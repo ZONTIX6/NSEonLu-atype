@@ -7,7 +7,7 @@ device_can_cnt
 字节对齐
 caninstance
 	{
-         can_handletydef*can_handle
+     can_handletydef*can_handle
 	can_txheadertydef txconf
 	uint32_t tx id
 	uint32_t tx mailbox
