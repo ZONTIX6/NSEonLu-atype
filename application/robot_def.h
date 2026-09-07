@@ -24,6 +24,21 @@
 #define VISION_USE_VCP  // 使用虚拟串口发送视觉数据
 // #define VISION_USE_UART // 使用串口发送视觉数据
 
+/*
+ * 底盘台架功率回退。正式固件必须保持为 0；仅在车轮架空调试且没有裁判系统时设为 1。
+ * 启用后，只有裁判系统未给出有效正功率上限时才使用 CHASSIS_POWER_BENCH_LIMIT_W。
+ */
+#ifndef CHASSIS_POWER_BENCH_TEST
+#define CHASSIS_POWER_BENCH_TEST 1
+#endif
+#ifndef CHASSIS_POWER_BENCH_LIMIT_W
+#define CHASSIS_POWER_BENCH_LIMIT_W 5.0f
+#endif
+
+#if CHASSIS_POWER_BENCH_TEST != 0 && CHASSIS_POWER_BENCH_TEST != 1
+#error CHASSIS_POWER_BENCH_TEST must be 0 or 1.
+#endif
+
 /* 机器人重要参数定义,注意根据不同机器人进行修改,浮点数需要以.0或f结尾,无符号以u结尾 */
 // 云台参数
 #define YAW_CHASSIS_ALIGN_ECD 2711  // 云台和底盘对齐指向相同方向时的电机编码器值,若对云台有机械改动需要修改
@@ -129,6 +144,13 @@ typedef struct
     float chassis_power_mx;
 } Chassis_Power_Data_s;
 
+typedef struct
+{
+    float predicted_unlimited_power_w; // 限流前四轮预测总功率，W
+    float predicted_limited_power_w;   // 限流后四轮预测总功率，W
+    float effective_limit_w;           // 当前实际生效的总功率上限，W
+} Chassis_Power_Control_Data_s;
+
 /* ----------------CMD应用发布的控制数据,应当由gimbal/chassis/shoot订阅---------------- */
 /**
  * @brief 对于双板情况,遥控器和pc在云台,裁判系统在底盘
@@ -179,6 +201,7 @@ typedef struct
 
 typedef struct
 {
+    Chassis_Power_Control_Data_s power_control;
 #if defined(CHASSIS_BOARD) || defined(GIMBAL_BOARD) // 非单板的时候底盘还将imu数据回传(若有必要)
     // attitude_t chassis_imu_data;
 #endif

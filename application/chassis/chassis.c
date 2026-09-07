@@ -12,8 +12,10 @@
  */
 
 #include "chassis.h"
+#include "chassis_power_budget.h"
+#include "chassis_power_feedback.h"
 #include "robot_def.h"
-#include "power_control.h"
+#include "dji_motor.h"
 #include "super_cap.h"
 #include "message_center.h"
 #include "referee_task.h"
@@ -22,6 +24,8 @@
 #include "bsp_dwt.h"
 #include "referee_UI.h"
 #include "arm_math.h"
+
+#include <math.h>
 
 /* 根据robot_def.h中的macro自动计算的参数 */
 #define HALF_WHEEL_BASE (WHEEL_BASE / 2.0f)     // 半轴距
@@ -47,7 +51,28 @@ static referee_info_t *referee_data;       // 用于获取裁判系统的数据
 static Referee_Interactive_info_t ui_data; // UI数据，将底盘中的数据传入此结构体的对应变量中，UI会自动检测是否变化，对应显示UI
 
 static SuperCapInstance *cap;                                       // 超级电容
-static DJIMotorInstance *motor_lf, *motor_rf, *motor_lb, *motor_rb; // left right forward back
+ DJIMotorInstance *motor_lf, *motor_rf, *motor_lb, *motor_rb; // left right forward back
+static bool chassis_power_ready;
+static ChassisPowerBudgetState_s chassis_budget_state;
+static ChassisPowerBudgetOutput_s chassis_budget_output;
+static uint32_t chassis_budget_dwt_count;
+
+static const ChassisPowerBudgetConfig_s chassis_budget_config = {
+    .empty_energy_ratio = 0.10f,
+    .full_energy_ratio = 0.30f,
+    .max_boost_w = 100.0f,
+    .rise_rate_w_per_s = 200.0f,
+};
+
+static const MotorPowerModelConfig_s m3508_power_model = {
+    .k0 = 0.65213f,
+    .k1 = -0.15659f,
+    .k2 = 0.00041660f,
+    .k3 = 0.00235415f,
+    .k4 = 0.20022f,
+    .k5 = 1.08e-7f,
+    .current_conversion = 1000.0f,
+};
 
 /* 用于自旋变速策略的时间变量 */
 // static float t;
@@ -63,7 +88,7 @@ void ChassisInit()
         .can_init_config.can_handle = &hcan1,
         .controller_param_init_config = {
             .speed_PID = {
-                .Kp = 4.5, // 4.5
+                .Kp = 0.75f, // 目标和反馈由 rpm 换为度/秒，保持原 4.5 的等效增益，因为kp乘的是误差，误差单位变为原来的6倍，kp要乘六分之一
                 .Ki = 0,   // 0
                 .Kd = 0,   // 0
                 .IntegralLimit = 3000,
@@ -75,28 +100,50 @@ void ChassisInit()
         .controller_setting_init_config = {
             .angle_feedback_source = MOTOR_FEED,
             .speed_feedback_source = MOTOR_FEED,
-            .outer_loop_type = SPEED_LOOP, // 设置为开环，电机设定值由下面的功率控制设定，不走普通的pid
+            .outer_loop_type = SPEED_LOOP,
             .close_loop_type = SPEED_LOOP,
         },
         .motor_type = M3508,
     };
     //  @todo: 当前还没有设置电机的正反转,仍然需要手动添加reference的正负号,需要电机module的支持,待修改.
-    //使用功率控制的电机需要使用PowerControlInit()函数初始化,因为电机的控制方式不同
     chassis_motor_config.can_init_config.tx_id = 1;
     chassis_motor_config.controller_setting_init_config.motor_reverse_flag = MOTOR_DIRECTION_NORMAL;
-    motor_lf = PowerControlInit(&chassis_motor_config);
+    motor_lf = DJIMotorInit(&chassis_motor_config);
 
     chassis_motor_config.can_init_config.tx_id = 2;
     chassis_motor_config.controller_setting_init_config.motor_reverse_flag = MOTOR_DIRECTION_NORMAL;
-    motor_rf = PowerControlInit(&chassis_motor_config);
+    motor_rf = DJIMotorInit(&chassis_motor_config);
 
     chassis_motor_config.can_init_config.tx_id = 4;
     chassis_motor_config.controller_setting_init_config.motor_reverse_flag = MOTOR_DIRECTION_NORMAL;
-    motor_lb = PowerControlInit(&chassis_motor_config);
+    motor_lb = DJIMotorInit(&chassis_motor_config);
 
     chassis_motor_config.can_init_config.tx_id = 3;
     chassis_motor_config.controller_setting_init_config.motor_reverse_flag = MOTOR_DIRECTION_NORMAL;
-    motor_rb = PowerControlInit(&chassis_motor_config);
+    motor_rb = DJIMotorInit(&chassis_motor_config);
+
+    DJIChassisPowerConfig_s power_config = {
+        .motors = {motor_lf, motor_rf, motor_lb, motor_rb},
+        .algorithm = {
+            .safety_factor = 0.95f,
+            .small_error_threshold_rpm = 500.0f,
+            .reserved_power_threshold_w = 54.0f,
+            .per_motor_reserved_power_w = 8.0f,
+            .max_current_command = 15000.0f,
+        },
+    };
+    for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
+        power_config.models[i] = m3508_power_model;
+
+    chassis_power_ready = DJIChassisPowerRegister(&power_config);
+    DJIChassisPowerSetAttenuation(1.0f);
+    if (!chassis_power_ready)
+    {
+        DJIMotorStop(motor_lf);
+        DJIMotorStop(motor_rf);
+        DJIMotorStop(motor_lb);
+        DJIMotorStop(motor_rb);
+    }
 
     referee_data = UITaskInit(&huart6, &ui_data); // 裁判系统初始化,会同时初始化UI
 
@@ -113,10 +160,14 @@ void ChassisInit()
     SuperCap_Init_Config_s cap_conf = {
         .can_config = {
             .can_handle = &hcan2,
-            .tx_id = 0x302, // 超级电容默认接收id
-            .rx_id = 0x301, // 超级电容默认发送id,注意tx和rx在其他人看来是反的
-        }};
+            .tx_id = SUPERCAP_COMMAND_CAN_ID,
+            .rx_id = SUPERCAP_STATUS_CAN_ID,
+        },
+        .offline_reload_count = 20U,
+    };
     cap = SuperCapInit(&cap_conf); // 超级电容初始化
+    ChassisPowerBudgetReset(&chassis_budget_state, 0.0f);
+    DWT_GetDeltaT(&chassis_budget_dwt_count);
 
     // 发布订阅初始化,如果为双板,则需要can comm来传递消息
 #ifdef CHASSIS_BOARD
@@ -162,15 +213,11 @@ static void MecanumCalculate()
  */
 static void LimitChassisOutput()
 {
-    // 功率限制待添加
-    // referee_data->PowerHeatData.chassis_power;
-    // referee_data->PowerHeatData.chassis_power_buffer;
-
-    // 完成功率限制后进行电机参考输入设定
-    (motor_lf, vt_lf);
-    DJIMotorSetRef(motor_rf, vt_rf);
-    DJIMotorSetRef(motor_lb, vt_lb);
-    DJIMotorSetRef(motor_rb, vt_rb);
+    // 底盘解算输出沿用 rpm；统一 DJI 驱动的速度环使用度/秒。
+    DJIMotorSetRef(motor_lf, vt_lf * 6.0f);
+    DJIMotorSetRef(motor_rf, vt_rf * 6.0f);
+    DJIMotorSetRef(motor_lb, vt_lb * 6.0f);
+    DJIMotorSetRef(motor_rb, vt_rb * 6.0f);
 }
 
 /**
@@ -185,6 +232,65 @@ static void EstimateSpeed()
     //  ...
 }
 
+static uint16_t PowerValueToU16(float value)
+{
+    if (!isfinite(value) || value <= 0.0f)
+        return 0U;
+    if (value >= (float)UINT16_MAX)
+        return UINT16_MAX;
+    return (uint16_t)(value + 0.5f);
+}
+
+static void UpdateChassisPowerBudget(void)
+{
+    float bench_limit_w = 0.0f;
+#if CHASSIS_POWER_BENCH_TEST
+    bench_limit_w = CHASSIS_POWER_BENCH_LIMIT_W;
+#endif
+
+    const float referee_limit_w =
+        (float)referee_data->GameRobotState.chassis_power_limit;
+    const float selected_limit_w =
+        PowerModelSelectLimit(referee_limit_w, bench_limit_w);
+    const bool referee_valid = isfinite(referee_limit_w) && referee_limit_w > 0.0f;
+    const bool bench_valid = !referee_valid && bench_limit_w > 0.0f;
+    const bool enable_dcdc =
+        (referee_valid || bench_valid) &&
+        (bench_valid || referee_data->GameRobotState.power_management_chassis_output) &&
+        chassis_cmd_recv.chassis_mode != CHASSIS_ZERO_FORCE;
+
+    const SuperCapCommand_s command = {
+        .enable_dcdc = enable_dcdc,
+        .referee_power_limit_w = PowerValueToU16(selected_limit_w),
+        .referee_buffer_energy_j =
+            PowerValueToU16((float)referee_data->PowerHeatData.buffer_energy),
+    };
+    if (cap != NULL)
+        (void)SuperCapSendCommand(cap, &command);
+
+    SuperCapStatus_s cap_status = {0};
+    if (cap != NULL)
+        (void)SuperCapGetStatus(cap, &cap_status);
+
+    const ChassisPowerBudgetInput_s input = {
+        .referee_limit_w = selected_limit_w,
+        .cap_online = cap_status.online,
+        .cap_output_enabled = cap_status.output_enabled,
+        .cap_error_code = cap_status.error_code,
+        .cap_energy_ratio = cap_status.energy_ratio,
+        .cap_reported_limit_w = (float)cap_status.available_power_limit_w,
+    };
+    const float dt_s = DWT_GetDeltaT(&chassis_budget_dwt_count);
+    if (!ChassisPowerBudgetUpdate(&chassis_budget_config,
+                                  &input,
+                                  dt_s,
+                                  &chassis_budget_state,
+                                  &chassis_budget_output))
+        chassis_budget_output.applied_budget_w = 0.0f;
+
+    DJIChassisPowerSetBudget(chassis_budget_output.applied_budget_w);
+}
+
 /* 机器人底盘控制核心任务 */
 void ChassisTask()
 {
@@ -197,8 +303,8 @@ void ChassisTask()
     chassis_cmd_recv = *(Chassis_Ctrl_Cmd_s *)CANCommGet(chasiss_can_comm);
 #endif // CHASSIS_BOARD
 
-    SetPowerLimit(referee_data->GameRobotState.chassis_power_limit);//设置功率限制
-    if (chassis_cmd_recv.chassis_mode == CHASSIS_ZERO_FORCE)
+    UpdateChassisPowerBudget();
+    if (!chassis_power_ready || chassis_cmd_recv.chassis_mode == CHASSIS_ZERO_FORCE)
     { // 如果出现重要模块离线或遥控器设置为急停,让电机停止
         DJIMotorStop(motor_lf);
         DJIMotorStop(motor_rf);
@@ -252,6 +358,11 @@ void ChassisTask()
     // // 当前只做了17mm热量的数据获取,后续根据robot_def中的宏切换双枪管和英雄42mm的情况
     // chassis_feedback_data.bullet_speed = referee_data->GameRobotState.shooter_id1_17mm_speed_limit;
     // chassis_feedback_data.rest_heat = referee_data->PowerHeatData.shooter_heat0;
+
+    const DJIChassisPowerState_s *power_state = DJIChassisPowerGetState();
+    ChassisPowerFeedbackUpdate(&chassis_feedback_data.power_control,
+                               power_state != NULL && power_state->registered,
+                               power_state != NULL ? &power_state->power : NULL);
 
     // 推送反馈消息
 #ifdef ONE_BOARD
