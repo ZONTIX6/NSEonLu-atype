@@ -40,6 +40,18 @@
 #endif
 
 /* 机器人重要参数定义,注意根据不同机器人进行修改,浮点数需要以.0或f结尾,无符号以u结尾 */
+// 底盘类型：默认保持现有麦克纳姆轮，改为 CHASSIS_DRIVE_OMNI_X 可启用四轮 X 型全向轮
+#define CHASSIS_DRIVE_MECANUM 0
+#define CHASSIS_DRIVE_OMNI_X 1
+#ifndef CHASSIS_DRIVE_TYPE
+#define CHASSIS_DRIVE_TYPE CHASSIS_DRIVE_MECANUM
+#endif
+
+#if CHASSIS_DRIVE_TYPE != CHASSIS_DRIVE_MECANUM && \
+    CHASSIS_DRIVE_TYPE != CHASSIS_DRIVE_OMNI_X
+#error CHASSIS_DRIVE_TYPE must be CHASSIS_DRIVE_MECANUM or CHASSIS_DRIVE_OMNI_X.
+#endif
+
 // 云台参数
 #define YAW_CHASSIS_ALIGN_ECD 2711  // 云台和底盘对齐指向相同方向时的电机编码器值,若对云台有机械改动需要修改
 #define YAW_ECD_GREATER_THAN_4096 0 // ALIGN_ECD值是否大于4096,是为1,否为0;用于计算云台偏转角度
@@ -57,6 +69,20 @@
 #define CENTER_GIMBAL_OFFSET_Y 0    // 云台旋转中心距底盘几何中心的距离,左右方向,云台位于正中心时默认设为0
 #define RADIUS_WHEEL 60             // 轮子半径
 #define REDUCTION_RATIO_WHEEL 19.0f // 电机减速比,因为编码器量测的是转子的速度而不是输出轴的速度故需进行转换
+
+// X 型全向轮方向校正：架空测试时若某一轮方向相反，只将对应值改为 -1.0f
+#ifndef OMNI_X_LF_DIRECTION
+#define OMNI_X_LF_DIRECTION 1.0f
+#endif
+#ifndef OMNI_X_RF_DIRECTION
+#define OMNI_X_RF_DIRECTION 1.0f
+#endif
+#ifndef OMNI_X_LB_DIRECTION
+#define OMNI_X_LB_DIRECTION 1.0f
+#endif
+#ifndef OMNI_X_RB_DIRECTION
+#define OMNI_X_RB_DIRECTION 1.0f
+#endif
 
 #define GYRO2GIMBAL_DIR_YAW 1   // 陀螺仪数据相较于云台的yaw的方向,1为相同,-1为相反
 #define GYRO2GIMBAL_DIR_PITCH 1 // 陀螺仪数据相较于云台的pitch的方向,1为相同,-1为相反

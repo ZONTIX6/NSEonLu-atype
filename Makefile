@@ -155,6 +155,7 @@ modules/daemon/daemon.c \
 modules/alarm/buzzer.c \
 application/gimbal/gimbal.c \
 application/chassis/chassis.c \
+application/chassis/chassis_kinematics.c \
 application/chassis/chassis_power_feedback.c \
 application/shoot/shoot.c \
 application/cmd/robot_cmd.c \

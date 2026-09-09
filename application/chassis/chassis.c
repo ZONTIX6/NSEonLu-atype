@@ -12,6 +12,7 @@
  */
 
 #include "chassis.h"
+#include "chassis_kinematics.h"
 #include "chassis_power_budget.h"
 #include "chassis_power_feedback.h"
 #include "robot_def.h"
@@ -199,12 +200,32 @@ void ChassisInit()
  * @brief 计算每个轮毂电机的输出,正运动学解算
  *        用宏进行预替换减小开销,运动解算具体过程参考教程
  */
-static void MecanumCalculate()
+static void CalculateWheelSpeed(void)
 {
-    vt_lf = -chassis_vx - chassis_vy - chassis_cmd_recv.wz * LF_CENTER;
-    vt_rf = -chassis_vx + chassis_vy - chassis_cmd_recv.wz * RF_CENTER;
-    vt_lb = chassis_vx - chassis_vy - chassis_cmd_recv.wz * LB_CENTER;
-    vt_rb = chassis_vx + chassis_vy - chassis_cmd_recv.wz * RB_CENTER;
+    const ChassisKinematicsInput_s input = {
+        .vx = chassis_vx,
+        .vy = chassis_vy,
+        .wz = chassis_cmd_recv.wz,
+        .rotation_radius = {LF_CENTER, RF_CENTER, LB_CENTER, RB_CENTER},
+    };
+    ChassisWheelOutput_s output = {0};
+
+#if CHASSIS_DRIVE_TYPE == CHASSIS_DRIVE_OMNI_X
+    const float wheel_direction[CHASSIS_WHEEL_COUNT] = {
+        OMNI_X_LF_DIRECTION,
+        OMNI_X_RF_DIRECTION,
+        OMNI_X_LB_DIRECTION,
+        OMNI_X_RB_DIRECTION,
+    };
+    (void)ChassisOmniXCalculate(&input, wheel_direction, &output);
+#else
+    (void)ChassisMecanumCalculate(&input, &output);
+#endif
+
+    vt_lf = output.rpm[CHASSIS_WHEEL_LEFT_FRONT];
+    vt_rf = output.rpm[CHASSIS_WHEEL_RIGHT_FRONT];
+    vt_lb = output.rpm[CHASSIS_WHEEL_LEFT_BACK];
+    vt_rb = output.rpm[CHASSIS_WHEEL_RIGHT_BACK];
 }
 
 /**
@@ -344,7 +365,7 @@ void ChassisTask()
     chassis_vy = chassis_cmd_recv.vx * sin_theta + chassis_cmd_recv.vy * cos_theta;
 
     // 根据控制模式进行正运动学解算,计算底盘输出
-    MecanumCalculate();
+    CalculateWheelSpeed();
 
     // 根据裁判系统的反馈数据和电容数据对输出限幅并设定闭环参考值
     LimitChassisOutput();
