@@ -13,7 +13,7 @@
 #define CHASSIS_DRIVE_TYPE CHASSIS_DRIVE_OMNI_X
 ```
 
-四轮位置和 CAN ID 沿用现有接线：左前 1、右前 2、左后 4、右后 3。底盘坐标系以向前为 `+x`、向右为 `+y`；X 型全向轮按 45° 安装，运动学会对轮子滚动方向做 `1/sqrt(2)` 投影。
+四轮位置和 CAN ID 沿用现有接线：左前 1、右前 2、左后 4、右后 3。底盘坐标系以向前为 `+x`、向右为 `+y`；X 型全向轮按 45° 安装，运动学对 `vx/vy` 做 `1/sqrt(2)` 投影，旋转项直接使用轮心到旋转中心的力臂。
 
 首次调试必须架空车轮，并依次给出纯前进、纯右移和原地旋转命令。如果只有某个车轮方向相反，将对应的 `OMNI_X_LF_DIRECTION`、`OMNI_X_RF_DIRECTION`、`OMNI_X_LB_DIRECTION` 或 `OMNI_X_RB_DIRECTION` 从 `1.0f` 改为 `-1.0f`，不要修改运动学公式。
 

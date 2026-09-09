@@ -23,13 +23,13 @@
 底盘采用右手坐标系：`+x` 为前进、`+y` 为右移，`+wz` 沿现有底盘旋转正方向。四个轮子的滚动方向相对底盘轴线为 45°，轮心速度在滚动方向上的投影使用 `sqrt(1/2)`：
 
 ```text
-left_front  = (-vx - vy - wz * r_left_front)  * sqrt(1/2)
-right_front = (-vx + vy - wz * r_right_front) * sqrt(1/2)
-left_back   = ( vx - vy - wz * r_left_back)   * sqrt(1/2)
-right_back  = ( vx + vy - wz * r_right_back)  * sqrt(1/2)
+left_front  = (-vx - vy) * sqrt(1/2) - wz * r_left_front
+right_front = (-vx + vy) * sqrt(1/2) - wz * r_right_front
+left_back   = ( vx - vy) * sqrt(1/2) - wz * r_left_back
+right_back  = ( vx + vy) * sqrt(1/2) - wz * r_right_back
 ```
 
-每项结果最后乘对应车轮方向系数。旋转项沿用现有四轮力臂计算，保证偏置云台中心配置仍然有效。
+每项结果最后乘对应车轮方向系数。45° 系数只用于平移速度投影；原地旋转产生的轮心速度已经沿车轮滚动方向，不再重复投影。旋转项沿用现有四轮力臂计算，保证偏置云台中心配置仍然有效。
 
 ## 安全与错误处理
 
