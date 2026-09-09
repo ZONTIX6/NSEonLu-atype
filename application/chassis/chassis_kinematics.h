@@ -17,7 +17,7 @@ typedef struct
     float vx;
     float vy;
     float wz;
-    float rotation_radius[CHASSIS_WHEEL_COUNT];
+    float rotation_lever_sum[CHASSIS_WHEEL_COUNT];
 } ChassisKinematicsInput_s;
 
 typedef struct

@@ -40,7 +40,7 @@ static ChassisKinematicsInput_s Input(float vx, float vy, float wz)
         .vx = vx,
         .vy = vy,
         .wz = wz,
-        .rotation_radius = {1.0f, 2.0f, 3.0f, 4.0f},
+        .rotation_lever_sum = {1.0f, 2.0f, 3.0f, 4.0f},
     };
     return input;
 }
@@ -84,13 +84,24 @@ static void TestOmniXRightProjection(void)
     AssertOutput(&output, -7.071068f, 7.071068f, -7.071068f, 7.071068f);
 }
 
-static void TestOmniXRotationIsTangentialAtEveryWheel(void)
+static void TestOmniXProjectsEachRotationalLever(void)
 {
     const ChassisKinematicsInput_s input = Input(0.0f, 0.0f, 2.0f);
     ChassisWheelOutput_s output;
 
     ASSERT_TRUE(ChassisOmniXCalculate(&input, all_forward, &output));
-    AssertOutput(&output, -2.0f, -4.0f, -6.0f, -8.0f);
+    AssertOutput(&output, -1.414214f, -2.828427f, -4.242641f, -5.656854f);
+}
+
+static void TestOmniXDefaultGeometryDoesNotUseMecanumLeverDirectly(void)
+{
+    ChassisKinematicsInput_s input = Input(0.0f, 0.0f, 1.0f);
+    ChassisWheelOutput_s output;
+    for (int i = 0; i < CHASSIS_WHEEL_COUNT; ++i)
+        input.rotation_lever_sum[i] = 325.0f;
+
+    ASSERT_TRUE(ChassisOmniXCalculate(&input, all_forward, &output));
+    AssertOutput(&output, -229.809708f, -229.809708f, -229.809708f, -229.809708f);
 }
 
 static void TestOmniXCombinesMotionAndWheelDirections(void)
@@ -100,7 +111,7 @@ static void TestOmniXCombinesMotionAndWheelDirections(void)
     ChassisWheelOutput_s output;
 
     ASSERT_TRUE(ChassisOmniXCalculate(&input, direction, &output));
-    AssertOutput(&output, -7.242641f, 4.585786f, -10.414214f, 7.757359f);
+    AssertOutput(&output, -6.363961f, 2.828427f, -7.778175f, 4.242641f);
 }
 
 static void TestMecanumPreservesExistingFormula(void)
@@ -129,7 +140,8 @@ int main(void)
     TestOmniXZeroInputStopsEveryWheel();
     TestOmniXForwardProjection();
     TestOmniXRightProjection();
-    TestOmniXRotationIsTangentialAtEveryWheel();
+    TestOmniXProjectsEachRotationalLever();
+    TestOmniXDefaultGeometryDoesNotUseMecanumLeverDirectly();
     TestOmniXCombinesMotionAndWheelDirections();
     TestMecanumPreservesExistingFormula();
     TestInvalidPointersAreRejected();

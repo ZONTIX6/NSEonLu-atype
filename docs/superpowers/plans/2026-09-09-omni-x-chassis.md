@@ -38,15 +38,15 @@ const ChassisKinematicsInput_s input = {
     .vx = 2.0f,
     .vy = 4.0f,
     .wz = 3.0f,
-    .rotation_radius = {1.0f, 2.0f, 3.0f, 4.0f},
+    .rotation_lever_sum = {1.0f, 2.0f, 3.0f, 4.0f},
 };
 const float direction[CHASSIS_WHEEL_COUNT] = {1.0f, -1.0f, 1.0f, -1.0f};
 ChassisWheelOutput_s output;
 ASSERT_TRUE(ChassisOmniXCalculate(&input, direction, &output));
-ASSERT_NEAR(-7.242641f, output.rpm[CHASSIS_WHEEL_LEFT_FRONT], 0.0001f);
-ASSERT_NEAR( 4.585786f, output.rpm[CHASSIS_WHEEL_RIGHT_FRONT], 0.0001f);
-ASSERT_NEAR(-10.414214f, output.rpm[CHASSIS_WHEEL_LEFT_BACK], 0.0001f);
-ASSERT_NEAR( 7.757359f, output.rpm[CHASSIS_WHEEL_RIGHT_BACK], 0.0001f);
+ASSERT_NEAR(-6.363961f, output.rpm[CHASSIS_WHEEL_LEFT_FRONT], 0.0001f);
+ASSERT_NEAR( 2.828427f, output.rpm[CHASSIS_WHEEL_RIGHT_FRONT], 0.0001f);
+ASSERT_NEAR(-7.778175f, output.rpm[CHASSIS_WHEEL_LEFT_BACK], 0.0001f);
+ASSERT_NEAR( 4.242641f, output.rpm[CHASSIS_WHEEL_RIGHT_BACK], 0.0001f);
 ```
 
 - [ ] **Step 2: 运行测试并确认因模块缺失而失败**
@@ -60,9 +60,9 @@ Expected: FAIL，提示 `chassis_kinematics.h` 或实现不存在。
 #define OMNI_X_PROJECTION 0.70710678118654752440f
 
 output->rpm[CHASSIS_WHEEL_LEFT_FRONT] =
-    ((-input->vx - input->vy) * OMNI_X_PROJECTION -
-     input->wz * input->rotation_radius[CHASSIS_WHEEL_LEFT_FRONT]) *
-    wheel_direction[CHASSIS_WHEEL_LEFT_FRONT];
+    (-input->vx - input->vy -
+     input->wz * input->rotation_lever_sum[CHASSIS_WHEEL_LEFT_FRONT]) *
+    OMNI_X_PROJECTION * wheel_direction[CHASSIS_WHEEL_LEFT_FRONT];
 ```
 
 对其余三轮使用设计文档中的对应公式；麦轮函数原样搬移 `chassis.c` 的既有公式。所有指针必须非空，否则返回 `false`。

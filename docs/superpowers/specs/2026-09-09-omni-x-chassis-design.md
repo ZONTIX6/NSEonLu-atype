@@ -14,7 +14,7 @@
 
 ## 架构
 
-新增独立、无硬件依赖的 `application/chassis/chassis_kinematics.h/.c`。模块接收底盘坐标系中的 `vx`、`vy`、`wz` 和四轮旋转力臂，返回按左前、右前、左后、右后排列的四个轮速目标。麦克纳姆和 X 型全向轮分别暴露纯函数，使其可由主机单元测试直接验证。
+新增独立、无硬件依赖的 `application/chassis/chassis_kinematics.h/.c`。模块接收底盘坐标系中的 `vx`、`vy`、`wz` 和四轮轴距/轮距分量之和，返回按左前、右前、左后、右后排列的四个轮速目标。麦克纳姆和 X 型全向轮分别暴露纯函数，使其可由主机单元测试直接验证。
 
 `application/chassis/chassis.c` 继续负责坐标旋转、模式处理、电机启停和功率管理；它只根据 `CHASSIS_DRIVE_TYPE` 调用对应运动学函数，然后沿用 `DJIMotorSetRef(..., rpm * 6.0f)` 的现有单位转换。
 
@@ -23,13 +23,13 @@
 底盘采用右手坐标系：`+x` 为前进、`+y` 为右移，`+wz` 沿现有底盘旋转正方向。四个轮子的滚动方向相对底盘轴线为 45°，轮心速度在滚动方向上的投影使用 `sqrt(1/2)`：
 
 ```text
-left_front  = (-vx - vy) * sqrt(1/2) - wz * r_left_front
-right_front = (-vx + vy) * sqrt(1/2) - wz * r_right_front
-left_back   = ( vx - vy) * sqrt(1/2) - wz * r_left_back
-right_back  = ( vx + vy) * sqrt(1/2) - wz * r_right_back
+left_front  = (-vx - vy - wz * lever_sum_left_front)  * sqrt(1/2)
+right_front = (-vx + vy - wz * lever_sum_right_front) * sqrt(1/2)
+left_back   = ( vx - vy - wz * lever_sum_left_back)   * sqrt(1/2)
+right_back  = ( vx + vy - wz * lever_sum_right_back)  * sqrt(1/2)
 ```
 
-每项结果最后乘对应车轮方向系数。45° 系数只用于平移速度投影；原地旋转产生的轮心速度已经沿车轮滚动方向，不再重复投影。旋转项沿用现有四轮力臂计算，保证偏置云台中心配置仍然有效。
+每项结果最后乘对应车轮方向系数。传入的 `lever_sum` 是现有麦轮公式使用的轴距与轮距分量之和，并非欧氏半径；45° 投影后，默认 350 mm × 300 mm 底盘的旋转有效力臂约为 229.81 mm，而不是 325 mm。各轮仍沿用现有偏置量计算，保证偏置云台中心配置有效。
 
 ## 安全与错误处理
 
