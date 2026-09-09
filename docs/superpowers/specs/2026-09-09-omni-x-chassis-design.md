@@ -20,13 +20,13 @@
 
 ## 四轮 X 型运动学
 
-底盘采用右手坐标系：`+x` 为前进、`+y` 为右移，`+wz` 沿现有底盘旋转正方向。四个轮子的滚动方向相对底盘轴线为 45°，平移投影使用 `sqrt(1/2)`：
+底盘采用右手坐标系：`+x` 为前进、`+y` 为右移，`+wz` 沿现有底盘旋转正方向。四个轮子的滚动方向相对底盘轴线为 45°，轮心速度在滚动方向上的投影使用 `sqrt(1/2)`：
 
 ```text
-left_front  = (-vx - vy) * sqrt(1/2) - wz * r_left_front
-right_front = (-vx + vy) * sqrt(1/2) - wz * r_right_front
-left_back   = ( vx - vy) * sqrt(1/2) - wz * r_left_back
-right_back  = ( vx + vy) * sqrt(1/2) - wz * r_right_back
+left_front  = (-vx - vy - wz * r_left_front)  * sqrt(1/2)
+right_front = (-vx + vy - wz * r_right_front) * sqrt(1/2)
+left_back   = ( vx - vy - wz * r_left_back)   * sqrt(1/2)
+right_back  = ( vx + vy - wz * r_right_back)  * sqrt(1/2)
 ```
 
 每项结果最后乘对应车轮方向系数。旋转项沿用现有四轮力臂计算，保证偏置云台中心配置仍然有效。
@@ -41,4 +41,3 @@ right_back  = ( vx + vy) * sqrt(1/2) - wz * r_right_back
 ## 测试与验收
 
 主机单元测试覆盖：零输入、纯前进、纯右移、纯旋转、组合输入、四轮方向系数以及空输出指针。随后运行现有全部主机测试，并完成 ARM 固件构建。默认麦克纳姆配置和 X 型全向轮配置都必须通过编译。
-
