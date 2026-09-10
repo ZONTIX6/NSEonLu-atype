@@ -160,7 +160,7 @@ void ChassisInit()
     PIDInit(&buffer_PID, &Buffer_pid_conf); // 缓冲能量PID初始化
     SuperCap_Init_Config_s cap_conf = {
         .can_config = {
-            .can_handle = &hcan2,
+            .can_handle = &hcan1,
             .tx_id = SUPERCAP_COMMAND_CAN_ID,
             .rx_id = SUPERCAP_STATUS_CAN_ID,
         },
