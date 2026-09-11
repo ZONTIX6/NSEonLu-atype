@@ -26,10 +26,10 @@
 
 /*
  * 底盘台架功率回退。正式固件必须保持为 0；仅在车轮架空调试且没有裁判系统时设为 1。
- * 启用后，只有裁判系统未给出有效正功率上限时才使用 CHASSIS_POWER_BENCH_LIMIT_W。
+ * 启用后，只有裁判功率快照无效时才使用 CHASSIS_POWER_BENCH_LIMIT_W。
  */
 #ifndef CHASSIS_POWER_BENCH_TEST
-#define CHASSIS_POWER_BENCH_TEST 1
+#define CHASSIS_POWER_BENCH_TEST 0
 #endif
 #ifndef CHASSIS_POWER_BENCH_LIMIT_W
 #define CHASSIS_POWER_BENCH_LIMIT_W 60.0f

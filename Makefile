@@ -156,6 +156,7 @@ modules/message_center/message_center.c \
 modules/daemon/daemon.c \
 modules/alarm/buzzer.c \
 application/gimbal/gimbal.c \
+application/chassis/chassis_power_link.c \
 application/chassis/chassis.c \
 application/chassis/chassis_kinematics.c \
 application/chassis/chassis_power_feedback.c \

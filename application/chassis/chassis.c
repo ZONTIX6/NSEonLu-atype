@@ -15,6 +15,7 @@
 #include "chassis_kinematics.h"
 #include "chassis_power_budget.h"
 #include "chassis_power_feedback.h"
+#include "chassis_power_link.h"
 #include "robot_def.h"
 #include "dji_motor.h"
 #include "super_cap.h"
@@ -25,8 +26,6 @@
 #include "bsp_dwt.h"
 #include "referee_UI.h"
 #include "arm_math.h"
-
-#include <math.h>
 
 /* 根据robot_def.h中的macro自动计算的参数 */
 #define HALF_WHEEL_BASE (WHEEL_BASE / 2.0f)     // 半轴距
@@ -48,7 +47,6 @@ static Chassis_Ctrl_Cmd_s chassis_cmd_recv;         // 底盘接收到的控制�
 static Chassis_Upload_Data_s chassis_feedback_data; // 底盘回传的反馈数据
 
 static PIDInstance buffer_PID;             // 用于底盘的缓冲能量PID
-static referee_info_t *referee_data;       // 用于获取裁判系统的数据
 static Referee_Interactive_info_t ui_data; // UI数据，将底盘中的数据传入此结构体的对应变量中，UI会自动检测是否变化，对应显示UI
 
 static SuperCapInstance *cap;                                       // 超级电容
@@ -146,7 +144,7 @@ void ChassisInit()
         DJIMotorStop(motor_rb);
     }
 
-    referee_data = UITaskInit(&huart6, &ui_data); // 裁判系统初始化,会同时初始化UI
+    (void)UITaskInit(&huart6, &ui_data); // 裁判系统初始化,会同时初始化UI
 
 /* Buffer环暂未测试，逻辑是计算期望buffer与实际buffer的差值，转换为冗余的功率，todo：输入给功率控制部分，待完善 */
     PID_Init_Config_s Buffer_pid_conf = {
@@ -258,48 +256,34 @@ static void EstimateSpeed()
     //  ...
 }
 
-static uint16_t PowerValueToU16(float value)
-{
-    if (!isfinite(value) || value <= 0.0f)
-        return 0U;
-    if (value >= (float)UINT16_MAX)
-        return UINT16_MAX;
-    return (uint16_t)(value + 0.5f);
-}
-
 static void UpdateChassisPowerBudget(void)
 {
-    float bench_limit_w = 0.0f;
+    RefereePowerSnapshot_s referee_snapshot = {0};
+    (void)RefereeGetPowerSnapshot(HAL_GetTick(), &referee_snapshot);
+
+    const ChassisPowerLinkInput_s link_input = {
+        .referee = referee_snapshot,
 #if CHASSIS_POWER_BENCH_TEST
-    bench_limit_w = CHASSIS_POWER_BENCH_LIMIT_W;
+        .bench_enabled = true,
+#else
+        .bench_enabled = false,
 #endif
-
-    const float referee_limit_w =
-        (float)referee_data->GameRobotState.chassis_power_limit;
-    const float selected_limit_w =
-        PowerModelSelectLimit(referee_limit_w, bench_limit_w);
-    const bool referee_valid = isfinite(referee_limit_w) && referee_limit_w > 0.0f;
-    const bool bench_valid = !referee_valid && bench_limit_w > 0.0f;
-    const bool enable_dcdc =
-        (referee_valid || bench_valid) &&
-        (bench_valid || referee_data->GameRobotState.power_management_chassis_output) &&
-        chassis_cmd_recv.chassis_mode != CHASSIS_ZERO_FORCE;
-
-    const SuperCapCommand_s command = {
-        .enable_dcdc = enable_dcdc,
-        .referee_power_limit_w = PowerValueToU16(selected_limit_w),
-        .referee_buffer_energy_j =
-            PowerValueToU16((float)referee_data->PowerHeatData.buffer_energy),
+        .bench_limit_w = CHASSIS_POWER_BENCH_LIMIT_W,
+        .chassis_zero_force =
+            chassis_cmd_recv.chassis_mode == CHASSIS_ZERO_FORCE,
     };
+    ChassisPowerLinkOutput_s link_output = {0};
+    (void)ChassisPowerLinkBuild(&link_input, &link_output);
+
     if (cap != NULL)
-        (void)SuperCapSendCommand(cap, &command);
+        (void)SuperCapSendCommand(cap, &link_output.command);
 
     SuperCapStatus_s cap_status = {0};
     if (cap != NULL)
         (void)SuperCapGetStatus(cap, &cap_status);
 
     const ChassisPowerBudgetInput_s input = {
-        .referee_limit_w = selected_limit_w,
+        .referee_limit_w = link_output.base_power_limit_w,
         .cap_online = cap_status.online,
         .cap_output_enabled = cap_status.output_enabled,
         .cap_error_code = cap_status.error_code,
