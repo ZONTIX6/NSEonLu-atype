@@ -6,6 +6,7 @@
 #include "robot_def.h"
 #include "bsp_usart.h"
 #include "FreeRTOS.h"
+#include "referee_power.h"
 
 extern uint8_t UI_Seq;
 
@@ -87,6 +88,9 @@ typedef struct
  * @return referee_info_t* 返回裁判系统反馈的数据,包括热量/血量/状态等
  */
 referee_info_t *RefereeInit(UART_HandleTypeDef *referee_usart_handle);
+
+bool RefereeGetPowerSnapshot(uint32_t now_ms,
+							 RefereePowerSnapshot_s *snapshot);
 
 /**
  * @brief UI绘制和交互数的发送接口,由UI绘制任务和多机通信函数调用

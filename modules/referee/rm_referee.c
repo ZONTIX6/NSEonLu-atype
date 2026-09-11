@@ -11,110 +11,122 @@
 
 #include "rm_referee.h"
 #include "string.h"
-#include "crc_ref.h"
 #include "bsp_usart.h"
 #include "task.h"
 #include "daemon.h"
 #include "bsp_log.h"
 #include "cmsis_os.h"
+#include "referee_stream_parser.h"
 
 #define RE_RX_BUFFER_SIZE 255u // 裁判系统接收缓冲区大小
 
 static USARTInstance *referee_usart_instance; // 裁判系统串口实例
 static DaemonInstance *referee_daemon;		  // 裁判系统守护进程
 static referee_info_t referee_info;			  // 裁判系统数据
+static RefereeStreamParser_s referee_stream_parser;
+static RefereePowerState_s referee_power_state;
 
-/**
- * @brief  读取裁判数据,中断中读取保证速度
- * @param  buff: 读取到的裁判系统原始数据
- * @retval 是否对正误判断做处理
- * @attention  在此判断帧头和CRC校验,无误再写入数据，不重复判断帧头
- */
-static void JudgeReadData(uint8_t *buff)
+static void HandleValidFrame(void *context,
+							 uint16_t command_id,
+							 const uint8_t *payload,
+							 uint16_t payload_length,
+							 uint8_t sequence)
 {
-	uint16_t judge_length; // 统计一帧数据长度
-	if (buff == NULL)	   // 空数据包，则不作任何处理
-		return;
+	(void)context;
+	referee_info.FrameHeader.Seq = sequence;
+	referee_info.CmdID = command_id;
 
-	// 写入帧头数据(5-byte),用于判断是否开始存储裁判数据
-	memcpy(&referee_info.FrameHeader, buff, LEN_HEADER);
-
-	// 判断帧头数据(0)是否为0xA5
-	if (buff[SOF] == REFEREE_SOF)
+	if (RefereePowerStateAcceptFrame(&referee_power_state,
+										 command_id,
+										 payload,
+										 payload_length,
+										 HAL_GetTick()))
 	{
-		// 帧头CRC8校验
-		if (Verify_CRC8_Check_Sum(buff, LEN_HEADER) == TRUE)
+		if (command_id == ID_game_robot_state &&
+			payload_length == LEN_game_robot_state)
 		{
-			// 统计一帧数据长度(byte),用于CR16校验
-			judge_length = buff[DATA_LENGTH] + LEN_HEADER + LEN_CMDID + LEN_TAIL;
-			// 帧尾CRC16校验
-			if (Verify_CRC16_Check_Sum(buff, judge_length) == TRUE)
-			{
-				// 2个8位拼成16位int
-				referee_info.CmdID = (buff[6] << 8 | buff[5]);
-				// 解析数据命令码,将数据拷贝到相应结构体中(注意拷贝数据的长度)
-				// 第8个字节开始才是数据 data=7
-				switch (referee_info.CmdID)
-				{
-				case ID_game_state: // 0x0001
-					memcpy(&referee_info.GameState, (buff + DATA_Offset), LEN_game_state);
-					break;
-				case ID_game_result: // 0x0002
-					memcpy(&referee_info.GameResult, (buff + DATA_Offset), LEN_game_result);
-					break;
-				case ID_game_robot_survivors: // 0x0003
-					memcpy(&referee_info.GameRobotHP, (buff + DATA_Offset), LEN_game_robot_HP);
-					break;
-				case ID_event_data: // 0x0101
-					memcpy(&referee_info.EventData, (buff + DATA_Offset), LEN_event_data);
-					break;
-				case ID_supply_projectile_action: // 0x0102
-					memcpy(&referee_info.SupplyProjectileAction, (buff + DATA_Offset), LEN_supply_projectile_action);
-					break;
-				case ID_game_robot_state: // 0x0201
-					memcpy(&referee_info.GameRobotState, (buff + DATA_Offset), LEN_game_robot_state);
-					break;
-				case ID_power_heat_data: // 0x0202
-					memcpy(&referee_info.PowerHeatData, (buff + DATA_Offset), LEN_power_heat_data);
-					break;
-				case ID_game_robot_pos: // 0x0203
-					memcpy(&referee_info.GameRobotPos, (buff + DATA_Offset), LEN_game_robot_pos);
-					break;
-				case ID_buff_musk: // 0x0204
-					memcpy(&referee_info.BuffMusk, (buff + DATA_Offset), LEN_buff_musk);
-					break;
-				case ID_aerial_robot_energy: // 0x0205
-					memcpy(&referee_info.AerialRobotEnergy, (buff + DATA_Offset), LEN_aerial_robot_energy);
-					break;
-				case ID_robot_hurt: // 0x0206
-					memcpy(&referee_info.RobotHurt, (buff + DATA_Offset), LEN_robot_hurt);
-					break;
-				case ID_shoot_data: // 0x0207
-					memcpy(&referee_info.ShootData, (buff + DATA_Offset), LEN_shoot_data);
-					break;
-				case ID_student_interactive: // 0x0301   syhtodo接收代码未测试
-					memcpy(&referee_info.ReceiveData, (buff + DATA_Offset), LEN_receive_data);
-					break;
-				}
-			}
+			memcpy(&referee_info.GameRobotState, payload, LEN_game_robot_state);
 		}
-		// 首地址加帧长度,指向CRC16下一字节,用来判断是否为0xA5,从而判断一个数据包是否有多帧数据
-		if (*(buff + sizeof(xFrameHeader) + LEN_CMDID + referee_info.FrameHeader.DataLength + LEN_TAIL) == 0xA5)
-		{ // 如果一个数据包出现了多帧数据,则再次调用解析函数,直到所有数据包解析完毕
-			JudgeReadData(buff + sizeof(xFrameHeader) + LEN_CMDID + referee_info.FrameHeader.DataLength + LEN_TAIL);
+		else if (command_id == ID_power_heat_data &&
+				 payload_length == LEN_power_heat_data)
+		{
+			memcpy(&referee_info.PowerHeatData, payload, LEN_power_heat_data);
 		}
 	}
+	else
+	{
+		switch (command_id)
+		{
+		case ID_game_state: // 0x0001
+			if (payload_length == LEN_game_state)
+				memcpy(&referee_info.GameState, payload, LEN_game_state);
+			break;
+		case ID_game_result: // 0x0002
+			if (payload_length == LEN_game_result)
+				memcpy(&referee_info.GameResult, payload, LEN_game_result);
+			break;
+		case ID_game_robot_survivors: // 0x0003
+			if (payload_length == LEN_game_robot_HP)
+				memcpy(&referee_info.GameRobotHP, payload, LEN_game_robot_HP);
+			break;
+		case ID_event_data: // 0x0101
+			if (payload_length == LEN_event_data)
+				memcpy(&referee_info.EventData, payload, LEN_event_data);
+			break;
+		case ID_supply_projectile_action: // 0x0102
+			if (payload_length == LEN_supply_projectile_action)
+				memcpy(&referee_info.SupplyProjectileAction, payload, LEN_supply_projectile_action);
+			break;
+		case ID_game_robot_pos: // 0x0203
+			if (payload_length == LEN_game_robot_pos)
+				memcpy(&referee_info.GameRobotPos, payload, LEN_game_robot_pos);
+			break;
+		case ID_buff_musk: // 0x0204
+			if (payload_length == LEN_buff_musk)
+				memcpy(&referee_info.BuffMusk, payload, LEN_buff_musk);
+			break;
+		case ID_aerial_robot_energy: // 0x0205
+			if (payload_length == LEN_aerial_robot_energy)
+				memcpy(&referee_info.AerialRobotEnergy, payload, LEN_aerial_robot_energy);
+			break;
+		case ID_robot_hurt: // 0x0206
+			if (payload_length == LEN_robot_hurt)
+				memcpy(&referee_info.RobotHurt, payload, LEN_robot_hurt);
+			break;
+		case ID_shoot_data: // 0x0207
+			if (payload_length == LEN_shoot_data)
+				memcpy(&referee_info.ShootData, payload, LEN_shoot_data);
+			break;
+		case ID_student_interactive: // 0x0301   syhtodo接收代码未测试
+			if (payload_length == LEN_receive_data)
+				memcpy(&referee_info.ReceiveData, payload, LEN_receive_data);
+			break;
+		default:
+			break;
+		}
+	}
+
+	if (referee_daemon != NULL)
+		DaemonReload(referee_daemon);
 }
 
 /*裁判系统串口接收回调函数,解析数据 */
-static void RefereeRxCallback()
+static void RefereeRxCallback(void)
 {
-	DaemonReload(referee_daemon);
-	JudgeReadData(referee_usart_instance->recv_buff);
+	if (referee_usart_instance == NULL ||
+		referee_usart_instance->recv_data_len == 0U)
+	{
+		return;
+	}
+
+	RefereeStreamParserFeed(&referee_stream_parser,
+							referee_usart_instance->recv_buff,
+							referee_usart_instance->recv_data_len);
 }
 // 裁判系统丢失回调函数,重新初始化裁判系统串口
 static void RefereeLostCallback(void *arg)
 {
+	RefereeStreamParserReset(&referee_stream_parser);
 	USARTServiceInit(referee_usart_instance);
 	LOGWARNING("[rm_ref] lost referee data");
 }
@@ -122,6 +134,11 @@ static void RefereeLostCallback(void *arg)
 /* 裁判系统通信初始化 */
 referee_info_t *RefereeInit(UART_HandleTypeDef *referee_usart_handle)
 {
+	RefereePowerStateReset(&referee_power_state);
+	(void)RefereeStreamParserInit(&referee_stream_parser,
+								  HandleValidFrame,
+								  NULL);
+
 	USART_Init_Config_s conf;
 	conf.module_callback = RefereeRxCallback;
 	conf.usart_handle = referee_usart_handle;
@@ -136,6 +153,21 @@ referee_info_t *RefereeInit(UART_HandleTypeDef *referee_usart_handle)
 	referee_daemon = DaemonRegister(&daemon_conf);
 
 	return &referee_info;
+}
+
+bool RefereeGetPowerSnapshot(uint32_t now_ms,
+							 RefereePowerSnapshot_s *snapshot)
+{
+	RefereePowerState_s state;
+
+	if (snapshot == NULL)
+		return false;
+
+	taskENTER_CRITICAL();
+	state = referee_power_state;
+	taskEXIT_CRITICAL();
+
+	return RefereePowerBuildSnapshot(&state, now_ms, snapshot);
 }
 
 /**

@@ -143,6 +143,8 @@ modules/algorithm/power_model.c \
 modules/algorithm/chassis_power_budget.c \
 modules/oled/oled.c \
 modules/referee/crc_ref.c \
+modules/referee/referee_stream_parser.c \
+modules/referee/referee_power.c \
 modules/referee/rm_referee.c \
 modules/referee/referee_UI.c \
 modules/referee/referee_task.c \
