@@ -1,0 +1,26 @@
+CC ?= gcc
+CFLAGS := -std=c11 -Wall -Wextra -Werror -pedantic -O0 -g
+TARGET := test_referee_integration.exe
+SOURCE := test_referee_integration.c \
+          stubs/test_platform.c \
+          ../../modules/referee/rm_referee.c \
+          ../../modules/referee/referee_stream_parser.c \
+          ../../modules/referee/referee_power.c \
+          ../../application/chassis/chassis_power_link.c \
+          ../../modules/super_cap/super_cap_protocol.c \
+          ../../modules/referee/crc_ref.c
+INCLUDES := -Istubs -I../../modules/referee \
+            -I../../application/chassis -I../../modules/super_cap
+
+.PHONY: all test clean
+
+all: $(TARGET)
+
+$(TARGET): $(SOURCE)
+	$(CC) $(CFLAGS) $(INCLUDES) $(SOURCE) -lm -o $(TARGET)
+
+test: $(TARGET)
+	./$(TARGET)
+
+clean:
+	-if exist $(TARGET) del /Q $(TARGET)

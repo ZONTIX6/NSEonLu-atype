@@ -259,7 +259,7 @@ static void EstimateSpeed()
 static void UpdateChassisPowerBudget(void)
 {
     RefereePowerSnapshot_s referee_snapshot = {0};
-    (void)RefereeGetPowerSnapshot(HAL_GetTick(), &referee_snapshot);
+    (void)RefereeGetPowerSnapshot(&referee_snapshot);
 
     const ChassisPowerLinkInput_s link_input = {
         .referee = referee_snapshot,

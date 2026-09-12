@@ -1,0 +1,274 @@
+#include "chassis_power_link.h"
+#include "crc_ref.h"
+#include "rm_referee.h"
+#include "super_cap_protocol.h"
+#include "test_platform.h"
+
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+
+static int failures;
+
+#define ASSERT_TRUE(condition)                                                          \
+    do                                                                                  \
+    {                                                                                   \
+        if (!(condition))                                                               \
+        {                                                                               \
+            printf("FAIL %s:%d: expected true: %s\n", __FILE__, __LINE__, #condition); \
+            ++failures;                                                                 \
+        }                                                                               \
+    } while (0)
+
+#define ASSERT_FALSE(condition) ASSERT_TRUE(!(condition))
+
+#define ASSERT_EQ_U32(expected, actual)                                                  \
+    do                                                                                  \
+    {                                                                                   \
+        const uint32_t expected_ = (uint32_t)(expected);                                \
+        const uint32_t actual_ = (uint32_t)(actual);                                    \
+        if (expected_ != actual_)                                                       \
+        {                                                                               \
+            printf("FAIL %s:%d: expected %lu, got %lu\n",                             \
+                   __FILE__,                                                            \
+                   __LINE__,                                                            \
+                   (unsigned long)expected_,                                            \
+                   (unsigned long)actual_);                                             \
+            ++failures;                                                                 \
+        }                                                                               \
+    } while (0)
+
+static size_t BuildFrame(uint8_t *frame,
+                         uint16_t command_id,
+                         const uint8_t *payload,
+                         uint16_t payload_length,
+                         uint8_t sequence)
+{
+    const size_t frame_length = (size_t)payload_length + 9U;
+    frame[0] = 0xA5U;
+    frame[1] = (uint8_t)payload_length;
+    frame[2] = (uint8_t)(payload_length >> 8U);
+    frame[3] = sequence;
+    frame[4] = 0U;
+    Append_CRC8_Check_Sum(frame, 5U);
+    frame[5] = (uint8_t)command_id;
+    frame[6] = (uint8_t)(command_id >> 8U);
+    if (payload_length > 0U)
+        memcpy(&frame[7], payload, payload_length);
+    frame[frame_length - 2U] = 0U;
+    frame[frame_length - 1U] = 0U;
+    Append_CRC16_Check_Sum(frame, (uint32_t)frame_length);
+    return frame_length;
+}
+
+static void StartReferee(void)
+{
+    static UART_HandleTypeDef uart;
+    TestPlatformReset();
+    ASSERT_TRUE(RefereeInit(&uart) != NULL);
+    ASSERT_TRUE(TestPlatformGetUSART()->module_callback != NULL);
+}
+
+static void AssertFrameEquals(const uint8_t expected[8],
+                              const uint8_t actual[8])
+{
+    for (size_t i = 0U; i < 8U; ++i)
+        ASSERT_EQ_U32(expected[i], actual[i]);
+}
+
+static void TestSplitAndCoalescedFramesDriveCompleteCommand(void)
+{
+    static const uint8_t robot_state_payload[13] = {
+        0x03U, 0x01U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U,
+        0x00U, 0x00U, 0x00U, 0x78U, 0x00U, 0x02U,
+    };
+    static const uint8_t power_heat_payload[14] = {
+        0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U,
+        0x00U, 0x37U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U,
+    };
+    static const uint8_t expected_can_frame[8] = {
+        0x01U, 0x78U, 0x00U, 0x37U, 0x00U, 0x00U, 0x00U, 0x00U,
+    };
+    uint8_t robot_frame[32];
+    uint8_t power_frame[32];
+    uint8_t second_chunk[64];
+    const size_t robot_length = BuildFrame(
+        robot_frame, 0x0201U, robot_state_payload, 13U, 0x21U);
+    const size_t power_length = BuildFrame(
+        power_frame, 0x0202U, power_heat_payload, 14U, 0x22U);
+
+    StartReferee();
+    TestPlatformSetTick(100U);
+    ASSERT_TRUE(TestPlatformFeed(robot_frame, 8U));
+    memcpy(second_chunk, &robot_frame[8], robot_length - 8U);
+    memcpy(&second_chunk[robot_length - 8U], power_frame, power_length);
+    ASSERT_TRUE(TestPlatformFeed(
+        second_chunk, robot_length - 8U + power_length));
+
+    TestPlatformResetTickObservations();
+    RefereePowerSnapshot_s snapshot = {0};
+    ASSERT_TRUE(RefereeGetPowerSnapshot(&snapshot));
+    ASSERT_TRUE(snapshot.valid);
+    ASSERT_TRUE(snapshot.chassis_output_enabled);
+    ASSERT_EQ_U32(120U, snapshot.chassis_power_limit_w);
+    ASSERT_EQ_U32(55U, snapshot.buffer_energy_j);
+    ASSERT_EQ_U32(1U, TestPlatformTickCallsInsideCritical());
+    ASSERT_EQ_U32(0U, TestPlatformTickCallsOutsideCritical());
+    ASSERT_EQ_U32(0U, TestPlatformCriticalDepth());
+
+    const ChassisPowerLinkInput_s input = {
+        .referee = snapshot,
+        .bench_enabled = false,
+        .bench_limit_w = 0.0f,
+        .chassis_zero_force = false,
+    };
+    ChassisPowerLinkOutput_s output = {0};
+    uint8_t actual_can_frame[8] = {0};
+    ASSERT_TRUE(ChassisPowerLinkBuild(&input, &output));
+    ASSERT_TRUE(SuperCapProtocolEncodeCommand(&output.command,
+                                              actual_can_frame));
+    AssertFrameEquals(expected_can_frame, actual_can_frame);
+}
+
+static void TestOnlyOneRequiredFrameIsInvalid(void)
+{
+    static const uint8_t robot_state_payload[13] = {
+        0x03U, 0x01U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U,
+        0x00U, 0x00U, 0x00U, 0x64U, 0x00U, 0x02U,
+    };
+    uint8_t frame[32];
+    const size_t length = BuildFrame(
+        frame, 0x0201U, robot_state_payload, 13U, 0x31U);
+
+    StartReferee();
+    TestPlatformSetTick(10U);
+    ASSERT_TRUE(TestPlatformFeed(frame, length));
+
+    RefereePowerSnapshot_s snapshot = {0};
+    ASSERT_TRUE(RefereeGetPowerSnapshot(&snapshot));
+    ASSERT_FALSE(snapshot.valid);
+    ASSERT_EQ_U32(0U, snapshot.chassis_power_limit_w);
+    ASSERT_EQ_U32(0U, snapshot.buffer_energy_j);
+}
+
+static void TestCrcAndPayloadLengthRejectionsAreDiagnosed(void)
+{
+    static const uint8_t robot_payload[13] = {
+        0x03U, 0x01U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U,
+        0x00U, 0x00U, 0x00U, 0x50U, 0x00U, 0x02U,
+    };
+    static const uint8_t short_robot_payload[12] = {0};
+    static const uint8_t short_power_payload[13] = {0};
+    static const uint8_t short_game_payload[10] = {0};
+    static const uint8_t unknown_payload[1] = {0x5AU};
+    uint8_t frame[32];
+    size_t length;
+
+    StartReferee();
+    TestPlatformSetTick(20U);
+
+    length = BuildFrame(frame, 0x0201U, robot_payload, 13U, 0x40U);
+    frame[length - 1U] ^= 0x01U;
+    ASSERT_TRUE(TestPlatformFeed(frame, length));
+
+    length = BuildFrame(frame, 0x0201U, short_robot_payload, 12U, 0x41U);
+    ASSERT_TRUE(TestPlatformFeed(frame, length));
+    length = BuildFrame(frame, 0x0202U, short_power_payload, 13U, 0x42U);
+    ASSERT_TRUE(TestPlatformFeed(frame, length));
+    length = BuildFrame(frame, 0x0001U, short_game_payload, 10U, 0x43U);
+    ASSERT_TRUE(TestPlatformFeed(frame, length));
+    length = BuildFrame(frame, 0x7777U, unknown_payload, 1U, 0x44U);
+    ASSERT_TRUE(TestPlatformFeed(frame, length));
+
+    RefereePowerSnapshot_s snapshot = {0};
+    ASSERT_TRUE(RefereeGetPowerSnapshot(&snapshot));
+    ASSERT_FALSE(snapshot.valid);
+
+    RefereeLinkDiagnostics_s diagnostics = {0};
+    ASSERT_TRUE(RefereeGetLinkDiagnostics(&diagnostics));
+    ASSERT_EQ_U32(4U, diagnostics.transport.valid_frame_count);
+    ASSERT_EQ_U32(1U, diagnostics.transport.crc16_error_count);
+    ASSERT_EQ_U32(3U, diagnostics.payload_length_error_count);
+    ASSERT_EQ_U32(4U, TestPlatformDaemonReloadCount());
+}
+
+static void TestFreshnessBoundaryFailsSafeAndRecovers(void)
+{
+    static const uint8_t robot_state_payload[13] = {
+        0x03U, 0x01U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U,
+        0x00U, 0x00U, 0x00U, 0x5AU, 0x00U, 0x02U,
+    };
+    static const uint8_t power_heat_payload[14] = {
+        0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U,
+        0x00U, 0x19U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U,
+    };
+    static const uint8_t expected_zero[8] = {0};
+    static const uint8_t expected_recovered[8] = {
+        0x01U, 0x5AU, 0x00U, 0x19U, 0x00U, 0x00U, 0x00U, 0x00U,
+    };
+    uint8_t robot_frame[32];
+    uint8_t power_frame[32];
+    const size_t robot_length = BuildFrame(
+        robot_frame, 0x0201U, robot_state_payload, 13U, 0x50U);
+    const size_t power_length = BuildFrame(
+        power_frame, 0x0202U, power_heat_payload, 14U, 0x51U);
+
+    StartReferee();
+    TestPlatformSetTick(100U);
+    ASSERT_TRUE(TestPlatformFeed(robot_frame, robot_length));
+    ASSERT_TRUE(TestPlatformFeed(power_frame, power_length));
+
+    RefereePowerSnapshot_s snapshot = {0};
+    TestPlatformSetTick(400U);
+    ASSERT_TRUE(RefereeGetPowerSnapshot(&snapshot));
+    ASSERT_TRUE(snapshot.valid);
+
+    TestPlatformSetTick(401U);
+    ASSERT_TRUE(RefereeGetPowerSnapshot(&snapshot));
+    ASSERT_FALSE(snapshot.valid);
+
+    ChassisPowerLinkInput_s input = {
+        .referee = snapshot,
+        .bench_enabled = false,
+        .bench_limit_w = 0.0f,
+        .chassis_zero_force = false,
+    };
+    ChassisPowerLinkOutput_s output = {0};
+    uint8_t actual[8] = {0};
+    ASSERT_TRUE(ChassisPowerLinkBuild(&input, &output));
+    ASSERT_TRUE(SuperCapProtocolEncodeCommand(&output.command, actual));
+    AssertFrameEquals(expected_zero, actual);
+
+    TestPlatformSetTick(500U);
+    ASSERT_TRUE(TestPlatformFeed(robot_frame, robot_length));
+    ASSERT_TRUE(TestPlatformFeed(power_frame, power_length));
+    ASSERT_TRUE(RefereeGetPowerSnapshot(&snapshot));
+    ASSERT_TRUE(snapshot.valid);
+    input.referee = snapshot;
+    ASSERT_TRUE(ChassisPowerLinkBuild(&input, &output));
+    ASSERT_TRUE(SuperCapProtocolEncodeCommand(&output.command, actual));
+    AssertFrameEquals(expected_recovered, actual);
+}
+
+static void TestNullOutputsAreRejected(void)
+{
+    StartReferee();
+    ASSERT_FALSE(RefereeGetPowerSnapshot(NULL));
+    ASSERT_FALSE(RefereeGetLinkDiagnostics(NULL));
+}
+
+int main(void)
+{
+    TestSplitAndCoalescedFramesDriveCompleteCommand();
+    TestOnlyOneRequiredFrameIsInvalid();
+    TestCrcAndPayloadLengthRejectionsAreDiagnosed();
+    TestFreshnessBoundaryFailsSafeAndRecovers();
+    TestNullOutputsAreRejected();
+
+    if (failures != 0)
+        return 1;
+
+    puts("PASS: referee integration tests");
+    return 0;
+}

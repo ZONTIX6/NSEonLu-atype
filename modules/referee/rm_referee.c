@@ -25,6 +25,56 @@ static DaemonInstance *referee_daemon;		  // 裁判系统守护进程
 static referee_info_t referee_info;			  // 裁判系统数据
 static RefereeStreamParser_s referee_stream_parser;
 static RefereePowerState_s referee_power_state;
+static uint32_t payload_length_error_count;
+
+static bool GetExpectedPayloadLength(uint16_t command_id,
+									 uint16_t *expected_length)
+{
+	switch (command_id)
+	{
+	case ID_game_state:
+		*expected_length = LEN_game_state;
+		return true;
+	case ID_game_result:
+		*expected_length = LEN_game_result;
+		return true;
+	case ID_game_robot_survivors:
+		*expected_length = LEN_game_robot_HP;
+		return true;
+	case ID_event_data:
+		*expected_length = LEN_event_data;
+		return true;
+	case ID_supply_projectile_action:
+		*expected_length = LEN_supply_projectile_action;
+		return true;
+	case ID_game_robot_state:
+		*expected_length = LEN_game_robot_state;
+		return true;
+	case ID_power_heat_data:
+		*expected_length = LEN_power_heat_data;
+		return true;
+	case ID_game_robot_pos:
+		*expected_length = LEN_game_robot_pos;
+		return true;
+	case ID_buff_musk:
+		*expected_length = LEN_buff_musk;
+		return true;
+	case ID_aerial_robot_energy:
+		*expected_length = LEN_aerial_robot_energy;
+		return true;
+	case ID_robot_hurt:
+		*expected_length = LEN_robot_hurt;
+		return true;
+	case ID_shoot_data:
+		*expected_length = LEN_shoot_data;
+		return true;
+	case ID_student_interactive:
+		*expected_length = LEN_receive_data;
+		return true;
+	default:
+		return false;
+	}
+}
 
 static void HandleValidFrame(void *context,
 							 uint16_t command_id,
@@ -32,11 +82,19 @@ static void HandleValidFrame(void *context,
 							 uint16_t payload_length,
 							 uint8_t sequence)
 {
+	uint16_t expected_payload_length;
+	const bool known_command =
+		GetExpectedPayloadLength(command_id, &expected_payload_length);
+
 	(void)context;
 	referee_info.FrameHeader.Seq = sequence;
 	referee_info.CmdID = command_id;
 
-	if (RefereePowerStateAcceptFrame(&referee_power_state,
+	if (known_command && payload_length != expected_payload_length)
+	{
+		++payload_length_error_count;
+	}
+	else if (RefereePowerStateAcceptFrame(&referee_power_state,
 										 command_id,
 										 payload,
 										 payload_length,
@@ -126,6 +184,7 @@ static void RefereeRxCallback(void)
 // 裁判系统丢失回调函数,重新初始化裁判系统串口
 static void RefereeLostCallback(void *arg)
 {
+	(void)arg;
 	RefereeStreamParserReset(&referee_stream_parser);
 	USARTServiceInit(referee_usart_instance);
 	LOGWARNING("[rm_ref] lost referee data");
@@ -135,6 +194,7 @@ static void RefereeLostCallback(void *arg)
 referee_info_t *RefereeInit(UART_HandleTypeDef *referee_usart_handle)
 {
 	RefereePowerStateReset(&referee_power_state);
+	payload_length_error_count = 0U;
 	(void)RefereeStreamParserInit(&referee_stream_parser,
 								  HandleValidFrame,
 								  NULL);
@@ -155,19 +215,36 @@ referee_info_t *RefereeInit(UART_HandleTypeDef *referee_usart_handle)
 	return &referee_info;
 }
 
-bool RefereeGetPowerSnapshot(uint32_t now_ms,
-							 RefereePowerSnapshot_s *snapshot)
+bool RefereeGetPowerSnapshot(RefereePowerSnapshot_s *snapshot)
 {
 	RefereePowerState_s state;
+	uint32_t now_ms;
 
 	if (snapshot == NULL)
 		return false;
 
 	taskENTER_CRITICAL();
 	state = referee_power_state;
+	now_ms = HAL_GetTick();
 	taskEXIT_CRITICAL();
 
 	return RefereePowerBuildSnapshot(&state, now_ms, snapshot);
+}
+
+bool RefereeGetLinkDiagnostics(RefereeLinkDiagnostics_s *diagnostics)
+{
+	RefereeLinkDiagnostics_s current;
+
+	if (diagnostics == NULL)
+		return false;
+
+	taskENTER_CRITICAL();
+	current.transport = referee_stream_parser.stats;
+	current.payload_length_error_count = payload_length_error_count;
+	taskEXIT_CRITICAL();
+
+	*diagnostics = current;
+	return true;
 }
 
 /**
