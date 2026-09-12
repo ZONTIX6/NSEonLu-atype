@@ -35,6 +35,35 @@ static void DiscardPrefix(RefereeStreamParser_s *parser, size_t count)
     parser->stats.discarded_byte_count += (uint32_t)discarded;
 }
 
+static size_t FindCompleteValidFrameOffset(RefereeStreamParser_s *parser)
+{
+    for (size_t offset = 1U;
+         offset + REFEREE_HEADER_LENGTH <= parser->used;
+         ++offset)
+    {
+        uint8_t *candidate = &parser->buffer[offset];
+        if (candidate[0] != REFEREE_SOF ||
+            !Verify_CRC8_Check_Sum(candidate, REFEREE_HEADER_LENGTH))
+        {
+            continue;
+        }
+
+        const uint16_t payload_length = ReadU16LE(&candidate[1]);
+        const size_t frame_length =
+            (size_t)payload_length + REFEREE_FRAME_OVERHEAD;
+        if (frame_length > REFEREE_STREAM_BUFFER_CAPACITY ||
+            frame_length > parser->used - offset)
+        {
+            continue;
+        }
+
+        if (Verify_CRC16_Check_Sum(candidate, (uint32_t)frame_length))
+            return offset;
+    }
+
+    return parser->used;
+}
+
 static void ProcessBufferedData(RefereeStreamParser_s *parser)
 {
     while (parser->used > 0U)
@@ -68,7 +97,16 @@ static void ProcessBufferedData(RefereeStreamParser_s *parser)
         }
 
         if (parser->used < frame_length)
+        {
+            const size_t valid_frame_offset =
+                FindCompleteValidFrameOffset(parser);
+            if (valid_frame_offset < parser->used)
+            {
+                DiscardPrefix(parser, valid_frame_offset);
+                continue;
+            }
             return;
+        }
 
         if (!Verify_CRC16_Check_Sum(parser->buffer, (uint32_t)frame_length))
         {

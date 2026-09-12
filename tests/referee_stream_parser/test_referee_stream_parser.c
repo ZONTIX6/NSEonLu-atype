@@ -197,6 +197,69 @@ static void TestRejectsFrameLargerThanCapacityThenFindsGoodFrame(void)
     ASSERT_EQ_U32(1U, stats->oversize_frame_count);
 }
 
+static void TestEscapesIncompleteFalseFrameForCompleteValidFrame(void)
+{
+    RefereeStreamParser_s parser;
+    uint8_t bytes[32] = {0xA5U, 200U, 0U, 6U, 0U};
+    const uint8_t payload[] = {0x78U};
+    Append_CRC8_Check_Sum(bytes, 5U);
+    size_t used = 5U;
+    used += BuildFrame(0x0202U, 7U, payload, 1U, &bytes[used]);
+
+    captured_count = 0U;
+    ASSERT_TRUE(RefereeStreamParserInit(&parser, CaptureFrame, NULL));
+    RefereeStreamParserFeed(&parser, bytes, used);
+    const RefereeStreamParserStats_s *stats = RefereeStreamParserGetStats(&parser);
+
+    if (captured_count != 1U)
+        printf("FAIL incomplete false frame: expected 1 frame, got %zu\n",
+               captured_count);
+    ASSERT_EQ_U32(1U, captured_count);
+    ASSERT_EQ_U32(0x0202U, captured[0].command_id);
+    ASSERT_EQ_U32(1U, stats->valid_frame_count);
+    ASSERT_EQ_U32(5U, stats->discarded_byte_count);
+}
+
+static void TestIncompleteOuterFrameKeepsBadCrc16CandidateInPayload(void)
+{
+    RefereeStreamParser_s parser;
+    uint8_t outer_payload[20] = {0};
+    uint8_t outer_frame[29];
+    const uint8_t inner_payload[] = {0x55U};
+    const size_t inner_length =
+        BuildFrame(0x0102U, 0x11U, inner_payload, 1U, outer_payload);
+    outer_payload[inner_length - 1U] ^= 0x01U;
+    outer_payload[19] = 0xCCU;
+    const size_t outer_length =
+        BuildFrame(0x0301U, 0x22U, outer_payload, 20U, outer_frame);
+    const size_t first_chunk_length = 7U + inner_length;
+
+    ASSERT_TRUE(Verify_CRC8_Check_Sum(outer_payload, 5U));
+    ASSERT_TRUE(!Verify_CRC16_Check_Sum(outer_payload,
+                                        (uint32_t)inner_length));
+    captured_count = 0U;
+    ASSERT_TRUE(RefereeStreamParserInit(&parser, CaptureFrame, NULL));
+    RefereeStreamParserFeed(&parser, outer_frame, first_chunk_length);
+    const RefereeStreamParserStats_s *stats = RefereeStreamParserGetStats(&parser);
+
+    ASSERT_EQ_U32(0U, captured_count);
+    ASSERT_EQ_U32(0U, stats->discarded_byte_count);
+
+    RefereeStreamParserFeed(&parser,
+                            &outer_frame[first_chunk_length],
+                            outer_length - first_chunk_length);
+
+    ASSERT_EQ_U32(1U, captured_count);
+    ASSERT_EQ_U32(0x0301U, captured[0].command_id);
+    ASSERT_EQ_U32(20U, captured[0].payload_length);
+    ASSERT_EQ_U32(0x22U, captured[0].sequence);
+    ASSERT_TRUE(memcmp(captured[0].payload,
+                       outer_payload,
+                       sizeof(outer_payload)) == 0);
+    ASSERT_EQ_U32(1U, stats->valid_frame_count);
+    ASSERT_EQ_U32(0U, stats->discarded_byte_count);
+}
+
 static void TestParsesLargeFeedAcrossInternalBufferBoundaries(void)
 {
     RefereeStreamParser_s parser;
@@ -274,6 +337,8 @@ int main(void)
     TestRejectsOversize16BitLengthThenFindsGoodFrame();
     TestParsesMaximumCapacityFrame();
     TestRejectsFrameLargerThanCapacityThenFindsGoodFrame();
+    TestEscapesIncompleteFalseFrameForCompleteValidFrame();
+    TestIncompleteOuterFrameKeepsBadCrc16CandidateInPayload();
     TestParsesLargeFeedAcrossInternalBufferBoundaries();
     TestResetClearsPendingBytesAndPreservesConfigurationAndStats();
     TestNullAndZeroLengthInputsAreSafe();
