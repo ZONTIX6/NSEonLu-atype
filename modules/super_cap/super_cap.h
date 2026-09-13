@@ -10,6 +10,12 @@ typedef struct
     CANInstance *can_ins;
     DaemonInstance *daemon;
     SuperCapStatus_s status;
+
+    /* 临时诊断计数,用于确认 CAN 链路是否真的在收帧。问题定位完就删。
+       全部在 CAN 接收中断里更新,32 位对齐读写是原子的,读侧不用加锁。 */
+    volatile uint32_t received_frame_count; // 成功解码的状态帧累计数
+    volatile uint32_t rejected_frame_count; // 收到但被解码拒绝的帧数(长度不对/浮点非法)
+    volatile uint32_t last_rx_tick_ms;      // 最近一次成功解码时的 HAL_GetTick()
 } SuperCapInstance;
 
 typedef struct

@@ -25,14 +25,21 @@ static void SuperCapRxCallback(CANInstance *can_instance)
         return;
 
     SuperCapInstance *instance = (SuperCapInstance *)can_instance->id;
-    SuperCapStatus_s decoded;
-    if (instance == NULL ||
-        !SuperCapProtocolDecodeStatus(can_instance->rx_buff,
-                                      can_instance->rx_len,
-                                      &decoded))
+    if (instance == NULL)
         return;
 
+    SuperCapStatus_s decoded;
+    if (!SuperCapProtocolDecodeStatus(can_instance->rx_buff,
+                                      can_instance->rx_len,
+                                      &decoded))
+    { // 帧收到了但内容不合法,单独计数,以便和"完全没收到帧"区分开
+        instance->rejected_frame_count++;
+        return;
+    }
+
     instance->status = decoded;
+    instance->received_frame_count++;
+    instance->last_rx_tick_ms = HAL_GetTick();
     DaemonReload(instance->daemon);
 }
 
