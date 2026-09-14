@@ -17,6 +17,9 @@
 #include "chassis_power_feedback.h"
 #include "chassis_power_link.h"
 #include "robot_def.h"
+#if POWER_METER_ENABLE
+#include "power_meter.h"
+#endif
 #include "dji_motor.h"
 #include "super_cap.h"
 #include "message_center.h"
@@ -50,6 +53,9 @@ static PIDInstance buffer_PID;             // 用于底盘的缓冲能量PID
 static Referee_Interactive_info_t ui_data; // UI数据，将底盘中的数据传入此结构体的对应变量中，UI会自动检测是否变化，对应显示UI
 
 static SuperCapInstance *cap;                                       // 超级电容
+#if POWER_METER_ENABLE
+static PowerMeterInstance *power_meter;
+#endif
  DJIMotorInstance *motor_lf, *motor_rf, *motor_lb, *motor_rb; // left right forward back
 static bool chassis_power_ready;
 static ChassisPowerBudgetState_s chassis_budget_state;
@@ -165,6 +171,17 @@ void ChassisInit()
         .offline_reload_count = 20U,
     };
     cap = SuperCapInit(&cap_conf); // 超级电容初始化
+#if POWER_METER_ENABLE
+    const PowerMeter_Init_Config_s power_meter_config = {
+        .can_config = {
+            .can_handle = &hcan1,
+            .tx_id = POWER_METER_STATUS_CAN_ID,
+            .rx_id = POWER_METER_STATUS_CAN_ID,
+        },
+        .offline_reload_count = 10U,
+    };
+    power_meter = PowerMeterInit(&power_meter_config);
+#endif
     ChassisPowerBudgetReset(&chassis_budget_state, 0.0f);
     DWT_GetDeltaT(&chassis_budget_dwt_count);
 

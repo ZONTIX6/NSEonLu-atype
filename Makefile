@@ -151,6 +151,8 @@ modules/referee/referee_task.c \
 modules/remote/remote_control.c \
 modules/super_cap/super_cap_protocol.c \
 modules/super_cap/super_cap.c \
+modules/power_meter/power_meter_protocol.c \
+modules/power_meter/power_meter.c \
 modules/can_comm/can_comm.c \
 modules/message_center/message_center.c \
 modules/daemon/daemon.c \
@@ -216,6 +218,10 @@ C_DEFS =  \
 -DARM_MATH_CM4 \
 -DDISABLE_LOG_SYSTEM 
 
+ifneq ($(strip $(POWER_METER_ENABLE)),)
+C_DEFS += -DPOWER_METER_ENABLE=$(POWER_METER_ENABLE)
+endif
+
 # AS includes
 AS_INCLUDES =  \
 -IInc
@@ -269,6 +275,7 @@ C_INCLUDES =  \
 -Imodules/referee \
 -Imodules/remote \
 -Imodules/super_cap \
+-Imodules/power_meter \
 -Imodules/can_comm \
 -Imodules/message_center \
 -Imodules/daemon \

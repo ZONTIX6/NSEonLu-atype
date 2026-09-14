@@ -39,6 +39,25 @@
 #error CHASSIS_POWER_BENCH_TEST must be 0 or 1.
 #endif
 
+/* 功率计 CAN1 状态接收；设为 0 时不创建实例或注册 CAN 过滤器。 */
+#ifndef POWER_METER_ENABLE
+#define POWER_METER_ENABLE 1
+#endif
+
+#define POWER_METER_ENABLE_IS_VALID_0 1
+#define POWER_METER_ENABLE_IS_VALID_1 1
+#define POWER_METER_ENABLE_IS_VALID_IMPL(value) POWER_METER_ENABLE_IS_VALID_##value
+#define POWER_METER_ENABLE_IS_VALID(value) POWER_METER_ENABLE_IS_VALID_IMPL(value)
+
+#if !POWER_METER_ENABLE_IS_VALID(POWER_METER_ENABLE)
+#error POWER_METER_ENABLE must be 0 or 1.
+#endif
+
+#undef POWER_METER_ENABLE_IS_VALID
+#undef POWER_METER_ENABLE_IS_VALID_IMPL
+#undef POWER_METER_ENABLE_IS_VALID_1
+#undef POWER_METER_ENABLE_IS_VALID_0
+
 /* 机器人重要参数定义,注意根据不同机器人进行修改,浮点数需要以.0或f结尾,无符号以u结尾 */
 // 底盘类型：默认保持现有麦克纳姆轮，改为 CHASSIS_DRIVE_OMNI_X 可启用四轮 X 型全向轮
 #define CHASSIS_DRIVE_MECANUM 0
