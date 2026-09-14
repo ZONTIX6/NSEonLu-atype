@@ -13,6 +13,7 @@
 - 新增与 HAL、FreeRTOS 无关的功率计 CAN 协议解码单元；
 - 新增符合跃鹿框架实例注册风格的功率计模块；
 - 在 `ChassisInit()` 中把功率计注册到 CAN1；
+- 在 `robot_def.h` 中提供是否启用功率计的编译期开关；
 - 保存测量数据、在线状态和接收诊断计数；
 - 提供线程安全的数据快照读取接口；
 - 新增协议主机测试并接入现有 ARM 固件构建。
@@ -135,12 +136,28 @@ bool PowerMeterGetStatus(PowerMeterInstance *instance,
 
 ## 应用集成
 
-`ChassisInit()` 创建一个静态功率计实例，CAN 配置为：
+`application/robot_def.h` 新增编译期开关：
+
+```c
+#ifndef POWER_METER_ENABLE
+#define POWER_METER_ENABLE 1
+#endif
+
+#if POWER_METER_ENABLE != 0 && POWER_METER_ENABLE != 1
+#error POWER_METER_ENABLE must be 0 or 1.
+#endif
+```
+
+默认值为 `1`，使本次新增功能在当前工程中生效；设置为 `0` 时完全跳过功率计实例创建和 CAN 注册。使用 `#ifndef` 保留通过编译参数覆盖配置的能力，取值检查可防止拼写或非布尔配置被静默接受。
+
+`chassis.c` 中与功率计有关的头文件、静态实例和初始化代码均受 `#if POWER_METER_ENABLE` 保护。启用时，`ChassisInit()` 创建一个静态功率计实例，CAN 配置为：
 
 - `can_handle = &hcan1`；
 - `rx_id = POWER_METER_STATUS_CAN_ID`；
 - 不发送任何功率计 CAN 帧；
 - `offline_reload_count = 10U`。
+
+关闭宏时不注册 `0x605` CAN 过滤器、不创建功率计 daemon，也不分配功率计实例内存。协议和模块源码仍保留在构建中，避免切换宏时还需同步维护构建文件。
 
 不修改 `Src/main.c`。跃鹿框架的主入口只调用 `RobotInit()`，实际硬件模块应由所属 App 的初始化函数创建；功率计属于底盘功率观测设备，因此在 `ChassisInit()` 中初始化。
 
@@ -172,7 +189,8 @@ CMake 使用递归源文件和头文件目录搜索，新目录会自动加入�
 - 先运行新增协议测试并确认在实现前因缺少接口而失败；
 - 实现最小协议代码后确认测试通过；
 - 运行仓库现有主机测试，确认无回归；
-- 使用现有 ARM 工具链构建完整固件，确认无新增错误或警告。
+- 使用现有 ARM 工具链以 `POWER_METER_ENABLE=1` 构建完整固件，确认无新增错误或警告；
+- 再以 `POWER_METER_ENABLE=0` 编译相关应用代码，确认关闭配置不会引用功率计实例或注册 CAN 设备。
 
 上板验证步骤：
 
@@ -187,6 +205,7 @@ CMake 使用递归源文件和头文件目录搜索，新目录会自动加入�
 - C 板 CAN1 能持续接收并正确解码 `0x605`、DLC 8 的功率计状态帧；
 - 测量结果以 V、A、W 为单位保存在功率计模块中；
 - 调用方能够通过快照接口读取数据和在线状态；
+- `POWER_METER_ENABLE=1` 时创建模块，设为 `0` 时不创建实例、不注册 CAN 设备；
 - 错误帧不会覆盖最后一次有效数据或刷新在线状态；
 - 功率计掉线约 100 ms 后能够被识别，恢复后自动上线；
 - 不改变现有底盘功率控制和超级电容行为；
