@@ -7,6 +7,15 @@
 #include <string.h>
 
 #define POWER_METER_DEFAULT_OFFLINE_RELOAD_COUNT 10U
+#define POWER_METER_DAEMON_PERIOD_MS 10U
+
+static bool PowerMeterIsFresh(const PowerMeterInstance *instance,
+                              uint32_t now_ms)
+{
+    return instance->status.online &&
+           (uint32_t)(now_ms - instance->last_rx_tick_ms) <
+               instance->offline_timeout_ms;
+}
 
 static void PowerMeterOffline(void *owner)
 {
@@ -15,7 +24,7 @@ static void PowerMeterOffline(void *owner)
         return;
 
     taskENTER_CRITICAL();
-    if (DaemonIsOnline(instance->daemon) == 0U)
+    if (!PowerMeterIsFresh(instance, HAL_GetTick()))
         instance->status.online = false;
     taskEXIT_CRITICAL();
 }
@@ -63,6 +72,8 @@ PowerMeterInstance *PowerMeterInit(const PowerMeter_Init_Config_s *config)
         config->offline_reload_count == 0U
             ? POWER_METER_DEFAULT_OFFLINE_RELOAD_COUNT
             : config->offline_reload_count;
+    instance->offline_timeout_ms =
+        (uint32_t)reload_count * POWER_METER_DAEMON_PERIOD_MS;
     Daemon_Init_Config_s daemon_config = {
         .reload_count = reload_count,
         .init_count = reload_count,
@@ -95,8 +106,7 @@ bool PowerMeterGetStatus(PowerMeterInstance *instance,
 
     taskENTER_CRITICAL();
     *status = instance->status;
-    status->online =
-        status->online && DaemonIsOnline(instance->daemon) != 0U;
+    status->online = PowerMeterIsFresh(instance, HAL_GetTick());
     taskEXIT_CRITICAL();
     return true;
 }

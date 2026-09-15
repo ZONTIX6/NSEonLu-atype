@@ -16,7 +16,7 @@
 - 通信仅允许功率计到 C 板的单向状态上报；不得新增 C 板发送命令。
 - `POWER_METER_ENABLE` 默认必须为 `1`，只允许 `0` 或 `1`。
 - `POWER_METER_ENABLE=0` 时不得创建功率计实例、daemon 或 CAN 过滤器。
-- 离线窗口固定为约 100 ms，即 100 Hz daemon 的 10 个计数。
+- 离线窗口固定为约 100 ms，即 100 Hz daemon 的 10 个计数；模块保留 daemon 注册/重载，并以最后有效帧的无符号 tick 差值作为权威在线判据。
 - 测量数据仅保存并提供读取接口，不参与底盘功率控制和超级电容控制。
 - 不修改 `Src/main.c`、CubeMX `.ioc`、生成的 CAN 初始化代码或功率计固件。
 - 保留用户当前对 `Src/usart.c`、`application/chassis/chassis.c`、`basic_framework.ioc`、`modules/referee/rm_referee.c` 的未提交改动。
@@ -970,6 +970,7 @@ Expected: 任务提交只包含计划列出的功率计文件、宏、Makefile �
 - 错误 DLC 是否不会喂 daemon；
 - 初始化前是否保持 offline；
 - getter 是否在临界区内复制一致快照；
+- getter 与离线回调是否按最后有效帧时间戳判断 100 ms 超时，并正确处理 tick 回绕和 daemon 重载/递减竞态；
 - 宏关闭是否完全跳过实例和 CAN 注册；
 - 是否没有发送路径、控制闭环改动或高频日志；
 - 是否没有覆盖用户已有未提交修改。

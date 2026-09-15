@@ -22,6 +22,7 @@ typedef struct
     CANInstance *can_ins;
     DaemonInstance *daemon;
     PowerMeterStatus_s status;
+    uint32_t offline_timeout_ms;
     volatile uint32_t received_frame_count;
     volatile uint32_t rejected_frame_count;
     volatile uint32_t last_rx_tick_ms;
