@@ -150,7 +150,7 @@ void ChassisInit()
         DJIMotorStop(motor_rb);
     }
 
-    (void)UITaskInit(&huart6, &ui_data); // 裁判系统初始化,会同时初始化UI
+    (void)UITaskInit(&huart1, &ui_data); // 裁判系统初始化,会同时初始化UI
 
 /* Buffer环暂未测试，逻辑是计算期望buffer与实际buffer的差值，转换为冗余的功率，todo：输入给功率控制部分，待完善 */
     PID_Init_Config_s Buffer_pid_conf = {
