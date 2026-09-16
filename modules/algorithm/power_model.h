@@ -55,6 +55,15 @@ typedef struct
     PowerModelStatus_e status;
 } ChassisPowerOutput_s;
 
+typedef struct
+{
+    float current_command[POWER_MODEL_MOTOR_COUNT];
+    float actual_speed_rpm[POWER_MODEL_MOTOR_COUNT];
+    float target_speed_rpm[POWER_MODEL_MOTOR_COUNT];
+    float predicted_power_w[POWER_MODEL_MOTOR_COUNT];
+    float predicted_total_power_w;
+} ChassisPowerTelemetry_s;
+
 bool PowerModelConfigIsValid(const MotorPowerModelConfig_s *config);
 bool ChassisPowerAlgorithmConfigIsValid(const ChassisPowerAlgorithmConfig_s *config);
 float PowerModelSelectLimit(float referee_limit_w, float fallback_limit_w);
@@ -62,8 +71,11 @@ float PowerModelPredict(const MotorPowerModelConfig_s *config,
                         float current_command,
                         float speed_rpm);
 bool PowerModelApply(const MotorPowerModelConfig_s models[POWER_MODEL_MOTOR_COUNT],
-                     const ChassisPowerAlgorithmConfig_s *config,
-                     const ChassisPowerInput_s *input,
-                     ChassisPowerOutput_s *output);
+                      const ChassisPowerAlgorithmConfig_s *config,
+                      const ChassisPowerInput_s *input,
+                      ChassisPowerOutput_s *output);
+bool ChassisPowerTelemetryBuild(const ChassisPowerInput_s *input,
+                                const ChassisPowerOutput_s *power,
+                                ChassisPowerTelemetry_s *telemetry);
 
 #endif // POWER_MODEL_H

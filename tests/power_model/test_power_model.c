@@ -2,6 +2,7 @@
 
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 
 static int failures;
 
@@ -324,6 +325,57 @@ static void TestInvalidConfigurationIsRejected(void)
     ASSERT_EQ_INT(POWER_MODEL_STATUS_INVALID_CONFIG, output.status);
 }
 
+static void TestTelemetryBuildsCoherentSnapshot(void)
+{
+    ChassisPowerInput_s input = ValidInput();
+    ChassisPowerOutput_s power = {.status = POWER_MODEL_STATUS_OK};
+    ChassisPowerTelemetry_s telemetry;
+
+    input.speed_rpm[0] = 1000.0f;
+    input.speed_rpm[1] = 1100.0f;
+    input.speed_rpm[2] = 1200.0f;
+    input.speed_rpm[3] = 1300.0f;
+    input.speed_error_rpm[0] = 10.0f;
+    input.speed_error_rpm[1] = 11.0f;
+    input.speed_error_rpm[2] = 12.0f;
+    input.speed_error_rpm[3] = 13.0f;
+    power.limited_current[0] = 2000.0f;
+    power.limited_current[1] = 2100.0f;
+    power.limited_current[2] = 2200.0f;
+    power.limited_current[3] = 2300.0f;
+    power.predicted_limited_power_w[0] = 10.0f;
+    power.predicted_limited_power_w[1] = 11.0f;
+    power.predicted_limited_power_w[2] = 12.0f;
+    power.predicted_limited_power_w[3] = 13.0f;
+
+    ASSERT_TRUE(ChassisPowerTelemetryBuild(&input, &power, &telemetry));
+    ASSERT_NEAR(46.0f, telemetry.predicted_total_power_w, 1.0e-6f);
+    for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
+    {
+        ASSERT_NEAR(power.limited_current[i], telemetry.current_command[i], 1.0e-6f);
+        ASSERT_NEAR(input.speed_rpm[i], telemetry.actual_speed_rpm[i], 1.0e-6f);
+        ASSERT_NEAR(input.speed_rpm[i] + input.speed_error_rpm[i],
+                    telemetry.target_speed_rpm[i],
+                    1.0e-6f);
+        ASSERT_NEAR(power.predicted_limited_power_w[i],
+                    telemetry.predicted_power_w[i],
+                    1.0e-6f);
+    }
+}
+
+static void TestTelemetryRejectsInvalidPowerAndClearsOutput(void)
+{
+    ChassisPowerInput_s input = ValidInput();
+    ChassisPowerOutput_s power = {.status = POWER_MODEL_STATUS_INVALID_BUDGET};
+    ChassisPowerTelemetry_s telemetry;
+    memset(&telemetry, 0xA5, sizeof(telemetry));
+
+    ASSERT_FALSE(ChassisPowerTelemetryBuild(&input, &power, &telemetry));
+    const unsigned char *bytes = (const unsigned char *)&telemetry;
+    for (size_t i = 0; i < sizeof(telemetry); ++i)
+        ASSERT_TRUE(bytes[i] == 0U);
+}
+
 int main(void)
 {
     TestDisabledBenchFallbackPreservesInvalidLimit();
@@ -343,6 +395,8 @@ int main(void)
     TestInvalidBudgetFailsSafe();
     TestNanInputFailsSafe();
     TestInvalidConfigurationIsRejected();
+    TestTelemetryBuildsCoherentSnapshot();
+    TestTelemetryRejectsInvalidPowerAndClearsOutput();
     if (failures != 0)
         return 1;
 

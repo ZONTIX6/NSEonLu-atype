@@ -152,8 +152,8 @@ static void AllocatePower(const ChassisPowerAlgorithmConfig_s *config,
 }
 
 bool PowerModelApply(const MotorPowerModelConfig_s models[POWER_MODEL_MOTOR_COUNT],
-                     const ChassisPowerAlgorithmConfig_s *config,
-                     const ChassisPowerInput_s *input,
+                      const ChassisPowerAlgorithmConfig_s *config,
+                      const ChassisPowerInput_s *input,
                      ChassisPowerOutput_s *output)
 {
     if (output == NULL)
@@ -232,6 +232,43 @@ bool PowerModelApply(const MotorPowerModelConfig_s models[POWER_MODEL_MOTOR_COUN
             ResetOutput(output, POWER_MODEL_STATUS_NUMERIC_ERROR);
             return false;
         }
+    }
+
+    return true;
+}
+
+bool ChassisPowerTelemetryBuild(const ChassisPowerInput_s *input,
+                                const ChassisPowerOutput_s *power,
+                                ChassisPowerTelemetry_s *telemetry)
+{
+    if (telemetry == NULL)
+        return false;
+
+    memset(telemetry, 0, sizeof(*telemetry));
+    if (input == NULL || power == NULL || power->status != POWER_MODEL_STATUS_OK)
+        return false;
+
+    for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
+    {
+        const float target_speed_rpm = input->speed_rpm[i] + input->speed_error_rpm[i];
+        if (!isfinite(power->limited_current[i]) || !isfinite(input->speed_rpm[i]) ||
+            !isfinite(target_speed_rpm) || !isfinite(power->predicted_limited_power_w[i]))
+        {
+            memset(telemetry, 0, sizeof(*telemetry));
+            return false;
+        }
+
+        telemetry->current_command[i] = power->limited_current[i];
+        telemetry->actual_speed_rpm[i] = input->speed_rpm[i];
+        telemetry->target_speed_rpm[i] = target_speed_rpm;
+        telemetry->predicted_power_w[i] = power->predicted_limited_power_w[i];
+        telemetry->predicted_total_power_w += power->predicted_limited_power_w[i];
+    }
+
+    if (!isfinite(telemetry->predicted_total_power_w))
+    {
+        memset(telemetry, 0, sizeof(*telemetry));
+        return false;
     }
 
     return true;
