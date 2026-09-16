@@ -1,7 +1,9 @@
 #include "power_model.h"
 
 #include <math.h>
+#include <limits.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 
 #define POWER_MODEL_EPSILON 1.0e-6f
@@ -239,13 +241,15 @@ bool PowerModelApply(const MotorPowerModelConfig_s models[POWER_MODEL_MOTOR_COUN
 
 bool ChassisPowerTelemetryBuild(const ChassisPowerInput_s *input,
                                 const ChassisPowerOutput_s *power,
+                                const bool output_enabled[POWER_MODEL_MOTOR_COUNT],
                                 ChassisPowerTelemetry_s *telemetry)
 {
     if (telemetry == NULL)
         return false;
 
     memset(telemetry, 0, sizeof(*telemetry));
-    if (input == NULL || power == NULL || power->status != POWER_MODEL_STATUS_OK)
+    if (input == NULL || power == NULL || output_enabled == NULL ||
+        power->status != POWER_MODEL_STATUS_OK)
         return false;
 
     for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
@@ -258,11 +262,13 @@ bool ChassisPowerTelemetryBuild(const ChassisPowerInput_s *input,
             return false;
         }
 
-        telemetry->current_command[i] = power->limited_current[i];
+        telemetry->current_command[i] =
+            output_enabled[i] ? power->limited_current[i] : 0.0f;
         telemetry->actual_speed_rpm[i] = input->speed_rpm[i];
         telemetry->target_speed_rpm[i] = target_speed_rpm;
-        telemetry->predicted_power_w[i] = power->predicted_limited_power_w[i];
-        telemetry->predicted_total_power_w += power->predicted_limited_power_w[i];
+        telemetry->predicted_power_w[i] =
+            output_enabled[i] ? power->predicted_limited_power_w[i] : 0.0f;
+        telemetry->predicted_total_power_w += telemetry->predicted_power_w[i];
     }
 
     if (!isfinite(telemetry->predicted_total_power_w))
@@ -272,4 +278,57 @@ bool ChassisPowerTelemetryBuild(const ChassisPowerInput_s *input,
     }
 
     return true;
+}
+
+static int32_t RoundTelemetryValue(float value)
+{
+    if (!isfinite(value))
+        return 0;
+    if (value >= (float)INT32_MAX)
+        return INT32_MAX;
+    if (value <= (float)INT32_MIN)
+        return INT32_MIN;
+    return (int32_t)(value >= 0.0f ? value + 0.5f : value - 0.5f);
+}
+
+size_t ChassisPowerTelemetryFormatCsv(const ChassisPowerTelemetry_s *telemetry,
+                                      uint32_t tick_ms,
+                                      char *buffer,
+                                      size_t buffer_size)
+{
+    if (buffer == NULL || buffer_size == 0U)
+        return 0U;
+    buffer[0] = '\0';
+    if (telemetry == NULL)
+        return 0U;
+
+    const int written = snprintf(
+        buffer,
+        buffer_size,
+        "%lu,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld\r\n",
+        (unsigned long)tick_ms,
+        (long)RoundTelemetryValue(telemetry->current_command[0]),
+        (long)RoundTelemetryValue(telemetry->current_command[1]),
+        (long)RoundTelemetryValue(telemetry->current_command[2]),
+        (long)RoundTelemetryValue(telemetry->current_command[3]),
+        (long)RoundTelemetryValue(telemetry->actual_speed_rpm[0]),
+        (long)RoundTelemetryValue(telemetry->actual_speed_rpm[1]),
+        (long)RoundTelemetryValue(telemetry->actual_speed_rpm[2]),
+        (long)RoundTelemetryValue(telemetry->actual_speed_rpm[3]),
+        (long)RoundTelemetryValue(telemetry->target_speed_rpm[0]),
+        (long)RoundTelemetryValue(telemetry->target_speed_rpm[1]),
+        (long)RoundTelemetryValue(telemetry->target_speed_rpm[2]),
+        (long)RoundTelemetryValue(telemetry->target_speed_rpm[3]),
+        (long)RoundTelemetryValue(telemetry->predicted_power_w[0] * 100.0f),
+        (long)RoundTelemetryValue(telemetry->predicted_power_w[1] * 100.0f),
+        (long)RoundTelemetryValue(telemetry->predicted_power_w[2] * 100.0f),
+        (long)RoundTelemetryValue(telemetry->predicted_power_w[3] * 100.0f),
+        (long)RoundTelemetryValue(telemetry->predicted_total_power_w * 100.0f));
+
+    if (written < 0 || (size_t)written >= buffer_size)
+    {
+        buffer[0] = '\0';
+        return 0U;
+    }
+    return (size_t)written;
 }

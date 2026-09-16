@@ -44,6 +44,17 @@ static int failures;
         }                                                                                 \
     } while (0)
 
+#define ASSERT_STREQ(expected, actual)                                                     \
+    do                                                                                    \
+    {                                                                                     \
+        if (strcmp((expected), (actual)) != 0)                                            \
+        {                                                                                 \
+            printf("FAIL %s:%d: expected '%s', got '%s'\n",                             \
+                   __FILE__, __LINE__, (expected), (actual));                             \
+            ++failures;                                                                   \
+        }                                                                                 \
+    } while (0)
+
 static const MotorPowerModelConfig_s m3508_model = {
     .k0 = 0.65213f,
     .k1 = -0.15659f,
@@ -330,6 +341,7 @@ static void TestTelemetryBuildsCoherentSnapshot(void)
     ChassisPowerInput_s input = ValidInput();
     ChassisPowerOutput_s power = {.status = POWER_MODEL_STATUS_OK};
     ChassisPowerTelemetry_s telemetry;
+    const bool output_enabled[POWER_MODEL_MOTOR_COUNT] = {true, true, true, true};
 
     input.speed_rpm[0] = 1000.0f;
     input.speed_rpm[1] = 1100.0f;
@@ -348,7 +360,7 @@ static void TestTelemetryBuildsCoherentSnapshot(void)
     power.predicted_limited_power_w[2] = 12.0f;
     power.predicted_limited_power_w[3] = 13.0f;
 
-    ASSERT_TRUE(ChassisPowerTelemetryBuild(&input, &power, &telemetry));
+    ASSERT_TRUE(ChassisPowerTelemetryBuild(&input, &power, output_enabled, &telemetry));
     ASSERT_NEAR(46.0f, telemetry.predicted_total_power_w, 1.0e-6f);
     for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
     {
@@ -368,12 +380,76 @@ static void TestTelemetryRejectsInvalidPowerAndClearsOutput(void)
     ChassisPowerInput_s input = ValidInput();
     ChassisPowerOutput_s power = {.status = POWER_MODEL_STATUS_INVALID_BUDGET};
     ChassisPowerTelemetry_s telemetry;
+    const bool output_enabled[POWER_MODEL_MOTOR_COUNT] = {true, true, true, true};
     memset(&telemetry, 0xA5, sizeof(telemetry));
 
-    ASSERT_FALSE(ChassisPowerTelemetryBuild(&input, &power, &telemetry));
+    ASSERT_FALSE(ChassisPowerTelemetryBuild(&input, &power, output_enabled, &telemetry));
     const unsigned char *bytes = (const unsigned char *)&telemetry;
     for (size_t i = 0; i < sizeof(telemetry); ++i)
         ASSERT_TRUE(bytes[i] == 0U);
+}
+
+static void TestTelemetryClearsCommandsDisabledByFinalOutputGate(void)
+{
+    ChassisPowerInput_s input = ValidInput();
+    ChassisPowerOutput_s power = {.status = POWER_MODEL_STATUS_OK};
+    ChassisPowerTelemetry_s telemetry;
+    const bool output_enabled[POWER_MODEL_MOTOR_COUNT] = {true, false, true, true};
+
+    power.limited_current[0] = 2000.0f;
+    power.limited_current[1] = 2100.0f;
+    power.limited_current[2] = 2200.0f;
+    power.limited_current[3] = 2300.0f;
+    power.predicted_limited_power_w[0] = 10.0f;
+    power.predicted_limited_power_w[1] = 11.0f;
+    power.predicted_limited_power_w[2] = 12.0f;
+    power.predicted_limited_power_w[3] = 13.0f;
+
+    ASSERT_TRUE(ChassisPowerTelemetryBuild(&input, &power, output_enabled, &telemetry));
+    ASSERT_NEAR(0.0f, telemetry.current_command[1], 1.0e-6f);
+    ASSERT_NEAR(0.0f, telemetry.predicted_power_w[1], 1.0e-6f);
+    ASSERT_NEAR(35.0f, telemetry.predicted_total_power_w, 1.0e-6f);
+}
+
+static void TestTelemetryFormatsOneCompleteCsvRow(void)
+{
+    ChassisPowerInput_s input = ValidInput();
+    ChassisPowerOutput_s power = {.status = POWER_MODEL_STATUS_OK};
+    ChassisPowerTelemetry_s telemetry;
+    char row[CHASSIS_POWER_TELEMETRY_CSV_MAX_LENGTH];
+    const bool output_enabled[POWER_MODEL_MOTOR_COUNT] = {true, true, true, true};
+
+    input.speed_rpm[0] = 1000.0f;
+    input.speed_rpm[1] = 1100.0f;
+    input.speed_rpm[2] = 1200.0f;
+    input.speed_rpm[3] = 1300.0f;
+    input.speed_error_rpm[0] = 10.0f;
+    input.speed_error_rpm[1] = 11.0f;
+    input.speed_error_rpm[2] = 12.0f;
+    input.speed_error_rpm[3] = 13.0f;
+    power.limited_current[0] = 2000.0f;
+    power.limited_current[1] = 2100.0f;
+    power.limited_current[2] = 2200.0f;
+    power.limited_current[3] = 2300.0f;
+    power.predicted_limited_power_w[0] = 10.0f;
+    power.predicted_limited_power_w[1] = 11.0f;
+    power.predicted_limited_power_w[2] = 12.0f;
+    power.predicted_limited_power_w[3] = 13.0f;
+    ASSERT_TRUE(ChassisPowerTelemetryBuild(&input, &power, output_enabled, &telemetry));
+
+    ASSERT_TRUE(ChassisPowerTelemetryFormatCsv(&telemetry, 123U, row, sizeof(row)) > 0U);
+    ASSERT_STREQ("123,2000,2100,2200,2300,1000,1100,1200,1300,"
+                 "1010,1111,1212,1313,1000,1100,1200,1300,4600\r\n",
+                 row);
+}
+
+static void TestTelemetryCsvRejectsTruncatedRow(void)
+{
+    ChassisPowerTelemetry_s telemetry = {0};
+    char row[8] = "dirty";
+
+    ASSERT_TRUE(ChassisPowerTelemetryFormatCsv(&telemetry, 123U, row, sizeof(row)) == 0U);
+    ASSERT_TRUE(row[0] == '\0');
 }
 
 int main(void)
@@ -397,6 +473,9 @@ int main(void)
     TestInvalidConfigurationIsRejected();
     TestTelemetryBuildsCoherentSnapshot();
     TestTelemetryRejectsInvalidPowerAndClearsOutput();
+    TestTelemetryClearsCommandsDisabledByFinalOutputGate();
+    TestTelemetryFormatsOneCompleteCsvRow();
+    TestTelemetryCsvRejectsTruncatedRow();
     if (failures != 0)
         return 1;
 

@@ -58,35 +58,17 @@ static float motor_output[DJI_MOTOR_CNT];
 static float speed_reference_aps[DJI_MOTOR_CNT];
 static float speed_feedback_aps[DJI_MOTOR_CNT];
 static uint8_t chassis_power_rtt_count;
-
-static int32_t RoundTelemetryValue(float value)
-{
-    return (int32_t)(value >= 0.0f ? value + 0.5f : value - 0.5f);
-}
+static char chassis_power_rtt_row[CHASSIS_POWER_TELEMETRY_CSV_MAX_LENGTH];
 
 static void PrintChassisPowerTelemetry(const ChassisPowerTelemetry_s *telemetry)
 {
-    SEGGER_RTT_printf(
-        BUFFER_INDEX,
-        "%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
-        (unsigned int)HAL_GetTick(),
-        (int)RoundTelemetryValue(telemetry->current_command[0]),
-        (int)RoundTelemetryValue(telemetry->current_command[1]),
-        (int)RoundTelemetryValue(telemetry->current_command[2]),
-        (int)RoundTelemetryValue(telemetry->current_command[3]),
-        (int)RoundTelemetryValue(telemetry->actual_speed_rpm[0]),
-        (int)RoundTelemetryValue(telemetry->actual_speed_rpm[1]),
-        (int)RoundTelemetryValue(telemetry->actual_speed_rpm[2]),
-        (int)RoundTelemetryValue(telemetry->actual_speed_rpm[3]),
-        (int)RoundTelemetryValue(telemetry->target_speed_rpm[0]),
-        (int)RoundTelemetryValue(telemetry->target_speed_rpm[1]),
-        (int)RoundTelemetryValue(telemetry->target_speed_rpm[2]),
-        (int)RoundTelemetryValue(telemetry->target_speed_rpm[3]),
-        (int)RoundTelemetryValue(telemetry->predicted_power_w[0] * 100.0f),
-        (int)RoundTelemetryValue(telemetry->predicted_power_w[1] * 100.0f),
-        (int)RoundTelemetryValue(telemetry->predicted_power_w[2] * 100.0f),
-        (int)RoundTelemetryValue(telemetry->predicted_power_w[3] * 100.0f),
-        (int)RoundTelemetryValue(telemetry->predicted_total_power_w * 100.0f));
+    const size_t row_length = ChassisPowerTelemetryFormatCsv(
+        telemetry,
+        HAL_GetTick(),
+        chassis_power_rtt_row,
+        sizeof(chassis_power_rtt_row));
+    if (row_length > 0U)
+        (void)SEGGER_RTT_Write(BUFFER_INDEX, chassis_power_rtt_row, (unsigned)row_length);
 }
 
 /**
@@ -357,6 +339,8 @@ const DJIChassisPowerState_s *DJIChassisPowerGetState(void)
 
 static void ApplyChassisPowerGroup(void)
 {
+    bool output_enabled[POWER_MODEL_MOTOR_COUNT];
+
     if (!chassis_power_group.registered)
         return;
 
@@ -373,18 +357,23 @@ static void ApplyChassisPowerGroup(void)
                                              &chassis_power_group.algorithm,
                                              &chassis_power_group.input,
                                              &chassis_power_group.state.power);
-    (void)ChassisPowerTelemetryBuild(&chassis_power_group.input,
-                                     &chassis_power_group.state.power,
-                                     &chassis_power_group.state.telemetry);
 
     for (size_t slot = 0; slot < POWER_MODEL_MOTOR_COUNT; ++slot)
     {
         const uint8_t index = chassis_power_group.motor_indices[slot];
         DJIMotorInstance *motor = dji_motor_instance[index];
-        motor_output[index] = power_valid && DaemonIsOnline(motor->daemon)
+        const bool motor_online = DaemonIsOnline(motor->daemon) != 0U;
+        motor_output[index] = power_valid && motor_online
                                   ? chassis_power_group.state.power.limited_current[slot]
                                   : 0.0f;
+        output_enabled[slot] = power_valid && motor_online &&
+                               motor->stop_flag != MOTOR_STOP;
     }
+
+    (void)ChassisPowerTelemetryBuild(&chassis_power_group.input,
+                                     &chassis_power_group.state.power,
+                                     output_enabled,
+                                     &chassis_power_group.state.telemetry);
 
     if (++chassis_power_rtt_count >= CHASSIS_POWER_RTT_DIVIDER)
     {
