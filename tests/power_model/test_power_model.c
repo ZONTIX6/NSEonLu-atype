@@ -1,5 +1,6 @@
 #include "power_model.h"
 
+#include <float.h>
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -452,6 +453,16 @@ static void TestTelemetryCsvRejectsTruncatedRow(void)
     ASSERT_TRUE(row[0] == '\0');
 }
 
+static void TestTelemetryCsvSaturatesLargePower(void)
+{
+    ChassisPowerTelemetry_s telemetry = {0};
+    char row[CHASSIS_POWER_TELEMETRY_CSV_MAX_LENGTH];
+    telemetry.predicted_power_w[0] = FLT_MAX;
+
+    ASSERT_TRUE(ChassisPowerTelemetryFormatCsv(&telemetry, 1U, row, sizeof(row)) > 0U);
+    ASSERT_STREQ("1,0,0,0,0,0,0,0,0,0,0,0,0,2147483647,0,0,0,0\r\n", row);
+}
+
 int main(void)
 {
     TestDisabledBenchFallbackPreservesInvalidLimit();
@@ -476,6 +487,7 @@ int main(void)
     TestTelemetryClearsCommandsDisabledByFinalOutputGate();
     TestTelemetryFormatsOneCompleteCsvRow();
     TestTelemetryCsvRejectsTruncatedRow();
+    TestTelemetryCsvSaturatesLargePower();
     if (failures != 0)
         return 1;
 

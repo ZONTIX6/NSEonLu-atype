@@ -291,6 +291,17 @@ static int32_t RoundTelemetryValue(float value)
     return (int32_t)(value >= 0.0f ? value + 0.5f : value - 0.5f);
 }
 
+static int32_t PowerToCentiwatts(float power_w)
+{
+    if (!isfinite(power_w))
+        return 0;
+    if (power_w >= (float)INT32_MAX / 100.0f)
+        return INT32_MAX;
+    if (power_w <= (float)INT32_MIN / 100.0f)
+        return INT32_MIN;
+    return RoundTelemetryValue(power_w * 100.0f);
+}
+
 size_t ChassisPowerTelemetryFormatCsv(const ChassisPowerTelemetry_s *telemetry,
                                       uint32_t tick_ms,
                                       char *buffer,
@@ -319,11 +330,11 @@ size_t ChassisPowerTelemetryFormatCsv(const ChassisPowerTelemetry_s *telemetry,
         (long)RoundTelemetryValue(telemetry->target_speed_rpm[1]),
         (long)RoundTelemetryValue(telemetry->target_speed_rpm[2]),
         (long)RoundTelemetryValue(telemetry->target_speed_rpm[3]),
-        (long)RoundTelemetryValue(telemetry->predicted_power_w[0] * 100.0f),
-        (long)RoundTelemetryValue(telemetry->predicted_power_w[1] * 100.0f),
-        (long)RoundTelemetryValue(telemetry->predicted_power_w[2] * 100.0f),
-        (long)RoundTelemetryValue(telemetry->predicted_power_w[3] * 100.0f),
-        (long)RoundTelemetryValue(telemetry->predicted_total_power_w * 100.0f));
+        (long)PowerToCentiwatts(telemetry->predicted_power_w[0]),
+        (long)PowerToCentiwatts(telemetry->predicted_power_w[1]),
+        (long)PowerToCentiwatts(telemetry->predicted_power_w[2]),
+        (long)PowerToCentiwatts(telemetry->predicted_power_w[3]),
+        (long)PowerToCentiwatts(telemetry->predicted_total_power_w));
 
     if (written < 0 || (size_t)written >= buffer_size)
     {
