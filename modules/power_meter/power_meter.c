@@ -6,8 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define POWER_METER_DEFAULT_OFFLINE_RELOAD_COUNT 10U
-#define POWER_METER_DAEMON_PERIOD_MS 10U
+#define POWER_METER_DEFAULT_OFFLINE_RELOAD_COUNT 10U    // 默认离线重载值,即100ms内没有接收到数据则认为离线
+#define POWER_METER_DAEMON_PERIOD_MS 10U    // 守护进程周期,即每10ms调用一次守护进程的回调函数
 
 static bool PowerMeterIsFresh(const PowerMeterInstance *instance,
                               uint32_t now_ms)
