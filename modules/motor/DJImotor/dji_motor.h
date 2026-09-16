@@ -77,6 +77,7 @@ typedef struct
 {
     bool registered;
     ChassisPowerOutput_s power;
+    ChassisPowerTelemetry_s telemetry;
 } DJIChassisPowerState_s;
 
 /**

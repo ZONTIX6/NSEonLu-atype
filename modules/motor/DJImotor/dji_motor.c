@@ -7,6 +7,8 @@
 
 _Static_assert(POWER_MODEL_MOTOR_COUNT == 4U, "DJI chassis power group must contain four motors");
 
+#define CHASSIS_POWER_RTT_DIVIDER 10U
+
 static uint8_t idx = 0; // register idx,是该文件的全局电机索引,在注册时使用
 /* DJI电机的实例,此处仅保存指针,内存的分配将通过电机实例初始化时通过malloc()进行 */
 static DJIMotorInstance *dji_motor_instance[DJI_MOTOR_CNT] = {NULL}; // 会在control任务中遍历该指针数组进行pid计算
@@ -55,6 +57,37 @@ static DJIChassisPowerGroup_s chassis_power_group = {
 static float motor_output[DJI_MOTOR_CNT];
 static float speed_reference_aps[DJI_MOTOR_CNT];
 static float speed_feedback_aps[DJI_MOTOR_CNT];
+static uint8_t chassis_power_rtt_count;
+
+static int32_t RoundTelemetryValue(float value)
+{
+    return (int32_t)(value >= 0.0f ? value + 0.5f : value - 0.5f);
+}
+
+static void PrintChassisPowerTelemetry(const ChassisPowerTelemetry_s *telemetry)
+{
+    SEGGER_RTT_printf(
+        BUFFER_INDEX,
+        "%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
+        (unsigned int)HAL_GetTick(),
+        (int)RoundTelemetryValue(telemetry->current_command[0]),
+        (int)RoundTelemetryValue(telemetry->current_command[1]),
+        (int)RoundTelemetryValue(telemetry->current_command[2]),
+        (int)RoundTelemetryValue(telemetry->current_command[3]),
+        (int)RoundTelemetryValue(telemetry->actual_speed_rpm[0]),
+        (int)RoundTelemetryValue(telemetry->actual_speed_rpm[1]),
+        (int)RoundTelemetryValue(telemetry->actual_speed_rpm[2]),
+        (int)RoundTelemetryValue(telemetry->actual_speed_rpm[3]),
+        (int)RoundTelemetryValue(telemetry->target_speed_rpm[0]),
+        (int)RoundTelemetryValue(telemetry->target_speed_rpm[1]),
+        (int)RoundTelemetryValue(telemetry->target_speed_rpm[2]),
+        (int)RoundTelemetryValue(telemetry->target_speed_rpm[3]),
+        (int)RoundTelemetryValue(telemetry->predicted_power_w[0] * 100.0f),
+        (int)RoundTelemetryValue(telemetry->predicted_power_w[1] * 100.0f),
+        (int)RoundTelemetryValue(telemetry->predicted_power_w[2] * 100.0f),
+        (int)RoundTelemetryValue(telemetry->predicted_power_w[3] * 100.0f),
+        (int)RoundTelemetryValue(telemetry->predicted_total_power_w * 100.0f));
+}
 
 /**
  * @brief 根据电调/拨码开关上的ID,根据说明书的默认id分配方式计算发送ID和接收ID,
@@ -295,8 +328,15 @@ bool DJIChassisPowerRegister(const DJIChassisPowerConfig_s *config)
     chassis_power_group.input.referee_power_limit_w = 0.0f;
     chassis_power_group.input.attenuation = 1.0f;
     memset(&chassis_power_group.state.power, 0, sizeof(chassis_power_group.state.power));
+    memset(&chassis_power_group.state.telemetry, 0, sizeof(chassis_power_group.state.telemetry));
     chassis_power_group.state.registered = true;
     chassis_power_group.registered = true;
+    chassis_power_rtt_count = 0U;
+    SEGGER_RTT_WriteString(
+        BUFFER_INDEX,
+        "tick,i_lf,i_rf,i_lb,i_rb,rpm_lf,rpm_rf,rpm_lb,rpm_rb,"
+        "target_lf,target_rf,target_lb,target_rb,p_lf_cw,p_rf_cw,"
+        "p_lb_cw,p_rb_cw,p_total_cw\r\n");
     return true;
 }
 
@@ -333,6 +373,9 @@ static void ApplyChassisPowerGroup(void)
                                              &chassis_power_group.algorithm,
                                              &chassis_power_group.input,
                                              &chassis_power_group.state.power);
+    (void)ChassisPowerTelemetryBuild(&chassis_power_group.input,
+                                     &chassis_power_group.state.power,
+                                     &chassis_power_group.state.telemetry);
 
     for (size_t slot = 0; slot < POWER_MODEL_MOTOR_COUNT; ++slot)
     {
@@ -341,6 +384,12 @@ static void ApplyChassisPowerGroup(void)
         motor_output[index] = power_valid && DaemonIsOnline(motor->daemon)
                                   ? chassis_power_group.state.power.limited_current[slot]
                                   : 0.0f;
+    }
+
+    if (++chassis_power_rtt_count >= CHASSIS_POWER_RTT_DIVIDER)
+    {
+        chassis_power_rtt_count = 0U;
+        PrintChassisPowerTelemetry(&chassis_power_group.state.telemetry);
     }
 }
 
