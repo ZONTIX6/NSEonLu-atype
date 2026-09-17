@@ -70,12 +70,12 @@ static const ChassisPowerBudgetConfig_s chassis_budget_config = {
 };
 
 static const MotorPowerModelConfig_s m3508_power_model = {
-    .k0 = 0.65213f,
-    .k1 = -0.15659f,
-    .k2 = 0.00041660f,
-    .k3 = 0.00235415f,
-    .k4 = 0.20022f,
-    .k5 = 1.08e-7f,
+    .k0 = 1.10671243f,
+    .k1 = -0.275458501f,
+    .k2 = 0.000465227105f,
+    .k3 = 0.00166421676f,
+    .k4 = 0.228857816f,
+    .k5 = 1.11735923e-7f,
     .current_conversion = 1000.0f,
 };
 

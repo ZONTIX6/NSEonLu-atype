@@ -57,12 +57,12 @@ static int failures;
     } while (0)
 
 static const MotorPowerModelConfig_s m3508_model = {
-    .k0 = 0.65213f,
-    .k1 = -0.15659f,
-    .k2 = 0.00041660f,
-    .k3 = 0.00235415f,
-    .k4 = 0.20022f,
-    .k5 = 1.08e-7f,
+    .k0 = 1.10671243f,
+    .k1 = -0.275458501f,
+    .k2 = 0.000465227105f,
+    .k3 = 0.00166421676f,
+    .k4 = 0.228857816f,
+    .k5 = 1.11735923e-7f,
     .current_conversion = 1000.0f,
 };
 
@@ -121,15 +121,10 @@ static void TestInvalidBenchFallbackIsIgnored(void)
     ASSERT_NEAR(0.0f, PowerModelSelectLimit(0.0f, -40.0f), 1.0e-6f);
 }
 
-static void TestPredictionMatchesPolynomial(void)
+static void TestPredictionMatchesRecalibratedM3508Sample(void)
 {
     const float actual = PowerModelPredict(&m3508_model, 5000.0f, 3000.0f);
-    const float expected = 0.65213f - 0.15659f * 5.0f
-                         + 0.00041660f * 3000.0f
-                         + 0.00235415f * 5.0f * 3000.0f
-                         + 0.20022f * 25.0f
-                         + 1.08e-7f * 9000000.0f;
-    ASSERT_NEAR(expected, actual, 1.0e-4f);
+    ASSERT_NEAR(32.81542f, actual, 1.0e-4f);
 }
 
 static void TestSmallErrorEvenlySplitsBudget(void)
@@ -520,7 +515,7 @@ int main(void)
     TestBenchFallbackReplacesInvalidRefereeLimit();
     TestRefereeLimitHasPriorityOverBenchFallback();
     TestInvalidBenchFallbackIsIgnored();
-    TestPredictionMatchesPolynomial();
+    TestPredictionMatchesRecalibratedM3508Sample();
     TestSmallErrorEvenlySplitsBudget();
     TestLargeErrorUsesReservedPower();
     TestLowBudgetUsesPureErrorRatio();
