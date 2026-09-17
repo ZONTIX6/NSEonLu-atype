@@ -153,6 +153,11 @@ bool DJIChassisPowerRegister(const DJIChassisPowerConfig_s *config);
 void DJIChassisPowerSetBudget(float total_budget_w);
 
 /**
+ * @brief 更新仅用于 RTT 观测的底盘实测功率，单位 W
+ */
+void DJIChassisPowerSetMeasuredPower(float measured_power_w);
+
+/**
  * @brief 更新超级电容衰减系数，算法内部限制到 [0, 1]
  */
 void DJIChassisPowerSetAttenuation(float attenuation);

@@ -48,6 +48,7 @@ typedef struct
     ChassisPowerAlgorithmConfig_s algorithm;
     ChassisPowerInput_s input;
     DJIChassisPowerState_s state;
+    volatile float measured_chassis_power_w;
 } DJIChassisPowerGroup_s;
 
 static DJIChassisPowerGroup_s chassis_power_group = {
@@ -65,6 +66,7 @@ static void PrintChassisPowerTelemetry(const ChassisPowerTelemetry_s *telemetry)
     const size_t row_length = ChassisPowerTelemetryFormatCsv(
         telemetry,
         HAL_GetTick(),
+        chassis_power_group.measured_chassis_power_w,
         chassis_power_rtt_row,
         sizeof(chassis_power_rtt_row));
     if (row_length > 0U)
@@ -318,13 +320,19 @@ bool DJIChassisPowerRegister(const DJIChassisPowerConfig_s *config)
         BUFFER_INDEX,
         "tick,i_lf,i_rf,i_lb,i_rb,rpm_lf,rpm_rf,rpm_lb,rpm_rb,"
         "target_lf,target_rf,target_lb,target_rb,p_lf_cw,p_rf_cw,"
-        "p_lb_cw,p_rb_cw,p_total_cw\r\n");
+        "p_lb_cw,p_rb_cw,p_total_cw,p_cap_cw\r\n");
     return true;
 }
 
 void DJIChassisPowerSetBudget(float total_budget_w)
 {
     chassis_power_group.input.referee_power_limit_w = total_budget_w;
+}
+
+void DJIChassisPowerSetMeasuredPower(float measured_power_w)
+{
+    chassis_power_group.measured_chassis_power_w =
+        isfinite(measured_power_w) ? measured_power_w : 0.0f;
 }
 
 void DJIChassisPowerSetAttenuation(float attenuation)

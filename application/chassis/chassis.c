@@ -298,6 +298,7 @@ static void UpdateChassisPowerBudget(void)
     SuperCapStatus_s cap_status = {0};
     if (cap != NULL)
         (void)SuperCapGetStatus(cap, &cap_status);
+    DJIChassisPowerSetMeasuredPower(cap_status.chassis_power_w);
 
     const ChassisPowerBudgetInput_s input = {
         .referee_limit_w = link_output.base_power_limit_w,
