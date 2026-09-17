@@ -438,10 +438,53 @@ static void TestTelemetryFormatsOneCompleteCsvRow(void)
     power.predicted_limited_power_w[3] = 13.0f;
     ASSERT_TRUE(ChassisPowerTelemetryBuild(&input, &power, output_enabled, &telemetry));
 
-    ASSERT_TRUE(ChassisPowerTelemetryFormatCsv(&telemetry, 123U, row, sizeof(row)) > 0U);
+    ASSERT_TRUE(ChassisPowerTelemetryFormatCsv(&telemetry,
+                                               123U,
+                                               12.34f,
+                                               row,
+                                               sizeof(row)) > 0U);
     ASSERT_STREQ("123,2000,2100,2200,2300,1000,1100,1200,1300,"
-                 "1010,1111,1212,1313,1000,1100,1200,1300,4600\r\n",
+                 "1010,1111,1212,1313,1000,1100,1200,1300,4600,1234\r\n",
                  row);
+}
+
+static void TestTelemetryCsvPreservesNegativeMeasuredPower(void)
+{
+    ChassisPowerTelemetry_s telemetry = {0};
+    char row[CHASSIS_POWER_TELEMETRY_CSV_MAX_LENGTH];
+
+    ASSERT_TRUE(ChassisPowerTelemetryFormatCsv(&telemetry,
+                                               1U,
+                                               -1.25f,
+                                               row,
+                                               sizeof(row)) > 0U);
+    ASSERT_STREQ("1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-125\r\n", row);
+}
+
+static void TestTelemetryCsvNormalizesNonfiniteMeasuredPower(void)
+{
+    ChassisPowerTelemetry_s telemetry = {0};
+    char row[CHASSIS_POWER_TELEMETRY_CSV_MAX_LENGTH];
+
+    ASSERT_TRUE(ChassisPowerTelemetryFormatCsv(&telemetry,
+                                               1U,
+                                               NAN,
+                                               row,
+                                               sizeof(row)) > 0U);
+    ASSERT_STREQ("1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\r\n", row);
+}
+
+static void TestTelemetryCsvSaturatesMeasuredPower(void)
+{
+    ChassisPowerTelemetry_s telemetry = {0};
+    char row[CHASSIS_POWER_TELEMETRY_CSV_MAX_LENGTH];
+
+    ASSERT_TRUE(ChassisPowerTelemetryFormatCsv(&telemetry,
+                                               1U,
+                                               FLT_MAX,
+                                               row,
+                                               sizeof(row)) > 0U);
+    ASSERT_STREQ("1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2147483647\r\n", row);
 }
 
 static void TestTelemetryCsvRejectsTruncatedRow(void)
@@ -449,7 +492,11 @@ static void TestTelemetryCsvRejectsTruncatedRow(void)
     ChassisPowerTelemetry_s telemetry = {0};
     char row[8] = "dirty";
 
-    ASSERT_TRUE(ChassisPowerTelemetryFormatCsv(&telemetry, 123U, row, sizeof(row)) == 0U);
+    ASSERT_TRUE(ChassisPowerTelemetryFormatCsv(&telemetry,
+                                               123U,
+                                               0.0f,
+                                               row,
+                                               sizeof(row)) == 0U);
     ASSERT_TRUE(row[0] == '\0');
 }
 
@@ -459,8 +506,12 @@ static void TestTelemetryCsvSaturatesLargePower(void)
     char row[CHASSIS_POWER_TELEMETRY_CSV_MAX_LENGTH];
     telemetry.predicted_power_w[0] = FLT_MAX;
 
-    ASSERT_TRUE(ChassisPowerTelemetryFormatCsv(&telemetry, 1U, row, sizeof(row)) > 0U);
-    ASSERT_STREQ("1,0,0,0,0,0,0,0,0,0,0,0,0,2147483647,0,0,0,0\r\n", row);
+    ASSERT_TRUE(ChassisPowerTelemetryFormatCsv(&telemetry,
+                                               1U,
+                                               0.0f,
+                                               row,
+                                               sizeof(row)) > 0U);
+    ASSERT_STREQ("1,0,0,0,0,0,0,0,0,0,0,0,0,2147483647,0,0,0,0,0\r\n", row);
 }
 
 int main(void)
@@ -486,6 +537,9 @@ int main(void)
     TestTelemetryRejectsInvalidPowerAndClearsOutput();
     TestTelemetryClearsCommandsDisabledByFinalOutputGate();
     TestTelemetryFormatsOneCompleteCsvRow();
+    TestTelemetryCsvPreservesNegativeMeasuredPower();
+    TestTelemetryCsvNormalizesNonfiniteMeasuredPower();
+    TestTelemetryCsvSaturatesMeasuredPower();
     TestTelemetryCsvRejectsTruncatedRow();
     TestTelemetryCsvSaturatesLargePower();
     if (failures != 0)

@@ -304,6 +304,7 @@ static int32_t PowerToCentiwatts(float power_w)
 
 size_t ChassisPowerTelemetryFormatCsv(const ChassisPowerTelemetry_s *telemetry,
                                       uint32_t tick_ms,
+                                      float measured_chassis_power_w,
                                       char *buffer,
                                       size_t buffer_size)
 {
@@ -316,7 +317,7 @@ size_t ChassisPowerTelemetryFormatCsv(const ChassisPowerTelemetry_s *telemetry,
     const int written = snprintf(
         buffer,
         buffer_size,
-        "%lu,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld\r\n",
+        "%lu,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld\r\n",
         (unsigned long)tick_ms,
         (long)RoundTelemetryValue(telemetry->current_command[0]),
         (long)RoundTelemetryValue(telemetry->current_command[1]),
@@ -334,7 +335,8 @@ size_t ChassisPowerTelemetryFormatCsv(const ChassisPowerTelemetry_s *telemetry,
         (long)PowerToCentiwatts(telemetry->predicted_power_w[1]),
         (long)PowerToCentiwatts(telemetry->predicted_power_w[2]),
         (long)PowerToCentiwatts(telemetry->predicted_power_w[3]),
-        (long)PowerToCentiwatts(telemetry->predicted_total_power_w));
+        (long)PowerToCentiwatts(telemetry->predicted_total_power_w),
+        (long)PowerToCentiwatts(measured_chassis_power_w));
 
     if (written < 0 || (size_t)written >= buffer_size)
     {

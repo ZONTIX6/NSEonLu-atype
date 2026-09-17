@@ -82,6 +82,7 @@ bool ChassisPowerTelemetryBuild(const ChassisPowerInput_s *input,
                                 ChassisPowerTelemetry_s *telemetry);
 size_t ChassisPowerTelemetryFormatCsv(const ChassisPowerTelemetry_s *telemetry,
                                       uint32_t tick_ms,
+                                      float measured_chassis_power_w,
                                       char *buffer,
                                       size_t buffer_size);
 
