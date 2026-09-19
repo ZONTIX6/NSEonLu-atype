@@ -372,6 +372,274 @@ static void TestInvalidPointersFailSafely(void)
                                              &state, NULL));
 }
 
+static void TestOverPowerImmediatelyReducesBudget(void)
+{
+    ChassisPowerOuterLoopState_s state;
+    ChassisPowerOuterLoopOutput_s output;
+    ChassisPowerOuterLoopInput_s input = BaseInput();
+    ChassisPowerOuterLoopReset(&state);
+    input.measured_power_w = 62.0f;
+    input.predicted_unlimited_power_w = 70.0f;
+
+    ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                            &state, &output));
+    ASSERT_EQ_INT(CHASSIS_POWER_OUTER_ACTIVE, output.mode);
+    ASSERT_NEAR(-2.525f, output.correction_w, 1.0e-4f);
+    ASSERT_NEAR(57.475f, output.corrected_budget_w, 1.0e-4f);
+}
+
+static void TestPositiveCorrectionIsSlewLimited(void)
+{
+    ChassisPowerOuterLoopState_s state;
+    ChassisPowerOuterLoopOutput_s output;
+    ChassisPowerOuterLoopInput_s input = BaseInput();
+    ChassisPowerOuterLoopReset(&state);
+    input.measured_power_w = 52.0f;
+    input.predicted_unlimited_power_w = 70.0f;
+
+    ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                            &state, &output));
+    ASSERT_NEAR(0.1f, output.correction_w, 1.0e-5f);
+    ASSERT_NEAR(60.1f, output.corrected_budget_w, 1.0e-5f);
+}
+
+static void TestDeadbandProducesNoCorrection(void)
+{
+    ChassisPowerOuterLoopState_s state;
+    ChassisPowerOuterLoopOutput_s output;
+    ChassisPowerOuterLoopInput_s input = BaseInput();
+    ChassisPowerOuterLoopReset(&state);
+    input.measured_power_w = 57.5f;
+    input.predicted_unlimited_power_w = 70.0f;
+
+    ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                            &state, &output));
+    ASSERT_EQ_INT(CHASSIS_POWER_OUTER_ACTIVE, output.mode);
+    ASSERT_NEAR(0.0f, output.error_w, 1.0e-5f);
+    ASSERT_NEAR(0.0f, output.correction_w, 1.0e-5f);
+    ASSERT_NEAR(0.0f, state.integral_w, 1.0e-5f);
+}
+
+static void TestPositiveCorrectionStopsAtEightWatts(void)
+{
+    ChassisPowerOuterLoopState_s state;
+    ChassisPowerOuterLoopOutput_s output;
+    ChassisPowerOuterLoopInput_s input = BaseInput();
+    ChassisPowerOuterLoopReset(&state);
+    input.measured_power_w = 52.0f;
+    input.predicted_unlimited_power_w = 70.0f;
+
+    for (int i = 0; i < 400; ++i)
+    {
+        ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                                &state, &output));
+    }
+
+    ASSERT_NEAR(8.0f, output.correction_w, 1.0e-5f);
+    ASSERT_NEAR(68.0f, output.corrected_budget_w, 1.0e-5f);
+}
+
+static void TestLargeOverPowerCanReduceBudgetToZero(void)
+{
+    ChassisPowerOuterLoopState_s state;
+    ChassisPowerOuterLoopOutput_s output;
+    ChassisPowerOuterLoopInput_s input = BaseInput();
+    ChassisPowerOuterLoopReset(&state);
+    input.measured_power_w = 200.0f;
+    input.predicted_unlimited_power_w = 200.0f;
+
+    ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                            &state, &output));
+    ASSERT_NEAR(-60.0f, output.correction_w, 1.0e-5f);
+    ASSERT_NEAR(0.0f, output.corrected_budget_w, 1.0e-5f);
+}
+
+static void TestRawHardLimitBypassesFilteredMeasurement(void)
+{
+    ChassisPowerOuterLoopState_s state;
+    ChassisPowerOuterLoopOutput_s output;
+    ChassisPowerOuterLoopInput_s input = BaseInput();
+    ChassisPowerOuterLoopReset(&state);
+    input.measured_power_w = 40.0f;
+
+    ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                            &state, &output));
+    input.measured_power_w = 65.0f;
+    ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                            &state, &output));
+
+    ASSERT_EQ_INT(CHASSIS_POWER_OUTER_ACTIVE, output.mode);
+    ASSERT_NEAR(43.57143f, output.filtered_power_w, 1.0e-4f);
+    ASSERT_NEAR(-8.0f, output.error_w, 1.0e-5f);
+    ASSERT_NEAR(-4.04f, output.correction_w, 1.0e-4f);
+}
+
+static void TestBrakingCannotCreatePositiveCorrection(void)
+{
+    ChassisPowerOuterLoopState_s state;
+    ChassisPowerOuterLoopOutput_s output;
+    ChassisPowerOuterLoopInput_s input = BaseInput();
+    ChassisPowerOuterLoopReset(&state);
+    input.measured_power_w = 52.0f;
+    input.predicted_unlimited_power_w = 70.0f;
+    input.allow_positive_correction = false;
+
+    ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                            &state, &output));
+    ASSERT_EQ_INT(CHASSIS_POWER_OUTER_ACTIVE, output.mode);
+    ASSERT_NEAR(0.0f, state.integral_w, 1.0e-5f);
+    ASSERT_NEAR(0.0f, output.correction_w, 1.0e-5f);
+    ASSERT_NEAR(60.0f, output.corrected_budget_w, 1.0e-5f);
+}
+
+static void TestOfflineDropsPositiveCorrectionImmediately(void)
+{
+    ChassisPowerOuterLoopState_s state;
+    ChassisPowerOuterLoopOutput_s output;
+    ChassisPowerOuterLoopInput_s input = BaseInput();
+    ChassisPowerOuterLoopReset(&state);
+    input.measured_power_w = 52.0f;
+    input.predicted_unlimited_power_w = 70.0f;
+    ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                            &state, &output));
+    ASSERT_NEAR(0.1f, output.correction_w, 1.0e-5f);
+
+    input.meter_online = false;
+    ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                            &state, &output));
+    ASSERT_EQ_INT(CHASSIS_POWER_OUTER_OFFLINE, output.mode);
+    ASSERT_NEAR(0.0f, state.integral_w, 1.0e-5f);
+    ASSERT_NEAR(0.0f, output.correction_w, 1.0e-5f);
+    ASSERT_NEAR(60.0f, output.corrected_budget_w, 1.0e-5f);
+}
+
+static void TestOfflineReleasesNegativeCorrectionAtPointOneWattPerTick(void)
+{
+    ChassisPowerOuterLoopState_s state;
+    ChassisPowerOuterLoopOutput_s output;
+    ChassisPowerOuterLoopInput_s input = BaseInput();
+    ChassisPowerOuterLoopReset(&state);
+    input.measured_power_w = 62.0f;
+    input.predicted_unlimited_power_w = 70.0f;
+    ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                            &state, &output));
+    ASSERT_NEAR(-2.525f, output.correction_w, 1.0e-4f);
+
+    input.meter_online = false;
+    ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                            &state, &output));
+    ASSERT_EQ_INT(CHASSIS_POWER_OUTER_OFFLINE, output.mode);
+    ASSERT_NEAR(0.0f, state.integral_w, 1.0e-5f);
+    ASSERT_NEAR(-2.425f, output.correction_w, 1.0e-4f);
+    ASSERT_NEAR(57.575f, output.corrected_budget_w, 1.0e-4f);
+}
+
+static void TestBudgetDropClearsPositiveState(void)
+{
+    ChassisPowerOuterLoopState_s state = {
+        .filtered_power_w = 47.5f,
+        .integral_w = 2.0f,
+        .correction_w = 2.0f,
+        .previous_nominal_budget_w = 60.0f,
+        .measurement_initialized = true,
+    };
+    ChassisPowerOuterLoopOutput_s output;
+    ChassisPowerOuterLoopInput_s input = BaseInput();
+    input.nominal_budget_w = 50.0f;
+    input.target_power_w = 47.5f;
+    input.measured_power_w = 47.5f;
+    input.predicted_unlimited_power_w = 70.0f;
+
+    ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                            &state, &output));
+    ASSERT_EQ_INT(CHASSIS_POWER_OUTER_ACTIVE, output.mode);
+    ASSERT_NEAR(0.0f, state.integral_w, 1.0e-5f);
+    ASSERT_NEAR(0.0f, output.correction_w, 1.0e-5f);
+    ASSERT_NEAR(50.0f, output.corrected_budget_w, 1.0e-5f);
+}
+
+static void TestSaturationDoesNotWindIntegralFurther(void)
+{
+    ChassisPowerOuterLoopState_s state;
+    ChassisPowerOuterLoopOutput_s output;
+    ChassisPowerOuterLoopInput_s input = BaseInput();
+    ChassisPowerOuterLoopReset(&state);
+    input.measured_power_w = 52.0f;
+    input.predicted_unlimited_power_w = 70.0f;
+
+    for (int i = 0; i < 400 && state.correction_w < 8.0f; ++i)
+    {
+        ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                                &state, &output));
+    }
+    ASSERT_NEAR(8.0f, state.correction_w, 1.0e-5f);
+    const float integral_at_saturation_w = state.integral_w;
+
+    for (int i = 0; i < 100; ++i)
+    {
+        ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                                &state, &output));
+    }
+
+    ASSERT_NEAR(integral_at_saturation_w, state.integral_w, 1.0e-5f);
+    ASSERT_NEAR(8.0f, output.correction_w, 1.0e-5f);
+}
+
+static void TestErrorCanDriveControllerOutOfSaturation(void)
+{
+    ChassisPowerOuterLoopState_s state;
+    ChassisPowerOuterLoopOutput_s output;
+    ChassisPowerOuterLoopInput_s input = BaseInput();
+    ChassisPowerOuterLoopReset(&state);
+    input.measured_power_w = 52.0f;
+    input.predicted_unlimited_power_w = 70.0f;
+    for (int i = 0; i < 400 && state.correction_w < 8.0f; ++i)
+    {
+        ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                                &state, &output));
+    }
+    const float saturated_integral_w = state.integral_w;
+
+    input.measured_power_w = 65.0f;
+    ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                            &state, &output));
+
+    ASSERT_TRUE(output.correction_w < 8.0f);
+    ASSERT_NEAR(saturated_integral_w - 0.04f, state.integral_w, 1.0e-4f);
+}
+
+static void TestInvalidDeltaTimeFailsWithoutPositiveOutput(void)
+{
+    ChassisPowerOuterLoopState_s state = {
+        .filtered_power_w = 52.0f,
+        .integral_w = 2.0f,
+        .correction_w = 2.0f,
+        .previous_nominal_budget_w = 60.0f,
+        .measurement_initialized = true,
+    };
+    ChassisPowerOuterLoopOutput_s output;
+    ChassisPowerOuterLoopInput_s input = BaseInput();
+    input.measured_power_w = 52.0f;
+    input.predicted_unlimited_power_w = 70.0f;
+
+    ASSERT_FALSE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.0f,
+                                             &state, &output));
+    ASSERT_EQ_INT(CHASSIS_POWER_OUTER_OFFLINE, output.mode);
+    ASSERT_NEAR(0.0f, state.integral_w, 1.0e-5f);
+    ASSERT_NEAR(0.0f, output.correction_w, 1.0e-5f);
+    ASSERT_NEAR(60.0f, output.corrected_budget_w, 1.0e-5f);
+    ASSERT_TRUE(state.measurement_initialized);
+
+    state.integral_w = -1.0f;
+    state.correction_w = -2.5f;
+    ASSERT_FALSE(ChassisPowerOuterLoopUpdate(&valid_config, &input, NAN,
+                                             &state, &output));
+    ASSERT_EQ_INT(CHASSIS_POWER_OUTER_OFFLINE, output.mode);
+    ASSERT_NEAR(-1.0f, state.integral_w, 1.0e-5f);
+    ASSERT_NEAR(-2.5f, output.correction_w, 1.0e-5f);
+    ASSERT_NEAR(57.5f, output.corrected_budget_w, 1.0e-5f);
+}
+
 int main(void)
 {
     TestResetClearsEveryStateField();
@@ -383,6 +651,19 @@ int main(void)
     TestInvalidBudgetFailsClosed();
     TestInvalidConfigFailsClosed();
     TestInvalidPointersFailSafely();
+    TestOverPowerImmediatelyReducesBudget();
+    TestPositiveCorrectionIsSlewLimited();
+    TestDeadbandProducesNoCorrection();
+    TestPositiveCorrectionStopsAtEightWatts();
+    TestLargeOverPowerCanReduceBudgetToZero();
+    TestRawHardLimitBypassesFilteredMeasurement();
+    TestBrakingCannotCreatePositiveCorrection();
+    TestOfflineDropsPositiveCorrectionImmediately();
+    TestOfflineReleasesNegativeCorrectionAtPointOneWattPerTick();
+    TestBudgetDropClearsPositiveState();
+    TestSaturationDoesNotWindIntegralFurther();
+    TestErrorCanDriveControllerOutOfSaturation();
+    TestInvalidDeltaTimeFailsWithoutPositiveOutput();
 
     if (failures != 0)
         return 1;

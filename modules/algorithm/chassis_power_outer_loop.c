@@ -99,6 +99,34 @@ bool ChassisPowerOuterLoopUpdate(
         return true;
     }
 
+    if (!isfinite(dt_s) || dt_s <= 0.0f)
+    {
+        if (!isfinite(state->integral_w) || state->integral_w > 0.0f)
+            state->integral_w = 0.0f;
+        if (!isfinite(state->correction_w) || state->correction_w > 0.0f)
+            state->correction_w = 0.0f;
+
+        output->correction_w = state->correction_w;
+        output->filtered_power_w = isfinite(state->filtered_power_w)
+                                       ? state->filtered_power_w
+                                       : 0.0f;
+        output->corrected_budget_w = ClampFloat(
+            input->nominal_budget_w + state->correction_w,
+            0.0f,
+            input->nominal_budget_w + config->max_positive_correction_w);
+        return false;
+    }
+
+    if (state->previous_nominal_budget_w > 0.0f &&
+        input->nominal_budget_w <
+            state->previous_nominal_budget_w - config->budget_drop_reset_w)
+    {
+        if (state->integral_w > 0.0f)
+            state->integral_w = 0.0f;
+        if (state->correction_w > 0.0f)
+            state->correction_w = 0.0f;
+    }
+
     if (!input->meter_online || !isfinite(input->measured_power_w))
     {
         state->measurement_initialized = false;
@@ -146,8 +174,50 @@ bool ChassisPowerOuterLoopUpdate(
         }
         else
         {
-            state->integral_w = 0.0f;
-            state->correction_w = 0.0f;
+            float control_power_w = state->filtered_power_w;
+            if (input->measured_power_w > input->nominal_budget_w &&
+                input->measured_power_w > control_power_w)
+            {
+                control_power_w = input->measured_power_w;
+            }
+
+            float error_w = input->target_power_w - control_power_w;
+            if (fabsf(error_w) <= config->error_deadband_w)
+                error_w = 0.0f;
+            const float previous_integral_w = state->integral_w;
+            state->integral_w = ClampFloat(
+                previous_integral_w + config->ki * error_w * dt_s,
+                -input->nominal_budget_w,
+                config->max_positive_correction_w);
+            float candidate_w = config->kp * error_w + state->integral_w;
+            if ((!input->allow_positive_correction && candidate_w > 0.0f) ||
+                (state->correction_w >=
+                     config->max_positive_correction_w &&
+                 error_w > 0.0f) ||
+                (state->correction_w <= -input->nominal_budget_w &&
+                 error_w < 0.0f))
+            {
+                state->integral_w = previous_integral_w;
+                candidate_w = config->kp * error_w + state->integral_w;
+            }
+            if (!input->allow_positive_correction && candidate_w > 0.0f)
+                candidate_w = 0.0f;
+            candidate_w = ClampFloat(
+                candidate_w,
+                -input->nominal_budget_w,
+                config->max_positive_correction_w);
+            if (candidate_w > state->correction_w)
+            {
+                const float maximum_increase_w =
+                    config->positive_slew_rate_w_per_s * dt_s;
+                state->correction_w = fminf(
+                    candidate_w, state->correction_w + maximum_increase_w);
+            }
+            else
+            {
+                state->correction_w = candidate_w;
+            }
+            output->error_w = error_w;
             output->mode = CHASSIS_POWER_OUTER_ACTIVE;
         }
     }
