@@ -2,6 +2,8 @@
 #include "general_def.h"
 #include "bsp_dwt.h"
 #include "bsp_log.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
 #include <math.h>
 
@@ -345,9 +347,22 @@ const DJIChassisPowerState_s *DJIChassisPowerGetState(void)
     return &chassis_power_group.state;
 }
 
+bool DJIChassisPowerGetSnapshot(DJIChassisPowerState_s *snapshot)
+{
+    if (snapshot == NULL)
+        return false;
+
+    taskENTER_CRITICAL();
+    *snapshot = chassis_power_group.state;
+    taskEXIT_CRITICAL();
+    return true;
+}
+
 static void ApplyChassisPowerGroup(void)
 {
     bool output_enabled[POWER_MODEL_MOTOR_COUNT];
+    ChassisPowerOutput_s power_output;
+    ChassisPowerTelemetry_s telemetry;
 
     if (!chassis_power_group.registered)
         return;
@@ -364,7 +379,7 @@ static void ApplyChassisPowerGroup(void)
     const bool power_valid = PowerModelApply(chassis_power_group.models,
                                              &chassis_power_group.algorithm,
                                              &chassis_power_group.input,
-                                             &chassis_power_group.state.power);
+                                             &power_output);
 
     for (size_t slot = 0; slot < POWER_MODEL_MOTOR_COUNT; ++slot)
     {
@@ -372,21 +387,26 @@ static void ApplyChassisPowerGroup(void)
         DJIMotorInstance *motor = dji_motor_instance[index];
         const bool motor_online = DaemonIsOnline(motor->daemon) != 0U;
         motor_output[index] = power_valid && motor_online
-                                  ? chassis_power_group.state.power.limited_current[slot]
+                                  ? power_output.limited_current[slot]
                                   : 0.0f;
         output_enabled[slot] = power_valid && motor_online &&
                                motor->stop_flag != MOTOR_STOP;
     }
 
     (void)ChassisPowerTelemetryBuild(&chassis_power_group.input,
-                                     &chassis_power_group.state.power,
+                                     &power_output,
                                      output_enabled,
-                                     &chassis_power_group.state.telemetry);
+                                     &telemetry);
+
+    taskENTER_CRITICAL();
+    chassis_power_group.state.power = power_output;
+    chassis_power_group.state.telemetry = telemetry;
+    taskEXIT_CRITICAL();
 
     if (++chassis_power_rtt_count >= CHASSIS_POWER_RTT_DIVIDER)
     {
         chassis_power_rtt_count = 0U;
-        PrintChassisPowerTelemetry(&chassis_power_group.state.telemetry);
+        PrintChassisPowerTelemetry(&telemetry);
     }
 }
 

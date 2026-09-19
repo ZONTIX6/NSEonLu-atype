@@ -35,7 +35,8 @@ static int failures;
     {                                                                                     \
         const float expected_ = (expected);                                                \
         const float actual_ = (actual);                                                    \
-        if (fabsf(expected_ - actual_) > (tolerance))                                      \
+        if (!isfinite(expected_) || !isfinite(actual_) ||                                  \
+            fabsf(expected_ - actual_) > (tolerance))                                      \
         {                                                                                 \
             printf("FAIL %s:%d: expected %.6f, got %.6f\n",                              \
                    __FILE__, __LINE__, (double)expected_, (double)actual_);                \
@@ -149,6 +150,31 @@ static void TestSubsequentOnlineSampleUsesLowPassFilter(void)
 
     ASSERT_EQ_INT(CHASSIS_POWER_OUTER_STANDBY, output.mode);
     ASSERT_NEAR(25.0f, output.filtered_power_w, 1.0e-5f);
+}
+
+static void TestOnlineSampleAfterOfflineReseedsFilter(void)
+{
+    ChassisPowerOuterLoopState_s state;
+    ChassisPowerOuterLoopOutput_s output;
+    ChassisPowerOuterLoopInput_s input = BaseInput();
+    ChassisPowerOuterLoopReset(&state);
+    input.measured_power_w = 40.0f;
+    ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                            &state, &output));
+
+    input.meter_online = false;
+    ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                            &state, &output));
+    ASSERT_FALSE(state.measurement_initialized);
+
+    input.meter_online = true;
+    input.measured_power_w = 62.0f;
+    input.predicted_unlimited_power_w = 70.0f;
+    ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                            &state, &output));
+
+    ASSERT_NEAR(62.0f, output.filtered_power_w, 1.0e-5f);
+    ASSERT_TRUE(output.correction_w < 0.0f);
 }
 
 static void TestLowDemandStaysStandbyAndDoesNotAccumulateCorrection(void)
@@ -492,6 +518,25 @@ static void TestBrakingCannotCreatePositiveCorrection(void)
     ASSERT_NEAR(60.0f, output.corrected_budget_w, 1.0e-5f);
 }
 
+static void TestNegativeMeasuredPowerCannotCreatePositiveCorrection(void)
+{
+    ChassisPowerOuterLoopState_s state;
+    ChassisPowerOuterLoopOutput_s output;
+    ChassisPowerOuterLoopInput_s input = BaseInput();
+    ChassisPowerOuterLoopReset(&state);
+    input.measured_power_w = -25.0f;
+    input.predicted_unlimited_power_w = 70.0f;
+    input.allow_positive_correction = false;
+
+    ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                            &state, &output));
+    ASSERT_EQ_INT(CHASSIS_POWER_OUTER_ACTIVE, output.mode);
+    ASSERT_NEAR(-25.0f, output.filtered_power_w, 1.0e-5f);
+    ASSERT_NEAR(0.0f, state.integral_w, 1.0e-5f);
+    ASSERT_NEAR(0.0f, output.correction_w, 1.0e-5f);
+    ASSERT_NEAR(60.0f, output.corrected_budget_w, 1.0e-5f);
+}
+
 static void TestBrakingSaturationCannotStorePositiveIntegral(void)
 {
     ChassisPowerOuterLoopState_s state;
@@ -735,6 +780,7 @@ int main(void)
     TestOfflineMeterPassesNominalBudgetFromReset();
     TestFirstOnlineSampleSeedsFilterWithoutZeroRamp();
     TestSubsequentOnlineSampleUsesLowPassFilter();
+    TestOnlineSampleAfterOfflineReseedsFilter();
     TestLowDemandStaysStandbyAndDoesNotAccumulateCorrection();
     TestDisabledControlResetsStateAndOutputsZeroBudget();
     TestInvalidBudgetFailsClosed();
@@ -747,6 +793,7 @@ int main(void)
     TestLargeOverPowerCanReduceBudgetToZero();
     TestRawHardLimitBypassesFilteredMeasurement();
     TestBrakingCannotCreatePositiveCorrection();
+    TestNegativeMeasuredPowerCannotCreatePositiveCorrection();
     TestBrakingSaturationCannotStorePositiveIntegral();
     TestOfflineDropsPositiveCorrectionImmediately();
     TestOfflineReleasesNegativeCorrectionAtPointOneWattPerTick();

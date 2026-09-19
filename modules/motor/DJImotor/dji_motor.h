@@ -167,4 +167,9 @@ void DJIChassisPowerSetAttenuation(float attenuation);
  */
 const DJIChassisPowerState_s *DJIChassisPowerGetState(void);
 
+/**
+ * @brief 原子复制功率控制诊断状态
+ */
+bool DJIChassisPowerGetSnapshot(DJIChassisPowerState_s *snapshot);
+
 #endif // !DJI_MOTOR_H

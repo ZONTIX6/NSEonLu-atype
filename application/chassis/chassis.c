@@ -339,17 +339,18 @@ static void UpdateChassisPowerBudget(void)
 
     float predicted_unlimited_power_w = 0.0f;
     float motoring_indicator = 0.0f;
-    const DJIChassisPowerState_s *power_state = DJIChassisPowerGetState();
-    if (power_state != NULL && power_state->registered &&
-        power_state->power.status == POWER_MODEL_STATUS_OK)
+    DJIChassisPowerState_s power_state = {0};
+    const bool power_state_valid = DJIChassisPowerGetSnapshot(&power_state);
+    if (power_state_valid && power_state.registered &&
+        power_state.power.status == POWER_MODEL_STATUS_OK)
     {
         for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
         {
             predicted_unlimited_power_w +=
-                power_state->power.predicted_unlimited_power_w[i];
+                power_state.power.predicted_unlimited_power_w[i];
             motoring_indicator +=
-                power_state->telemetry.current_command[i] *
-                power_state->telemetry.actual_speed_rpm[i];
+                power_state.telemetry.current_command[i] *
+                power_state.telemetry.actual_speed_rpm[i];
         }
     }
 
@@ -454,10 +455,11 @@ void ChassisTask()
     // chassis_feedback_data.bullet_speed = referee_data->GameRobotState.shooter_id1_17mm_speed_limit;
     // chassis_feedback_data.rest_heat = referee_data->PowerHeatData.shooter_heat0;
 
-    const DJIChassisPowerState_s *power_state = DJIChassisPowerGetState();
+    DJIChassisPowerState_s power_state = {0};
+    const bool power_state_valid = DJIChassisPowerGetSnapshot(&power_state);
     ChassisPowerFeedbackUpdate(&chassis_feedback_data.power_control,
-                               power_state != NULL && power_state->registered,
-                               power_state != NULL ? &power_state->power : NULL);
+                               power_state_valid && power_state.registered,
+                               power_state_valid ? &power_state.power : NULL);
 
     // 推送反馈消息
 #ifdef ONE_BOARD
