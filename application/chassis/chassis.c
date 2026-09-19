@@ -14,6 +14,7 @@
 #include "chassis.h"
 #include "chassis_kinematics.h"
 #include "chassis_power_budget.h"
+#include "chassis_power_outer_loop.h"
 #include "chassis_power_feedback.h"
 #include "chassis_power_link.h"
 #include "robot_def.h"
@@ -34,6 +35,7 @@
 #define HALF_WHEEL_BASE (WHEEL_BASE / 2.0f)     // 半轴距
 #define HALF_TRACK_WIDTH (TRACK_WIDTH / 2.0f)   // 半轮距
 #define PERIMETER_WHEEL (RADIUS_WHEEL * 2 * PI) // 轮子周长
+#define CHASSIS_POWER_SAFETY_FACTOR 0.95f
 
 /* 底盘应用包含的模块和信息存储,底盘是单例模式,因此不需要为底盘建立单独的结构体 */
 #ifdef CHASSIS_BOARD // 如果是底盘板,使用板载IMU获取底盘转动角速度
@@ -60,6 +62,8 @@ static PowerMeterInstance *power_meter;
 static bool chassis_power_ready;
 static ChassisPowerBudgetState_s chassis_budget_state;
 static ChassisPowerBudgetOutput_s chassis_budget_output;
+static ChassisPowerOuterLoopState_s chassis_outer_loop_state;
+static ChassisPowerOuterLoopOutput_s chassis_outer_loop_output;
 static uint32_t chassis_budget_dwt_count;
 
 static const ChassisPowerBudgetConfig_s chassis_budget_config = {
@@ -67,6 +71,17 @@ static const ChassisPowerBudgetConfig_s chassis_budget_config = {
     .full_energy_ratio = 0.30f,
     .max_boost_w = 100.0f,
     .rise_rate_w_per_s = 200.0f,
+};
+
+static const ChassisPowerOuterLoopConfig_s chassis_outer_loop_config = {
+    .kp = 0.5f,
+    .ki = 1.0f,
+    .measurement_lpf_tau_s = 0.030f,
+    .activation_margin_w = 5.0f,
+    .error_deadband_w = 1.0f,
+    .max_positive_correction_w = 8.0f,
+    .positive_slew_rate_w_per_s = 20.0f,
+    .budget_drop_reset_w = 1.0f,
 };
 
 static const MotorPowerModelConfig_s m3508_power_model = {
@@ -130,7 +145,7 @@ void ChassisInit()
     DJIChassisPowerConfig_s power_config = {
         .motors = {motor_lf, motor_rf, motor_lb, motor_rb},
         .algorithm = {
-            .safety_factor = 0.95f,
+            .safety_factor = CHASSIS_POWER_SAFETY_FACTOR,
             .small_error_threshold_rpm = 500.0f,
             .reserved_power_threshold_w = 54.0f,
             .per_motor_reserved_power_w = 8.0f,
@@ -183,6 +198,7 @@ void ChassisInit()
     power_meter = PowerMeterInit(&power_meter_config);
 #endif
     ChassisPowerBudgetReset(&chassis_budget_state, 0.0f);
+    ChassisPowerOuterLoopReset(&chassis_outer_loop_state);
     DWT_GetDeltaT(&chassis_budget_dwt_count);
 
     // 发布订阅初始化,如果为双板,则需要can comm来传递消息
@@ -298,7 +314,6 @@ static void UpdateChassisPowerBudget(void)
     SuperCapStatus_s cap_status = {0};
     if (cap != NULL)
         (void)SuperCapGetStatus(cap, &cap_status);
-    DJIChassisPowerSetMeasuredPower(cap_status.chassis_power_w);
 
     const ChassisPowerBudgetInput_s input = {
         .referee_limit_w = link_output.base_power_limit_w,
@@ -316,7 +331,59 @@ static void UpdateChassisPowerBudget(void)
                                   &chassis_budget_output))
         chassis_budget_output.applied_budget_w = 0.0f;
 
+#if POWER_METER_ENABLE
+    PowerMeterStatus_s meter_status = {0};
+    bool meter_valid = false;
+    if (power_meter != NULL && PowerMeterGetStatus(power_meter, &meter_status))
+        meter_valid = meter_status.online;
+
+    float predicted_unlimited_power_w = 0.0f;
+    float motoring_indicator = 0.0f;
+    const DJIChassisPowerState_s *power_state = DJIChassisPowerGetState();
+    if (power_state != NULL && power_state->registered &&
+        power_state->power.status == POWER_MODEL_STATUS_OK)
+    {
+        for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
+        {
+            predicted_unlimited_power_w +=
+                power_state->power.predicted_unlimited_power_w[i];
+            motoring_indicator +=
+                power_state->telemetry.current_command[i] *
+                power_state->telemetry.actual_speed_rpm[i];
+        }
+    }
+
+    const ChassisPowerOuterLoopInput_s outer_input = {
+        .nominal_budget_w = chassis_budget_output.applied_budget_w,
+        .target_power_w = chassis_budget_output.applied_budget_w *
+                          CHASSIS_POWER_SAFETY_FACTOR,
+        .measured_power_w = meter_status.power_w,
+        .predicted_unlimited_power_w = predicted_unlimited_power_w,
+        .meter_online = meter_valid,
+        .allow_positive_correction =
+            meter_valid && meter_status.power_w >= 0.0f &&
+            motoring_indicator >= 0.0f,
+        .control_enabled =
+            chassis_power_ready &&
+            chassis_cmd_recv.chassis_mode != CHASSIS_ZERO_FORCE,
+    };
+
+    if (!ChassisPowerOuterLoopUpdate(&chassis_outer_loop_config,
+                                     &outer_input,
+                                     dt_s,
+                                     &chassis_outer_loop_state,
+                                     &chassis_outer_loop_output))
+    {
+        chassis_outer_loop_output.corrected_budget_w = 0.0f;
+    }
+
+    DJIChassisPowerSetMeasuredPower(
+        meter_valid ? meter_status.power_w : 0.0f);
+    DJIChassisPowerSetBudget(chassis_outer_loop_output.corrected_budget_w);
+#else
+    DJIChassisPowerSetMeasuredPower(0.0f);
     DJIChassisPowerSetBudget(chassis_budget_output.applied_budget_w);
+#endif
 }
 
 /* 机器人底盘控制核心任务 */
