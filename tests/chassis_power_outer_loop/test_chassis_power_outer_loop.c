@@ -492,6 +492,34 @@ static void TestBrakingCannotCreatePositiveCorrection(void)
     ASSERT_NEAR(60.0f, output.corrected_budget_w, 1.0e-5f);
 }
 
+static void TestBrakingSaturationCannotStorePositiveIntegral(void)
+{
+    ChassisPowerOuterLoopState_s state;
+    ChassisPowerOuterLoopOutput_s output;
+    ChassisPowerOuterLoopInput_s input = BaseInput();
+    ChassisPowerOuterLoopReset(&state);
+    input.measured_power_w = 41.1f;
+    input.predicted_unlimited_power_w = 70.0f;
+    input.allow_positive_correction = false;
+
+    ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                            &state, &output));
+    ASSERT_NEAR(0.0f, state.integral_w, 1.0e-5f);
+    ASSERT_NEAR(0.0f, output.correction_w, 1.0e-5f);
+
+    input.measured_power_w = 57.0f;
+    for (int i = 0; i < 200; ++i)
+    {
+        ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                                &state, &output));
+    }
+    input.allow_positive_correction = true;
+    ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &input, 0.005f,
+                                            &state, &output));
+    ASSERT_NEAR(0.0f, state.integral_w, 1.0e-5f);
+    ASSERT_NEAR(0.0f, output.correction_w, 1.0e-5f);
+}
+
 static void TestOfflineDropsPositiveCorrectionImmediately(void)
 {
     ChassisPowerOuterLoopState_s state;
@@ -719,6 +747,7 @@ int main(void)
     TestLargeOverPowerCanReduceBudgetToZero();
     TestRawHardLimitBypassesFilteredMeasurement();
     TestBrakingCannotCreatePositiveCorrection();
+    TestBrakingSaturationCannotStorePositiveIntegral();
     TestOfflineDropsPositiveCorrectionImmediately();
     TestOfflineReleasesNegativeCorrectionAtPointOneWattPerTick();
     TestNonfiniteMeasurementUsesOfflinePolicy();

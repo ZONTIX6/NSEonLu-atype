@@ -194,9 +194,13 @@ bool ChassisPowerOuterLoopUpdate(
                 upper_limit_w);
             const float proportional_w = config->kp * error_w;
             float candidate_w = proportional_w + integral_candidate_w;
-            if ((!input->allow_positive_correction && candidate_w > 0.0f) ||
-                (candidate_w >= upper_limit_w && error_w > 0.0f) ||
-                (candidate_w <= lower_limit_w && error_w < 0.0f))
+            if (!input->allow_positive_correction && candidate_w > 0.0f)
+            {
+                integral_candidate_w = previous_integral_w;
+                candidate_w = proportional_w + integral_candidate_w;
+            }
+            else if ((candidate_w >= upper_limit_w && error_w > 0.0f) ||
+                     (candidate_w <= lower_limit_w && error_w < 0.0f))
             {
                 const float previous_candidate_w =
                     proportional_w + previous_integral_w;
