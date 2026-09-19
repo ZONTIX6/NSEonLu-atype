@@ -92,13 +92,6 @@ bool ChassisPowerOuterLoopUpdate(
         return false;
     }
 
-    if (!input->control_enabled)
-    {
-        ChassisPowerOuterLoopReset(state);
-        output->mode = CHASSIS_POWER_OUTER_STANDBY;
-        return true;
-    }
-
     if (!isfinite(dt_s) || dt_s <= 0.0f)
     {
         if (!isfinite(state->integral_w) || state->integral_w > 0.0f)
@@ -115,6 +108,13 @@ bool ChassisPowerOuterLoopUpdate(
             0.0f,
             input->nominal_budget_w + config->max_positive_correction_w);
         return false;
+    }
+
+    if (!input->control_enabled)
+    {
+        ChassisPowerOuterLoopReset(state);
+        output->mode = CHASSIS_POWER_OUTER_STANDBY;
+        return true;
     }
 
     if (state->previous_nominal_budget_w > 0.0f &&
@@ -184,28 +184,47 @@ bool ChassisPowerOuterLoopUpdate(
             float error_w = input->target_power_w - control_power_w;
             if (fabsf(error_w) <= config->error_deadband_w)
                 error_w = 0.0f;
+            const float lower_limit_w = -input->nominal_budget_w;
+            const float upper_limit_w =
+                config->max_positive_correction_w;
             const float previous_integral_w = state->integral_w;
-            state->integral_w = ClampFloat(
+            float integral_candidate_w = ClampFloat(
                 previous_integral_w + config->ki * error_w * dt_s,
-                -input->nominal_budget_w,
-                config->max_positive_correction_w);
-            float candidate_w = config->kp * error_w + state->integral_w;
+                lower_limit_w,
+                upper_limit_w);
+            const float proportional_w = config->kp * error_w;
+            float candidate_w = proportional_w + integral_candidate_w;
             if ((!input->allow_positive_correction && candidate_w > 0.0f) ||
-                (state->correction_w >=
-                     config->max_positive_correction_w &&
-                 error_w > 0.0f) ||
-                (state->correction_w <= -input->nominal_budget_w &&
-                 error_w < 0.0f))
+                (candidate_w >= upper_limit_w && error_w > 0.0f) ||
+                (candidate_w <= lower_limit_w && error_w < 0.0f))
             {
-                state->integral_w = previous_integral_w;
-                candidate_w = config->kp * error_w + state->integral_w;
+                const float previous_candidate_w =
+                    proportional_w + previous_integral_w;
+                if (candidate_w >= upper_limit_w && error_w > 0.0f &&
+                    previous_candidate_w < upper_limit_w)
+                {
+                    integral_candidate_w = upper_limit_w - proportional_w;
+                }
+                else if (candidate_w <= lower_limit_w && error_w < 0.0f &&
+                         previous_candidate_w > lower_limit_w)
+                {
+                    integral_candidate_w = lower_limit_w - proportional_w;
+                }
+                else
+                {
+                    integral_candidate_w = previous_integral_w;
+                }
+                integral_candidate_w = ClampFloat(
+                    integral_candidate_w, lower_limit_w, upper_limit_w);
+                candidate_w = proportional_w + integral_candidate_w;
             }
             if (!input->allow_positive_correction && candidate_w > 0.0f)
                 candidate_w = 0.0f;
+            state->integral_w = integral_candidate_w;
             candidate_w = ClampFloat(
                 candidate_w,
-                -input->nominal_budget_w,
-                config->max_positive_correction_w);
+                lower_limit_w,
+                upper_limit_w);
             if (candidate_w > state->correction_w)
             {
                 const float maximum_increase_w =
