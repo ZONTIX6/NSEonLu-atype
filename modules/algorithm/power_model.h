@@ -2,6 +2,7 @@
 #define POWER_MODEL_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #define POWER_MODEL_MOTOR_COUNT 4U
 
@@ -68,6 +69,7 @@ typedef struct
     float target_speed_rpm[POWER_MODEL_MOTOR_COUNT];
     float predicted_power_w[POWER_MODEL_MOTOR_COUNT];
     float predicted_total_power_w;
+    uint8_t motor_enabled_mask;
 } ChassisPowerTelemetry_s;
 
 bool PowerModelConfigIsValid(const MotorPowerModelConfig_s *config);

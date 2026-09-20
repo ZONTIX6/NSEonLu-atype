@@ -433,6 +433,7 @@ static void TestTelemetryBuildsCoherentSnapshot(void)
 
     ASSERT_TRUE(ChassisPowerTelemetryBuild(&input, &power, output_enabled, &telemetry));
     ASSERT_NEAR(46.0f, telemetry.predicted_total_power_w, 1.0e-6f);
+    ASSERT_EQ_INT(0x0F, telemetry.motor_enabled_mask);
     for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
     {
         ASSERT_NEAR(power.limited_current[i], telemetry.current_command[i], 1.0e-6f);
@@ -455,6 +456,7 @@ static void TestTelemetryRejectsInvalidPowerAndClearsOutput(void)
     memset(&telemetry, 0xA5, sizeof(telemetry));
 
     ASSERT_FALSE(ChassisPowerTelemetryBuild(&input, &power, output_enabled, &telemetry));
+    ASSERT_EQ_INT(0, telemetry.motor_enabled_mask);
     const unsigned char *bytes = (const unsigned char *)&telemetry;
     for (size_t i = 0; i < sizeof(telemetry); ++i)
         ASSERT_TRUE(bytes[i] == 0U);
@@ -480,6 +482,7 @@ static void TestTelemetryClearsCommandsDisabledByFinalOutputGate(void)
     ASSERT_NEAR(0.0f, telemetry.current_command[1], 1.0e-6f);
     ASSERT_NEAR(0.0f, telemetry.predicted_power_w[1], 1.0e-6f);
     ASSERT_NEAR(35.0f, telemetry.predicted_total_power_w, 1.0e-6f);
+    ASSERT_EQ_INT(0x0D, telemetry.motor_enabled_mask);
 }
 
 int main(void)

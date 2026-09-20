@@ -326,6 +326,8 @@ bool ChassisPowerTelemetryBuild(const ChassisPowerInput_s *input,
         telemetry->predicted_power_w[i] =
             output_enabled[i] ? power->predicted_limited_power_w[i] : 0.0f;
         telemetry->predicted_total_power_w += telemetry->predicted_power_w[i];
+        if (output_enabled[i])
+            telemetry->motor_enabled_mask |= (uint8_t)(1U << i);
     }
 
     if (!isfinite(telemetry->predicted_total_power_w))
