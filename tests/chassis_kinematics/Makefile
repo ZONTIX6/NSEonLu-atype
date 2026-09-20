@@ -1,8 +1,8 @@
 CC ?= gcc
 CFLAGS := -std=c11 -Wall -Wextra -Werror -pedantic -O0 -g
 TARGET := test_chassis_kinematics.exe
-SOURCE := test_chassis_kinematics.c ../../application/chassis/chassis_kinematics.c
-INCLUDES := -I../../application/chassis
+SOURCE := test_chassis_kinematics.c ../../modules/algorithm/chassis_kinematics.c
+INCLUDES := -I../../modules/algorithm
 
 .PHONY: all test clean
 

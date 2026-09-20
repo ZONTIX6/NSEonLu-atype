@@ -6,11 +6,10 @@ SOURCE := test_referee_integration.c \
           ../../modules/referee/rm_referee.c \
           ../../modules/referee/referee_stream_parser.c \
           ../../modules/referee/referee_power.c \
-          ../../application/chassis/chassis_power_link.c \
+          ../../modules/super_cap/chassis_power_link.c \
           ../../modules/super_cap/super_cap_protocol.c \
           ../../modules/referee/crc_ref.c
-INCLUDES := -Istubs -I../../modules/referee \
-            -I../../application/chassis -I../../modules/super_cap
+INCLUDES := -Istubs -I../../modules/referee -I../../modules/super_cap
 
 .PHONY: all test clean
 
