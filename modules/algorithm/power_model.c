@@ -4,10 +4,13 @@
 #include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define POWER_MODEL_EPSILON 1.0e-6f
 #define POWER_MODEL_DISCRIMINANT_EPSILON 1.0e-5f
+
+static Chassis_Power_Control_Data_s *chassis_power_feedback;
 
 static float ClampFloat(float value, float minimum, float maximum)
 {
@@ -18,6 +21,62 @@ static void ResetOutput(ChassisPowerOutput_s *output, PowerModelStatus_e status)
 {
     memset(output, 0, sizeof(*output));
     output->status = status;
+}
+
+static void ResetFeedback(Chassis_Power_Control_Data_s *feedback)
+{
+    memset(feedback, 0, sizeof(*feedback));
+}
+
+bool ChassisPowerFeedbackInit(void)
+{
+    if (chassis_power_feedback != NULL)
+        return false;
+
+    chassis_power_feedback = malloc(sizeof(*chassis_power_feedback));
+    if (chassis_power_feedback == NULL)
+        return false;
+
+    ResetFeedback(chassis_power_feedback);
+    return true;
+}
+
+void ChassisPowerFeedbackUpdate(bool registered,
+                                const ChassisPowerOutput_s *power)
+{
+    if (chassis_power_feedback == NULL)
+        return;
+
+    ResetFeedback(chassis_power_feedback);
+    if (!registered || power == NULL || power->status != POWER_MODEL_STATUS_OK)
+        return;
+
+    for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
+    {
+        chassis_power_feedback->predicted_unlimited_power_w +=
+            power->predicted_unlimited_power_w[i];
+        chassis_power_feedback->predicted_limited_power_w +=
+            power->predicted_limited_power_w[i];
+    }
+    chassis_power_feedback->effective_limit_w = power->effective_limit_w;
+
+    if (!isfinite(chassis_power_feedback->predicted_unlimited_power_w) ||
+        !isfinite(chassis_power_feedback->predicted_limited_power_w) ||
+        !isfinite(chassis_power_feedback->effective_limit_w))
+        ResetFeedback(chassis_power_feedback);
+}
+
+bool ChassisPowerFeedbackGet(Chassis_Power_Control_Data_s *feedback)
+{
+    if (feedback == NULL)
+        return false;
+
+    ResetFeedback(feedback);
+    if (chassis_power_feedback == NULL)
+        return false;
+
+    *feedback = *chassis_power_feedback;
+    return true;
 }
 
 bool PowerModelConfigIsValid(const MotorPowerModelConfig_s *config)

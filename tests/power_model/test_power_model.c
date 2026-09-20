@@ -12,7 +12,7 @@ static int failures;
     {                                                                                     \
         const float expected_ = (expected);                                               \
         const float actual_ = (actual);                                                   \
-        if (fabsf(expected_ - actual_) > (tolerance))                                     \
+        if (!isfinite(actual_) || fabsf(expected_ - actual_) > (tolerance))                \
         {                                                                                 \
             printf("FAIL %s:%d: expected %.6f, got %.6f\n",                              \
                    __FILE__, __LINE__, (double)expected_, (double)actual_);                \
@@ -55,6 +55,15 @@ static int failures;
             ++failures;                                                                   \
         }                                                                                 \
     } while (0)
+
+_Static_assert(sizeof(Chassis_Power_Control_Data_s) == 3U * sizeof(float),
+               "power feedback must contain exactly three floats");
+_Static_assert(offsetof(Chassis_Power_Control_Data_s, predicted_unlimited_power_w) == 0U,
+               "unexpected unlimited prediction offset");
+_Static_assert(offsetof(Chassis_Power_Control_Data_s, predicted_limited_power_w) == sizeof(float),
+               "unexpected limited prediction offset");
+_Static_assert(offsetof(Chassis_Power_Control_Data_s, effective_limit_w) == 2U * sizeof(float),
+               "unexpected effective limit offset");
 
 static const MotorPowerModelConfig_s m3508_model = {
     .k0 = 1.10671243f,
@@ -99,6 +108,83 @@ static float Sum4(const float values[POWER_MODEL_MOTOR_COUNT])
     for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
         sum += values[i];
     return sum;
+}
+
+static void AssertFeedbackIsZero(const Chassis_Power_Control_Data_s *feedback)
+{
+    ASSERT_NEAR(0.0f, feedback->predicted_unlimited_power_w, 1.0e-6f);
+    ASSERT_NEAR(0.0f, feedback->predicted_limited_power_w, 1.0e-6f);
+    ASSERT_NEAR(0.0f, feedback->effective_limit_w, 1.0e-6f);
+}
+
+static void TestFeedbackBeforeInitFailsSafe(void)
+{
+    Chassis_Power_Control_Data_s feedback = {1.0f, 2.0f, 3.0f};
+    const ChassisPowerOutput_s power = {.status = POWER_MODEL_STATUS_OK};
+
+    ChassisPowerFeedbackUpdate(true, &power);
+
+    ASSERT_FALSE(ChassisPowerFeedbackGet(&feedback));
+    AssertFeedbackIsZero(&feedback);
+}
+
+static void TestFeedbackInitRejectsDuplicate(void)
+{
+    ASSERT_TRUE(ChassisPowerFeedbackInit());
+    ASSERT_FALSE(ChassisPowerFeedbackInit());
+}
+
+static void TestFeedbackSumsValidPowerState(void)
+{
+    const ChassisPowerOutput_s power = {
+        .effective_limit_w = 60.0f,
+        .predicted_unlimited_power_w = {10.0f, 20.0f, 30.0f, 40.0f},
+        .predicted_limited_power_w = {8.0f, 12.0f, 16.0f, 20.0f},
+        .status = POWER_MODEL_STATUS_OK,
+    };
+    Chassis_Power_Control_Data_s feedback = {0};
+
+    ChassisPowerFeedbackUpdate(true, &power);
+
+    ASSERT_TRUE(ChassisPowerFeedbackGet(&feedback));
+    ASSERT_NEAR(100.0f, feedback.predicted_unlimited_power_w, 1.0e-6f);
+    ASSERT_NEAR(56.0f, feedback.predicted_limited_power_w, 1.0e-6f);
+    ASSERT_NEAR(60.0f, feedback.effective_limit_w, 1.0e-6f);
+}
+
+static void AssertFeedbackClearedAfterUpdate(bool registered,
+                                             const ChassisPowerOutput_s *power)
+{
+    Chassis_Power_Control_Data_s feedback = {1.0f, 2.0f, 3.0f};
+
+    ChassisPowerFeedbackUpdate(registered, power);
+
+    ASSERT_TRUE(ChassisPowerFeedbackGet(&feedback));
+    AssertFeedbackIsZero(&feedback);
+}
+
+static void TestFeedbackClearsInvalidPowerStates(void)
+{
+    const ChassisPowerOutput_s valid_power = {
+        .effective_limit_w = 60.0f,
+        .predicted_unlimited_power_w = {10.0f, 20.0f, 30.0f, 40.0f},
+        .predicted_limited_power_w = {8.0f, 12.0f, 16.0f, 20.0f},
+        .status = POWER_MODEL_STATUS_OK,
+    };
+    ChassisPowerOutput_s invalid_power = valid_power;
+    ChassisPowerOutput_s nonfinite_power = valid_power;
+    invalid_power.status = POWER_MODEL_STATUS_INVALID_BUDGET;
+    nonfinite_power.predicted_limited_power_w[2] = NAN;
+
+    AssertFeedbackClearedAfterUpdate(false, &valid_power);
+    AssertFeedbackClearedAfterUpdate(true, NULL);
+    AssertFeedbackClearedAfterUpdate(true, &invalid_power);
+    AssertFeedbackClearedAfterUpdate(true, &nonfinite_power);
+}
+
+static void TestFeedbackGetRejectsNullOutput(void)
+{
+    ASSERT_FALSE(ChassisPowerFeedbackGet(NULL));
 }
 
 static void TestDisabledBenchFallbackPreservesInvalidLimit(void)
@@ -511,6 +597,11 @@ static void TestTelemetryCsvSaturatesLargePower(void)
 
 int main(void)
 {
+    TestFeedbackBeforeInitFailsSafe();
+    TestFeedbackInitRejectsDuplicate();
+    TestFeedbackSumsValidPowerState();
+    TestFeedbackClearsInvalidPowerStates();
+    TestFeedbackGetRejectsNullOutput();
     TestDisabledBenchFallbackPreservesInvalidLimit();
     TestBenchFallbackReplacesInvalidRefereeLimit();
     TestRefereeLimitHasPriorityOverBenchFallback();

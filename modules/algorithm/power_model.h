@@ -59,6 +59,13 @@ typedef struct
 
 typedef struct
 {
+    float predicted_unlimited_power_w;
+    float predicted_limited_power_w;
+    float effective_limit_w;
+} Chassis_Power_Control_Data_s;
+
+typedef struct
+{
     float current_command[POWER_MODEL_MOTOR_COUNT];
     float actual_speed_rpm[POWER_MODEL_MOTOR_COUNT];
     float target_speed_rpm[POWER_MODEL_MOTOR_COUNT];
@@ -76,6 +83,10 @@ bool PowerModelApply(const MotorPowerModelConfig_s models[POWER_MODEL_MOTOR_COUN
                       const ChassisPowerAlgorithmConfig_s *config,
                       const ChassisPowerInput_s *input,
                       ChassisPowerOutput_s *output);
+bool ChassisPowerFeedbackInit(void);
+void ChassisPowerFeedbackUpdate(bool registered,
+                                const ChassisPowerOutput_s *power);
+bool ChassisPowerFeedbackGet(Chassis_Power_Control_Data_s *feedback);
 bool ChassisPowerTelemetryBuild(const ChassisPowerInput_s *input,
                                 const ChassisPowerOutput_s *power,
                                 const bool output_enabled[POWER_MODEL_MOTOR_COUNT],

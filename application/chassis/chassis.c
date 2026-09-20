@@ -15,7 +15,6 @@
 #include "chassis_kinematics.h"
 #include "chassis_power_budget.h"
 #include "chassis_power_outer_loop.h"
-#include "chassis_power_feedback.h"
 #include "chassis_power_link.h"
 #include "robot_def.h"
 #if POWER_METER_ENABLE
@@ -56,6 +55,7 @@ static Referee_Interactive_info_t ui_data; // UI数据，将底盘中的数据�
 
  DJIMotorInstance *motor_lf, *motor_rf, *motor_lb, *motor_rb; // left right forward back
 static bool chassis_power_ready;
+static bool chassis_power_feedback_ready;
 static ChassisPowerBudgetState_s chassis_budget_state;// 底盘功率预算状态
 static ChassisPowerBudgetOutput_s chassis_budget_output;// 底盘功率预算输出
 static ChassisPowerOuterLoopState_s chassis_outer_loop_state;
@@ -152,6 +152,7 @@ void ChassisInit()
         power_config.models[i] = m3508_power_model;
 
     chassis_power_ready = DJIChassisPowerRegister(&power_config);
+    chassis_power_feedback_ready = ChassisPowerFeedbackInit();
     DJIChassisPowerSetAttenuation(1.0f);
     if (!chassis_power_ready)
     {
@@ -451,9 +452,10 @@ void ChassisTask()
 
     DJIChassisPowerState_s power_state = {0};
     const bool power_state_valid = DJIChassisPowerGetSnapshot(&power_state);
-    ChassisPowerFeedbackUpdate(&chassis_feedback_data.power_control,
-                               power_state_valid && power_state.registered,
-                               power_state_valid ? &power_state.power : NULL);
+    if (chassis_power_feedback_ready)
+        ChassisPowerFeedbackUpdate(power_state_valid && power_state.registered,
+                                   power_state_valid ? &power_state.power : NULL);
+    (void)ChassisPowerFeedbackGet(&chassis_feedback_data.power_control);
 
     // 推送反馈消息
 #ifdef ONE_BOARD

@@ -14,6 +14,7 @@
 
 #include "ins_task.h"
 #include "master_process.h"
+#include "power_model.h"
 #include "stdint.h"
 
 /* 开发板类型定义,烧录时注意不要弄错对应功能;修改定义后需要重新编译,只能存在一个定义! */
@@ -188,13 +189,6 @@ typedef struct
 { // 功率控制
     float chassis_power_mx;
 } Chassis_Power_Data_s;
-
-typedef struct
-{
-    float predicted_unlimited_power_w; // 限流前四轮预测总功率，W
-    float predicted_limited_power_w;   // 限流后四轮预测总功率，W
-    float effective_limit_w;           // 当前实际生效的总功率上限，W
-} Chassis_Power_Control_Data_s;
 
 /* ----------------CMD应用发布的控制数据,应当由gimbal/chassis/shoot订阅---------------- */
 /**
