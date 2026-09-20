@@ -2,6 +2,7 @@
 #include "general_def.h"
 #include "bsp_dwt.h"
 #include "bsp_log.h"
+#include "rtt_telemetry.h"
 #include "FreeRTOS.h"
 #include "task.h"
 
@@ -48,19 +49,6 @@ static float motor_output[DJI_MOTOR_CNT];
 static float speed_reference_aps[DJI_MOTOR_CNT];
 static float speed_feedback_aps[DJI_MOTOR_CNT];
 static uint8_t chassis_power_rtt_count;
-static char chassis_power_rtt_row[CHASSIS_POWER_TELEMETRY_CSV_MAX_LENGTH];
-
-static void PrintChassisPowerTelemetry(const ChassisPowerTelemetry_s *telemetry)
-{
-    const size_t row_length = ChassisPowerTelemetryFormatCsv(
-        telemetry,
-        HAL_GetTick(),
-        chassis_power->measured_chassis_power_w,
-        chassis_power_rtt_row,
-        sizeof(chassis_power_rtt_row));
-    if (row_length > 0U)
-        (void)SEGGER_RTT_Write(BUFFER_INDEX, chassis_power_rtt_row, (unsigned)row_length);
-}
 
 /**
  * @brief 根据电调/拨码开关上的ID,根据说明书的默认id分配方式计算发送ID和接收ID,
@@ -309,11 +297,7 @@ bool DJIChassisPowerRegister(const DJIChassisPowerConfig_s *config)
     instance->registered = true;
     chassis_power = instance;
     chassis_power_rtt_count = 0U;
-    SEGGER_RTT_WriteString(
-        BUFFER_INDEX,
-        "tick,i_lf,i_rf,i_lb,i_rb,rpm_lf,rpm_rf,rpm_lb,rpm_rb,"
-        "target_lf,target_rf,target_lb,target_rb,p_lf_cw,p_rf_cw,"
-        "p_lb_cw,p_rb_cw,p_total_cw,p_cap_cw\r\n");
+    RTTTelemetryWriteChassisPowerHeader();
     return true;
 }
 
@@ -402,7 +386,10 @@ static void ApplyChassisPowerGroup(void)
     if (++chassis_power_rtt_count >= CHASSIS_POWER_RTT_DIVIDER)
     {
         chassis_power_rtt_count = 0U;
-        PrintChassisPowerTelemetry(&telemetry);
+        RTTTelemetryWriteChassisPowerRow(
+            &telemetry,
+            HAL_GetTick(),
+            chassis_power->measured_chassis_power_w);
     }
 }
 
