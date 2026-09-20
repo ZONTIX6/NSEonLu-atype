@@ -140,6 +140,7 @@ modules/motor/step_motor/step_motor.c \
 modules/motor/servo_motor/servo_motor.c \
 modules/motor/motor_task.c \
 modules/algorithm/power_model.c \
+modules/algorithm/chassis_kinematics.c \
 modules/algorithm/chassis_power_budget.c \
 modules/algorithm/chassis_power_outer_loop.c \
 modules/oled/oled.c \
@@ -152,6 +153,7 @@ modules/referee/referee_task.c \
 modules/remote/remote_control.c \
 modules/super_cap/super_cap_protocol.c \
 modules/super_cap/super_cap.c \
+modules/super_cap/chassis_power_link.c \
 modules/power_meter/power_meter_protocol.c \
 modules/power_meter/power_meter.c \
 modules/can_comm/can_comm.c \
@@ -159,10 +161,7 @@ modules/message_center/message_center.c \
 modules/daemon/daemon.c \
 modules/alarm/buzzer.c \
 application/gimbal/gimbal.c \
-application/chassis/chassis_power_link.c \
 application/chassis/chassis.c \
-application/chassis/chassis_kinematics.c \
-application/chassis/chassis_power_feedback.c \
 application/shoot/shoot.c \
 application/cmd/robot_cmd.c \
 application/robot.c
