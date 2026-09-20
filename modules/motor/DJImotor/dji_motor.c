@@ -307,13 +307,19 @@ void DJIChassisPowerSetBudget(float total_budget_w)
         chassis_power->input.referee_power_limit_w = total_budget_w;
 }
 
-void DJIChassisPowerSetMeasuredPower(float measured_power_w)
+void DJIChassisPowerSetMeasuredPower(float measured_power_w,
+                                     bool meter_online,
+                                     uint32_t meter_tick_ms)
 {
-    if (chassis_power != NULL)
-    {
-        chassis_power->measured_chassis_power_w =
-            isfinite(measured_power_w) ? measured_power_w : 0.0f;
-    }
+    if (chassis_power == NULL)
+        return;
+
+    taskENTER_CRITICAL();
+    chassis_power->measured_chassis_power_w =
+        isfinite(measured_power_w) ? measured_power_w : 0.0f;
+    chassis_power->power_meter_online = meter_online;
+    chassis_power->power_meter_tick_ms = meter_tick_ms;
+    taskEXIT_CRITICAL();
 }
 
 void DJIChassisPowerSetAttenuation(float attenuation)
@@ -343,6 +349,9 @@ static void ApplyChassisPowerGroup(void)
     bool output_enabled[POWER_MODEL_MOTOR_COUNT];
     ChassisPowerOutput_s power_output;
     ChassisPowerTelemetry_s telemetry;
+    float measured_chassis_power_w;
+    bool meter_online;
+    uint32_t meter_tick_ms;
 
     if (chassis_power == NULL || !chassis_power->registered)
         return;
@@ -381,6 +390,9 @@ static void ApplyChassisPowerGroup(void)
     taskENTER_CRITICAL();
     chassis_power->state.power = power_output;
     chassis_power->state.telemetry = telemetry;
+    measured_chassis_power_w = chassis_power->measured_chassis_power_w;
+    meter_online = chassis_power->power_meter_online;
+    meter_tick_ms = chassis_power->power_meter_tick_ms;
     taskEXIT_CRITICAL();
 
     if (++chassis_power_rtt_count >= CHASSIS_POWER_RTT_DIVIDER)
@@ -389,7 +401,9 @@ static void ApplyChassisPowerGroup(void)
         RTTTelemetryWriteChassisPowerRow(
             &telemetry,
             HAL_GetTick(),
-            chassis_power->measured_chassis_power_w);
+            measured_chassis_power_w,
+            meter_online,
+            meter_tick_ms);
     }
 }
 

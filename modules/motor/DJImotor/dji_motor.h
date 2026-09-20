@@ -89,6 +89,8 @@ typedef struct
     ChassisPowerInput_s input;
     DJIChassisPowerState_s state;
     volatile float measured_chassis_power_w;
+    volatile bool power_meter_online;
+    volatile uint32_t power_meter_tick_ms;
 } DJIChassisPowerInstance_s;
 
 /**
@@ -164,9 +166,11 @@ bool DJIChassisPowerRegister(const DJIChassisPowerConfig_s *config);
 void DJIChassisPowerSetBudget(float total_budget_w);
 
 /**
- * @brief 更新仅用于 RTT 观测的底盘实测功率，单位 W
+ * @brief 原子更新仅用于 RTT 观测的功率计功率、在线状态和采样 tick
  */
-void DJIChassisPowerSetMeasuredPower(float measured_power_w);
+void DJIChassisPowerSetMeasuredPower(float measured_power_w,
+                                     bool meter_online,
+                                     uint32_t meter_tick_ms);
 
 /**
  * @brief 更新超级电容衰减系数，算法内部限制到 [0, 1]

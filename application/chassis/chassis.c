@@ -374,10 +374,12 @@ static void UpdateChassisPowerBudget(void)
     }
 
     DJIChassisPowerSetMeasuredPower(
-        meter_valid ? meter_status.power_w : 0.0f);
+        meter_status.power_w,
+        meter_valid,
+        meter_status.last_rx_tick_ms);
     DJIChassisPowerSetBudget(chassis_outer_loop_output.corrected_budget_w);
 #else
-    DJIChassisPowerSetMeasuredPower(0.0f);
+    DJIChassisPowerSetMeasuredPower(0.0f, false, 0U);
     DJIChassisPowerSetBudget(chassis_budget_output.applied_budget_w);
 #endif
 }
