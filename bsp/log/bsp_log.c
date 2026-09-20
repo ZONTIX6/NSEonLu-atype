@@ -3,11 +3,27 @@
 #include "SEGGER_RTT.h"
 #include "SEGGER_RTT_Conf.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 
 void BSPLogInit()
 {
     SEGGER_RTT_Init();
+}
+
+unsigned BSPLogWrite(const void *data, unsigned length)
+{
+    return SEGGER_RTT_Write(BUFFER_INDEX, data, length);
+}
+
+unsigned BSPLogWriteString(const char *text)
+{
+    return SEGGER_RTT_WriteString(BUFFER_INDEX, text);
+}
+
+void BSPLogClear(void)
+{
+    (void)BSPLogWriteString("  " RTT_CTRL_CLEAR);
 }
 
 int PrintLog(const char *fmt, ...)
@@ -31,4 +47,3 @@ void Float2Str(char *str, float va)
     else
         sprintf(str, "%d.%d", head, point);
 }
-

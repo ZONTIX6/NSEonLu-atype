@@ -13,21 +13,27 @@
  */
 void BSPLogInit();
 
+/** @brief 向默认 RTT 上行通道写入原始字节 */
+unsigned BSPLogWrite(const void *data, unsigned length);
+
+/** @brief 向默认 RTT 上行通道写入字符串 */
+unsigned BSPLogWriteString(const char *text);
+
+/** @brief 清空 RTT 终端显示 */
+void BSPLogClear(void);
+
 /**
  * @brief 日志功能原型,供下面的LOGI,LOGW,LOGE等使用
  *
  */
-#define LOG_PROTO(type, color, format, ...)                       \
-        SEGGER_RTT_printf(BUFFER_INDEX, "  %s%s" format "\r\n%s", \
-                          color,                                  \
-                          type,                                   \
-                          ##__VA_ARGS__,                          \
-                          RTT_CTRL_RESET)
+#define LOG_PROTO(type, color, format, ...)              \
+    PrintLog("  %s%s" format "\r\n%s",                 \
+             color, type, ##__VA_ARGS__, RTT_CTRL_RESET)
 
 /*----------------------------------------下面是日志输出的接口-------------------------------------------------*/
 
 /* 清屏 */
-#define LOG_CLEAR() SEGGER_RTT_WriteString(0, "  " RTT_CTRL_CLEAR)
+#define LOG_CLEAR() BSPLogClear()
 
 /* 无颜色日志输出 */
 #define LOG(format, ...) LOG_PROTO("", "", format, ##__VA_ARGS__)
