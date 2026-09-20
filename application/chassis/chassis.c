@@ -54,10 +54,6 @@ static Chassis_Upload_Data_s chassis_feedback_data; // 底盘回传的反馈数�
 static PIDInstance buffer_PID;             // 用于底盘的缓冲能量PID
 static Referee_Interactive_info_t ui_data; // UI数据，将底盘中的数据传入此结构体的对应变量中，UI会自动检测是否变化，对应显示UI
 
-static SuperCapInstance *cap;                                       // 超级电容
-#if POWER_METER_ENABLE
-static PowerMeterInstance *power_meter;
-#endif
  DJIMotorInstance *motor_lf, *motor_rf, *motor_lb, *motor_rb; // left right forward back
 static bool chassis_power_ready;
 static ChassisPowerBudgetState_s chassis_budget_state;
@@ -185,7 +181,7 @@ void ChassisInit()
         },
         .offline_reload_count = 20U,
     };
-    cap = SuperCapInit(&cap_conf); // 超级电容初始化
+    (void)SuperCapInit(&cap_conf); // 超级电容初始化
 #if POWER_METER_ENABLE
     const PowerMeter_Init_Config_s power_meter_config = {
         .can_config = {
@@ -195,7 +191,7 @@ void ChassisInit()
         },
         .offline_reload_count = 10U,
     };
-    power_meter = PowerMeterInit(&power_meter_config);
+    (void)PowerMeterInit(&power_meter_config);
 #endif
     ChassisPowerBudgetReset(&chassis_budget_state, 0.0f);
     ChassisPowerOuterLoopReset(&chassis_outer_loop_state);
@@ -308,12 +304,10 @@ static void UpdateChassisPowerBudget(void)
     ChassisPowerLinkOutput_s link_output = {0};
     (void)ChassisPowerLinkBuild(&link_input, &link_output);
 
-    if (cap != NULL)
-        (void)SuperCapSendCommand(cap, &link_output.command);
+    (void)SuperCapSendCommand(&link_output.command);
 
     SuperCapStatus_s cap_status = {0};
-    if (cap != NULL)
-        (void)SuperCapGetStatus(cap, &cap_status);
+    (void)SuperCapGetStatus(&cap_status);
 
     const ChassisPowerBudgetInput_s input = {
         .referee_limit_w = link_output.base_power_limit_w,
@@ -334,7 +328,7 @@ static void UpdateChassisPowerBudget(void)
 #if POWER_METER_ENABLE
     PowerMeterStatus_s meter_status = {0};
     bool meter_valid = false;
-    if (power_meter != NULL && PowerMeterGetStatus(power_meter, &meter_status))
+    if (PowerMeterGetStatus(&meter_status))
         meter_valid = meter_status.online;
 
     float predicted_unlimited_power_w = 0.0f;
