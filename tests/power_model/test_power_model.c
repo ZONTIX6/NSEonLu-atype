@@ -485,6 +485,26 @@ static void TestTelemetryClearsCommandsDisabledByFinalOutputGate(void)
     ASSERT_EQ_INT(0x0D, telemetry.motor_enabled_mask);
 }
 
+static void TestTelemetryBuildsZeroMaskWhenAllOutputsAreDisabled(void)
+{
+    ChassisPowerInput_s input = ValidInput();
+    ChassisPowerOutput_s power = {.status = POWER_MODEL_STATUS_OK};
+    ChassisPowerTelemetry_s telemetry;
+    const bool output_enabled[POWER_MODEL_MOTOR_COUNT] = {false, false, false, false};
+
+    for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
+    {
+        power.limited_current[i] = 1000.0f + (float)i;
+        power.predicted_limited_power_w[i] = 10.0f + (float)i;
+    }
+
+    ASSERT_TRUE(ChassisPowerTelemetryBuild(&input, &power, output_enabled, &telemetry));
+    ASSERT_EQ_INT(0, telemetry.motor_enabled_mask);
+    ASSERT_NEAR(0.0f, telemetry.predicted_total_power_w, 1.0e-6f);
+    for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
+        ASSERT_NEAR(0.0f, telemetry.current_command[i], 1.0e-6f);
+}
+
 int main(void)
 {
     TestFeedbackBeforeInitFailsSafe();
@@ -512,6 +532,7 @@ int main(void)
     TestTelemetryBuildsCoherentSnapshot();
     TestTelemetryRejectsInvalidPowerAndClearsOutput();
     TestTelemetryClearsCommandsDisabledByFinalOutputGate();
+    TestTelemetryBuildsZeroMaskWhenAllOutputsAreDisabled();
     if (failures != 0)
         return 1;
 

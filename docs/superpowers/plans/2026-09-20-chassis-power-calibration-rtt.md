@@ -29,6 +29,7 @@
 - `tests/power_model/test_power_model.c`: verify motor-mask construction.
 - `tests/power_meter/test_power_meter.c`: verify last-receive-tick status behavior.
 - `tests/rtt_telemetry/test_rtt_telemetry.c`: verify the exact schema and row conversion.
+- `tests/dji_chassis_power_rtt/`: verify the complete measured-power tuple reaches one emitted motor RTT row.
 
 ---
 
@@ -484,6 +485,7 @@ git commit -m "feat: forward coherent power meter telemetry"
 make -C tests/power_model clean test
 make -C tests/power_meter clean test
 make -C tests/rtt_telemetry clean test
+make -C tests/dji_chassis_power_rtt clean test
 make -C tests/chassis_power_outer_loop clean test
 make -C tests/chassis_power_budget clean test
 make -C tests/power_meter_protocol clean test

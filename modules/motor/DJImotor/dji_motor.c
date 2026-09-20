@@ -7,6 +7,8 @@
 #include "task.h"
 
 #include <math.h>
+#include <stdlib.h>
+#include <string.h>
 
 _Static_assert(POWER_MODEL_MOTOR_COUNT == 4U, "DJI chassis power group must contain four motors");
 
