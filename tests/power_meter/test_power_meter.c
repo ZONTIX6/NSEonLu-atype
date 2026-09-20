@@ -220,6 +220,7 @@ static void TestStartsOfflineAndRejectsNullArguments(void)
 
     ASSERT_TRUE(PowerMeterGetStatus(&status));
     ASSERT_FALSE(status.online);
+    ASSERT_EQ_U32(0U, status.last_rx_tick_ms);
     ASSERT_FALSE(PowerMeterGetStatus(NULL));
 }
 
@@ -239,6 +240,7 @@ static void TestValidFrameUpdatesSnapshotAndDiagnostics(void)
     ASSERT_NEAR(24.5f, status.bus_voltage_v, 0.00001f);
     ASSERT_NEAR(3.25f, status.current_a, 0.00001f);
     ASSERT_NEAR(79.63f, status.power_w, 0.00001f);
+    ASSERT_EQ_U32(1234U, status.last_rx_tick_ms);
     ASSERT_EQ_U32(1U, meter->received_frame_count);
     ASSERT_EQ_U32(0U, meter->rejected_frame_count);
     ASSERT_EQ_U32(1234U, meter->last_rx_tick_ms);
@@ -270,6 +272,7 @@ static void TestBadLengthDoesNotOverwriteOrFeedDaemon(void)
     ASSERT_NEAR(status_before.bus_voltage_v, status_after.bus_voltage_v, 0.00001f);
     ASSERT_NEAR(status_before.current_a, status_after.current_a, 0.00001f);
     ASSERT_NEAR(status_before.power_w, status_after.power_w, 0.00001f);
+    ASSERT_EQ_U32(status_before.last_rx_tick_ms, status_after.last_rx_tick_ms);
     ASSERT_EQ_U32(received_before, meter->received_frame_count);
     ASSERT_EQ_U32(rejected_before + 1U, meter->rejected_frame_count);
     ASSERT_EQ_U32(last_rx_before, meter->last_rx_tick_ms);
@@ -281,15 +284,17 @@ static void TestOfflineCallbackClearsOnlyOnlineState(void)
     static const uint8_t frame[8] = {0, 1, 0, 2, 0, 3, 0, 4};
     PowerMeterStatus_s status = {0};
     ResetMeterState();
+    fake_tick_ms = 42U;
     DeliverFrame(frame, 8U);
 
-    fake_tick_ms = 100U;
+    fake_tick_ms = 142U;
     fake_daemon_instance.temp_count = 0U;
     captured_daemon_config.callback(captured_daemon_config.owner_id);
 
     ASSERT_TRUE(PowerMeterGetStatus(&status));
     ASSERT_FALSE(status.online);
     ASSERT_NEAR(0.04f, status.power_w, 0.00001f);
+    ASSERT_EQ_U32(42U, status.last_rx_tick_ms);
 }
 
 static void TestStaleOfflineCallbackKeepsReloadedMeterOnline(void)

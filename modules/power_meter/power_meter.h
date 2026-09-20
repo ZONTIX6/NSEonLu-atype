@@ -15,6 +15,7 @@ typedef struct
     float bus_voltage_v;
     float current_a;
     float power_w;
+    uint32_t last_rx_tick_ms;
 } PowerMeterStatus_s;
 
 typedef struct

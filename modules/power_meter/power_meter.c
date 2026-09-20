@@ -110,6 +110,7 @@ bool PowerMeterGetStatus(PowerMeterStatus_s *status)
 
     taskENTER_CRITICAL();
     *status = power_meter->status;
+    status->last_rx_tick_ms = power_meter->last_rx_tick_ms;
     status->online = PowerMeterIsFresh(power_meter, HAL_GetTick());
     taskEXIT_CRITICAL();
     return true;
