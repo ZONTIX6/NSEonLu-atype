@@ -24,10 +24,8 @@ typedef struct
     uint16_t offline_reload_count;
 } SuperCap_Init_Config_s;
 
-SuperCapInstance *SuperCapInit(const SuperCap_Init_Config_s *config);
-bool SuperCapSendCommand(SuperCapInstance *instance,
-                         const SuperCapCommand_s *command);
-bool SuperCapGetStatus(SuperCapInstance *instance,
-                       SuperCapStatus_s *status);
+bool SuperCapInit(const SuperCap_Init_Config_s *config);
+bool SuperCapSendCommand(const SuperCapCommand_s *command);
+bool SuperCapGetStatus(SuperCapStatus_s *status);
 
 #endif

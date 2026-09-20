@@ -8,6 +8,8 @@
 
 #define SUPERCAP_DEFAULT_OFFLINE_RELOAD_COUNT 20U
 
+static SuperCapInstance *cap;
+
 static void SuperCapOffline(void *owner)
 {
     SuperCapInstance *instance = (SuperCapInstance *)owner;
@@ -43,14 +45,14 @@ static void SuperCapRxCallback(CANInstance *can_instance)
     DaemonReload(instance->daemon);
 }
 
-SuperCapInstance *SuperCapInit(const SuperCap_Init_Config_s *config)
+bool SuperCapInit(const SuperCap_Init_Config_s *config)
 {
-    if (config == NULL)
-        return NULL;
+    if (config == NULL || cap != NULL)
+        return false;
 
     SuperCapInstance *instance = (SuperCapInstance *)malloc(sizeof(SuperCapInstance));
     if (instance == NULL)
-        return NULL;
+        return false;
     memset(instance, 0, sizeof(*instance));
 
     const uint16_t reload_count = config->offline_reload_count == 0U
@@ -66,7 +68,7 @@ SuperCapInstance *SuperCapInit(const SuperCap_Init_Config_s *config)
     if (instance->daemon == NULL)
     {
         free(instance);
-        return NULL;
+        return false;
     }
 
     CAN_Init_Config_s can_config = config->can_config;
@@ -74,31 +76,30 @@ SuperCapInstance *SuperCapInit(const SuperCap_Init_Config_s *config)
     can_config.id = instance;
     instance->can_ins = CANRegister(&can_config);
     if (instance->can_ins == NULL)
-        return NULL;
-
-    CANSetDLC(instance->can_ins, SUPERCAP_CAN_DLC);
-    return instance;
-}
-
-bool SuperCapSendCommand(SuperCapInstance *instance,
-                         const SuperCapCommand_s *command)
-{
-    if (instance == NULL || instance->can_ins == NULL ||
-        !SuperCapProtocolEncodeCommand(command, instance->can_ins->tx_buff))
         return false;
 
-    return CANTransmit(instance->can_ins, 1.0f) != 0U;
+    CANSetDLC(instance->can_ins, SUPERCAP_CAN_DLC);
+    cap = instance;
+    return true;
 }
 
-bool SuperCapGetStatus(SuperCapInstance *instance,
-                       SuperCapStatus_s *status)
+bool SuperCapSendCommand(const SuperCapCommand_s *command)
 {
-    if (instance == NULL || status == NULL || instance->daemon == NULL)
+    if (cap == NULL || cap->can_ins == NULL ||
+        !SuperCapProtocolEncodeCommand(command, cap->can_ins->tx_buff))
+        return false;
+
+    return CANTransmit(cap->can_ins, 1.0f) != 0U;
+}
+
+bool SuperCapGetStatus(SuperCapStatus_s *status)
+{
+    if (cap == NULL || status == NULL || cap->daemon == NULL)
         return false;
 
     taskENTER_CRITICAL();
-    *status = instance->status;
-    status->online = status->online && DaemonIsOnline(instance->daemon) != 0U;
+    *status = cap->status;
+    status->online = status->online && DaemonIsOnline(cap->daemon) != 0U;
     taskEXIT_CRITICAL();
     return true;
 }
