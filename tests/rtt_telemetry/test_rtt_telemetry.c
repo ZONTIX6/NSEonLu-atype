@@ -50,7 +50,8 @@ static void TestHeaderIsWrittenExactly(void)
     ASSERT_STREQ(
         "tick,i_lf,i_rf,i_lb,i_rb,rpm_lf,rpm_rf,rpm_lb,rpm_rb,"
         "target_lf,target_rf,target_lb,target_rb,p_lf_cw,p_rf_cw,"
-        "p_lb_cw,p_rb_cw,p_total_cw,p_cap_cw\r\n",
+        "p_lb_cw,p_rb_cw,p_total_cw,p_meter_cw,meter_online,"
+        "meter_tick_ms,motor_enabled_mask\r\n",
         captured_data);
     ASSERT_TRUE(captured_length == strlen(captured_data));
 }
@@ -63,14 +64,16 @@ static void TestRepresentativeRowPreservesAllFields(void)
         .target_speed_rpm = {1010.0f, 1111.0f, 1212.0f, 1313.0f},
         .predicted_power_w = {10.0f, 11.0f, 12.0f, 13.0f},
         .predicted_total_power_w = 46.0f,
+        .motor_enabled_mask = 0x0FU,
     };
     char row[RTT_TELEMETRY_CHASSIS_POWER_CSV_MAX_LENGTH];
 
     ASSERT_TRUE(RTTTelemetryFormatChassisPowerCsv(
-                    &telemetry, 123U, 12.34f, row, sizeof(row)) > 0U);
+                    &telemetry, 123U, 12.34f, true, 120U,
+                    row, sizeof(row)) > 0U);
     ASSERT_STREQ(
         "123,2000,2100,2200,2300,1000,1100,1200,1300,"
-        "1010,1111,1212,1313,1000,1100,1200,1300,4600,1234\r\n",
+        "1010,1111,1212,1313,1000,1100,1200,1300,4600,1234,1,120,15\r\n",
         row);
 }
 
@@ -80,8 +83,9 @@ static void TestNegativeMeasuredPowerPreservesSign(void)
     char row[RTT_TELEMETRY_CHASSIS_POWER_CSV_MAX_LENGTH];
 
     ASSERT_TRUE(RTTTelemetryFormatChassisPowerCsv(
-                    &telemetry, 1U, -1.25f, row, sizeof(row)) > 0U);
-    ASSERT_STREQ("1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-125\r\n", row);
+                    &telemetry, 1U, -1.25f, false, 0U,
+                    row, sizeof(row)) > 0U);
+    ASSERT_STREQ("1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-125,0,0,0\r\n", row);
 }
 
 static void TestNonfiniteMeasuredPowerBecomesZero(void)
@@ -90,8 +94,9 @@ static void TestNonfiniteMeasuredPowerBecomesZero(void)
     char row[RTT_TELEMETRY_CHASSIS_POWER_CSV_MAX_LENGTH];
 
     ASSERT_TRUE(RTTTelemetryFormatChassisPowerCsv(
-                    &telemetry, 1U, NAN, row, sizeof(row)) > 0U);
-    ASSERT_STREQ("1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\r\n", row);
+                    &telemetry, 1U, NAN, false, 0U,
+                    row, sizeof(row)) > 0U);
+    ASSERT_STREQ("1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\r\n", row);
 }
 
 static void TestMeasuredPowerSaturates(void)
@@ -100,9 +105,10 @@ static void TestMeasuredPowerSaturates(void)
     char row[RTT_TELEMETRY_CHASSIS_POWER_CSV_MAX_LENGTH];
 
     ASSERT_TRUE(RTTTelemetryFormatChassisPowerCsv(
-                    &telemetry, 1U, FLT_MAX, row, sizeof(row)) > 0U);
+                    &telemetry, 1U, FLT_MAX, false, 0U,
+                    row, sizeof(row)) > 0U);
     ASSERT_STREQ(
-        "1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2147483647\r\n",
+        "1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2147483647,0,0,0\r\n",
         row);
 }
 
@@ -113,9 +119,10 @@ static void TestPredictedPowerSaturates(void)
     telemetry.predicted_power_w[0] = FLT_MAX;
 
     ASSERT_TRUE(RTTTelemetryFormatChassisPowerCsv(
-                    &telemetry, 1U, 0.0f, row, sizeof(row)) > 0U);
+                    &telemetry, 1U, 0.0f, false, 0U,
+                    row, sizeof(row)) > 0U);
     ASSERT_STREQ(
-        "1,0,0,0,0,0,0,0,0,0,0,0,0,2147483647,0,0,0,0,0\r\n",
+        "1,0,0,0,0,0,0,0,0,0,0,0,0,2147483647,0,0,0,0,0,0,0,0\r\n",
         row);
 }
 
@@ -125,20 +132,24 @@ static void TestInvalidFormattingInputsAreRejected(void)
     char row[8] = "dirty";
 
     ASSERT_TRUE(RTTTelemetryFormatChassisPowerCsv(
-                    NULL, 1U, 0.0f, row, sizeof(row)) == 0U);
+                    NULL, 1U, 0.0f, false, 0U,
+                    row, sizeof(row)) == 0U);
     ASSERT_TRUE(row[0] == '\0');
 
     ASSERT_TRUE(RTTTelemetryFormatChassisPowerCsv(
-                    &telemetry, 1U, 0.0f, NULL, sizeof(row)) == 0U);
+                    &telemetry, 1U, 0.0f, false, 0U,
+                    NULL, sizeof(row)) == 0U);
 
     row[0] = 'x';
     ASSERT_TRUE(RTTTelemetryFormatChassisPowerCsv(
-                    &telemetry, 1U, 0.0f, row, 0U) == 0U);
+                    &telemetry, 1U, 0.0f, false, 0U,
+                    row, 0U) == 0U);
     ASSERT_TRUE(row[0] == 'x');
 
     strcpy(row, "dirty");
     ASSERT_TRUE(RTTTelemetryFormatChassisPowerCsv(
-                    &telemetry, 123U, 0.0f, row, sizeof(row)) == 0U);
+                    &telemetry, 123U, 0.0f, false, 0U,
+                    row, sizeof(row)) == 0U);
     ASSERT_TRUE(row[0] == '\0');
 }
 
@@ -147,10 +158,23 @@ static void TestRowWriterSendsOneCompleteRow(void)
     const ChassisPowerTelemetry_s telemetry = {0};
 
     ResetCapture();
-    RTTTelemetryWriteChassisPowerRow(&telemetry, 7U, 1.5f);
+    RTTTelemetryWriteChassisPowerRow(&telemetry, 7U, 1.5f, false, 0U);
 
-    ASSERT_STREQ("7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,150\r\n", captured_data);
+    ASSERT_STREQ("7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,150,0,0,0\r\n", captured_data);
     ASSERT_TRUE(captured_length == strlen(captured_data));
+}
+
+static void TestMeterOnlinePrintsAsOne(void)
+{
+    const ChassisPowerTelemetry_s telemetry = {.motor_enabled_mask = 5U};
+    char row[RTT_TELEMETRY_CHASSIS_POWER_CSV_MAX_LENGTH];
+
+    ASSERT_TRUE(RTTTelemetryFormatChassisPowerCsv(
+                    &telemetry, 9U, 2.5f, true, 7U,
+                    row, sizeof(row)) > 0U);
+    ASSERT_STREQ(
+        "9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,250,1,7,5\r\n",
+        row);
 }
 
 int main(void)
@@ -163,6 +187,7 @@ int main(void)
     TestPredictedPowerSaturates();
     TestInvalidFormattingInputsAreRejected();
     TestRowWriterSendsOneCompleteRow();
+    TestMeterOnlinePrintsAsOne();
 
     if (failures != 0)
         return 1;
