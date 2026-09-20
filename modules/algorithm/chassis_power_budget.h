@@ -31,15 +31,15 @@ typedef struct
 
 typedef struct
 {
-    float applied_budget_w;
+    float applied_budget_w;// 实际应用的功率预算,由算法计算得出,用于限制底盘输出
     ChassisPowerBudgetMode_e mode;
 } ChassisPowerBudgetState_s;
 
 typedef struct
 {
-    float energy_factor;
-    float target_budget_w;
-    float applied_budget_w;
+    float energy_factor;// 电容能量因子,0~1,0表示电容能量耗尽,1表示电容能量充满
+    float target_budget_w;// 目标功率预算,由算法计算得出,用于限制底盘输出
+    float applied_budget_w;// 实际应用的功率预算,由算法计算得出,用于限制底盘输出
     ChassisPowerBudgetMode_e mode;
 } ChassisPowerBudgetOutput_s;
 

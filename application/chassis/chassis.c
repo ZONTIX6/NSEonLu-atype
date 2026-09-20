@@ -56,8 +56,8 @@ static Referee_Interactive_info_t ui_data; // UI数据，将底盘中的数据�
 
  DJIMotorInstance *motor_lf, *motor_rf, *motor_lb, *motor_rb; // left right forward back
 static bool chassis_power_ready;
-static ChassisPowerBudgetState_s chassis_budget_state;
-static ChassisPowerBudgetOutput_s chassis_budget_output;
+static ChassisPowerBudgetState_s chassis_budget_state;// 底盘功率预算状态
+static ChassisPowerBudgetOutput_s chassis_budget_output;// 底盘功率预算输出
 static ChassisPowerOuterLoopState_s chassis_outer_loop_state;
 static ChassisPowerOuterLoopOutput_s chassis_outer_loop_output;
 static uint32_t chassis_budget_dwt_count;
