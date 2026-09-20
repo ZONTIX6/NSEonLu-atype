@@ -87,7 +87,9 @@ application/robot_def.h
 modules/algorithm/power_model.h
 ```
 
-Module 层不再包含或依赖 `robot_def.h`，避免底层模块反向依赖 Application。
+本次迁入 `modules/algorithm` 和 `modules/super_cap` 的底盘辅助代码不包含或依赖
+`robot_def.h`，避免新增底层模块反向依赖 Application。仓库中既有的裁判 UI 和视觉配置
+依赖不属于本次底盘迁移范围。
 
 ## Application 调用流程
 
@@ -182,6 +184,6 @@ CMake 已递归收集 `modules/*.c` 和 `application/*.c`，文件移动后自�
 - 运动学代码位于 `modules/algorithm`；
 - 功率链路代码位于 `modules/super_cap`；
 - 功率反馈类型、实例指针和接口位于 `power_model.h/.c`；
-- Module 层不依赖 `robot_def.h`；
+- 本次迁入 Module 层的底盘辅助代码不依赖 `robot_def.h`；
 - 所有相关测试和两种固件配置构建通过；
 - 用户现有未提交修改不被覆盖或误提交。

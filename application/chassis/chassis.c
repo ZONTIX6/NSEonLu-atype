@@ -452,9 +452,8 @@ void ChassisTask()
 
     DJIChassisPowerState_s power_state = {0};
     const bool power_state_valid = DJIChassisPowerGetSnapshot(&power_state);
-    if (chassis_power_feedback_ready)
-        ChassisPowerFeedbackUpdate(power_state_valid && power_state.registered,
-                                   power_state_valid ? &power_state.power : NULL);
+    ChassisPowerFeedbackUpdate(power_state_valid && power_state.registered,
+                               power_state_valid ? &power_state.power : NULL);
     (void)ChassisPowerFeedbackGet(&chassis_feedback_data.power_control);
 
     // 推送反馈消息

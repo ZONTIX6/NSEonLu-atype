@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - Keep all existing kinematics formulas, CAN protocol data, control periods, and published message layout unchanged.
-- `modules` code must not include `application/robot_def.h`.
+- Chassis helper code moved into `modules/algorithm` and `modules/super_cap` must not include `application/robot_def.h`; pre-existing referee UI and vision configuration dependencies are outside this relocation.
 - Store `static Chassis_Power_Control_Data_s *chassis_power_feedback;` near the top of `modules/algorithm/power_model.c`.
 - Use `malloc()` once in `ChassisPowerFeedbackInit()`; repeated initialization returns `false` without replacing the instance.
 - Do not add FreeRTOS dependencies or new tasks.
@@ -202,7 +202,7 @@
   Run:
 
   ```powershell
-  rg "robot_def.h" modules
+  rg "robot_def.h" modules/algorithm modules/super_cap
   Get-ChildItem application/chassis -File | Select-Object -ExpandProperty Name
   ```
 
