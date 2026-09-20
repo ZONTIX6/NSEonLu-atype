@@ -12,6 +12,9 @@ static DaemonInstance fake_daemon_instance;
 static uint8_t captured_dlc;
 static uint32_t fake_tick_ms;
 static uint32_t daemon_reload_calls;
+static uint32_t can_register_calls;
+static uint32_t daemon_register_calls;
+static bool can_registration_fails;
 static PowerMeterInstance *meter;
 
 #define ASSERT_TRUE(value)                                                                         \
@@ -47,7 +50,11 @@ static PowerMeterInstance *meter;
 
 CANInstance *CANRegister(CAN_Init_Config_s *config)
 {
+    ++can_register_calls;
     captured_can_config = *config;
+    if (can_registration_fails)
+        return NULL;
+
     memset(&fake_can_instance, 0, sizeof(fake_can_instance));
     fake_can_instance.can_handle = config->can_handle;
     fake_can_instance.tx_id = config->tx_id;
@@ -65,6 +72,7 @@ void CANSetDLC(CANInstance *instance, uint8_t length)
 
 DaemonInstance *DaemonRegister(Daemon_Init_Config_s *config)
 {
+    ++daemon_register_calls;
     captured_daemon_config = *config;
     fake_daemon_instance.reload_count = config->reload_count;
     fake_daemon_instance.temp_count = config->init_count;
@@ -98,6 +106,9 @@ static void ResetFakes(void)
     captured_dlc = 0U;
     fake_tick_ms = 0U;
     daemon_reload_calls = 0U;
+    can_register_calls = 0U;
+    daemon_register_calls = 0U;
+    can_registration_fails = false;
 }
 
 static void ResetMeterState(void)
@@ -145,6 +156,61 @@ static void TestInitRegistersFrameworkInstances(void)
     ASSERT_EQ_U32(10U, captured_daemon_config.reload_count);
     ASSERT_TRUE(captured_daemon_config.owner_id == meter);
     ASSERT_EQ_U32(POWER_METER_CAN_DLC, captured_dlc);
+}
+
+static void TestCanRegistrationFailureIsLatched(void)
+{
+    static CAN_HandleTypeDef can1;
+    PowerMeterStatus_s status = {0};
+    const PowerMeter_Init_Config_s config = {
+        .can_config = {
+            .can_handle = &can1,
+            .tx_id = POWER_METER_STATUS_CAN_ID,
+            .rx_id = POWER_METER_STATUS_CAN_ID,
+        },
+        .offline_reload_count = 10U,
+    };
+
+    ResetFakes();
+    can_registration_fails = true;
+    ASSERT_FALSE(PowerMeterInit(&config));
+    ASSERT_EQ_U32(1U, daemon_register_calls);
+    ASSERT_EQ_U32(1U, can_register_calls);
+    ASSERT_FALSE(PowerMeterGetStatus(&status));
+
+    ASSERT_FALSE(PowerMeterInit(&config));
+    ASSERT_EQ_U32(1U, daemon_register_calls);
+    ASSERT_EQ_U32(1U, can_register_calls);
+    captured_daemon_config.callback(captured_daemon_config.owner_id);
+}
+
+static void TestConfiguredFreshnessWindow(void)
+{
+    static CAN_HandleTypeDef can1;
+    static const uint8_t frame[8] = {0, 1, 0, 2, 0, 3, 0, 4};
+    PowerMeterStatus_s status = {0};
+    const PowerMeter_Init_Config_s config = {
+        .can_config = {
+            .can_handle = &can1,
+            .tx_id = POWER_METER_STATUS_CAN_ID,
+            .rx_id = POWER_METER_STATUS_CAN_ID,
+        },
+        .offline_reload_count = 2U,
+    };
+
+    ResetFakes();
+    ASSERT_TRUE(PowerMeterInit(&config));
+    meter = (PowerMeterInstance *)captured_can_config.id;
+    ASSERT_EQ_U32(2U, captured_daemon_config.reload_count);
+
+    fake_tick_ms = 100U;
+    DeliverFrame(frame, 8U);
+    fake_tick_ms = 119U;
+    ASSERT_TRUE(PowerMeterGetStatus(&status));
+    ASSERT_TRUE(status.online);
+    fake_tick_ms = 120U;
+    ASSERT_TRUE(PowerMeterGetStatus(&status));
+    ASSERT_FALSE(status.online);
 }
 
 static void TestStartsOfflineAndRejectsNullArguments(void)
@@ -327,8 +393,19 @@ static void TestGetterFreshnessHandlesTickWrap(void)
     ASSERT_FALSE(status.online);
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
+    if (argc > 1 && strcmp(argv[1], "can_failure") == 0)
+    {
+        TestCanRegistrationFailureIsLatched();
+        return failures == 0 ? 0 : 1;
+    }
+    if (argc > 1 && strcmp(argv[1], "custom_timeout") == 0)
+    {
+        TestConfiguredFreshnessWindow();
+        return failures == 0 ? 0 : 1;
+    }
+
     TestInitRegistersFrameworkInstances();
     TestStartsOfflineAndRejectsNullArguments();
     TestValidFrameUpdatesSnapshotAndDiagnostics();

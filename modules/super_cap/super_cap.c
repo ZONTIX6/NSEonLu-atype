@@ -9,6 +9,7 @@
 #define SUPERCAP_DEFAULT_OFFLINE_RELOAD_COUNT 20U
 
 static SuperCapInstance *cap;
+static bool cap_init_started;
 
 static void SuperCapOffline(void *owner)
 {
@@ -47,7 +48,7 @@ static void SuperCapRxCallback(CANInstance *can_instance)
 
 bool SuperCapInit(const SuperCap_Init_Config_s *config)
 {
-    if (config == NULL || cap != NULL)
+    if (config == NULL || cap_init_started)
         return false;
 
     SuperCapInstance *instance = (SuperCapInstance *)malloc(sizeof(SuperCapInstance));
@@ -70,6 +71,7 @@ bool SuperCapInit(const SuperCap_Init_Config_s *config)
         free(instance);
         return false;
     }
+    cap_init_started = true;
 
     CAN_Init_Config_s can_config = config->can_config;
     can_config.can_module_callback = SuperCapRxCallback;

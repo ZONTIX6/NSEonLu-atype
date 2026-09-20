@@ -10,6 +10,7 @@
 #define POWER_METER_DAEMON_PERIOD_MS 10U    // 守护进程周期,即每10ms调用一次守护进程的回调函数
 
 static PowerMeterInstance *power_meter;
+static bool power_meter_init_started;
 
 static bool PowerMeterIsFresh(const PowerMeterInstance *instance,
                               uint32_t now_ms)
@@ -61,7 +62,7 @@ static void PowerMeterRxCallback(CANInstance *can_instance)
 
 bool PowerMeterInit(const PowerMeter_Init_Config_s *config)
 {
-    if (config == NULL || power_meter != NULL)
+    if (config == NULL || power_meter_init_started)
         return false;
 
     PowerMeterInstance *instance =
@@ -88,6 +89,7 @@ bool PowerMeterInit(const PowerMeter_Init_Config_s *config)
         free(instance);
         return false;
     }
+    power_meter_init_started = true;
 
     CAN_Init_Config_s can_config = config->can_config;
     can_config.can_module_callback = PowerMeterRxCallback;

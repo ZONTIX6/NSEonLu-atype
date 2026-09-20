@@ -14,6 +14,9 @@ static uint8_t transmit_result = 1U;
 static uint32_t transmit_calls;
 static uint32_t daemon_reload_calls;
 static uint32_t fake_tick_ms;
+static uint32_t can_register_calls;
+static uint32_t daemon_register_calls;
+static bool can_registration_fails;
 static SuperCapInstance *instance;
 
 #define ASSERT_TRUE(value)                                                                     \
@@ -49,7 +52,11 @@ static SuperCapInstance *instance;
 
 CANInstance *CANRegister(CAN_Init_Config_s *config)
 {
+    ++can_register_calls;
     captured_can_config = *config;
+    if (can_registration_fails)
+        return NULL;
+
     memset(&fake_can_instance, 0, sizeof(fake_can_instance));
     fake_can_instance.can_handle = config->can_handle;
     fake_can_instance.tx_id = config->tx_id;
@@ -75,6 +82,7 @@ uint8_t CANTransmit(CANInstance *can_instance, float timeout_ms)
 
 DaemonInstance *DaemonRegister(Daemon_Init_Config_s *config)
 {
+    ++daemon_register_calls;
     captured_daemon_config = *config;
     fake_daemon_instance.reload_count = config->reload_count;
     fake_daemon_instance.temp_count = config->init_count;
@@ -136,6 +144,33 @@ static void TestUninitializedOperationsFailAndInitRegistersDependencies(void)
     ASSERT_EQ_U32(SUPERCAP_CAN_DLC, captured_dlc);
 }
 
+static void TestCanRegistrationFailureIsLatched(void)
+{
+    static CAN_HandleTypeDef can1;
+    SuperCapStatus_s status = {0};
+    const SuperCapCommand_s command = {0};
+    const SuperCap_Init_Config_s config = {
+        .can_config = {
+            .can_handle = &can1,
+            .tx_id = SUPERCAP_COMMAND_CAN_ID,
+            .rx_id = SUPERCAP_STATUS_CAN_ID,
+        },
+        .offline_reload_count = 20U,
+    };
+
+    can_registration_fails = true;
+    ASSERT_FALSE(SuperCapInit(&config));
+    ASSERT_EQ_U32(1U, daemon_register_calls);
+    ASSERT_EQ_U32(1U, can_register_calls);
+    ASSERT_FALSE(SuperCapGetStatus(&status));
+    ASSERT_FALSE(SuperCapSendCommand(&command));
+
+    ASSERT_FALSE(SuperCapInit(&config));
+    ASSERT_EQ_U32(1U, daemon_register_calls);
+    ASSERT_EQ_U32(1U, can_register_calls);
+    captured_daemon_config.callback(captured_daemon_config.owner_id);
+}
+
 static void TestCommandUsesOwnedInstance(void)
 {
     const SuperCapCommand_s command = {
@@ -185,8 +220,14 @@ static void TestStatusUsesOwnedInstanceAndOfflineCallback(void)
     ASSERT_NEAR(120.5f, status.chassis_power_w, 0.001f);
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
+    if (argc > 1 && strcmp(argv[1], "can_failure") == 0)
+    {
+        TestCanRegistrationFailureIsLatched();
+        return failures == 0 ? 0 : 1;
+    }
+
     TestUninitializedOperationsFailAndInitRegistersDependencies();
     TestCommandUsesOwnedInstance();
     TestStatusUsesOwnedInstanceAndOfflineCallback();
