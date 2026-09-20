@@ -34,8 +34,7 @@ typedef struct
     uint16_t offline_reload_count;
 } PowerMeter_Init_Config_s;
 
-PowerMeterInstance *PowerMeterInit(const PowerMeter_Init_Config_s *config);
-bool PowerMeterGetStatus(PowerMeterInstance *instance,
-                         PowerMeterStatus_s *status);
+bool PowerMeterInit(const PowerMeter_Init_Config_s *config);
+bool PowerMeterGetStatus(PowerMeterStatus_s *status);
 
 #endif

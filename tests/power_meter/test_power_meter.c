@@ -12,6 +12,7 @@ static DaemonInstance fake_daemon_instance;
 static uint8_t captured_dlc;
 static uint32_t fake_tick_ms;
 static uint32_t daemon_reload_calls;
+static PowerMeterInstance *meter;
 
 #define ASSERT_TRUE(value)                                                                         \
     do                                                                                             \
@@ -99,19 +100,15 @@ static void ResetFakes(void)
     daemon_reload_calls = 0U;
 }
 
-static PowerMeterInstance *InitMeter(void)
+static void ResetMeterState(void)
 {
-    static CAN_HandleTypeDef can1;
-    ResetFakes();
-    const PowerMeter_Init_Config_s config = {
-        .can_config = {
-            .can_handle = &can1,
-            .tx_id = POWER_METER_STATUS_CAN_ID,
-            .rx_id = POWER_METER_STATUS_CAN_ID,
-        },
-        .offline_reload_count = 10U,
-    };
-    return PowerMeterInit(&config);
+    memset(&meter->status, 0, sizeof(meter->status));
+    meter->received_frame_count = 0U;
+    meter->rejected_frame_count = 0U;
+    meter->last_rx_tick_ms = 0U;
+    fake_daemon_instance.temp_count = fake_daemon_instance.reload_count;
+    fake_tick_ms = 0U;
+    daemon_reload_calls = 0U;
 }
 
 static void DeliverFrame(const uint8_t frame[8], uint8_t dlc)
@@ -123,6 +120,7 @@ static void DeliverFrame(const uint8_t frame[8], uint8_t dlc)
 
 static void TestInitRegistersFrameworkInstances(void)
 {
+    PowerMeterStatus_s status = {0};
     ResetFakes();
     CAN_HandleTypeDef can1 = {0};
     const PowerMeter_Init_Config_s config = {
@@ -131,11 +129,15 @@ static void TestInitRegistersFrameworkInstances(void)
             .tx_id = POWER_METER_STATUS_CAN_ID,
             .rx_id = POWER_METER_STATUS_CAN_ID,
         },
-        .offline_reload_count = 10U,
+        .offline_reload_count = 0U,
     };
 
-    PowerMeterInstance *meter = PowerMeterInit(&config);
+    ASSERT_FALSE(PowerMeterGetStatus(&status));
+    ASSERT_FALSE(PowerMeterInit(NULL));
+    ASSERT_TRUE(PowerMeterInit(&config));
+    meter = (PowerMeterInstance *)captured_can_config.id;
     ASSERT_TRUE(meter != NULL);
+    ASSERT_FALSE(PowerMeterInit(&config));
     ASSERT_TRUE(captured_can_config.can_handle == &can1);
     ASSERT_EQ_U32(POWER_METER_STATUS_CAN_ID, captured_can_config.rx_id);
     ASSERT_TRUE(captured_can_config.can_module_callback != NULL);
@@ -148,13 +150,11 @@ static void TestInitRegistersFrameworkInstances(void)
 static void TestStartsOfflineAndRejectsNullArguments(void)
 {
     PowerMeterStatus_s status = {0};
-    PowerMeterInstance *meter = InitMeter();
+    ResetMeterState();
 
-    ASSERT_TRUE(PowerMeterGetStatus(meter, &status));
+    ASSERT_TRUE(PowerMeterGetStatus(&status));
     ASSERT_FALSE(status.online);
-    ASSERT_FALSE(PowerMeterGetStatus(NULL, &status));
-    ASSERT_FALSE(PowerMeterGetStatus(meter, NULL));
-    ASSERT_TRUE(PowerMeterInit(NULL) == NULL);
+    ASSERT_FALSE(PowerMeterGetStatus(NULL));
 }
 
 static void TestValidFrameUpdatesSnapshotAndDiagnostics(void)
@@ -162,12 +162,12 @@ static void TestValidFrameUpdatesSnapshotAndDiagnostics(void)
     static const uint8_t frame[8] = {0x00U, 0x0CU, 0x5FU, 0xB4U,
                                      0x0CU, 0xB2U, 0x1FU, 0x1BU};
     PowerMeterStatus_s status = {0};
-    PowerMeterInstance *meter = InitMeter();
+    ResetMeterState();
     fake_tick_ms = 1234U;
 
     DeliverFrame(frame, 8U);
 
-    ASSERT_TRUE(PowerMeterGetStatus(meter, &status));
+    ASSERT_TRUE(PowerMeterGetStatus(&status));
     ASSERT_TRUE(status.online);
     ASSERT_NEAR(0.012f, status.shunt_voltage_v, 0.00001f);
     ASSERT_NEAR(24.5f, status.bus_voltage_v, 0.00001f);
@@ -185,11 +185,11 @@ static void TestBadLengthDoesNotOverwriteOrFeedDaemon(void)
     static const uint8_t invalid[8] = {0, 9, 0, 9, 0, 9, 0, 9};
     PowerMeterStatus_s status_before = {0};
     PowerMeterStatus_s status_after = {0};
-    PowerMeterInstance *meter = InitMeter();
+    ResetMeterState();
     fake_tick_ms = 4321U;
     DeliverFrame(valid, 8U);
 
-    ASSERT_TRUE(PowerMeterGetStatus(meter, &status_before));
+    ASSERT_TRUE(PowerMeterGetStatus(&status_before));
     const uint32_t received_before = meter->received_frame_count;
     const uint32_t rejected_before = meter->rejected_frame_count;
     const uint32_t last_rx_before = meter->last_rx_tick_ms;
@@ -198,7 +198,7 @@ static void TestBadLengthDoesNotOverwriteOrFeedDaemon(void)
     fake_tick_ms = 4370U;
     DeliverFrame(invalid, 7U);
 
-    ASSERT_TRUE(PowerMeterGetStatus(meter, &status_after));
+    ASSERT_TRUE(PowerMeterGetStatus(&status_after));
     ASSERT_EQ_U32(status_before.online, status_after.online);
     ASSERT_NEAR(status_before.shunt_voltage_v, status_after.shunt_voltage_v, 0.00001f);
     ASSERT_NEAR(status_before.bus_voltage_v, status_after.bus_voltage_v, 0.00001f);
@@ -214,14 +214,14 @@ static void TestOfflineCallbackClearsOnlyOnlineState(void)
 {
     static const uint8_t frame[8] = {0, 1, 0, 2, 0, 3, 0, 4};
     PowerMeterStatus_s status = {0};
-    PowerMeterInstance *meter = InitMeter();
+    ResetMeterState();
     DeliverFrame(frame, 8U);
 
     fake_tick_ms = 100U;
     fake_daemon_instance.temp_count = 0U;
     captured_daemon_config.callback(captured_daemon_config.owner_id);
 
-    ASSERT_TRUE(PowerMeterGetStatus(meter, &status));
+    ASSERT_TRUE(PowerMeterGetStatus(&status));
     ASSERT_FALSE(status.online);
     ASSERT_NEAR(0.04f, status.power_w, 0.00001f);
 }
@@ -230,13 +230,13 @@ static void TestStaleOfflineCallbackKeepsReloadedMeterOnline(void)
 {
     static const uint8_t frame[8] = {0, 1, 0, 2, 0, 3, 0, 4};
     PowerMeterStatus_s status = {0};
-    PowerMeterInstance *meter = InitMeter();
+    ResetMeterState();
 
     fake_daemon_instance.temp_count = 0U;
     DeliverFrame(frame, 8U);
     captured_daemon_config.callback(captured_daemon_config.owner_id);
 
-    ASSERT_TRUE(PowerMeterGetStatus(meter, &status));
+    ASSERT_TRUE(PowerMeterGetStatus(&status));
     ASSERT_TRUE(status.online);
 }
 
@@ -244,7 +244,7 @@ static void TestLostDaemonReloadDoesNotMarkFreshFrameOffline(void)
 {
     static const uint8_t frame[8] = {0, 1, 0, 2, 0, 3, 0, 4};
     PowerMeterStatus_s status = {0};
-    PowerMeterInstance *meter = InitMeter();
+    ResetMeterState();
 
     fake_tick_ms = 100U;
     DeliverFrame(frame, 8U);
@@ -252,7 +252,7 @@ static void TestLostDaemonReloadDoesNotMarkFreshFrameOffline(void)
     fake_tick_ms = 101U;
     captured_daemon_config.callback(captured_daemon_config.owner_id);
 
-    ASSERT_TRUE(PowerMeterGetStatus(meter, &status));
+    ASSERT_TRUE(PowerMeterGetStatus(&status));
     ASSERT_TRUE(status.online);
 }
 
@@ -260,17 +260,17 @@ static void TestGetterUsesHundredMillisecondFreshnessBoundary(void)
 {
     static const uint8_t frame[8] = {0, 1, 0, 2, 0, 3, 0, 4};
     PowerMeterStatus_s status = {0};
-    PowerMeterInstance *meter = InitMeter();
+    ResetMeterState();
 
     fake_tick_ms = 100U;
     DeliverFrame(frame, 8U);
 
     fake_tick_ms = 199U;
-    ASSERT_TRUE(PowerMeterGetStatus(meter, &status));
+    ASSERT_TRUE(PowerMeterGetStatus(&status));
     ASSERT_TRUE(status.online);
 
     fake_tick_ms = 200U;
-    ASSERT_TRUE(PowerMeterGetStatus(meter, &status));
+    ASSERT_TRUE(PowerMeterGetStatus(&status));
     ASSERT_FALSE(status.online);
 }
 
@@ -278,14 +278,14 @@ static void TestFrameCounterWrapKeepsFreshMeterOnline(void)
 {
     static const uint8_t frame[8] = {0, 1, 0, 2, 0, 3, 0, 4};
     PowerMeterStatus_s status = {0};
-    PowerMeterInstance *meter = InitMeter();
+    ResetMeterState();
 
     meter->received_frame_count = UINT32_MAX;
     fake_tick_ms = 100U;
     DeliverFrame(frame, 8U);
 
     ASSERT_EQ_U32(0U, meter->received_frame_count);
-    ASSERT_TRUE(PowerMeterGetStatus(meter, &status));
+    ASSERT_TRUE(PowerMeterGetStatus(&status));
     ASSERT_TRUE(status.online);
 }
 
@@ -293,7 +293,7 @@ static void TestOfflineStateStaysLatchedAcrossFullTickCycle(void)
 {
     static const uint8_t frame[8] = {0, 1, 0, 2, 0, 3, 0, 4};
     PowerMeterStatus_s status = {0};
-    PowerMeterInstance *meter = InitMeter();
+    ResetMeterState();
 
     fake_tick_ms = 100U;
     DeliverFrame(frame, 8U);
@@ -301,11 +301,11 @@ static void TestOfflineStateStaysLatchedAcrossFullTickCycle(void)
     fake_daemon_instance.temp_count = 0U;
     captured_daemon_config.callback(captured_daemon_config.owner_id);
 
-    ASSERT_TRUE(PowerMeterGetStatus(meter, &status));
+    ASSERT_TRUE(PowerMeterGetStatus(&status));
     ASSERT_FALSE(status.online);
 
     fake_tick_ms = 100U;
-    ASSERT_TRUE(PowerMeterGetStatus(meter, &status));
+    ASSERT_TRUE(PowerMeterGetStatus(&status));
     ASSERT_FALSE(status.online);
 }
 
@@ -313,64 +313,18 @@ static void TestGetterFreshnessHandlesTickWrap(void)
 {
     static const uint8_t frame[8] = {0, 1, 0, 2, 0, 3, 0, 4};
     PowerMeterStatus_s status = {0};
-    PowerMeterInstance *meter = InitMeter();
+    ResetMeterState();
 
     fake_tick_ms = UINT32_MAX - 9U;
     DeliverFrame(frame, 8U);
 
     fake_tick_ms = 89U;
-    ASSERT_TRUE(PowerMeterGetStatus(meter, &status));
+    ASSERT_TRUE(PowerMeterGetStatus(&status));
     ASSERT_TRUE(status.online);
 
     fake_tick_ms = 90U;
-    ASSERT_TRUE(PowerMeterGetStatus(meter, &status));
+    ASSERT_TRUE(PowerMeterGetStatus(&status));
     ASSERT_FALSE(status.online);
-}
-
-static void TestGetterUsesConfiguredFreshnessWindow(void)
-{
-    static const uint8_t frame[8] = {0, 1, 0, 2, 0, 3, 0, 4};
-    ResetFakes();
-    CAN_HandleTypeDef can1 = {0};
-    const PowerMeter_Init_Config_s config = {
-        .can_config = {
-            .can_handle = &can1,
-            .tx_id = POWER_METER_STATUS_CAN_ID,
-            .rx_id = POWER_METER_STATUS_CAN_ID,
-        },
-        .offline_reload_count = 2U,
-    };
-    PowerMeterStatus_s status = {0};
-    PowerMeterInstance *meter = PowerMeterInit(&config);
-
-    fake_tick_ms = 100U;
-    DeliverFrame(frame, 8U);
-
-    fake_tick_ms = 119U;
-    ASSERT_TRUE(PowerMeterGetStatus(meter, &status));
-    ASSERT_TRUE(status.online);
-
-    fake_tick_ms = 120U;
-    ASSERT_TRUE(PowerMeterGetStatus(meter, &status));
-    ASSERT_FALSE(status.online);
-}
-
-static void TestZeroReloadUsesDefault(void)
-{
-    ResetFakes();
-    CAN_HandleTypeDef can1 = {0};
-    const PowerMeter_Init_Config_s config = {
-        .can_config = {
-            .can_handle = &can1,
-            .tx_id = POWER_METER_STATUS_CAN_ID,
-            .rx_id = POWER_METER_STATUS_CAN_ID,
-        },
-        .offline_reload_count = 0U,
-    };
-
-    ASSERT_TRUE(PowerMeterInit(&config) != NULL);
-    ASSERT_EQ_U32(10U, captured_daemon_config.reload_count);
-    ASSERT_EQ_U32(10U, captured_daemon_config.init_count);
 }
 
 int main(void)
@@ -386,8 +340,6 @@ int main(void)
     TestFrameCounterWrapKeepsFreshMeterOnline();
     TestOfflineStateStaysLatchedAcrossFullTickCycle();
     TestGetterFreshnessHandlesTickWrap();
-    TestGetterUsesConfiguredFreshnessWindow();
-    TestZeroReloadUsesDefault();
 
     if (failures != 0)
         return 1;

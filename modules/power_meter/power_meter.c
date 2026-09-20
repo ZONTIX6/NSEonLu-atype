@@ -9,6 +9,8 @@
 #define POWER_METER_DEFAULT_OFFLINE_RELOAD_COUNT 10U    // 默认离线重载值,即100ms内没有接收到数据则认为离线
 #define POWER_METER_DAEMON_PERIOD_MS 10U    // 守护进程周期,即每10ms调用一次守护进程的回调函数
 
+static PowerMeterInstance *power_meter;
+
 static bool PowerMeterIsFresh(const PowerMeterInstance *instance,
                               uint32_t now_ms)
 {
@@ -57,15 +59,15 @@ static void PowerMeterRxCallback(CANInstance *can_instance)
     DaemonReload(instance->daemon);
 }
 
-PowerMeterInstance *PowerMeterInit(const PowerMeter_Init_Config_s *config)
+bool PowerMeterInit(const PowerMeter_Init_Config_s *config)
 {
-    if (config == NULL)
-        return NULL;
+    if (config == NULL || power_meter != NULL)
+        return false;
 
     PowerMeterInstance *instance =
         (PowerMeterInstance *)malloc(sizeof(PowerMeterInstance));
     if (instance == NULL)
-        return NULL;
+        return false;
     memset(instance, 0, sizeof(*instance));
 
     const uint16_t reload_count =
@@ -84,7 +86,7 @@ PowerMeterInstance *PowerMeterInit(const PowerMeter_Init_Config_s *config)
     if (instance->daemon == NULL)
     {
         free(instance);
-        return NULL;
+        return false;
     }
 
     CAN_Init_Config_s can_config = config->can_config;
@@ -92,21 +94,21 @@ PowerMeterInstance *PowerMeterInit(const PowerMeter_Init_Config_s *config)
     can_config.id = instance;
     instance->can_ins = CANRegister(&can_config);
     if (instance->can_ins == NULL)
-        return NULL;
+        return false;
 
     CANSetDLC(instance->can_ins, POWER_METER_CAN_DLC);
-    return instance;
+    power_meter = instance;
+    return true;
 }
 
-bool PowerMeterGetStatus(PowerMeterInstance *instance,
-                         PowerMeterStatus_s *status)
+bool PowerMeterGetStatus(PowerMeterStatus_s *status)
 {
-    if (instance == NULL || status == NULL || instance->daemon == NULL)
+    if (power_meter == NULL || status == NULL || power_meter->daemon == NULL)
         return false;
 
     taskENTER_CRITICAL();
-    *status = instance->status;
-    status->online = PowerMeterIsFresh(instance, HAL_GetTick());
+    *status = power_meter->status;
+    status->online = PowerMeterIsFresh(power_meter, HAL_GetTick());
     taskEXIT_CRITICAL();
     return true;
 }
