@@ -80,6 +80,17 @@ typedef struct
     ChassisPowerTelemetry_s telemetry;
 } DJIChassisPowerState_s;
 
+typedef struct
+{
+    bool registered;
+    uint8_t motor_indices[POWER_MODEL_MOTOR_COUNT];
+    MotorPowerModelConfig_s models[POWER_MODEL_MOTOR_COUNT];
+    ChassisPowerAlgorithmConfig_s algorithm;
+    ChassisPowerInput_s input;
+    DJIChassisPowerState_s state;
+    volatile float measured_chassis_power_w;
+} DJIChassisPowerInstance_s;
+
 /**
  * @brief 调用此函数注册一个DJI智能电机,需要传递较多的初始化参数,请在application初始化的时候调用此函数
  *        推荐传参时像标准库一样构造initStructure然后传入此函数.

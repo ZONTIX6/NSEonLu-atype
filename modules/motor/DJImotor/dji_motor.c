@@ -42,20 +42,7 @@ static CANInstance sender_assignment[6] = {
  */
 static uint8_t sender_enable_flag[6] = {0};
 
-typedef struct
-{
-    bool registered;
-    uint8_t motor_indices[POWER_MODEL_MOTOR_COUNT];
-    MotorPowerModelConfig_s models[POWER_MODEL_MOTOR_COUNT];
-    ChassisPowerAlgorithmConfig_s algorithm;
-    ChassisPowerInput_s input;
-    DJIChassisPowerState_s state;
-    volatile float measured_chassis_power_w;
-} DJIChassisPowerGroup_s;
-
-static DJIChassisPowerGroup_s chassis_power_group = {
-    .input.attenuation = 1.0f,
-};
+static DJIChassisPowerInstance_s *chassis_power;
 
 static float motor_output[DJI_MOTOR_CNT];
 static float speed_reference_aps[DJI_MOTOR_CNT];
@@ -68,7 +55,7 @@ static void PrintChassisPowerTelemetry(const ChassisPowerTelemetry_s *telemetry)
     const size_t row_length = ChassisPowerTelemetryFormatCsv(
         telemetry,
         HAL_GetTick(),
-        chassis_power_group.measured_chassis_power_w,
+        chassis_power->measured_chassis_power_w,
         chassis_power_rtt_row,
         sizeof(chassis_power_rtt_row));
     if (row_length > 0U)
@@ -287,7 +274,7 @@ bool DJIChassisPowerRegister(const DJIChassisPowerConfig_s *config)
 {
     uint8_t motor_indices[POWER_MODEL_MOTOR_COUNT];
 
-    if (config == NULL || chassis_power_group.registered ||
+    if (config == NULL || chassis_power != NULL ||
         !ChassisPowerAlgorithmConfigIsValid(&config->algorithm))
         return false;
 
@@ -305,18 +292,22 @@ bool DJIChassisPowerRegister(const DJIChassisPowerConfig_s *config)
         }
     }
 
+    DJIChassisPowerInstance_s *instance =
+        (DJIChassisPowerInstance_s *)malloc(sizeof(*instance));
+    if (instance == NULL)
+        return false;
+    memset(instance, 0, sizeof(*instance));
+
     for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
     {
-        chassis_power_group.motor_indices[i] = motor_indices[i];
-        chassis_power_group.models[i] = config->models[i];
+        instance->motor_indices[i] = motor_indices[i];
+        instance->models[i] = config->models[i];
     }
-    chassis_power_group.algorithm = config->algorithm;
-    chassis_power_group.input.referee_power_limit_w = 0.0f;
-    chassis_power_group.input.attenuation = 1.0f;
-    memset(&chassis_power_group.state.power, 0, sizeof(chassis_power_group.state.power));
-    memset(&chassis_power_group.state.telemetry, 0, sizeof(chassis_power_group.state.telemetry));
-    chassis_power_group.state.registered = true;
-    chassis_power_group.registered = true;
+    instance->algorithm = config->algorithm;
+    instance->input.attenuation = 1.0f;
+    instance->state.registered = true;
+    instance->registered = true;
+    chassis_power = instance;
     chassis_power_rtt_count = 0U;
     SEGGER_RTT_WriteString(
         BUFFER_INDEX,
@@ -328,32 +319,37 @@ bool DJIChassisPowerRegister(const DJIChassisPowerConfig_s *config)
 
 void DJIChassisPowerSetBudget(float total_budget_w)
 {
-    chassis_power_group.input.referee_power_limit_w = total_budget_w;
+    if (chassis_power != NULL)
+        chassis_power->input.referee_power_limit_w = total_budget_w;
 }
 
 void DJIChassisPowerSetMeasuredPower(float measured_power_w)
 {
-    chassis_power_group.measured_chassis_power_w =
-        isfinite(measured_power_w) ? measured_power_w : 0.0f;
+    if (chassis_power != NULL)
+    {
+        chassis_power->measured_chassis_power_w =
+            isfinite(measured_power_w) ? measured_power_w : 0.0f;
+    }
 }
 
 void DJIChassisPowerSetAttenuation(float attenuation)
 {
-    chassis_power_group.input.attenuation = attenuation;
+    if (chassis_power != NULL)
+        chassis_power->input.attenuation = attenuation;
 }
 
 const DJIChassisPowerState_s *DJIChassisPowerGetState(void)
 {
-    return &chassis_power_group.state;
+    return chassis_power != NULL ? &chassis_power->state : NULL;
 }
 
 bool DJIChassisPowerGetSnapshot(DJIChassisPowerState_s *snapshot)
 {
-    if (snapshot == NULL)
+    if (chassis_power == NULL || snapshot == NULL)
         return false;
 
     taskENTER_CRITICAL();
-    *snapshot = chassis_power_group.state;
+    *snapshot = chassis_power->state;
     taskEXIT_CRITICAL();
     return true;
 }
@@ -364,26 +360,26 @@ static void ApplyChassisPowerGroup(void)
     ChassisPowerOutput_s power_output;
     ChassisPowerTelemetry_s telemetry;
 
-    if (!chassis_power_group.registered)
+    if (chassis_power == NULL || !chassis_power->registered)
         return;
 
     for (size_t slot = 0; slot < POWER_MODEL_MOTOR_COUNT; ++slot)
     {
-        const uint8_t index = chassis_power_group.motor_indices[slot];
-        chassis_power_group.input.desired_current[slot] = motor_output[index];
-        chassis_power_group.input.speed_rpm[slot] = speed_feedback_aps[index] / 6.0f;
-        chassis_power_group.input.speed_error_rpm[slot] =
+        const uint8_t index = chassis_power->motor_indices[slot];
+        chassis_power->input.desired_current[slot] = motor_output[index];
+        chassis_power->input.speed_rpm[slot] = speed_feedback_aps[index] / 6.0f;
+        chassis_power->input.speed_error_rpm[slot] =
             (speed_reference_aps[index] - speed_feedback_aps[index]) / 6.0f;
     }
 
-    const bool power_valid = PowerModelApply(chassis_power_group.models,
-                                             &chassis_power_group.algorithm,
-                                             &chassis_power_group.input,
+    const bool power_valid = PowerModelApply(chassis_power->models,
+                                             &chassis_power->algorithm,
+                                             &chassis_power->input,
                                              &power_output);
 
     for (size_t slot = 0; slot < POWER_MODEL_MOTOR_COUNT; ++slot)
     {
-        const uint8_t index = chassis_power_group.motor_indices[slot];
+        const uint8_t index = chassis_power->motor_indices[slot];
         DJIMotorInstance *motor = dji_motor_instance[index];
         const bool motor_online = DaemonIsOnline(motor->daemon) != 0U;
         motor_output[index] = power_valid && motor_online
@@ -393,14 +389,14 @@ static void ApplyChassisPowerGroup(void)
                                motor->stop_flag != MOTOR_STOP;
     }
 
-    (void)ChassisPowerTelemetryBuild(&chassis_power_group.input,
+    (void)ChassisPowerTelemetryBuild(&chassis_power->input,
                                      &power_output,
                                      output_enabled,
                                      &telemetry);
 
     taskENTER_CRITICAL();
-    chassis_power_group.state.power = power_output;
-    chassis_power_group.state.telemetry = telemetry;
+    chassis_power->state.power = power_output;
+    chassis_power->state.telemetry = telemetry;
     taskEXIT_CRITICAL();
 
     if (++chassis_power_rtt_count >= CHASSIS_POWER_RTT_DIVIDER)
