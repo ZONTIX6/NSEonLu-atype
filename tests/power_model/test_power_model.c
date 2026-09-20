@@ -1,7 +1,7 @@
 #include "power_model.h"
 
-#include <float.h>
 #include <math.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -41,17 +41,6 @@ static int failures;
         {                                                                                 \
             printf("FAIL %s:%d: expected %d, got %d\n",                                  \
                    __FILE__, __LINE__, expected_, actual_);                               \
-            ++failures;                                                                   \
-        }                                                                                 \
-    } while (0)
-
-#define ASSERT_STREQ(expected, actual)                                                     \
-    do                                                                                    \
-    {                                                                                     \
-        if (strcmp((expected), (actual)) != 0)                                            \
-        {                                                                                 \
-            printf("FAIL %s:%d: expected '%s', got '%s'\n",                             \
-                   __FILE__, __LINE__, (expected), (actual));                             \
             ++failures;                                                                   \
         }                                                                                 \
     } while (0)
@@ -493,108 +482,6 @@ static void TestTelemetryClearsCommandsDisabledByFinalOutputGate(void)
     ASSERT_NEAR(35.0f, telemetry.predicted_total_power_w, 1.0e-6f);
 }
 
-static void TestTelemetryFormatsOneCompleteCsvRow(void)
-{
-    ChassisPowerInput_s input = ValidInput();
-    ChassisPowerOutput_s power = {.status = POWER_MODEL_STATUS_OK};
-    ChassisPowerTelemetry_s telemetry;
-    char row[CHASSIS_POWER_TELEMETRY_CSV_MAX_LENGTH];
-    const bool output_enabled[POWER_MODEL_MOTOR_COUNT] = {true, true, true, true};
-
-    input.speed_rpm[0] = 1000.0f;
-    input.speed_rpm[1] = 1100.0f;
-    input.speed_rpm[2] = 1200.0f;
-    input.speed_rpm[3] = 1300.0f;
-    input.speed_error_rpm[0] = 10.0f;
-    input.speed_error_rpm[1] = 11.0f;
-    input.speed_error_rpm[2] = 12.0f;
-    input.speed_error_rpm[3] = 13.0f;
-    power.limited_current[0] = 2000.0f;
-    power.limited_current[1] = 2100.0f;
-    power.limited_current[2] = 2200.0f;
-    power.limited_current[3] = 2300.0f;
-    power.predicted_limited_power_w[0] = 10.0f;
-    power.predicted_limited_power_w[1] = 11.0f;
-    power.predicted_limited_power_w[2] = 12.0f;
-    power.predicted_limited_power_w[3] = 13.0f;
-    ASSERT_TRUE(ChassisPowerTelemetryBuild(&input, &power, output_enabled, &telemetry));
-
-    ASSERT_TRUE(ChassisPowerTelemetryFormatCsv(&telemetry,
-                                               123U,
-                                               12.34f,
-                                               row,
-                                               sizeof(row)) > 0U);
-    ASSERT_STREQ("123,2000,2100,2200,2300,1000,1100,1200,1300,"
-                 "1010,1111,1212,1313,1000,1100,1200,1300,4600,1234\r\n",
-                 row);
-}
-
-static void TestTelemetryCsvPreservesNegativeMeasuredPower(void)
-{
-    ChassisPowerTelemetry_s telemetry = {0};
-    char row[CHASSIS_POWER_TELEMETRY_CSV_MAX_LENGTH];
-
-    ASSERT_TRUE(ChassisPowerTelemetryFormatCsv(&telemetry,
-                                               1U,
-                                               -1.25f,
-                                               row,
-                                               sizeof(row)) > 0U);
-    ASSERT_STREQ("1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-125\r\n", row);
-}
-
-static void TestTelemetryCsvNormalizesNonfiniteMeasuredPower(void)
-{
-    ChassisPowerTelemetry_s telemetry = {0};
-    char row[CHASSIS_POWER_TELEMETRY_CSV_MAX_LENGTH];
-
-    ASSERT_TRUE(ChassisPowerTelemetryFormatCsv(&telemetry,
-                                               1U,
-                                               NAN,
-                                               row,
-                                               sizeof(row)) > 0U);
-    ASSERT_STREQ("1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\r\n", row);
-}
-
-static void TestTelemetryCsvSaturatesMeasuredPower(void)
-{
-    ChassisPowerTelemetry_s telemetry = {0};
-    char row[CHASSIS_POWER_TELEMETRY_CSV_MAX_LENGTH];
-
-    ASSERT_TRUE(ChassisPowerTelemetryFormatCsv(&telemetry,
-                                               1U,
-                                               FLT_MAX,
-                                               row,
-                                               sizeof(row)) > 0U);
-    ASSERT_STREQ("1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2147483647\r\n", row);
-}
-
-static void TestTelemetryCsvRejectsTruncatedRow(void)
-{
-    ChassisPowerTelemetry_s telemetry = {0};
-    char row[8] = "dirty";
-
-    ASSERT_TRUE(ChassisPowerTelemetryFormatCsv(&telemetry,
-                                               123U,
-                                               0.0f,
-                                               row,
-                                               sizeof(row)) == 0U);
-    ASSERT_TRUE(row[0] == '\0');
-}
-
-static void TestTelemetryCsvSaturatesLargePower(void)
-{
-    ChassisPowerTelemetry_s telemetry = {0};
-    char row[CHASSIS_POWER_TELEMETRY_CSV_MAX_LENGTH];
-    telemetry.predicted_power_w[0] = FLT_MAX;
-
-    ASSERT_TRUE(ChassisPowerTelemetryFormatCsv(&telemetry,
-                                               1U,
-                                               0.0f,
-                                               row,
-                                               sizeof(row)) > 0U);
-    ASSERT_STREQ("1,0,0,0,0,0,0,0,0,0,0,0,0,2147483647,0,0,0,0,0\r\n", row);
-}
-
 int main(void)
 {
     TestFeedbackBeforeInitFailsSafe();
@@ -622,12 +509,6 @@ int main(void)
     TestTelemetryBuildsCoherentSnapshot();
     TestTelemetryRejectsInvalidPowerAndClearsOutput();
     TestTelemetryClearsCommandsDisabledByFinalOutputGate();
-    TestTelemetryFormatsOneCompleteCsvRow();
-    TestTelemetryCsvPreservesNegativeMeasuredPower();
-    TestTelemetryCsvNormalizesNonfiniteMeasuredPower();
-    TestTelemetryCsvSaturatesMeasuredPower();
-    TestTelemetryCsvRejectsTruncatedRow();
-    TestTelemetryCsvSaturatesLargePower();
     if (failures != 0)
         return 1;
 

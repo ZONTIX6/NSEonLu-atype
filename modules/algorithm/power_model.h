@@ -2,11 +2,8 @@
 #define POWER_MODEL_H
 
 #include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 
 #define POWER_MODEL_MOTOR_COUNT 4U
-#define CHASSIS_POWER_TELEMETRY_CSV_MAX_LENGTH 256U
 
 typedef enum
 {
@@ -91,10 +88,5 @@ bool ChassisPowerTelemetryBuild(const ChassisPowerInput_s *input,
                                 const ChassisPowerOutput_s *power,
                                 const bool output_enabled[POWER_MODEL_MOTOR_COUNT],
                                 ChassisPowerTelemetry_s *telemetry);
-size_t ChassisPowerTelemetryFormatCsv(const ChassisPowerTelemetry_s *telemetry,
-                                      uint32_t tick_ms,
-                                      float measured_chassis_power_w,
-                                      char *buffer,
-                                      size_t buffer_size);
 
 #endif // POWER_MODEL_H
