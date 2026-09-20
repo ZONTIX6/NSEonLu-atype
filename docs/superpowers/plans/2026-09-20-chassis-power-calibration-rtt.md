@@ -486,10 +486,13 @@ make -C tests/power_meter clean test
 make -C tests/rtt_telemetry clean test
 make -C tests/chassis_power_outer_loop clean test
 make -C tests/chassis_power_budget clean test
-make -C tests/chassis_power_feedback clean test
+make -C tests/power_meter_protocol clean test
+make -C tests/chassis_power_link clean test
 ```
 
-Expected: every command passes without warnings.
+Expected: every command passes without warnings. `ChassisPowerFeedback*` is
+covered by `tests/power_model/test_power_model.c`; there is no standalone
+`tests/chassis_power_feedback/Makefile`.
 
 - [ ] **Step 2: Rebuild both firmware configurations from clean outputs**
 
@@ -510,7 +513,7 @@ Run:
 
 ```powershell
 rg -n "p_cap_cw|p_meter_cw|meter_online|meter_tick_ms|motor_enabled_mask" application modules tests
-git diff --check HEAD~4..HEAD
+git diff --check 4b0135d..HEAD
 git status --short
 ```
 
@@ -524,8 +527,8 @@ Expected:
 - [ ] **Step 4: Inspect the cumulative diff**
 
 ```powershell
-git diff --stat HEAD~4..HEAD
-git diff HEAD~4..HEAD -- application/chassis/chassis.c modules/algorithm/power_model.h modules/algorithm/power_model.c modules/power_meter/power_meter.h modules/power_meter/power_meter.c modules/telemetry/rtt_telemetry.h modules/telemetry/rtt_telemetry.c modules/motor/DJImotor/dji_motor.h modules/motor/DJImotor/dji_motor.c tests/power_model/test_power_model.c tests/power_meter/test_power_meter.c tests/rtt_telemetry/test_rtt_telemetry.c
+git diff --stat 4b0135d..HEAD
+git diff 4b0135d..HEAD -- application/chassis/chassis.c modules/algorithm/power_model.h modules/algorithm/power_model.c modules/power_meter/power_meter.h modules/power_meter/power_meter.c modules/telemetry/rtt_telemetry.h modules/telemetry/rtt_telemetry.c modules/motor/DJImotor/dji_motor.h modules/motor/DJImotor/dji_motor.c tests/power_model/test_power_model.c tests/power_meter/test_power_meter.c tests/rtt_telemetry/test_rtt_telemetry.c
 ```
 
 Confirm every changed production line traces to the approved RTT calibration design.
