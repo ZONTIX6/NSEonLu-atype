@@ -9,8 +9,21 @@
 
 #define RTT_TELEMETRY_CHASSIS_POWER_CSV_MAX_LENGTH 320U
 
+typedef struct
+{
+    float nominal_budget_w;
+    float target_power_w;
+    float corrected_budget_w;
+    float filtered_power_w;
+    float error_w;
+    float correction_w;
+    uint8_t outer_mode;
+} ChassisPowerControlTelemetry_s;
+
 size_t RTTTelemetryFormatChassisPowerCsv(
-    const ChassisPowerTelemetry_s *telemetry,
+    const ChassisPowerOutput_s *power,
+    const ChassisPowerTelemetry_s *motor,
+    const ChassisPowerControlTelemetry_s *control,
     uint32_t tick_ms,
     float measured_chassis_power_w,
     bool meter_online,
@@ -21,7 +34,9 @@ size_t RTTTelemetryFormatChassisPowerCsv(
 void RTTTelemetryWriteChassisPowerHeader(void);
 
 void RTTTelemetryWriteChassisPowerRow(
-    const ChassisPowerTelemetry_s *telemetry,
+    const ChassisPowerOutput_s *power,
+    const ChassisPowerTelemetry_s *motor,
+    const ChassisPowerControlTelemetry_s *control,
     uint32_t tick_ms,
     float measured_chassis_power_w,
     bool meter_online,
