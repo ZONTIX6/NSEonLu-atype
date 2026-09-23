@@ -373,12 +373,30 @@ static void UpdateChassisPowerBudget(void)
         chassis_outer_loop_output.corrected_budget_w = 0.0f;
     }
 
+    const ChassisPowerControlTelemetry_s control_telemetry = {
+        .nominal_budget_w = chassis_budget_output.applied_budget_w,
+        .target_power_w = outer_input.target_power_w,
+        .corrected_budget_w = chassis_outer_loop_output.corrected_budget_w,
+        .filtered_power_w = chassis_outer_loop_output.filtered_power_w,
+        .error_w = chassis_outer_loop_output.error_w,
+        .correction_w = chassis_outer_loop_output.correction_w,
+        .outer_mode = (uint8_t)chassis_outer_loop_output.mode,
+    };
+    DJIChassisPowerSetControlTelemetry(&control_telemetry);
     DJIChassisPowerSetMeasuredPower(
         meter_status.power_w,
         meter_valid,
         meter_status.last_rx_tick_ms);
     DJIChassisPowerSetBudget(chassis_outer_loop_output.corrected_budget_w);
 #else
+    const ChassisPowerControlTelemetry_s control_telemetry = {
+        .nominal_budget_w = chassis_budget_output.applied_budget_w,
+        .target_power_w = chassis_budget_output.applied_budget_w *
+                          CHASSIS_POWER_SAFETY_FACTOR,
+        .corrected_budget_w = chassis_budget_output.applied_budget_w,
+        .outer_mode = (uint8_t)CHASSIS_POWER_OUTER_OFFLINE,
+    };
+    DJIChassisPowerSetControlTelemetry(&control_telemetry);
     DJIChassisPowerSetMeasuredPower(0.0f, false, 0U);
     DJIChassisPowerSetBudget(chassis_budget_output.applied_budget_w);
 #endif
