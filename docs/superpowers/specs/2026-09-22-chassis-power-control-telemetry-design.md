@@ -29,10 +29,10 @@ meter_online,meter_age_ms,motor_enabled_mask
 - `corrected_budget_cw`：外环修正后传给功率模型的预算，单位为百分之一瓦。
 - `effective_limit_cw`：功率模型应用衰减系数和安全系数后的有效限制，单位为百分之一瓦。
 - `p_unlimited_cw`：四电机限流前预测功率之和，单位为百分之一瓦。
-- `p_limited_cw`：四电机限流后预测功率之和，单位为百分之一瓦。
+- `p_limited_cw`：使能电机的限流后预测功率之和；未使能电机按零计，单位为百分之一瓦。
 - `p_meter_cw`：独立功率计最近一次实测总功率，单位为百分之一瓦，保留负值。
 - `p_filtered_cw`：外环使用的一阶低通功率，单位为百分之一瓦。
-- `error_cw`：外环误差，等于目标功率减控制功率，单位为百分之一瓦。
+- `error_cw`：外环输出的误差（已应用死区，死区内为零），单位为百分之一瓦。
 - `correction_cw`：外环叠加到基准预算上的修正量，单位为百分之一瓦。
 - `min_scale_pm`：四电机 `current_scale` 的最小值，使用千分比，`1000` 表示没有电流缩放。
 - `limited_mask`：四电机限流位掩码；`current_scale < 1.0` 的电机对应位为 `1`。
@@ -61,6 +61,8 @@ typedef struct
 ```
 
 `application/chassis/chassis.c` 在每次外环更新完成后构造该结构体，并调用新的 `DJIChassisPowerSetControlTelemetry()`。该 setter 在临界区内将整个结构体复制到唯一的底盘功控实例，避免不同字段来自不同更新周期。
+
+外环诊断、功率计状态与模型预算通过各自的现有接口依次发布；任务切换恰好发生在这些调用之间时，单行 CSV 可能短暂组合相邻周期的数据。完整性保证针对外环结构体和功率计三元组各自成立，不保证它们与预算跨接口原子同步。
 
 `DJIMotorControl()` 仍以现有约 1 ms 周期执行，且仍通过现有分频器以约 100 Hz 输出遥测。当前电机周期的 `ChassisPowerOutput_s` 与 `ChassisPowerTelemetry_s` 是该任务的局部完整结果；输出前再在同一个临界区复制以下共享状态：
 
