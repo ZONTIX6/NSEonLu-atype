@@ -21,6 +21,7 @@
 #include "stdint.h"
 #include "daemon.h"
 #include "power_model.h"
+#include "rtt_telemetry.h"
 
 #define DJI_MOTOR_CNT 12
 
@@ -88,6 +89,7 @@ typedef struct
     ChassisPowerAlgorithmConfig_s algorithm;
     ChassisPowerInput_s input;
     DJIChassisPowerState_s state;
+    ChassisPowerControlTelemetry_s control_telemetry;
     volatile float measured_chassis_power_w;
     volatile bool power_meter_online;
     volatile uint32_t power_meter_tick_ms;
@@ -171,6 +173,12 @@ void DJIChassisPowerSetBudget(float total_budget_w);
 void DJIChassisPowerSetMeasuredPower(float measured_power_w,
                                      bool meter_online,
                                      uint32_t meter_tick_ms);
+
+/**
+ * @brief 原子更新仅用于功率闭环诊断的外环遥测快照
+ */
+void DJIChassisPowerSetControlTelemetry(
+    const ChassisPowerControlTelemetry_s *telemetry);
 
 /**
  * @brief 更新超级电容衰减系数，算法内部限制到 [0, 1]

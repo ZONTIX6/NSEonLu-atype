@@ -324,6 +324,17 @@ void DJIChassisPowerSetMeasuredPower(float measured_power_w,
     taskEXIT_CRITICAL();
 }
 
+void DJIChassisPowerSetControlTelemetry(
+    const ChassisPowerControlTelemetry_s *telemetry)
+{
+    if (chassis_power == NULL || telemetry == NULL)
+        return;
+
+    taskENTER_CRITICAL();
+    chassis_power->control_telemetry = *telemetry;
+    taskEXIT_CRITICAL();
+}
+
 void DJIChassisPowerSetAttenuation(float attenuation)
 {
     if (chassis_power != NULL)
@@ -351,6 +362,7 @@ static void ApplyChassisPowerGroup(void)
     bool output_enabled[POWER_MODEL_MOTOR_COUNT];
     ChassisPowerOutput_s power_output;
     ChassisPowerTelemetry_s telemetry;
+    ChassisPowerControlTelemetry_s control_telemetry;
     float measured_chassis_power_w;
     bool meter_online;
     uint32_t meter_tick_ms;
@@ -392,6 +404,7 @@ static void ApplyChassisPowerGroup(void)
     taskENTER_CRITICAL();
     chassis_power->state.power = power_output;
     chassis_power->state.telemetry = telemetry;
+    control_telemetry = chassis_power->control_telemetry;
     measured_chassis_power_w = chassis_power->measured_chassis_power_w;
     meter_online = chassis_power->power_meter_online;
     meter_tick_ms = chassis_power->power_meter_tick_ms;
@@ -401,7 +414,9 @@ static void ApplyChassisPowerGroup(void)
     {
         chassis_power_rtt_count = 0U;
         RTTTelemetryWriteChassisPowerRow(
+            &power_output,
             &telemetry,
+            &control_telemetry,
             HAL_GetTick(),
             measured_chassis_power_w,
             meter_online,

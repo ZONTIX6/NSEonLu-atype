@@ -136,15 +136,26 @@ static void EmitOneRow(void)
         ApplyChassisPowerGroup();
 }
 
-static void TestMeasurementTupleReachesOneRttRow(void)
+static void TestControlAndMeasurementSnapshotsReachOneRttRow(void)
 {
     PreparePowerGroup();
+    const ChassisPowerControlTelemetry_s control = {
+        .nominal_budget_w = 30.0f,
+        .target_power_w = 28.5f,
+        .corrected_budget_w = 27.0f,
+        .filtered_power_w = 29.0f,
+        .error_w = -0.5f,
+        .correction_w = -3.0f,
+        .outer_mode = 2U,
+    };
+    DJIChassisPowerSetControlTelemetry(&control);
     DJIChassisPowerSetMeasuredPower(12.34f, true, 77U);
 
     EmitOneRow();
 
     ASSERT_STREQ(
-        "123,1,2,3,4,0,0,0,0,0,0,0,0,0,0,0,0,0,1234,1,77,15\r\n",
+        "123,3000,2850,2700,10000,0,0,1234,2900,-50,-300,"
+        "1000,0,2,1,46,15\r\n",
         captured_data);
 }
 
@@ -156,7 +167,7 @@ static void TestOfflineMeasurementKeepsValueAndTick(void)
     EmitOneRow();
 
     ASSERT_STREQ(
-        "123,1,2,3,4,0,0,0,0,0,0,0,0,0,0,0,0,0,900,0,88,15\r\n",
+        "123,0,0,0,10000,0,0,900,0,0,0,1000,0,0,0,35,15\r\n",
         captured_data);
 }
 
@@ -168,15 +179,46 @@ static void TestNonfiniteMeasurementBecomesZero(void)
     EmitOneRow();
 
     ASSERT_STREQ(
-        "123,1,2,3,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,99,15\r\n",
+        "123,0,0,0,10000,0,0,0,0,0,0,1000,0,0,1,24,15\r\n",
         captured_data);
+}
+
+static void TestNullControlSnapshotLeavesPreviousValue(void)
+{
+    PreparePowerGroup();
+    const ChassisPowerControlTelemetry_s control = {
+        .nominal_budget_w = 1.0f,
+        .outer_mode = 1U,
+    };
+    DJIChassisPowerSetControlTelemetry(&control);
+    DJIChassisPowerSetControlTelemetry(NULL);
+
+    EmitOneRow();
+
+    ASSERT_STREQ(
+        "123,100,0,0,10000,0,0,0,0,0,0,1000,0,1,0,0,15\r\n",
+        captured_data);
+}
+
+static void TestRttDividerRemainsTenMotorCycles(void)
+{
+    PreparePowerGroup();
+
+    for (size_t i = 1; i < CHASSIS_POWER_RTT_DIVIDER; ++i)
+        ApplyChassisPowerGroup();
+    ASSERT_STREQ("", captured_data);
+
+    ApplyChassisPowerGroup();
+    ASSERT_TRUE(captured_data[0] != '\0');
 }
 
 int main(void)
 {
-    TestMeasurementTupleReachesOneRttRow();
+    TestControlAndMeasurementSnapshotsReachOneRttRow();
     TestOfflineMeasurementKeepsValueAndTick();
     TestNonfiniteMeasurementBecomesZero();
+    TestNullControlSnapshotLeavesPreviousValue();
+    TestRttDividerRemainsTenMotorCycles();
 
     if (failures != 0)
         return 1;
