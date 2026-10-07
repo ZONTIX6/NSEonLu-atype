@@ -17,6 +17,7 @@
 #include "chassis_power_outer_loop.h"
 #include "chassis_power_link.h"
 #include "robot_def.h"
+#include "board_config.h"
 #if POWER_METER_ENABLE
 #include "power_meter.h"
 #endif
@@ -34,7 +35,7 @@
 #define HALF_WHEEL_BASE (WHEEL_BASE / 2.0f)     // 半轴距
 #define HALF_TRACK_WIDTH (TRACK_WIDTH / 2.0f)   // 半轮距
 #define PERIMETER_WHEEL (RADIUS_WHEEL * 2 * PI) // 轮子周长
-#define CHASSIS_POWER_SAFETY_FACTOR 0.95f
+#define CHASSIS_POWER_SAFETY_FACTOR 0.95f   // 功率预算安全系数,用于降低功率预算,避免功率计和底盘功率模型的误差导致底盘超功率
 
 /* 底盘应用包含的模块和信息存储,底盘是单例模式,因此不需要为底盘建立单独的结构体 */
 #ifdef CHASSIS_BOARD // 如果是底盘板,使用板载IMU获取底盘转动角速度
@@ -69,25 +70,26 @@ static const ChassisPowerBudgetConfig_s chassis_budget_config = {
     .rise_rate_w_per_s = 200.0f,
 };
 
+/* 功率外环:用功率计实测功率对比模型预测值,在"基准预算"上叠加一个有界的修正量 */
 static const ChassisPowerOuterLoopConfig_s chassis_outer_loop_config = {
-    .kp = 0.5f,
-    .ki = 1.0f,
-    .measurement_lpf_tau_s = 0.030f,
-    .activation_margin_w = 5.0f,
-    .error_deadband_w = 1.0f,
-    .max_positive_correction_w = 8.0f,
-    .positive_slew_rate_w_per_s = 20.0f,
-    .budget_drop_reset_w = 1.0f,
+    .kp = 0.5f, // 比例增益,误差 = 目标功率 - 实测功率(W),输出为预算修正量(W)
+    .ki = 1.0f, // 积分增益,积分限幅为[-基准预算, max_positive_correction_w]
+    .measurement_lpf_tau_s = 0.030f, // 功率计读数一阶低通时间常数(s),抑制采样噪声
+    .activation_margin_w = 5.0f, // 介入阈值(W):需求或实测功率距目标不到此值时才进入ACTIVE
+    .error_deadband_w = 1.0f, // 误差死区(W):|误差|不超过此值时按0处理,停止积分
+    .max_positive_correction_w = 8.0f, // 修正量上限(W):最多只上调8W;下限为-基准预算,即最狠可压到0
+    .positive_slew_rate_w_per_s = 20.0f, // 修正量上升/回零速率(W/s);下调不限速,立即生效
+    .budget_drop_reset_w = 1.0f, // 基准预算单周期跌落超过此值(W)时,清零正向积分与修正量
 };
 
 static const MotorPowerModelConfig_s m3508_power_model = {
-    .k0 = 1.10671243f,
-    .k1 = -0.275458501f,
-    .k2 = 0.000465227105f,
-    .k3 = 0.00166421676f,
-    .k4 = 0.228857816f,
-    .k5 = 1.11735923e-7f,
-    .current_conversion = 1000.0f,
+    .k0 = 1.3123816,
+    .k1 = -0.25836727,
+    .k2 = 0.0007424524,
+    .k3 = 0.0024271158,
+    .k4 = 0.081198552,
+    .k5 = 3.890596e-08,
+    .current_conversion = 1000.0f,// 电流单位转换,功率模型使用A,电机模块使用mA
 };
 
 /* 用于自旋变速策略的时间变量 */
@@ -162,7 +164,9 @@ void ChassisInit()
         DJIMotorStop(motor_rb);
     }
 
+#if UART1_REFEREE_ENABLED
     (void)UITaskInit(&huart1, &ui_data); // 裁判系统初始化,会同时初始化UI
+#endif
 
 /* Buffer环暂未测试，逻辑是计算期望buffer与实际buffer的差值，转换为冗余的功率，todo：输入给功率控制部分，待完善 */
     PID_Init_Config_s Buffer_pid_conf = {

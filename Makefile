@@ -116,6 +116,7 @@ bsp/can/bsp_can.c \
 bsp/usart/bsp_usart.c \
 bsp/usb/bsp_usb.c \
 bsp/log/bsp_log.c \
+bsp/log/bsp_uart_log.c \
 bsp/flash/bsp_flash.c \
 bsp/bsp_tools.c \
 modules/algorithm/controller.c \
@@ -221,6 +222,10 @@ C_DEFS =  \
 
 ifneq ($(strip $(POWER_METER_ENABLE)),)
 C_DEFS += -DPOWER_METER_ENABLE=$(POWER_METER_ENABLE)
+endif
+
+ifneq ($(strip $(UART1_USE)),)
+C_DEFS += -DUART1_USE=$(UART1_USE)
 endif
 
 # AS includes

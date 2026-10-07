@@ -76,9 +76,9 @@ motor control must never be delayed by diagnostic output. The RTT destination
 continues to use its existing non-blocking behavior.
 
 In a USART1 logging mode, BSP log initialization reconfigures USART1 to
-460800 baud, 8 data bits, no parity, 1 stop bit, and no flow control. Referee
+115200 baud, 8 data bits, no parity, 1 stop bit, and no flow control. Referee
 mode retains the generated 115200-baud USART1 configuration. VSCode Serial
-Monitor must use the matching `460800 8N1` settings.
+Monitor must use the matching `115200 8N1` settings.
 
 ### Referee and UI ownership
 
@@ -141,7 +141,7 @@ Integration checks verify:
 - referee builds retain both operations and route logs only to RTT;
 - the existing RTT telemetry and BSP log host tests still pass;
 - the ARM firmware builds in referee, UART-only, and UART-plus-RTT modes;
-- at 460800 baud, Serial Monitor receives the existing 100 Hz chassis-power
+- at 115200 baud, Serial Monitor receives the existing 100 Hz chassis-power
   CSV stream without control-loop blocking.
 
 ## Completion Criteria
@@ -151,4 +151,4 @@ Integration checks verify:
 - All existing project logging APIs work without call-site changes.
 - UART output is DMA-driven and never blocks the control loop.
 - Referee mode behaves as before and preserves RTT logging.
-- UART log modes are readable in VSCode Serial Monitor at 460800 8N1.
+- UART log modes are readable in VSCode Serial Monitor at 115200 8N1.

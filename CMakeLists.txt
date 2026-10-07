@@ -45,6 +45,10 @@ add_definitions(
     -DARM_MATH_CM4 
     ) # need -D<macro> to define macro
 
+if(DEFINED UART1_USE)
+    add_compile_definitions(UART1_USE=${UART1_USE})
+endif()
+
 # add inc
 # 递归包含头文件的函数
 function(include_sub_directories_recursively root_dir)

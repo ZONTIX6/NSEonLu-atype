@@ -1,6 +1,7 @@
 #ifndef BOARD_CONFIG_H
 #define BOARD_CONFIG_H
 
+/* USART1 is exclusive: referee, UART log, or UART log plus RTT. */
 #define UART1_USE_REFEREE 0
 #define UART1_USE_LOG     1
 #define UART1_USE_LOG_RTT 2

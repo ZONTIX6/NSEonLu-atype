@@ -16,6 +16,7 @@
 #include "buzzer.h"
 
 #include "bsp_log.h"
+#include "board_config.h"
 
 osThreadId insTaskHandle;
 osThreadId robotTaskHandle;
@@ -48,8 +49,10 @@ void OSTaskInit()
     osThreadDef(robottask, StartROBOTTASK, osPriorityNormal, 0, 1024);
     robotTaskHandle = osThreadCreate(osThread(robottask), NULL);
 
+#if UART1_REFEREE_ENABLED
     osThreadDef(uitask, StartUITASK, osPriorityNormal, 0, 512);
     uiTaskHandle = osThreadCreate(osThread(uitask), NULL);
+#endif
 
     HTMotorControlInit(); // 没有注册HT电机则不会执行
 }

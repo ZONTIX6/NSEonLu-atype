@@ -11,8 +11,8 @@
 ## Global Constraints
 
 - `UART1_USE_REFEREE` means USART1 referee/UI enabled, logging through RTT only, at the generated 115200 8N1 setting.
-- `UART1_USE_LOG` means USART1 referee/UI disabled, logging through USART1 only, at 460800 8N1.
-- `UART1_USE_LOG_RTT` means USART1 referee/UI disabled, logging through both USART1 and RTT, at 460800 8N1.
+- `UART1_USE_LOG` means USART1 referee/UI disabled, logging through USART1 only, at 115200 8N1.
+- `UART1_USE_LOG_RTT` means USART1 referee/UI disabled, logging through both USART1 and RTT, at 115200 8N1.
 - The initial default is `UART1_USE_LOG`; changing one definition to `UART1_USE_REFEREE` restores the on-robot configuration.
 - USART1 logging and `VISION_USE_UART` are an invalid combination and must fail compilation.
 - UART writes never block; a message that does not fit is dropped atomically and counted.
@@ -219,7 +219,7 @@ In `tests/uart_log/test_uart_log.c`, provide capture stubs and independent test
 functions for these exact behaviors:
 
 ```c
-static void TestInitSelects460800AndResetsDiagnostics(void);
+static void TestInitSelects115200AndResetsDiagnostics(void);
 static void TestFirstWriteStartsDmaAndPreservesBytes(void);
 static void TestBusyWriteQueuesWithoutRestartingDma(void);
 static void TestCompletionDrainsQueuedAndWrappedSegmentsInOrder(void);
@@ -269,7 +269,7 @@ On `HAL_UART_Transmit_DMA` failure, increment `tx_errors`, discard queued bytes
 by setting `tail = head`, and leave `dma_length` zero so the next message can
 retry cleanly.
 
-`BSPUARTLogInit` clears all state, sets `huart1.Init.BaudRate = 460800U`, and
+`BSPUARTLogInit` clears all state, sets `huart1.Init.BaudRate = 115200U`, and
 calls `HAL_UART_Init(&huart1)`. A failed init increments `tx_errors`.
 
 The implementation's private TX-completion handler ignores handles other than
@@ -524,7 +524,7 @@ Update `bsp_log.md` to state:
 - `0` is referee + RTT, `1` is UART log, and `2` is UART log + RTT;
 - connect C-board USART1 TX (PA9) to DAPLink UART RX and connect GND;
 - select the DAPLink serial port in VSCode Serial Monitor;
-- configure `460800 baud`, `8 data bits`, `no parity`, `1 stop bit`, and `no flow control`;
+- configure `115200 baud`, `8 data bits`, `no parity`, `1 stop bit`, and `no flow control`;
 - USART1 RX is unnecessary for one-way logging;
 - setting `UART1_USE_REFEREE` restores referee/UI at 115200 and keeps logs on RTT;
 - the root Makefile currently defines `DISABLE_LOG_SYSTEM`, so structured
@@ -566,7 +566,7 @@ Expected:
 
 - [ ] **Step 4: Perform the hardware smoke test**
 
-Build/download `UART1_USE=1`, open the DAPLink serial port at 460800 8N1, and
+Build/download `UART1_USE=1`, open the DAPLink serial port at 115200 8N1, and
 verify that the CSV header appears once and rows continue without malformed or
 interleaved bytes. Observe that motor-control delay warnings do not increase.
 Then build/download `UART1_USE=0`, reconnect the referee system, and verify that
