@@ -10,7 +10,12 @@ static const char chassis_power_header[] =
     "tick,nominal_budget_cw,target_power_cw,corrected_budget_cw,"
     "effective_limit_cw,p_unlimited_cw,p_limited_cw,p_meter_cw,"
     "p_filtered_cw,error_cw,correction_cw,min_scale_pm,limited_mask,"
-    "outer_mode,meter_online,meter_age_ms,motor_enabled_mask\r\n";
+    "outer_mode,meter_online,meter_age_ms,motor_enabled_mask"
+#if CHASSIS_POWER_CALIBRATION_ENABLE
+    ",i_lf_cmd,i_rf_cmd,i_lb_cmd,i_rb_cmd,"
+    "n_lf_rpm,n_rf_rpm,n_lb_rpm,n_rb_rpm,meter_tick_ms"
+#endif
+    "\r\n";
 
 static char chassis_power_row[RTT_TELEMETRY_CHASSIS_POWER_CSV_MAX_LENGTH];
 
@@ -139,6 +144,48 @@ size_t RTTTelemetryFormatChassisPowerCsv(
     return (size_t)written;
 }
 
+#if CHASSIS_POWER_CALIBRATION_ENABLE
+static size_t FormatChassisPowerCalibrationCsv(
+    const ChassisPowerOutput_s *power,
+    const ChassisPowerTelemetry_s *motor,
+    const ChassisPowerControlTelemetry_s *control,
+    uint32_t tick_ms,
+    float measured_chassis_power_w,
+    bool meter_online,
+    uint32_t meter_tick_ms,
+    char *buffer,
+    size_t buffer_size)
+{
+    const size_t control_length = RTTTelemetryFormatChassisPowerCsv(
+        power, motor, control, tick_ms, measured_chassis_power_w,
+        meter_online, meter_tick_ms, buffer, buffer_size);
+    if (control_length == 0U)
+        return 0U;
+
+    /* Replace the control row's CRLF so both snapshots remain in one row. */
+    const size_t prefix_length = control_length - 2U;
+    const size_t remaining = buffer_size - prefix_length;
+    const int written = snprintf(
+        buffer + prefix_length, remaining,
+        ",%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%lu\r\n",
+        (long)RoundTelemetryValue(motor->current_command[0]),
+        (long)RoundTelemetryValue(motor->current_command[1]),
+        (long)RoundTelemetryValue(motor->current_command[2]),
+        (long)RoundTelemetryValue(motor->current_command[3]),
+        (long)RoundTelemetryValue(motor->actual_speed_rpm[0]),
+        (long)RoundTelemetryValue(motor->actual_speed_rpm[1]),
+        (long)RoundTelemetryValue(motor->actual_speed_rpm[2]),
+        (long)RoundTelemetryValue(motor->actual_speed_rpm[3]),
+        (unsigned long)meter_tick_ms);
+    if (written < 0 || (size_t)written >= remaining)
+    {
+        buffer[0] = '\0';
+        return 0U;
+    }
+    return prefix_length + (size_t)written;
+}
+#endif
+
 void RTTTelemetryWriteChassisPowerHeader(void)
 {
     (void)BSPLogWriteString(chassis_power_header);
@@ -153,7 +200,11 @@ void RTTTelemetryWriteChassisPowerRow(
     bool meter_online,
     uint32_t meter_tick_ms)
 {
+#if CHASSIS_POWER_CALIBRATION_ENABLE
+    const size_t length = FormatChassisPowerCalibrationCsv(
+#else
     const size_t length = RTTTelemetryFormatChassisPowerCsv(
+#endif
         power,
         motor,
         control,

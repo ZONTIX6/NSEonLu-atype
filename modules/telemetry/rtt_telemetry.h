@@ -7,6 +7,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/* 0: standard 17-column control CSV; 1: append 9 calibration columns. */
+#ifndef CHASSIS_POWER_CALIBRATION_ENABLE
+#define CHASSIS_POWER_CALIBRATION_ENABLE 0
+#endif
+
+#if CHASSIS_POWER_CALIBRATION_ENABLE != 0 && CHASSIS_POWER_CALIBRATION_ENABLE != 1
+#error CHASSIS_POWER_CALIBRATION_ENABLE must be 0 or 1
+#endif
+
 #define RTT_TELEMETRY_CHASSIS_POWER_CSV_MAX_LENGTH 320U
 
 typedef struct
@@ -20,6 +29,7 @@ typedef struct
     uint8_t outer_mode;
 } ChassisPowerControlTelemetry_s;
 
+/* Always formats the standard 17 columns, regardless of the writer mode. */
 size_t RTTTelemetryFormatChassisPowerCsv(
     const ChassisPowerOutput_s *power,
     const ChassisPowerTelemetry_s *motor,

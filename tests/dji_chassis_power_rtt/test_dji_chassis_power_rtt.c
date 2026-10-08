@@ -19,6 +19,17 @@ static char captured_data[RTT_TELEMETRY_CHASSIS_POWER_CSV_MAX_LENGTH];
 
 #define ASSERT_STREQ(expected, actual) ASSERT_TRUE(strcmp((expected), (actual)) == 0)
 
+static void AssertControlColumnsMatch(const char *expected)
+{
+#if CHASSIS_POWER_CALIBRATION_ENABLE
+    const size_t prefix_length = strlen(expected) - 2U;
+    ASSERT_TRUE(strncmp(expected, captured_data, prefix_length) == 0);
+    ASSERT_TRUE(captured_data[prefix_length] == ',');
+#else
+    ASSERT_STREQ(expected, captured_data);
+#endif
+}
+
 CAN_HandleTypeDef hcan1;
 CAN_HandleTypeDef hcan2;
 
@@ -153,10 +164,9 @@ static void TestControlAndMeasurementSnapshotsReachOneRttRow(void)
 
     EmitOneRow();
 
-    ASSERT_STREQ(
+    AssertControlColumnsMatch(
         "123,3000,2850,2700,10000,0,0,1234,2900,-50,-300,"
-        "1000,0,2,1,46,15\r\n",
-        captured_data);
+        "1000,0,2,1,46,15\r\n");
 }
 
 static void TestOfflineMeasurementKeepsValueAndTick(void)
@@ -166,9 +176,8 @@ static void TestOfflineMeasurementKeepsValueAndTick(void)
 
     EmitOneRow();
 
-    ASSERT_STREQ(
-        "123,0,0,0,10000,0,0,900,0,0,0,1000,0,0,0,35,15\r\n",
-        captured_data);
+    AssertControlColumnsMatch(
+        "123,0,0,0,10000,0,0,900,0,0,0,1000,0,0,0,35,15\r\n");
 }
 
 static void TestNonfiniteMeasurementBecomesZero(void)
@@ -178,9 +187,8 @@ static void TestNonfiniteMeasurementBecomesZero(void)
 
     EmitOneRow();
 
-    ASSERT_STREQ(
-        "123,0,0,0,10000,0,0,0,0,0,0,1000,0,0,1,24,15\r\n",
-        captured_data);
+    AssertControlColumnsMatch(
+        "123,0,0,0,10000,0,0,0,0,0,0,1000,0,0,1,24,15\r\n");
 }
 
 static void TestNullControlSnapshotLeavesPreviousValue(void)
@@ -195,9 +203,8 @@ static void TestNullControlSnapshotLeavesPreviousValue(void)
 
     EmitOneRow();
 
-    ASSERT_STREQ(
-        "123,100,0,0,10000,0,0,0,0,0,0,1000,0,1,0,0,15\r\n",
-        captured_data);
+    AssertControlColumnsMatch(
+        "123,100,0,0,10000,0,0,0,0,0,0,1000,0,1,0,0,15\r\n");
 }
 
 static void TestRttDividerRemainsTenMotorCycles(void)
@@ -212,6 +219,61 @@ static void TestRttDividerRemainsTenMotorCycles(void)
     ASSERT_TRUE(captured_data[0] != '\0');
 }
 
+static void TestCalibrationUsesOutputCommandsAndActualRpm(void)
+{
+    PreparePowerGroup();
+    DJIChassisPowerSetMeasuredPower(18.0f, true, 117U);
+    motor_output[0] = -1.0f;
+    motor_output[2] = -3.0f;
+    for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
+        speed_feedback_aps[i] = motor_output[i] * 600.0f;
+    dji_motor_instance[2]->stop_flag = MOTOR_STOP;
+    dji_motor_instance[3]->daemon->online = 0U;
+
+    EmitOneRow();
+    const char expected[] =
+        "123,0,0,0,10000,0,0,1800,0,0,0,1000,0,0,1,6,3"
+#if CHASSIS_POWER_CALIBRATION_ENABLE
+        ",-1,2,0,0,-100,200,-300,400,117"
+#endif
+        "\r\n";
+    ASSERT_STREQ(expected, captured_data);
+}
+
+static void TestCalibrationPrintsLimitedCurrentsInsteadOfPidDemand(void)
+{
+    PreparePowerGroup();
+    chassis_power->input.referee_power_limit_w = 4.0f;
+    const ChassisPowerControlTelemetry_s control = {
+        .nominal_budget_w = 4.0f,
+        .target_power_w = 4.0f,
+        .corrected_budget_w = 4.0f,
+        .filtered_power_w = 3.9f,
+        .error_w = 0.1f,
+        .outer_mode = 2U,
+    };
+    DJIChassisPowerSetControlTelemetry(&control);
+    DJIChassisPowerSetMeasuredPower(3.9f, true, 117U);
+    const float demands[] = {2.0f, -3.0f, 4.0f, -5.0f};
+    const float feedback_aps[] = {600.0f, -1200.0f, 1800.0f, -2400.0f};
+    for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
+    {
+        chassis_power->models[i].k4 = 1.0f;
+        motor_output[i] = demands[i];
+        speed_feedback_aps[i] = feedback_aps[i];
+    }
+
+    chassis_power_rtt_count = CHASSIS_POWER_RTT_DIVIDER - 1U;
+    ApplyChassisPowerGroup();
+    const char expected[] =
+        "123,400,400,400,400,5400,400,390,390,10,0,200,15,2,1,6,15"
+#if CHASSIS_POWER_CALIBRATION_ENABLE
+        ",1,-1,1,-1,100,-200,300,-400,117"
+#endif
+        "\r\n";
+    ASSERT_STREQ(expected, captured_data);
+}
+
 int main(void)
 {
     TestControlAndMeasurementSnapshotsReachOneRttRow();
@@ -219,6 +281,8 @@ int main(void)
     TestNonfiniteMeasurementBecomesZero();
     TestNullControlSnapshotLeavesPreviousValue();
     TestRttDividerRemainsTenMotorCycles();
+    TestCalibrationUsesOutputCommandsAndActualRpm();
+    TestCalibrationPrintsLimitedCurrentsInsteadOfPidDemand();
 
     if (failures != 0)
         return 1;

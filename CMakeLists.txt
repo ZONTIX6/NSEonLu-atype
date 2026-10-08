@@ -49,6 +49,10 @@ if(DEFINED UART1_USE)
     add_compile_definitions(UART1_USE=${UART1_USE})
 endif()
 
+if(DEFINED CHASSIS_POWER_CALIBRATION_ENABLE)
+    add_compile_definitions(CHASSIS_POWER_CALIBRATION_ENABLE=${CHASSIS_POWER_CALIBRATION_ENABLE})
+endif()
+
 # add inc
 # 递归包含头文件的函数
 function(include_sub_directories_recursively root_dir)

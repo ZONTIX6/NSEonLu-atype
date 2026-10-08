@@ -1,6 +1,9 @@
 CC ?= gcc
 CFLAGS := -std=c11 -Wall -Wextra -Werror -O0 -g \
           -ffunction-sections -fdata-sections
+ifneq ($(strip $(CHASSIS_POWER_CALIBRATION_ENABLE)),)
+CFLAGS += -DCHASSIS_POWER_CALIBRATION_ENABLE=$(CHASSIS_POWER_CALIBRATION_ENABLE)
+endif
 LDFLAGS := -Wl,--gc-sections
 TARGET := test_dji_chassis_power_rtt.exe
 SOURCE := test_dji_chassis_power_rtt.c \
