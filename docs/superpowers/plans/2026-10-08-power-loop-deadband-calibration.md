@@ -14,7 +14,7 @@
 - Preserve model coefficients, PI gains, filtering, protection, scheduling and allocation.
 - Default CSV has 17 columns; opt-in calibration CSV has the same prefix plus 9 fields.
 - `CHASSIS_POWER_CALIBRATION_ENABLE` defaults to 0 and accepts only 0/1.
-- Do not commit or flash firmware as part of this task.
+- Do not flash firmware as part of this task. The user subsequently authorized automatic local Git commits after completed and verified work, including these changes.
 
 ### Task 1: Calibration output
 
