@@ -27,6 +27,7 @@ typedef struct
     float filtered_power_w;
     float integral_w;
     float correction_w;
+    float applied_correction_w;
     float previous_nominal_budget_w;
     bool measurement_initialized;
 } ChassisPowerOuterLoopState_s;
@@ -40,6 +41,7 @@ typedef struct
     bool meter_online;
     bool allow_positive_correction;
     bool control_enabled;
+    bool learning_allowed;
 } ChassisPowerOuterLoopInput_s;
 
 typedef struct
@@ -60,5 +62,10 @@ bool ChassisPowerOuterLoopUpdate(
     float dt_s,
     ChassisPowerOuterLoopState_s *state,
     ChassisPowerOuterLoopOutput_s *output);
+
+bool ChassisPowerOuterLoopUpdateIsolated(
+    const ChassisPowerOuterLoopConfig_s *config,
+    const ChassisPowerOuterLoopInput_s *input, float dt_s,
+    ChassisPowerOuterLoopState_s *state, ChassisPowerOuterLoopOutput_s *output);
 
 #endif

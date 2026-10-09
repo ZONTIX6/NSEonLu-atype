@@ -255,3 +255,42 @@ bool ChassisPowerOuterLoopUpdate(
 
     return true;
 }
+
+bool ChassisPowerOuterLoopUpdateIsolated(const ChassisPowerOuterLoopConfig_s *c,
+    const ChassisPowerOuterLoopInput_s *i, float dt, ChassisPowerOuterLoopState_s *s,
+    ChassisPowerOuterLoopOutput_s *o)
+{
+    if (s == NULL || o == NULL) return false;
+    ClearOutput(o);
+    if (!ChassisPowerOuterLoopConfigIsValid(c) || i == NULL) {
+        ChassisPowerOuterLoopReset(s); return false;
+    }
+    if (!i->control_enabled) { ChassisPowerOuterLoopReset(s); o->mode = CHASSIS_POWER_OUTER_STANDBY; return true; }
+    if (!isfinite(i->nominal_budget_w) || i->nominal_budget_w <= 0 ||
+        !isfinite(i->target_power_w) || i->target_power_w <= 0 ||
+        !isfinite(s->integral_w) || !isfinite(s->correction_w) || !isfinite(s->applied_correction_w)) {
+        ChassisPowerOuterLoopReset(s); return false;
+    }
+    const bool timing = isfinite(dt) && dt > 0 && dt <= .020f;
+    if (!timing) dt = 0;
+    if (s->previous_nominal_budget_w > i->nominal_budget_w + c->budget_drop_reset_w) {
+        s->integral_w = fminf(s->integral_w, 0);
+        s->correction_w = fminf(s->correction_w, 0);
+        s->applied_correction_w = fminf(s->applied_correction_w, 0);
+    }
+    if (i->meter_online && isfinite(i->measured_power_w) && timing && i->learning_allowed) {
+        if (!ChassisPowerOuterLoopUpdate(c, i, dt, s, o)) return false;
+    } else {
+        if (!i->meter_online) s->measurement_initialized = false;
+        o->mode = i->meter_online ? CHASSIS_POWER_OUTER_STANDBY : CHASSIS_POWER_OUTER_OFFLINE;
+    }
+    float target = s->correction_w;
+    if (!i->allow_positive_correction || !i->meter_online || !timing) target = fminf(target, 0);
+    s->applied_correction_w = target > s->applied_correction_w ?
+        fminf(target, s->applied_correction_w + c->positive_slew_rate_w_per_s * dt) : target;
+    s->previous_nominal_budget_w = i->nominal_budget_w;
+    o->correction_w = ClampFloat(s->applied_correction_w, -i->nominal_budget_w, c->max_positive_correction_w);
+    o->filtered_power_w = s->filtered_power_w;
+    o->corrected_budget_w = ClampFloat(i->nominal_budget_w + o->correction_w, 0, i->nominal_budget_w + c->max_positive_correction_w);
+    return true;
+}

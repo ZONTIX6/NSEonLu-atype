@@ -46,6 +46,8 @@ static void TestCaptureWindowFreezeAndDrain(void)
         assert(ChassisPowerCaptureNextFrame(&capture, now, true, frame));
         ChassisPowerCaptureFrameAccepted(&capture, now);
     }
+    assert(capture.frozen); /* still frozen until UART reports empty */
+    ChassisPowerCaptureDrainComplete(&capture);
     assert(!capture.frozen);
 }
 static void TestT90HoldAndTargetChange(void)

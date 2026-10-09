@@ -8,6 +8,7 @@
 static int failures;
 static char captured_data[RTT_TELEMETRY_CHASSIS_POWER_CSV_MAX_LENGTH];
 static PowerMeterStatus_s test_meter;
+static bool publish_stop_during_pid;
 
 static void SetMeter(float power, bool online, uint32_t tick)
 {
@@ -86,6 +87,12 @@ float PIDCalculate(PIDInstance *pid, float measure, float ref)
 {
     (void)pid;
     (void)measure;
+    if (publish_stop_during_pid) {
+        publish_stop_during_pid = false;
+        DJIChassisPowerControlSnapshot_s next = chassis_power->control;
+        ++next.version; next.control_enabled = false;
+        DJIChassisPowerPublishControl(&next);
+    }
     return ref;
 }
 
@@ -140,6 +147,7 @@ static void PreparePowerGroup(void)
     memset(speed_feedback_aps, 0, sizeof(speed_feedback_aps));
     memset(captured_data, 0, sizeof(captured_data));
     memset(&test_meter, 0, sizeof(test_meter));
+    idx = 4;
 
     power_group.registered = true;
     power_group.input.referee_power_limit_w = 100.0f;
@@ -162,6 +170,8 @@ static void PreparePowerGroup(void)
         daemons[i].online = 1U;
         motors[i].daemon = &daemons[i];
         motors[i].stop_flag = MOTOR_ENALBED;
+        motors[i].sender_group = 1;
+        motors[i].message_num = (uint8_t)i;
         dji_motor_instance[i] = &motors[i];
         motor_output[i] = (float)(i + 1U);
     }
@@ -196,6 +206,55 @@ static void TestAtomicPublicationAndFinalIntegerCommands(void)
     DJIMotorStop(dji_motor_instance[0]);
     ApplyChassisPowerGroup();
     ASSERT_TRUE(chassis_power->state.power.limited_current[0] == 0);
+}
+
+static void TestStopPublicationDoesNotMixCanAndDiagnostics(void)
+{
+    PreparePowerGroup(); idx = 4;
+    DJIChassisPowerControlSnapshot_s control = chassis_power->control;
+    control.version = 10;
+    for (unsigned i = 0; i < 4; ++i) {
+        control.target_rpm[i] = 1000;
+        dji_motor_instance[i]->motor_settings.close_loop_type = SPEED_LOOP;
+        dji_motor_instance[i]->motor_settings.outer_loop_type = SPEED_LOOP;
+    }
+    DJIChassisPowerPublishControl(&control);
+    publish_stop_during_pid = true;
+    DJIMotorControl();
+    ASSERT_TRUE(chassis_power->state.control_version == 10);
+    for (unsigned i = 0; i < 4; ++i) {
+        int16_t sent = (int16_t)((uint16_t)sender_assignment[1].tx_buff[2*i] << 8 |
+                                sender_assignment[1].tx_buff[2*i+1]);
+        ASSERT_TRUE(sent == chassis_power->state.power.limited_current[i]);
+    }
+    DJIMotorControl();
+    ASSERT_TRUE(chassis_power->state.control_version == 11);
+    for (unsigned i = 0; i < 4; ++i) ASSERT_TRUE(chassis_power->state.power.limited_current[i] == 0);
+    idx = 0;
+}
+
+static void TestFastProtectionObservesOrAppliesByStage(void)
+{
+    PreparePowerGroup();
+    DJIChassisPowerControlSnapshot_s control = chassis_power->control;
+    control.nominal_budget_w = control.legacy_budget_w = 20;
+    control.target_power_w = 19; control.slow_correction_w = 3;
+    DJIChassisPowerPublishControl(&control);
+    for (unsigned i = 0; i < 4; ++i) {
+        chassis_power->models[i].k4 = .01f;
+        motor_output[i] = 40;
+    }
+    SetMeter(36.1f, true, 123);
+    ApplyChassisPowerGroup();
+#if POWER_METER_ENABLE
+    ASSERT_TRUE(chassis_power->state.transient.fast_w < -8);
+    ASSERT_TRUE(chassis_power->state.proposed_current[0] <= 16);
+#endif
+#if CHASSIS_POWER_CONTROL_STAGE == 0 || !POWER_METER_ENABLE
+    ASSERT_TRUE(chassis_power->state.power.limited_current[0] == 22);
+#else
+    ASSERT_TRUE(chassis_power->state.power.limited_current[0] <= 16);
+#endif
 }
 
 static void TestControlAndMeasurementSnapshotsReachOneRttRow(void)
@@ -327,14 +386,18 @@ static void TestCalibrationPrintsLimitedCurrentsInsteadOfPidDemand(void)
 
 int main(void)
 {
+    TestFastProtectionObservesOrAppliesByStage();
+    TestStopPublicationDoesNotMixCanAndDiagnostics();
     TestAtomicPublicationAndFinalIntegerCommands();
-    TestControlAndMeasurementSnapshotsReachOneRttRow();
-    TestOfflineMeasurementKeepsValueAndTick();
-    TestNonfiniteMeasurementBecomesZero();
-    TestNullControlSnapshotLeavesPreviousValue();
-    TestRttDividerRemainsTenMotorCycles();
-    TestCalibrationUsesOutputCommandsAndActualRpm();
-    TestCalibrationPrintsLimitedCurrentsInsteadOfPidDemand();
+    if (CHASSIS_POWER_CONTROL_STAGE == 0 && POWER_METER_ENABLE) {
+        TestControlAndMeasurementSnapshotsReachOneRttRow();
+        TestOfflineMeasurementKeepsValueAndTick();
+        TestNonfiniteMeasurementBecomesZero();
+        TestNullControlSnapshotLeavesPreviousValue();
+        TestRttDividerRemainsTenMotorCycles();
+        TestCalibrationUsesOutputCommandsAndActualRpm();
+        TestCalibrationPrintsLimitedCurrentsInsteadOfPidDemand();
+    }
 
     if (failures != 0)
         return 1;

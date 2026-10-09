@@ -138,7 +138,7 @@ void ChassisPowerCaptureUpdate(ChassisPowerCapture_s *c, const ChassisPowerCaptu
 bool ChassisPowerCaptureNextFrame(ChassisPowerCapture_s *c, uint32_t now,
                                  bool stopped, uint8_t frame[102])
 {
-    if (c == NULL || frame == NULL || !c->frozen || !stopped ||
+    if (c == NULL || frame == NULL || !c->frozen || !stopped || c->drain_index > c->count ||
         (c->drained_once && (uint32_t)(now - c->last_drain_ms) < 21)) return false;
     memcpy(frame, "CPC1", 4);
     uint8_t *r = frame + 4;
@@ -160,7 +160,11 @@ void ChassisPowerCaptureFrameAccepted(ChassisPowerCapture_s *c, uint32_t now)
 {
     if (c == NULL || !c->frozen) return;
     c->drained_once = true; c->last_drain_ms = now;
-    if (++c->drain_index > c->count) {
+    ++c->drain_index;
+}
+void ChassisPowerCaptureDrainComplete(ChassisPowerCapture_s *c)
+{
+    if (c != NULL && c->frozen && c->drain_index > c->count) {
         c->frozen = false; c->post_count = c->count = c->head = c->start = 0;
         c->low_valid = false;
     }

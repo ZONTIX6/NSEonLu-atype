@@ -358,6 +358,12 @@ static void UpdateChassisPowerBudget(void)
         }
     }
 
+#if CHASSIS_POWER_CONTROL_STAGE >= 1
+    meter_status.power_w = power_state.measured_power_w;
+    meter_status.last_rx_tick_ms = power_state.meter_tick_ms;
+    meter_valid = power_state_valid && power_state.meter_online &&
+        (uint32_t)(HAL_GetTick() - meter_status.last_rx_tick_ms) <= 20;
+#endif
     const ChassisPowerOuterLoopInput_s outer_input = {
         .nominal_budget_w = chassis_budget_output.applied_budget_w,
         .target_power_w = chassis_budget_output.applied_budget_w *
@@ -366,14 +372,26 @@ static void UpdateChassisPowerBudget(void)
         .predicted_unlimited_power_w = predicted_unlimited_power_w,
         .meter_online = meter_valid,
         .allow_positive_correction =
+#if CHASSIS_POWER_CONTROL_STAGE == 0
             meter_valid && meter_status.power_w >= 0.0f &&
             motoring_indicator >= 0.0f,
+#else
+            meter_valid && power_state.transient.positive_allowed &&
+            meter_status.power_w <= chassis_budget_output.applied_budget_w,
+#endif
+        .learning_allowed = meter_valid && power_state.transient.learning_allowed &&
+            meter_status.power_w <= chassis_budget_output.applied_budget_w &&
+            (uint32_t)(HAL_GetTick() - power_state.tick_ms) <= 5,
         .control_enabled =
             chassis_power_ready &&
             chassis_cmd_recv.chassis_mode != CHASSIS_ZERO_FORCE,
     };
 
+#if CHASSIS_POWER_CONTROL_STAGE == 0
     if (!ChassisPowerOuterLoopUpdate(&chassis_outer_loop_config,
+#else
+    if (!ChassisPowerOuterLoopUpdateIsolated(&chassis_outer_loop_config,
+#endif
                                      &outer_input,
                                      dt_s,
                                      &chassis_outer_loop_state,

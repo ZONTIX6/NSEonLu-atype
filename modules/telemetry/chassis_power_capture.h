@@ -44,6 +44,8 @@ void ChassisPowerCaptureUpdate(ChassisPowerCapture_s *capture,
 bool ChassisPowerCaptureNextFrame(ChassisPowerCapture_s *capture, uint32_t now_ms,
                                  bool control_stopped, uint8_t frame[102]);
 void ChassisPowerCaptureFrameAccepted(ChassisPowerCapture_s *capture, uint32_t now_ms);
+/* Release only after every frame has been queued AND the transport is empty. */
+void ChassisPowerCaptureDrainComplete(ChassisPowerCapture_s *capture);
 bool ChassisPowerCaptureFrameIsValid(const uint8_t frame[102]);
 
 #endif

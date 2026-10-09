@@ -41,9 +41,6 @@ static void StartNextDmaSegment(void)
     if (status != HAL_OK)
     {
         ++diagnostics.tx_errors;
-        tx_head = tx_tail;
-        tx_queued = 0U;
-        tx_dma_length = 0U;
         return;
     }
     tx_dma_length = length;
@@ -108,6 +105,22 @@ void BSPUARTLogGetDiagnostics(BSPUARTLogDiagnostics_s *out)
     if (out == NULL)
         return;
     *out = diagnostics;
+}
+
+void BSPUARTLogPoll(void)
+{
+    const uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    StartNextDmaSegment();
+    __set_PRIMASK(primask);
+}
+bool BSPUARTLogIsIdle(void)
+{
+    const uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    const bool idle = tx_queued == 0U && tx_dma_length == 0U;
+    __set_PRIMASK(primask);
+    return idle;
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)

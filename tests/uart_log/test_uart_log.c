@@ -62,11 +62,11 @@ static void Reset(void)
     dma_length = 0U;
 }
 
-static void TestInitSelects115200AndResetsDiagnostics(void)
+static void TestInitSelects250000AndResetsDiagnostics(void)
 {
     BSPUARTLogDiagnostics_s diagnostics;
     Reset();
-    ASSERT_EQ_UINT(115200U, huart1.Init.BaudRate);
+    ASSERT_EQ_UINT(250000U, huart1.Init.BaudRate);
     BSPUARTLogGetDiagnostics(&diagnostics);
     ASSERT_EQ_UINT(0U, diagnostics.dropped_messages);
     ASSERT_EQ_UINT(0U, diagnostics.tx_errors);
@@ -147,7 +147,18 @@ static void TestHalInitAndDmaStartFailuresAreCounted(void)
 
 int main(void)
 {
-    TestInitSelects115200AndResetsDiagnostics();
+    TestInitSelects250000AndResetsDiagnostics();
+    {
+        Reset(); dma_status = HAL_ERROR;
+        ASSERT_EQ_UINT(3, BSPUARTLogWrite("abc", 3));
+        ASSERT_TRUE(!BSPUARTLogIsIdle());
+        dma_status = HAL_OK;
+        BSPUARTLogPoll();
+        ASSERT_TRUE(memcmp(dma_data, "abc", 3) == 0);
+        ASSERT_TRUE(!BSPUARTLogIsIdle());
+        HAL_UART_TxCpltCallback(&huart1);
+        ASSERT_TRUE(BSPUARTLogIsIdle());
+    }
     TestFirstWriteStartsDmaAndPreservesBytes();
     TestBusyWriteQueuesWithoutRestartingDma();
     TestCompletionDrainsQueuedAndWrappedSegmentsInOrder();

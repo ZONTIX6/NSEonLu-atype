@@ -776,6 +776,21 @@ static void TestInvalidDeltaTimeFailsWithoutPositiveOutput(void)
 
 int main(void)
 {
+    /* A spike must freeze both P and I in the separated controller. */
+    {
+        ChassisPowerOuterLoopState_s s = {.integral_w = 2, .correction_w = 2,
+            .applied_correction_w = 2, .measurement_initialized = true, .filtered_power_w = 57};
+        ChassisPowerOuterLoopInput_s i = BaseInput();
+        i.measured_power_w = 100; i.learning_allowed = false; i.allow_positive_correction = false;
+        ChassisPowerOuterLoopOutput_s o;
+        ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&valid_config, &i, .005f, &s, &o));
+        ASSERT_NEAR(2, s.integral_w, 1e-6f);
+        ASSERT_NEAR(2, s.correction_w, 1e-6f);
+        ASSERT_NEAR(0, o.correction_w, 1e-6f);
+        i.learning_allowed = true; i.allow_positive_correction = true; i.measured_power_w = 57;
+        ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&valid_config, &i, .005f, &s, &o));
+        ASSERT_TRUE(o.correction_w <= .1f);
+    }
     TestResetClearsEveryStateField();
     TestOfflineMeterPassesNominalBudgetFromReset();
     TestFirstOnlineSampleSeedsFilterWithoutZeroRamp();

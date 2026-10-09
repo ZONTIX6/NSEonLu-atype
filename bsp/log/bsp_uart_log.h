@@ -7,6 +7,7 @@
  */
 
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef struct
 {
@@ -22,6 +23,9 @@ void BSPUARTLogInit(void);
  * @return `length` when the complete message was queued, otherwise zero.
  */
 unsigned BSPUARTLogWrite(const void *data, unsigned length);
+/* Retry a retained DMA segment after HAL_BUSY/HAL_ERROR. */
+void BSPUARTLogPoll(void);
+bool BSPUARTLogIsIdle(void);
 
 /** @brief Copy the current queue error counters to `out`. */
 void BSPUARTLogGetDiagnostics(BSPUARTLogDiagnostics_s *out);

@@ -24,6 +24,7 @@
 #include "rtt_telemetry.h"
 #include "chassis_power_config.h"
 #include "chassis_power_capture.h"
+#include "chassis_power_transient.h"
 
 #define DJI_MOTOR_CNT 12
 
@@ -100,6 +101,7 @@ typedef struct
     float measured_power_w;
     uint32_t meter_tick_ms;
     bool meter_online;
+    ChassisPowerTransientOutput_s transient;
 } DJIChassisPowerState_s;
 
 typedef struct
@@ -111,6 +113,8 @@ typedef struct
     ChassisPowerInput_s input;
     DJIChassisPowerState_s state;
     DJIChassisPowerControlSnapshot_s control;
+    ChassisPowerTransientState_s transient;
+    uint32_t control_dwt_count;
 } DJIChassisPowerInstance_s;
 
 /**
