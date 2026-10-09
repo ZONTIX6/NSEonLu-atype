@@ -409,6 +409,7 @@ static void ApplyChassisPowerGroup(void)
         .slow_w = cycle_control.slow_correction_w, .meter_w = meter.power_w,
         .now_ms = now_ms, .meter_tick_ms = meter.last_rx_tick_ms,
         .meter_enabled = POWER_METER_ENABLE != 0, .meter_online = meter.online,
+        .startup_enabled = CHASSIS_POWER_CONTROL_STAGE != 1,
         .control_enabled = cycle_control.control_enabled};
 
     for (size_t slot = 0; slot < POWER_MODEL_MOTOR_COUNT; ++slot)
@@ -434,6 +435,7 @@ static void ApplyChassisPowerGroup(void)
 
     ChassisPowerTransientConfig_s transient_config = ChassisPowerTransientDefaultConfig();
     transient_config.eta = chassis_power->algorithm.safety_factor;
+    transient_config.max_current_command = chassis_power->algorithm.max_current_command;
     (void)ChassisPowerTransientUpdate(&transient_config, &transient_input,
         DWT_GetDeltaT(&chassis_power->control_dwt_count), &chassis_power->transient, &state.transient);
 #if CHASSIS_POWER_CONTROL_STAGE >= 1
@@ -450,25 +452,36 @@ static void ApplyChassisPowerGroup(void)
     const bool proposed_valid = PowerModelApply(chassis_power->models, &chassis_power->algorithm,
                                                 &chassis_power->input, &proposed_power);
     chassis_power->input.referee_power_limit_w = applied_budget;
+    for (unsigned w = 0; w < 4; ++w) {
+        const unsigned index = chassis_power->motor_indices[w];
+        if (!cycle_online[index] || cycle_stop[index] == MOTOR_STOP || !cycle_control.control_enabled)
+            proposed_power.limited_current[w] = 0;
+    }
+    if (proposed_valid && !state.transient.fault && cycle_control.control_enabled)
+        (void)ChassisPowerTransientGuard(&transient_config, chassis_power->models, &transient_input,
+                                        proposed_power.limited_current, &chassis_power->transient, &state.transient);
 
     for (size_t slot = 0; slot < POWER_MODEL_MOTOR_COUNT; ++slot)
     {
         const uint8_t index = chassis_power->motor_indices[slot];
         const bool motor_online = cycle_online[index];
         output_enabled[slot] = power_valid && motor_online && cycle_control.control_enabled &&
-                               cycle_stop[index] != MOTOR_STOP;
+                               cycle_stop[index] != MOTOR_STOP && !state.transient.fault;
         if (motor_online) state.online_mask |= (uint8_t)(1U << slot);
         state.base_limited |= power_output.current_scale[slot] < 0.9999f;
-        const float final = output_enabled[slot] ? (float)(int16_t)power_output.limited_current[slot] : 0;
+        float chosen = power_output.limited_current[slot];
+#if CHASSIS_POWER_CONTROL_STAGE >= 2
+        chosen = state.transient.guarded_current[slot];
+#endif
+        const float final = output_enabled[slot] ? (float)(int16_t)chosen : 0;
         motor_output[index] = final;
         power_output.limited_current[slot] = final;
-        power_output.current_scale[slot] = fabsf(state.raw_current[slot]) > 0 ?
-            fabsf(final / state.raw_current[slot]) : 1;
-        if (power_valid) power_output.predicted_limited_power_w[slot] =
-            PowerModelPredict(&chassis_power->models[slot], final, chassis_power->input.speed_rpm[slot]);
         state.proposed_current[slot] = proposed_valid && output_enabled[slot] ?
-            (float)(int16_t)proposed_power.limited_current[slot] : 0;
+            state.transient.guarded_current[slot] : 0;
     }
+
+    if (power_valid) (void)PowerModelRecomputeFinal(chassis_power->models,
+        &chassis_power->input, power_output.limited_current, &power_output);
 
     (void)ChassisPowerTelemetryBuild(&chassis_power->input,
                                      &power_output,
@@ -494,10 +507,12 @@ static void ApplyChassisPowerGroup(void)
         .budget_w = cycle_control.nominal_budget_w, .measured_w = measured_chassis_power_w,
         .slow_w = state.transient.slow_applied_w, .fast_w = state.transient.fast_w,
         .state = (uint8_t)state.transient.mode,
+        .excess_j = state.transient.excess_j, .allowance_j = state.transient.allowance_j,
         .drive_mask = state.transient.drive_mask, .brake_mask = state.transient.brake_mask,
         .enabled_mask = telemetry.motor_enabled_mask,
         .meter_age_ms = (uint8_t)fminf(255, (float)(uint32_t)(now_ms - meter_tick_ms)),
-        .flags = (uint8_t)((state.numeric_error ? 1 : 0) | (CHASSIS_POWER_CONTROL_STAGE << 4))};
+        .flags = (uint8_t)((state.numeric_error ? 1 : 0) | (state.transient.guard_infeasible ? 2 : 0) |
+                          (state.transient.growth_fallback ? 4 : 0) | (CHASSIS_POWER_CONTROL_STAGE << 4))};
     for (unsigned i = 0; i < 4; ++i) {
         sample.raw_current[i] = state.raw_current[i];
         sample.final_current[i] = power_output.limited_current[i];
@@ -506,6 +521,8 @@ static void ApplyChassisPowerGroup(void)
         sample.target_rpm[i] = telemetry.target_speed_rpm[i];
         sample.motor_age_ms[i] = (uint8_t)fminf(255, (float)(uint32_t)(now_ms - state.feedback_tick_ms[i]));
         sample.actual_model_w += power_output.predicted_limited_power_w[i];
+        sample.guard_model_w += PowerModelPredict(&chassis_power->models[i],
+                                                  power_output.limited_current[i], state.transient.guard_rpm[i]);
     }
     ChassisPowerCaptureUpdate(&chassis_capture, &sample);
 #endif

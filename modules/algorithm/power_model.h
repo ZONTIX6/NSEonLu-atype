@@ -73,6 +73,10 @@ typedef struct
 } ChassisPowerTelemetry_s;
 
 bool PowerModelConfigIsValid(const MotorPowerModelConfig_s *config);
+/* Largest x in [0,max_scale] satisfying a*x*x+b*x+c <= 0. */
+bool PowerModelFindFeasibleScale(float a, float b, float c, float max_scale, float *scale);
+bool PowerModelRecomputeFinal(const MotorPowerModelConfig_s models[4],
+    const ChassisPowerInput_s *input, const float final_current[4], ChassisPowerOutput_s *output);
 bool ChassisPowerAlgorithmConfigIsValid(const ChassisPowerAlgorithmConfig_s *config);
 float PowerModelSelectLimit(float referee_limit_w, float fallback_limit_w);
 float PowerModelPredict(const MotorPowerModelConfig_s *config,

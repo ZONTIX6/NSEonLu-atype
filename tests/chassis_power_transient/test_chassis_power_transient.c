@@ -77,8 +77,118 @@ static void TestDisabledMeterResetInvalidAndWrap(void)
     assert(!ChassisPowerTransientUpdate(&config, &input, .001f, &state, &output));
     assert(output.fault && output.model_budget_w == 0);
 }
+
+static void StartLowSpeed(void)
+{
+    Prepare(); input.startup_enabled = true; input.slow_w = 3;
+    for (unsigned w = 0; w < 4; ++w) {
+        input.actual_rpm[w] = input.target_rpm[w] = input.raw_current[w] = 0;
+    }
+    for (uint32_t t = 0; t <= 100; ++t) {
+        for (unsigned w = 0; w < 4; ++w) input.feedback_sequence[w] = t + 1;
+        Tick(t, true);
+    }
+    for (unsigned w = 0; w < 4; ++w) { input.target_rpm[w] = 1000; input.raw_current[w] = 5000; }
+    Tick(101, true);
+    assert(output.mode == CHASSIS_POWER_TRANSIENT_STARTUP && output.startup_triggered);
+    assert(output.slow_applied_w == 0 && output.model_budget_w == 20);
+    assert(fabsf(output.allowance_j - .18f) < 1e-6f);
+}
+static void TestStartupWindowEnergyAndNoRecharge(void)
+{
+    StartLowSpeed(); input.meter_w = 25; Tick(102, true);
+    assert(output.fast_w == 0 && fabsf(output.excess_j - .005f) < 1e-6f);
+    for (uint32_t t = 103; t < 131; ++t) Tick(t, true);
+    assert(output.startup_active);
+    Tick(131, true);
+    assert(!output.startup_active && output.fast_w < 0);
+    input.target_rpm[0] += 300; Tick(132, true);
+    assert(!output.startup_triggered);
+    StartLowSpeed(); state.excess_j = .179f; input.meter_w = 25; Tick(102, true);
+    assert(!output.startup_active && output.fast_w < 0);
+    StartLowSpeed(); input.budget_w = 19; Tick(102, true);
+    assert(!output.startup_active);
+    StartLowSpeed(); input.raw_current[0] = -5000; Tick(102, true);
+    assert(!output.startup_active && (output.brake_mask & 1));
+}
+static void TestAccelerationUsesNewFeedbackAndStaleFallback(void)
+{
+    Prepare(); input.startup_enabled = false; input.actual_rpm[0] = 100;
+    Tick(100, true);
+    input.actual_rpm[0] = 110;
+    input.feedback_sequence[0] = 2; Tick(101, true);
+    assert(fabsf(output.guard_rpm[0] - 190) < .01f);
+    input.actual_rpm[0] = 500; Tick(102, false);
+    /* Repeated sequence does not differentiate an inconsistent speed snapshot. */
+    assert(fabsf(state.acceleration_rpm_s[0] - 10000) < .1f);
+    input.feedback_tick_ms[0] = 101;
+    input.now_ms = 107; input.meter_tick_ms = 107;
+    assert(ChassisPowerTransientUpdate(&config, &input, .001f, &state, &output));
+    assert(output.guard_rpm[0] == 500 && !output.feedback_fresh);
+}
+static void TestGuardPreservesBrakingAndUsesFeasibleIntervals(void)
+{
+    Prepare(); input.meter_enabled = false;
+    config.max_current_command = 100;
+    for (unsigned w = 0; w < 4; ++w) { input.raw_current[w] = 1000; input.actual_rpm[w] = 1000; }
+    input.raw_current[1] = -1000;
+    Tick(100, true);
+    MotorPowerModelConfig_s models[4] = {{.current_conversion = 1, .k4 = 1},
+        {.current_conversion = 1, .k4 = 1}, {.current_conversion = 1}, {.current_conversion = 1}};
+    const float candidate[4] = {10, -2, 0, 0};
+    output.allowed_guard_w = 20; state.feedback_seen[0] = 2;
+    assert(ChassisPowerTransientGuard(&config, models, &input, candidate, &state, &output));
+    assert(output.guarded_current[0] == 4 && output.guarded_current[1] == -2);
+    assert(fabsf(output.guard_power_w - 20) < .01f);
+    models[0].k0 = 10; models[0].k1 = -5; models[0].k4 = 1;
+    models[1].k4 = 0; output.allowed_guard_w = 4;
+    assert(ChassisPowerTransientGuard(&config, models, &input, candidate, &state, &output));
+    assert(output.guarded_current[0] == 3 && output.guarded_current[1] == -2);
+    output.allowed_guard_w = 1;
+    assert(!ChassisPowerTransientGuard(&config, models, &input, candidate, &state, &output));
+    assert(output.guard_infeasible && output.guarded_current[0] == 0 && output.guarded_current[1] == -2);
+}
+static void TestFallbackUsesSentCommandsAndDoesNotRampReductions(void)
+{
+    Prepare(); input.meter_enabled = false; config.max_current_command = 15000;
+    MotorPowerModelConfig_s models[4] = {{.current_conversion = 1}, {.current_conversion = 1},
+        {.current_conversion = 1}, {.current_conversion = 1}};
+    Tick(100, true);
+    const float candidate[4] = {15000, 15000, 15000, 15000};
+    assert(ChassisPowerTransientGuard(&config, models, &input, candidate, &state, &output));
+    assert(output.guarded_current[0] == 3000);
+    float sent[4] = {1000, 1000, 1000, 1000};
+    ChassisPowerTransientRecordSent(&state, sent);
+    assert(ChassisPowerTransientGuard(&config, models, &input, candidate, &state, &output));
+    assert(output.guarded_current[0] == 4000);
+    float reduction[4] = {500, 500, 500, 500};
+    assert(ChassisPowerTransientGuard(&config, models, &input, reduction, &state, &output));
+    assert(output.guarded_current[0] == 500);
+}
+
+static void TestInvalidTimingConfigurationAndStartupCooldown(void)
+{
+    Prepare(); config.growth_time_s = 0;
+    assert(!ChassisPowerTransientUpdate(&config, &input, .001f, &state, &output));
+    assert(output.fault);
+    Prepare(); input.slow_w = 5;
+    assert(ChassisPowerTransientUpdate(&config, &input, NAN, &state, &output));
+    assert(!output.learning_allowed && output.slow_applied_w == 0);
+    StartLowSpeed(); input.control_enabled = false; Tick(102, true);
+    input.control_enabled = true;
+    for (unsigned w = 0; w < 4; ++w) input.target_rpm[w] = input.raw_current[w] = 0;
+    for (uint32_t t = 103; t <= 205; ++t) Tick(t, true);
+    for (unsigned w = 0; w < 4; ++w) { input.target_rpm[w] = 1000; input.raw_current[w] = 5000; }
+    Tick(206, true);
+    assert(!output.startup_active && !output.startup_triggered);
+}
 int main(void)
 {
+    TestInvalidTimingConfigurationAndStartupCooldown();
+    TestStartupWindowEnergyAndNoRecharge();
+    TestAccelerationUsesNewFeedbackAndStaleFallback();
+    TestGuardPreservesBrakingAndUsesFeasibleIntervals();
+    TestFallbackUsesSentCommandsAndDoesNotRampReductions();
     TestFastClampIndependentOfSlowCompensation();
     TestReleaseNeedsDistinctSamplesAndHold();
     TestStaleMeterReleasesConservativelyAndReacquires();

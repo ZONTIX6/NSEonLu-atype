@@ -507,6 +507,21 @@ static void TestTelemetryBuildsZeroMaskWhenAllOutputsAreDisabled(void)
 
 int main(void)
 {
+    {
+        float scale;
+        /* (x-.2)(x-.8)<=0: x=0 is infeasible, largest solution .8. */
+        ASSERT_TRUE(PowerModelFindFeasibleScale(1, -1, .16f, 1, &scale));
+        ASSERT_NEAR(.8f, scale, 1e-5f);
+        ASSERT_TRUE(PowerModelFindFeasibleScale(1, -1, .16f, .5f, &scale));
+        ASSERT_NEAR(.5f, scale, 1e-5f);
+        ASSERT_FALSE(PowerModelFindFeasibleScale(1, -1, .16f, .1f, &scale));
+        ASSERT_TRUE(PowerModelFindFeasibleScale(-1, 1, -.16f, .5f, &scale));
+        ASSERT_NEAR(.2f, scale, 1e-5f);
+        ASSERT_TRUE(PowerModelFindFeasibleScale(0, -1, .2f, 1, &scale));
+        ASSERT_NEAR(1, scale, 1e-6f);
+        ASSERT_FALSE(PowerModelFindFeasibleScale(0, 0, 2, 1, &scale));
+        ASSERT_FALSE(PowerModelFindFeasibleScale(NAN, 0, 0, 1, &scale));
+    }
     TestFeedbackBeforeInitFailsSafe();
     TestFeedbackInitRejectsDuplicate();
     TestFeedbackSumsValidPowerState();

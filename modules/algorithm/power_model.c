@@ -5,9 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define POWER_MODEL_EPSILON 1.0e-6f
-#define POWER_MODEL_DISCRIMINANT_EPSILON 1.0e-5f
-
 static Chassis_Power_Control_Data_s *chassis_power_feedback;
 
 static float ClampFloat(float value, float minimum, float maximum)
@@ -24,6 +21,47 @@ static void ResetOutput(ChassisPowerOutput_s *output, PowerModelStatus_e status)
 static void ResetFeedback(Chassis_Power_Control_Data_s *feedback)
 {
     memset(feedback, 0, sizeof(*feedback));
+}
+
+bool PowerModelFindFeasibleScale(float a, float b, float c, float maximum, float *scale)
+{
+    if (scale == NULL) return false;
+    *scale = 0;
+    if (!isfinite(a) || !isfinite(b) || !isfinite(c) || !isfinite(maximum) || maximum < 0 || maximum > 1)
+        return false;
+    if ((a * maximum + b) * maximum + c <= 1e-5f) { *scale = maximum; return true; }
+    if (fabsf(a) < 1e-6f) {
+        if (b <= 1e-6f) return false;
+        const float root = -c / b;
+        if (root < 0 || root > maximum || !isfinite(root)) return false;
+        *scale = root; return true;
+    }
+    const float discriminant = b * b - 4 * a * c;
+    if (!isfinite(discriminant) || discriminant < 0) return false;
+    const float q = -.5f * (b + copysignf(sqrtf(discriminant), b));
+    float r0 = q / a, r1 = fabsf(q) > 1e-20f ? c / q : -b / (2 * a);
+    if (r0 > r1) { const float swap = r0; r0 = r1; r1 = swap; }
+    const float candidate = a > 0 ? fminf(maximum, r1) : fminf(maximum, r0);
+    if (!isfinite(candidate) || candidate < 0 || (a > 0 && candidate < r0)) return false;
+    if ((a * candidate + b) * candidate + c > 1e-4f) return false;
+    *scale = candidate; return true;
+}
+
+bool PowerModelRecomputeFinal(const MotorPowerModelConfig_s models[4],
+    const ChassisPowerInput_s *input, const float current[4], ChassisPowerOutput_s *output)
+{
+    if (models == NULL || input == NULL || current == NULL || output == NULL ||
+        output->status != POWER_MODEL_STATUS_OK) return false;
+    for (unsigned i = 0; i < 4; ++i) {
+        output->limited_current[i] = current[i];
+        output->current_scale[i] = fabsf(input->desired_current[i]) > 0 ?
+            fabsf(current[i] / input->desired_current[i]) : 1;
+        output->predicted_limited_power_w[i] = PowerModelPredict(&models[i], current[i], input->speed_rpm[i]);
+        if (!isfinite(output->predicted_limited_power_w[i]) || !isfinite(current[i])) {
+            ResetOutput(output, POWER_MODEL_STATUS_NUMERIC_ERROR); return false;
+        }
+    }
+    return true;
 }
 
 bool ChassisPowerFeedbackInit(void)
@@ -126,11 +164,6 @@ float PowerModelPredict(const MotorPowerModelConfig_s *config,
            config->k5 * speed * speed;
 }
 
-static bool IsScaleInRange(float scale)
-{
-    return isfinite(scale) && scale >= 0.0f && scale <= 1.0f;
-}
-
 static float CalculateCurrentScale(const MotorPowerModelConfig_s *model,
                                    float desired_current,
                                    float speed_rpm,
@@ -143,34 +176,9 @@ static float CalculateCurrentScale(const MotorPowerModelConfig_s *model,
     const float c = model->k0 + model->k2 * speed + model->k5 * speed * speed -
                     power_limit_w;
 
-    if (fabsf(a) < POWER_MODEL_EPSILON)
-    {
-        if (fabsf(b) < POWER_MODEL_EPSILON)
-            return c <= POWER_MODEL_EPSILON ? 1.0f : 0.0f;
-
-        const float scale = -c / b;
-        return IsScaleInRange(scale) ? scale : 0.0f;
-    }
-
-    float discriminant = b * b - 4.0f * a * c;
-    if (discriminant < -POWER_MODEL_DISCRIMINANT_EPSILON)
-        return 0.0f;
-    if (discriminant < 0.0f)
-        discriminant = 0.0f;
-
-    const float root = sqrtf(discriminant);
-    const float scale1 = (-b - root) / (2.0f * a);
-    const float scale2 = (-b + root) / (2.0f * a);
-    const bool scale1_valid = IsScaleInRange(scale1);
-    const bool scale2_valid = IsScaleInRange(scale2);
-
-    if (scale1_valid && scale2_valid)
-        return scale1 > scale2 ? scale1 : scale2;
-    if (scale1_valid)
-        return scale1;
-    if (scale2_valid)
-        return scale2;
-    return 0.0f;
+    float scale = 0;
+    (void)PowerModelFindFeasibleScale(a, b, c, 1, &scale);
+    return scale;
 }
 
 static void AllocatePower(const ChassisPowerAlgorithmConfig_s *config,
