@@ -14,6 +14,7 @@ INCLUDES := -Istubs \
             -I../../modules/motor \
             -I../../modules/algorithm \
             -I../../modules/telemetry
+INCLUDES += -I../../modules/power_meter
 
 .PHONY: all test clean
 

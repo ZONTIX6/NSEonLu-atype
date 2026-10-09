@@ -62,6 +62,8 @@ static ChassisPowerBudgetOutput_s chassis_budget_output;// 底盘功率预算输
 static ChassisPowerOuterLoopState_s chassis_outer_loop_state;
 static ChassisPowerOuterLoopOutput_s chassis_outer_loop_output;
 static uint32_t chassis_budget_dwt_count;
+static DJIChassisPowerControlSnapshot_s pending_power_control;
+static uint32_t power_control_version;
 
 static const ChassisPowerBudgetConfig_s chassis_budget_config = {
     .empty_energy_ratio = 0.10f,
@@ -272,10 +274,13 @@ static void CalculateWheelSpeed(void)
 static void LimitChassisOutput()
 {
     // 底盘解算输出沿用 rpm；统一 DJI 驱动的速度环使用度/秒。
-    DJIMotorSetRef(motor_lf, vt_lf * 6.0f);
-    DJIMotorSetRef(motor_rf, vt_rf * 6.0f);
-    DJIMotorSetRef(motor_lb, vt_lb * 6.0f);
-    DJIMotorSetRef(motor_rb, vt_rb * 6.0f);
+    pending_power_control.target_rpm[0] = vt_lf;
+    pending_power_control.target_rpm[1] = vt_rf;
+    pending_power_control.target_rpm[2] = vt_lb;
+    pending_power_control.target_rpm[3] = vt_rb;
+    pending_power_control.version = ++power_control_version;
+    pending_power_control.tick_ms = HAL_GetTick();
+    DJIChassisPowerPublishControl(&pending_power_control);
 }
 
 /**
@@ -386,12 +391,9 @@ static void UpdateChassisPowerBudget(void)
         .correction_w = chassis_outer_loop_output.correction_w,
         .outer_mode = (uint8_t)chassis_outer_loop_output.mode,
     };
-    DJIChassisPowerSetControlTelemetry(&control_telemetry);
-    DJIChassisPowerSetMeasuredPower(
-        meter_status.power_w,
-        meter_valid,
-        meter_status.last_rx_tick_ms);
-    DJIChassisPowerSetBudget(chassis_outer_loop_output.corrected_budget_w);
+    pending_power_control.telemetry = control_telemetry;
+    pending_power_control.legacy_budget_w = chassis_outer_loop_output.corrected_budget_w;
+    pending_power_control.slow_correction_w = chassis_outer_loop_output.correction_w;
 #else
     const ChassisPowerControlTelemetry_s control_telemetry = {
         .nominal_budget_w = chassis_budget_output.applied_budget_w,
@@ -400,10 +402,14 @@ static void UpdateChassisPowerBudget(void)
         .corrected_budget_w = chassis_budget_output.applied_budget_w,
         .outer_mode = (uint8_t)CHASSIS_POWER_OUTER_OFFLINE,
     };
-    DJIChassisPowerSetControlTelemetry(&control_telemetry);
-    DJIChassisPowerSetMeasuredPower(0.0f, false, 0U);
-    DJIChassisPowerSetBudget(chassis_budget_output.applied_budget_w);
+    pending_power_control.telemetry = control_telemetry;
+    pending_power_control.legacy_budget_w = chassis_budget_output.applied_budget_w;
+    pending_power_control.slow_correction_w = 0;
 #endif
+    pending_power_control.nominal_budget_w = chassis_budget_output.applied_budget_w;
+    pending_power_control.target_power_w = chassis_budget_output.applied_budget_w * CHASSIS_POWER_SAFETY_FACTOR;
+    pending_power_control.control_enabled = chassis_power_ready &&
+        chassis_cmd_recv.chassis_mode != CHASSIS_ZERO_FORCE;
 }
 
 /* 机器人底盘控制核心任务 */
@@ -419,20 +425,6 @@ void ChassisTask()
 #endif // CHASSIS_BOARD
 
     UpdateChassisPowerBudget();
-    if (!chassis_power_ready || chassis_cmd_recv.chassis_mode == CHASSIS_ZERO_FORCE)
-    { // 如果出现重要模块离线或遥控器设置为急停,让电机停止
-        DJIMotorStop(motor_lf);
-        DJIMotorStop(motor_rf);
-        DJIMotorStop(motor_lb);
-        DJIMotorStop(motor_rb);
-    }
-    else
-    { // 正常工作
-        DJIMotorEnable(motor_lf);
-        DJIMotorEnable(motor_rf);
-        DJIMotorEnable(motor_lb);
-        DJIMotorEnable(motor_rb);
-    }
 
     // 根据控制模式设定旋转速度
     switch (chassis_cmd_recv.chassis_mode)

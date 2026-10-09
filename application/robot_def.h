@@ -45,6 +45,8 @@
 #define POWER_METER_ENABLE 1
 #endif
 
+#include "chassis_power_config.h"
+
 #define POWER_METER_ENABLE_IS_VALID_0 1// 0 表示不启用功率计
 #define POWER_METER_ENABLE_IS_VALID_1 1// 1 表示启用功率计
 #define POWER_METER_ENABLE_IS_VALID_IMPL(value) POWER_METER_ENABLE_IS_VALID_##value

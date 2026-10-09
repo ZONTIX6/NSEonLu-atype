@@ -1,11 +1,33 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include "../../modules/power_meter/power_meter.h"
 
 #include "../../modules/motor/DJImotor/dji_motor.c"
 
 static int failures;
 static char captured_data[RTT_TELEMETRY_CHASSIS_POWER_CSV_MAX_LENGTH];
+static PowerMeterStatus_s test_meter;
+
+static void SetMeter(float power, bool online, uint32_t tick)
+{
+    test_meter = (PowerMeterStatus_s){.power_w = power, .online = online, .last_rx_tick_ms = tick};
+}
+static void PublishTelemetry(const ChassisPowerControlTelemetry_s *telemetry)
+{
+    if (telemetry == NULL) return;
+    DJIChassisPowerControlSnapshot_s control = chassis_power->control;
+    control.legacy_budget_w = chassis_power->input.referee_power_limit_w;
+    control.telemetry = *telemetry;
+    DJIChassisPowerPublishControl(&control);
+}
+
+bool PowerMeterGetStatus(PowerMeterStatus_s *status)
+{
+    *status = test_meter;
+    return true;
+}
+
 
 #define ASSERT_TRUE(condition)                                                   \
     do                                                                           \
@@ -23,9 +45,12 @@ static void AssertControlColumnsMatch(const char *expected)
 {
 #if CHASSIS_POWER_CALIBRATION_ENABLE
     const size_t prefix_length = strlen(expected) - 2U;
+    if (strncmp(expected, captured_data, prefix_length) != 0)
+        printf("expected %sactual %s", expected, captured_data);
     ASSERT_TRUE(strncmp(expected, captured_data, prefix_length) == 0);
     ASSERT_TRUE(captured_data[prefix_length] == ',');
 #else
+    if (strcmp(expected, captured_data) != 0) printf("expected %sactual %s", expected, captured_data);
     ASSERT_STREQ(expected, captured_data);
 #endif
 }
@@ -114,9 +139,13 @@ static void PreparePowerGroup(void)
     memset(speed_reference_aps, 0, sizeof(speed_reference_aps));
     memset(speed_feedback_aps, 0, sizeof(speed_feedback_aps));
     memset(captured_data, 0, sizeof(captured_data));
+    memset(&test_meter, 0, sizeof(test_meter));
 
     power_group.registered = true;
     power_group.input.referee_power_limit_w = 100.0f;
+    power_group.control = (DJIChassisPowerControlSnapshot_s){
+        .nominal_budget_w = 100, .target_power_w = 95,
+        .legacy_budget_w = 100, .control_enabled = true};
     power_group.input.attenuation = 1.0f;
     power_group.algorithm = (ChassisPowerAlgorithmConfig_s){
         .safety_factor = 1.0f,
@@ -147,6 +176,28 @@ static void EmitOneRow(void)
         ApplyChassisPowerGroup();
 }
 
+static void TestAtomicPublicationAndFinalIntegerCommands(void)
+{
+    PreparePowerGroup();
+    const DJIChassisPowerControlSnapshot_s control = {
+        .version = 42, .tick_ms = 120, .nominal_budget_w = 20,
+        .target_power_w = 19, .legacy_budget_w = 20, .control_enabled = true,
+        .target_rpm = {1000, -1000, 500, -500},
+    };
+    DJIChassisPowerPublishControl(&control);
+    motor_output[0] = 3.9f;
+    ApplyChassisPowerGroup();
+    DJIChassisPowerState_s state;
+    ASSERT_TRUE(DJIChassisPowerGetSnapshot(&state));
+    ASSERT_TRUE(state.control_version == 42);
+    ASSERT_TRUE(state.raw_current[0] == 3.9f);
+    ASSERT_TRUE(state.power.limited_current[0] == 3);
+    ASSERT_TRUE(dji_motor_instance[1]->motor_controller.pid_ref == -6000);
+    DJIMotorStop(dji_motor_instance[0]);
+    ApplyChassisPowerGroup();
+    ASSERT_TRUE(chassis_power->state.power.limited_current[0] == 0);
+}
+
 static void TestControlAndMeasurementSnapshotsReachOneRttRow(void)
 {
     PreparePowerGroup();
@@ -159,8 +210,8 @@ static void TestControlAndMeasurementSnapshotsReachOneRttRow(void)
         .correction_w = -3.0f,
         .outer_mode = 2U,
     };
-    DJIChassisPowerSetControlTelemetry(&control);
-    DJIChassisPowerSetMeasuredPower(12.34f, true, 77U);
+    PublishTelemetry(&control);
+    SetMeter(12.34f, true, 77U);
 
     EmitOneRow();
 
@@ -172,7 +223,7 @@ static void TestControlAndMeasurementSnapshotsReachOneRttRow(void)
 static void TestOfflineMeasurementKeepsValueAndTick(void)
 {
     PreparePowerGroup();
-    DJIChassisPowerSetMeasuredPower(9.0f, false, 88U);
+    SetMeter(9.0f, false, 88U);
 
     EmitOneRow();
 
@@ -183,7 +234,7 @@ static void TestOfflineMeasurementKeepsValueAndTick(void)
 static void TestNonfiniteMeasurementBecomesZero(void)
 {
     PreparePowerGroup();
-    DJIChassisPowerSetMeasuredPower(NAN, true, 99U);
+    SetMeter(NAN, true, 99U);
 
     EmitOneRow();
 
@@ -198,8 +249,8 @@ static void TestNullControlSnapshotLeavesPreviousValue(void)
         .nominal_budget_w = 1.0f,
         .outer_mode = 1U,
     };
-    DJIChassisPowerSetControlTelemetry(&control);
-    DJIChassisPowerSetControlTelemetry(NULL);
+    PublishTelemetry(&control);
+    PublishTelemetry(NULL);
 
     EmitOneRow();
 
@@ -222,7 +273,7 @@ static void TestRttDividerRemainsTenMotorCycles(void)
 static void TestCalibrationUsesOutputCommandsAndActualRpm(void)
 {
     PreparePowerGroup();
-    DJIChassisPowerSetMeasuredPower(18.0f, true, 117U);
+    SetMeter(18.0f, true, 117U);
     motor_output[0] = -1.0f;
     motor_output[2] = -3.0f;
     for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
@@ -252,8 +303,8 @@ static void TestCalibrationPrintsLimitedCurrentsInsteadOfPidDemand(void)
         .error_w = 0.1f,
         .outer_mode = 2U,
     };
-    DJIChassisPowerSetControlTelemetry(&control);
-    DJIChassisPowerSetMeasuredPower(3.9f, true, 117U);
+    PublishTelemetry(&control);
+    SetMeter(3.9f, true, 117U);
     const float demands[] = {2.0f, -3.0f, 4.0f, -5.0f};
     const float feedback_aps[] = {600.0f, -1200.0f, 1800.0f, -2400.0f};
     for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
@@ -276,6 +327,7 @@ static void TestCalibrationPrintsLimitedCurrentsInsteadOfPidDemand(void)
 
 int main(void)
 {
+    TestAtomicPublicationAndFinalIntegerCommands();
     TestControlAndMeasurementSnapshotsReachOneRttRow();
     TestOfflineMeasurementKeepsValueAndTick();
     TestNonfiniteMeasurementBecomesZero();

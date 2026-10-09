@@ -17,12 +17,21 @@
 
 #include "bsp_log.h"
 #include "board_config.h"
+#include "dji_motor.h"
 
 osThreadId insTaskHandle;
 osThreadId robotTaskHandle;
 osThreadId motorTaskHandle;
 osThreadId daemonTaskHandle;
 osThreadId uiTaskHandle;
+#if CHASSIS_POWER_CAPTURE_ENABLE && UART1_LOG_ENABLED
+osThreadId powerCaptureTaskHandle;
+void StartPowerCaptureTask(void const *argument)
+{
+    (void)argument;
+    for (;;) { DJIChassisPowerCaptureDrain(); osDelay(5); }
+}
+#endif
 
 void StartINSTASK(void const *argument);
 void StartMOTORTASK(void const *argument);
@@ -48,6 +57,11 @@ void OSTaskInit()
 
     osThreadDef(robottask, StartROBOTTASK, osPriorityNormal, 0, 1024);
     robotTaskHandle = osThreadCreate(osThread(robottask), NULL);
+
+#if CHASSIS_POWER_CAPTURE_ENABLE && UART1_LOG_ENABLED
+    osThreadDef(powercapture, StartPowerCaptureTask, osPriorityBelowNormal, 0, 256);
+    powerCaptureTaskHandle = osThreadCreate(osThread(powercapture), NULL);
+#endif
 
 #if UART1_REFEREE_ENABLED
     osThreadDef(uitask, StartUITASK, osPriorityNormal, 0, 512);

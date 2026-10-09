@@ -141,6 +141,7 @@ modules/motor/step_motor/step_motor.c \
 modules/motor/servo_motor/servo_motor.c \
 modules/motor/motor_task.c \
 modules/telemetry/rtt_telemetry.c \
+modules/telemetry/chassis_power_capture.c \
 modules/algorithm/power_model.c \
 modules/algorithm/chassis_kinematics.c \
 modules/algorithm/chassis_power_budget.c \
@@ -222,6 +223,13 @@ C_DEFS =  \
 
 ifneq ($(strip $(POWER_METER_ENABLE)),)
 C_DEFS += -DPOWER_METER_ENABLE=$(POWER_METER_ENABLE)
+endif
+
+ifneq ($(strip $(CHASSIS_POWER_CONTROL_STAGE)),)
+C_DEFS += -DCHASSIS_POWER_CONTROL_STAGE=$(CHASSIS_POWER_CONTROL_STAGE)
+endif
+ifneq ($(strip $(CHASSIS_POWER_CAPTURE_ENABLE)),)
+C_DEFS += -DCHASSIS_POWER_CAPTURE_ENABLE=$(CHASSIS_POWER_CAPTURE_ENABLE)
 endif
 
 ifneq ($(strip $(UART1_USE)),)

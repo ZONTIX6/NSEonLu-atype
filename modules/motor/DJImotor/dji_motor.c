@@ -5,6 +5,11 @@
 #include "rtt_telemetry.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "power_meter.h"
+#if CHASSIS_POWER_CAPTURE_ENABLE
+#include "bsp_uart_log.h"
+#include "board_config.h"
+#endif
 
 #include <math.h>
 #include <stdlib.h>
@@ -51,6 +56,14 @@ static float motor_output[DJI_MOTOR_CNT];
 static float speed_reference_aps[DJI_MOTOR_CNT];
 static float speed_feedback_aps[DJI_MOTOR_CNT];
 static uint8_t chassis_power_rtt_count;
+static DJI_Motor_Measure_s cycle_measure[DJI_MOTOR_CNT];
+static float cycle_reference[DJI_MOTOR_CNT];
+static Motor_Working_Type_e cycle_stop[DJI_MOTOR_CNT];
+static DJIChassisPowerControlSnapshot_s cycle_control;
+static bool cycle_ready;
+#if CHASSIS_POWER_CAPTURE_ENABLE
+static ChassisPowerCapture_s chassis_capture;
+#endif
 
 /**
  * @brief 根据电调/拨码开关上的ID,根据说明书的默认id分配方式计算发送ID和接收ID,
@@ -164,6 +177,8 @@ static void DecodeDJIMotor(CANInstance *_instance)
     else if (measure->ecd - measure->last_ecd < -4096)
         measure->total_round++;
     measure->total_angle = measure->total_round * 360 + measure->angle_single_round;
+    measure->rx_tick_ms = HAL_GetTick();
+    ++measure->rx_sequence;
 }
 
 static void DJIMotorLostCallback(void *motor_ptr)
@@ -298,41 +313,38 @@ bool DJIChassisPowerRegister(const DJIChassisPowerConfig_s *config)
     instance->state.registered = true;
     instance->registered = true;
     chassis_power = instance;
+#if CHASSIS_POWER_CAPTURE_ENABLE
+    ChassisPowerCaptureReset(&chassis_capture);
+#endif
     chassis_power_rtt_count = 0U;
     RTTTelemetryWriteChassisPowerHeader();
     return true;
 }
 
-void DJIChassisPowerSetBudget(float total_budget_w)
+void DJIChassisPowerPublishControl(const DJIChassisPowerControlSnapshot_s *control)
 {
-    if (chassis_power != NULL)
-        chassis_power->input.referee_power_limit_w = total_budget_w;
-}
-
-void DJIChassisPowerSetMeasuredPower(float measured_power_w,
-                                     bool meter_online,
-                                     uint32_t meter_tick_ms)
-{
-    if (chassis_power == NULL)
-        return;
-
+    if (chassis_power == NULL || control == NULL) return;
     taskENTER_CRITICAL();
-    chassis_power->measured_chassis_power_w =
-        isfinite(measured_power_w) ? measured_power_w : 0.0f;
-    chassis_power->power_meter_online = meter_online;
-    chassis_power->power_meter_tick_ms = meter_tick_ms;
+    chassis_power->control = *control;
+    for (unsigned i = 0; i < 4; ++i) {
+        DJIMotorInstance *motor = dji_motor_instance[chassis_power->motor_indices[i]];
+        motor->motor_controller.pid_ref = control->target_rpm[i] * 6.0f;
+        motor->stop_flag = control->control_enabled ? MOTOR_ENALBED : MOTOR_STOP;
+    }
     taskEXIT_CRITICAL();
 }
 
-void DJIChassisPowerSetControlTelemetry(
-    const ChassisPowerControlTelemetry_s *telemetry)
+static void ReadMotorCycle(void)
 {
-    if (chassis_power == NULL || telemetry == NULL)
-        return;
-
     taskENTER_CRITICAL();
-    chassis_power->control_telemetry = *telemetry;
+    if (chassis_power != NULL) cycle_control = chassis_power->control;
+    for (unsigned i = 0; i < idx; ++i) {
+        cycle_measure[i] = dji_motor_instance[i]->measure;
+        cycle_reference[i] = dji_motor_instance[i]->motor_controller.pid_ref;
+        cycle_stop[i] = dji_motor_instance[i]->stop_flag;
+    }
     taskEXIT_CRITICAL();
+    cycle_ready = true;
 }
 
 void DJIChassisPowerSetAttenuation(float attenuation)
@@ -370,6 +382,31 @@ static void ApplyChassisPowerGroup(void)
     if (chassis_power == NULL || !chassis_power->registered)
         return;
 
+    if (!cycle_ready) {
+        /* Also permits direct invocation in host integration fixtures. */
+        ReadMotorCycle();
+        for (unsigned slot = 0; slot < 4; ++slot) {
+            unsigned index = chassis_power->motor_indices[slot];
+            cycle_measure[index] = dji_motor_instance[index]->measure;
+            cycle_stop[index] = dji_motor_instance[index]->stop_flag;
+        }
+    }
+    cycle_ready = false;
+    const uint32_t now_ms = HAL_GetTick();
+    DJIChassisPowerState_s state = {.registered = true, .control_version = cycle_control.version,
+        .control_tick_ms = cycle_control.tick_ms, .tick_ms = now_ms};
+    PowerMeterStatus_s meter = {0};
+#if POWER_METER_ENABLE
+    (void)PowerMeterGetStatus(&meter);
+#endif
+    measured_chassis_power_w = meter.power_w;
+    meter_online = meter.online;
+    meter_tick_ms = meter.last_rx_tick_ms;
+    state.measured_power_w = meter.power_w;
+    state.meter_online = meter.online;
+    state.meter_tick_ms = meter.last_rx_tick_ms;
+    chassis_power->input.referee_power_limit_w = cycle_control.legacy_budget_w;
+
     for (size_t slot = 0; slot < POWER_MODEL_MOTOR_COUNT; ++slot)
     {
         const uint8_t index = chassis_power->motor_indices[slot];
@@ -377,6 +414,11 @@ static void ApplyChassisPowerGroup(void)
         chassis_power->input.speed_rpm[slot] = speed_feedback_aps[index] / 6.0f;
         chassis_power->input.speed_error_rpm[slot] =
             (speed_reference_aps[index] - speed_feedback_aps[index]) / 6.0f;
+        state.raw_current[slot] = motor_output[index];
+        state.feedback_current[slot] = cycle_measure[index].real_current;
+        state.feedback_sequence[slot] = cycle_measure[index].rx_sequence;
+        state.feedback_tick_ms[slot] = cycle_measure[index].rx_tick_ms;
+        state.numeric_error |= !isfinite(motor_output[index]);
     }
 
     const bool power_valid = PowerModelApply(chassis_power->models,
@@ -389,11 +431,18 @@ static void ApplyChassisPowerGroup(void)
         const uint8_t index = chassis_power->motor_indices[slot];
         DJIMotorInstance *motor = dji_motor_instance[index];
         const bool motor_online = DaemonIsOnline(motor->daemon) != 0U;
-        motor_output[index] = power_valid && motor_online
-                                  ? power_output.limited_current[slot]
-                                  : 0.0f;
-        output_enabled[slot] = power_valid && motor_online &&
-                               motor->stop_flag != MOTOR_STOP;
+        output_enabled[slot] = power_valid && motor_online && cycle_control.control_enabled &&
+                               cycle_stop[index] != MOTOR_STOP;
+        if (motor_online) state.online_mask |= (uint8_t)(1U << slot);
+        state.base_limited |= power_output.current_scale[slot] < 0.9999f;
+        const float final = output_enabled[slot] ? (float)(int16_t)power_output.limited_current[slot] : 0;
+        motor_output[index] = final;
+        power_output.limited_current[slot] = final;
+        power_output.current_scale[slot] = fabsf(state.raw_current[slot]) > 0 ?
+            fabsf(final / state.raw_current[slot]) : 1;
+        if (power_valid) power_output.predicted_limited_power_w[slot] =
+            PowerModelPredict(&chassis_power->models[slot], final, chassis_power->input.speed_rpm[slot]);
+        state.proposed_current[slot] = final;
     }
 
     (void)ChassisPowerTelemetryBuild(&chassis_power->input,
@@ -401,14 +450,30 @@ static void ApplyChassisPowerGroup(void)
                                      output_enabled,
                                      &telemetry);
 
+    state.power = power_output;
+    state.telemetry = telemetry;
+    control_telemetry = cycle_control.telemetry;
     taskENTER_CRITICAL();
-    chassis_power->state.power = power_output;
-    chassis_power->state.telemetry = telemetry;
-    control_telemetry = chassis_power->control_telemetry;
-    measured_chassis_power_w = chassis_power->measured_chassis_power_w;
-    meter_online = chassis_power->power_meter_online;
-    meter_tick_ms = chassis_power->power_meter_tick_ms;
+    chassis_power->state = state;
     taskEXIT_CRITICAL();
+
+#if CHASSIS_POWER_CAPTURE_ENABLE
+    ChassisPowerCaptureSample_s sample = {.tick_ms = now_ms, .meter_tick_ms = meter_tick_ms,
+        .budget_w = cycle_control.nominal_budget_w, .measured_w = measured_chassis_power_w,
+        .slow_w = cycle_control.slow_correction_w, .enabled_mask = telemetry.motor_enabled_mask,
+        .meter_age_ms = (uint8_t)fminf(255, (float)(uint32_t)(now_ms - meter_tick_ms)),
+        .flags = state.numeric_error ? 1 : 0};
+    for (unsigned i = 0; i < 4; ++i) {
+        sample.raw_current[i] = state.raw_current[i];
+        sample.final_current[i] = power_output.limited_current[i];
+        sample.feedback_current[i] = state.feedback_current[i];
+        sample.actual_rpm[i] = telemetry.actual_speed_rpm[i];
+        sample.target_rpm[i] = telemetry.target_speed_rpm[i];
+        sample.motor_age_ms[i] = (uint8_t)fminf(255, (float)(uint32_t)(now_ms - state.feedback_tick_ms[i]));
+        sample.actual_model_w += power_output.predicted_limited_power_w[i];
+    }
+    ChassisPowerCaptureUpdate(&chassis_capture, &sample);
+#endif
 
     if (++chassis_power_rtt_count >= CHASSIS_POWER_RTT_DIVIDER)
     {
@@ -434,6 +499,7 @@ void DJIMotorControl()
     Motor_Controller_s *motor_controller;
     DJI_Motor_Measure_s *measure;
     float pid_measure, pid_ref;
+    ReadMotorCycle();
 
     // 第一阶段：计算所有 DJI 电机的原始输出，暂不写入 CAN 缓冲区。
     for (size_t i = 0; i < idx; ++i)
@@ -441,8 +507,8 @@ void DJIMotorControl()
         motor = dji_motor_instance[i];
         motor_setting = &motor->motor_settings;
         motor_controller = &motor->motor_controller;
-        measure = &motor->measure;
-        pid_ref = motor_controller->pid_ref;
+        measure = &cycle_measure[i];
+        pid_ref = cycle_reference[i];
         speed_reference_aps[i] = 0.0f;
         speed_feedback_aps[i] = 0.0f;
 
@@ -481,7 +547,7 @@ void DJIMotorControl()
         if (motor_setting->feedback_reverse_flag == FEEDBACK_DIRECTION_REVERSE)
             pid_ref *= -1;
 
-        motor_output[i] = isfinite(pid_ref) ? pid_ref : 0.0f;
+        motor_output[i] = pid_ref;
     }
 
     // 第二阶段：只修改已注册的四个底盘电机输出。
@@ -491,7 +557,7 @@ void DJIMotorControl()
     for (size_t i = 0; i < idx; ++i)
     {
         motor = dji_motor_instance[i];
-        set = (int16_t)motor_output[i];
+        set = isfinite(motor_output[i]) ? (int16_t)motor_output[i] : 0;
         group = motor->sender_group;
         num = motor->message_num;
         sender_assignment[group].tx_buff[2 * num] = (uint8_t)(set >> 8);         // 低八位
@@ -508,4 +574,22 @@ void DJIMotorControl()
             CANTransmit(&sender_assignment[i], 1);
         }
     }
+}
+
+void DJIChassisPowerCaptureDrain(void)
+{
+#if CHASSIS_POWER_CAPTURE_ENABLE && UART1_LOG_ENABLED
+    uint8_t frame[CHASSIS_POWER_CAPTURE_FRAME_BYTES];
+    const uint32_t now = HAL_GetTick();
+    taskENTER_CRITICAL();
+    const bool ready = chassis_power != NULL &&
+        ChassisPowerCaptureNextFrame(&chassis_capture, now,
+                                    !chassis_power->control.control_enabled, frame);
+    taskEXIT_CRITICAL();
+    if (ready && BSPUARTLogWrite(frame, sizeof(frame)) == sizeof(frame)) {
+        taskENTER_CRITICAL();
+        ChassisPowerCaptureFrameAccepted(&chassis_capture, now);
+        taskEXIT_CRITICAL();
+    }
+#endif
 }

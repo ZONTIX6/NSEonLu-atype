@@ -1,0 +1,20 @@
+#ifndef CHASSIS_POWER_CONFIG_H
+#define CHASSIS_POWER_CONFIG_H
+
+/* 0 observe, 1 fast recovery, 2 startup guard, 3 complete slow loop. */
+#ifndef CHASSIS_POWER_CONTROL_STAGE
+#define CHASSIS_POWER_CONTROL_STAGE 0
+#endif
+#ifndef CHASSIS_POWER_CAPTURE_ENABLE
+#define CHASSIS_POWER_CAPTURE_ENABLE 0
+#endif
+#ifndef POWER_METER_ENABLE
+#define POWER_METER_ENABLE 1
+#endif
+#if CHASSIS_POWER_CONTROL_STAGE < 0 || CHASSIS_POWER_CONTROL_STAGE > 3
+#error CHASSIS_POWER_CONTROL_STAGE must be 0, 1, 2 or 3
+#endif
+#if CHASSIS_POWER_CAPTURE_ENABLE != 0 && CHASSIS_POWER_CAPTURE_ENABLE != 1
+#error CHASSIS_POWER_CAPTURE_ENABLE must be 0 or 1
+#endif
+#endif
