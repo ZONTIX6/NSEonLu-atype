@@ -776,6 +776,79 @@ static void TestInvalidDeltaTimeFailsWithoutPositiveOutput(void)
 
 int main(void)
 {
+    {
+        ChassisPowerOuterLoopConfig_s c = valid_config;
+        c.error_deadband_w = .3f; c.antiwindup_gain_per_s = 10;
+        c.low_demand_delay_s = .5f; c.low_demand_decay_w_per_s = 1;
+        ChassisPowerOuterLoopInput_s i = BaseInput();
+        i.complete_slow_control = i.learning_allowed = i.base_limited = i.demand_sufficient = true;
+        i.measured_power_w = 57.2f; i.meter_tick_ms = 1;
+        ChassisPowerOuterLoopState_s s = {0};
+        ChassisPowerOuterLoopOutput_s o;
+        ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&c, &i, .005f, &s, &o));
+        ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&c, &i, .005f, &s, &o));
+        ASSERT_EQ_INT(1, s.recovery_samples); /* repeats do not establish recovery */
+        i.meter_tick_ms = 2;
+        ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&c, &i, .005f, &s, &o));
+        ASSERT_NEAR(0, o.error_w, 1e-6f);
+        s.filtered_power_w = i.measured_power_w = 57.5f;
+        i.meter_tick_ms = 3;
+        ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&c, &i, .005f, &s, &o));
+        ASSERT_NEAR(-.2f, o.error_w, 1e-5f);
+        for (unsigned gate = 0; gate < 3; ++gate) {
+            s.integral_w = 1; s.correction_w = s.applied_correction_w = 1;
+            i.base_limited = gate != 0; i.braking = gate == 1; i.demand_sufficient = gate != 2;
+            ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&c, &i, .005f, &s, &o));
+            ASSERT_NEAR(1, s.integral_w, 1e-6f);
+            ASSERT_NEAR(1, s.correction_w, 1e-6f);
+        }
+        i.meter_online = false;
+        s.integral_w = s.correction_w = s.applied_correction_w = -2;
+        ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&c, &i, .005f, &s, &o));
+        ASSERT_NEAR(-2, s.integral_w, 1e-6f);
+        i.meter_online = true; i.measured_power_w = 20; i.meter_tick_ms = UINT32_MAX;
+        ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&c, &i, .005f, &s, &o));
+        ASSERT_NEAR(20, s.filtered_power_w, 1e-6f);
+        ASSERT_EQ_INT(1, s.recovery_samples);
+        i.meter_tick_ms = 0;
+        ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&c, &i, .005f, &s, &o));
+        ASSERT_EQ_INT(2, s.recovery_samples);
+    }
+    {
+        ChassisPowerOuterLoopConfig_s c = valid_config;
+        c.error_deadband_w = .3f; c.antiwindup_gain_per_s = 10;
+        c.low_demand_delay_s = .5f; c.low_demand_decay_w_per_s = 1;
+        ChassisPowerOuterLoopState_s s = {0};
+        ChassisPowerOuterLoopInput_s i = BaseInput();
+        i.complete_slow_control = i.learning_allowed = i.base_limited = i.demand_sufficient = true;
+        i.measured_power_w = 46.7f; i.meter_tick_ms = 1;
+        ChassisPowerOuterLoopOutput_s o;
+        ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&c, &i, .005f, &s, &o));
+        ASSERT_NEAR(0, o.correction_w, 1e-6f); /* first fresh sample reinitializes */
+        i.meter_tick_ms = 2;
+        ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&c, &i, .005f, &s, &o));
+        ASSERT_NEAR(10, o.error_w, 1e-4f);
+        ASSERT_NEAR(.1f, o.correction_w, 1e-5f);
+        ASSERT_NEAR(-.195f, s.integral_w, 1e-4f);
+        i.learning_allowed = i.allow_positive_correction = false; i.measured_power_w = 100;
+        ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&c, &i, .005f, &s, &o));
+        ASSERT_NEAR(-.195f, s.integral_w, 1e-4f);
+        ASSERT_NEAR(.1f, s.correction_w, 1e-5f);
+        ASSERT_NEAR(0, o.correction_w, 1e-6f);
+        s.integral_w = s.correction_w = s.applied_correction_w = -2;
+        i.demand_sufficient = false;
+        for (unsigned t = 0; t < 200; ++t)
+            ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&c, &i, .005f, &s, &o));
+        ASSERT_NEAR(-1.5f, s.integral_w, .01f);
+        ASSERT_NEAR(-1.5f, o.correction_w, .01f);
+        s.integral_w = s.correction_w = s.applied_correction_w = 3;
+        i.nominal_budget_w = 58;
+        ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&c, &i, .005f, &s, &o));
+        ASSERT_NEAR(0, s.integral_w, 1e-6f);
+        i.control_enabled = false;
+        ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&c, &i, .005f, &s, &o));
+        ASSERT_NEAR(0, o.corrected_budget_w, 1e-6f);
+    }
     /* A spike must freeze both P and I in the separated controller. */
     {
         ChassisPowerOuterLoopState_s s = {.integral_w = 2, .correction_w = 2,

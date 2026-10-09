@@ -82,6 +82,9 @@ static const ChassisPowerOuterLoopConfig_s chassis_outer_loop_config = {
     .max_positive_correction_w = 8.0f, // 修正量上限(W):最多只上调8W;下限为-基准预算,即最狠可压到0
     .positive_slew_rate_w_per_s = 20.0f, // 修正量上升/回零速率(W/s);下调不限速,立即生效
     .budget_drop_reset_w = 1.0f, // 基准预算单周期跌落超过此值(W)时,清零正向积分与修正量
+    .antiwindup_gain_per_s = 10,
+    .low_demand_delay_s = .5f,
+    .low_demand_decay_w_per_s = 1,
 };
 
 static const MotorPowerModelConfig_s m3508_power_model = {
@@ -297,6 +300,7 @@ static void EstimateSpeed()
 
 static void UpdateChassisPowerBudget(void)
 {
+    bool control_config_valid = true;
     RefereePowerSnapshot_s referee_snapshot = {0};
     (void)RefereeGetPowerSnapshot(&referee_snapshot);
 
@@ -333,7 +337,10 @@ static void UpdateChassisPowerBudget(void)
                                   dt_s,
                                   &chassis_budget_state,
                                   &chassis_budget_output))
+    {
         chassis_budget_output.applied_budget_w = 0.0f;
+        control_config_valid = false;
+    }
 
 #if POWER_METER_ENABLE
     PowerMeterStatus_s meter_status = {0};
@@ -342,7 +349,9 @@ static void UpdateChassisPowerBudget(void)
         meter_valid = meter_status.online;
 
     float predicted_unlimited_power_w = 0.0f;
+#if CHASSIS_POWER_CONTROL_STAGE == 0
     float motoring_indicator = 0.0f;
+#endif
     DJIChassisPowerState_s power_state = {0};
     const bool power_state_valid = DJIChassisPowerGetSnapshot(&power_state);
     if (power_state_valid && power_state.registered &&
@@ -352,9 +361,11 @@ static void UpdateChassisPowerBudget(void)
         {
             predicted_unlimited_power_w +=
                 power_state.power.predicted_unlimited_power_w[i];
+#if CHASSIS_POWER_CONTROL_STAGE == 0
             motoring_indicator +=
                 power_state.telemetry.current_command[i] *
                 power_state.telemetry.actual_speed_rpm[i];
+#endif
         }
     }
 
@@ -382,6 +393,13 @@ static void UpdateChassisPowerBudget(void)
         .learning_allowed = meter_valid && power_state.transient.learning_allowed &&
             meter_status.power_w <= chassis_budget_output.applied_budget_w &&
             (uint32_t)(HAL_GetTick() - power_state.tick_ms) <= 5,
+        .complete_slow_control = CHASSIS_POWER_CONTROL_STAGE == 3,
+        .base_limited = power_state.base_limited,
+        .demand_sufficient = power_state.transient.drive_mask != 0 && predicted_unlimited_power_w >=
+            chassis_budget_output.applied_budget_w * CHASSIS_POWER_SAFETY_FACTOR -
+            chassis_outer_loop_config.activation_margin_w,
+        .braking = power_state.transient.brake_mask != 0,
+        .meter_tick_ms = meter_status.last_rx_tick_ms,
         .control_enabled =
             chassis_power_ready &&
             chassis_cmd_recv.chassis_mode != CHASSIS_ZERO_FORCE,
@@ -398,6 +416,7 @@ static void UpdateChassisPowerBudget(void)
                                      &chassis_outer_loop_output))
     {
         chassis_outer_loop_output.corrected_budget_w = 0.0f;
+        control_config_valid = false;
     }
 
     const ChassisPowerControlTelemetry_s control_telemetry = {
@@ -426,7 +445,7 @@ static void UpdateChassisPowerBudget(void)
 #endif
     pending_power_control.nominal_budget_w = chassis_budget_output.applied_budget_w;
     pending_power_control.target_power_w = chassis_budget_output.applied_budget_w * CHASSIS_POWER_SAFETY_FACTOR;
-    pending_power_control.control_enabled = chassis_power_ready &&
+    pending_power_control.control_enabled = control_config_valid && chassis_power_ready &&
         chassis_cmd_recv.chassis_mode != CHASSIS_ZERO_FORCE;
 }
 

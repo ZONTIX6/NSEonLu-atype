@@ -26,10 +26,21 @@ osThreadId daemonTaskHandle;
 osThreadId uiTaskHandle;
 #if CHASSIS_POWER_CAPTURE_ENABLE && UART1_LOG_ENABLED
 osThreadId powerCaptureTaskHandle;
+/* Debugger-readable on-board validation; stack values are FreeRTOS words. */
+volatile float chassis_power_motor_max_dt_ms;
+volatile UBaseType_t chassis_power_motor_stack_free_words;
 void StartPowerCaptureTask(void const *argument)
 {
     (void)argument;
-    for (;;) { DJIChassisPowerCaptureDrain(); osDelay(5); }
+    uint32_t stack_sample_tick = 0;
+    for (;;) {
+        DJIChassisPowerCaptureDrain();
+        if ((uint32_t)(HAL_GetTick() - stack_sample_tick) >= 200) {
+            stack_sample_tick = HAL_GetTick();
+            chassis_power_motor_stack_free_words = uxTaskGetStackHighWaterMark(motorTaskHandle);
+        }
+        osDelay(5);
+    }
 }
 #endif
 
@@ -49,7 +60,8 @@ void OSTaskInit()
     insTaskHandle = osThreadCreate(osThread(instask), NULL); // 由于是阻塞读取传感器,为姿态解算设置较高优先级,确保以1khz的频率执行
     // // 后续修改为读取传感器数据准备好的中断处理,
 
-    osThreadDef(motortask, StartMOTORTASK, osPriorityNormal, 0, 256);
+    /* Diagnostic frame exceeds 1 KiB before nested algorithm/CSV calls. */
+    osThreadDef(motortask, StartMOTORTASK, osPriorityNormal, 0, 512);
     motorTaskHandle = osThreadCreate(osThread(motortask), NULL);
 
     osThreadDef(daemontask, StartDAEMONTASK, osPriorityNormal, 0, 128);
@@ -100,6 +112,9 @@ __attribute__((noreturn)) void StartMOTORTASK(void const *argument)
         motor_start = DWT_GetTimeline_ms();
         MotorControlTask();
         motor_dt = DWT_GetTimeline_ms() - motor_start;
+#if CHASSIS_POWER_CAPTURE_ENABLE && UART1_LOG_ENABLED
+        if (motor_dt > chassis_power_motor_max_dt_ms) chassis_power_motor_max_dt_ms = motor_dt;
+#endif
         if (motor_dt > 1)
             LOGERROR("[freeRTOS] MOTOR Task is being DELAY! dt = [%f]", &motor_dt);
         osDelay(1);

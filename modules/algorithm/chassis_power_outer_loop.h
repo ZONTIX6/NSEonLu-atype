@@ -2,6 +2,7 @@
 #define CHASSIS_POWER_OUTER_LOOP_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 typedef enum
 {
@@ -20,6 +21,7 @@ typedef struct
     float max_positive_correction_w;
     float positive_slew_rate_w_per_s;
     float budget_drop_reset_w;
+    float antiwindup_gain_per_s, low_demand_delay_s, low_demand_decay_w_per_s;
 } ChassisPowerOuterLoopConfig_s;
 
 typedef struct
@@ -30,6 +32,9 @@ typedef struct
     float applied_correction_w;
     float previous_nominal_budget_w;
     bool measurement_initialized;
+    float low_demand_s;
+    uint32_t last_meter_tick_ms;
+    uint8_t recovery_samples;
 } ChassisPowerOuterLoopState_s;
 
 typedef struct
@@ -42,6 +47,8 @@ typedef struct
     bool allow_positive_correction;
     bool control_enabled;
     bool learning_allowed;
+    bool complete_slow_control, base_limited, demand_sufficient, braking;
+    uint32_t meter_tick_ms;
 } ChassisPowerOuterLoopInput_s;
 
 typedef struct

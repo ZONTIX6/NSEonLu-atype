@@ -20,7 +20,8 @@ static bool ConfigValid(const ChassisPowerTransientConfig_s *c)
         c->zero_enter_rpm >= 0 && c->zero_exit_rpm > c->zero_enter_rpm &&
         c->demand_exit_current >= 0 && c->demand_enter_current > c->demand_exit_current &&
         c->meter_fresh_ms > 0 && c->feedback_fresh_ms > 0 && c->release_confirm_ms > 0 &&
-        c->low_hold_ms > 0 && c->startup_window_ms > 0 && c->startup_cooldown_ms >= c->startup_window_ms;
+        c->low_hold_ms > 0 && c->startup_window_ms > 0 && c->startup_cooldown_ms >= c->startup_window_ms &&
+        c->guard_search_nodes > 0 && c->guard_search_nodes <= 1024;
 }
 ChassisPowerTransientConfig_s ChassisPowerTransientDefaultConfig(void)
 {
@@ -32,11 +33,19 @@ ChassisPowerTransientConfig_s ChassisPowerTransientDefaultConfig(void)
         .growth_time_s = .005f, .peak_ratio = 1.30f, .low_rpm = 100, .low_current = 500,
         .target_step_rpm = 300, .zero_enter_rpm = 50, .zero_exit_rpm = 100,
         .demand_enter_current = 200, .demand_exit_current = 100,
-        .low_hold_ms = 100, .startup_window_ms = 30, .startup_cooldown_ms = 500};
+        .low_hold_ms = 100, .startup_window_ms = 30, .startup_cooldown_ms = 500,
+        .guard_search_nodes = 256};
 }
 void ChassisPowerTransientReset(ChassisPowerTransientState_s *s)
 {
     if (s != NULL) memset(s, 0, sizeof(*s));
+}
+static void ResetControlHistory(ChassisPowerTransientState_s *s)
+{
+    const uint32_t last = s->last_startup_ms;
+    const bool seen = s->startup_seen;
+    ChassisPowerTransientReset(s);
+    s->last_startup_ms = last; s->startup_seen = seen;
 }
 void ChassisPowerTransientRecordSent(ChassisPowerTransientState_s *s, const float current[4])
 {
@@ -49,17 +58,16 @@ bool ChassisPowerTransientUpdate(const ChassisPowerTransientConfig_s *c,
     if (o == NULL || s == NULL) return false;
     memset(o, 0, sizeof(*o));
     if (!ConfigValid(c) || i == NULL) {
-        ChassisPowerTransientReset(s); o->fault = true; return false;
+        ResetControlHistory(s); o->fault = true; return false;
     }
     if (!i->control_enabled) {
         /* Preserve the refractory clock across stop/start; clear all control history. */
-        const uint32_t last = s->last_startup_ms;
-        const bool seen = s->startup_seen;
-        ChassisPowerTransientReset(s); s->last_startup_ms = last; s->startup_seen = seen;
+        ResetControlHistory(s);
         return true;
     }
     bool valid = isfinite(i->budget_w) && i->budget_w > 0 && isfinite(i->target_w) &&
-                 i->target_w > 0 && isfinite(i->slow_w) && isfinite(s->fast_w);
+                 i->target_w > 0 && isfinite(i->slow_w) && isfinite(s->fast_w) &&
+                 isfinite(s->slow_applied_w);
     o->feedback_fresh = i->online_mask == 15 && i->enabled_mask == 15;
     float average_rpm = 0, maximum_sent = 0;
     bool target_step = false;
@@ -105,17 +113,19 @@ bool ChassisPowerTransientUpdate(const ChassisPowerTransientConfig_s *c,
         maximum_sent = fmaxf(maximum_sent, fabsf(s->sent_current[w]));
         target_step |= fabsf(i->target_rpm[w] - s->previous_target[w]) >= c->target_step_rpm;
     }
-    if (!valid) { ChassisPowerTransientReset(s); o->fault = true; return false; }
+    if (!valid) { ResetControlHistory(s); o->fault = true; return false; }
     o->timing_valid = isfinite(dt) && dt > 0 && dt <= .005f;
     if (!o->timing_valid) dt = 0;
     o->dt_s = dt;
     o->meter_fresh = i->meter_enabled && i->meter_online && isfinite(i->meter_w) &&
         (uint32_t)(i->now_ms - i->meter_tick_ms) <= c->meter_fresh_ms;
     const bool new_meter = o->meter_fresh && (!s->meter_initialized || s->meter_tick_ms != i->meter_tick_ms);
+    const bool meter_recovered = o->meter_fresh &&
+        (s->fresh_samples >= 2 || (s->fresh_samples == 1 && new_meter));
     const bool low = average_rpm < c->low_rpm && maximum_sent < c->low_current &&
-        i->online_mask == 15 && i->enabled_mask == 15;
+        i->online_mask == 15 && i->enabled_mask == 15 && o->brake_mask == 0;
     const bool armed = s->low_valid && (uint32_t)(i->now_ms - s->low_since_ms) >= c->low_hold_ms;
-    if (i->startup_enabled && i->meter_enabled && o->meter_fresh && o->feedback_fresh &&
+    if (i->startup_enabled && i->meter_enabled && meter_recovered && o->feedback_fresh &&
         o->timing_valid && armed && target_step && o->drive_mask && !o->brake_mask &&
         s->fast_w == 0 && !s->startup_active &&
         (!s->startup_seen || (uint32_t)(i->now_ms - s->last_startup_ms) >= c->startup_cooldown_ms)) {
@@ -177,10 +187,16 @@ bool ChassisPowerTransientUpdate(const ChassisPowerTransientConfig_s *c,
         if (!s->run_valid) { s->run_valid = true; s->run_since_ms = i->now_ms; }
     } else s->run_valid = false;
     o->positive_allowed = s->mode == CHASSIS_POWER_TRANSIENT_RUN &&
-        o->feedback_fresh && o->brake_mask == 0 && i->meter_w >= 0 && o->timing_valid;
+        o->feedback_fresh && o->drive_mask != 0 && o->brake_mask == 0 &&
+        i->meter_w >= 0 && o->timing_valid;
     o->learning_allowed = o->positive_allowed &&
         (uint32_t)(i->now_ms - s->run_since_ms) >= c->stable_run_ms;
-    o->slow_applied_w = i->meter_enabled ? (o->positive_allowed ? i->slow_w : fminf(i->slow_w, 0)) : 0;
+    const float slow_target = i->meter_enabled ? (o->positive_allowed ? i->slow_w : fminf(i->slow_w, 0)) : 0;
+    s->slow_applied_w = slow_target > s->slow_applied_w ?
+        fminf(slow_target, s->slow_applied_w + 20 * dt) : slow_target;
+    if (!o->positive_allowed) s->slow_applied_w = fminf(s->slow_applied_w, 0);
+    if (!i->meter_enabled) s->slow_applied_w = 0;
+    o->slow_applied_w = s->slow_applied_w;
     s->fast_w = Clamp(s->fast_w, -i->budget_w, 0);
     o->fast_w = s->fast_w;
     o->model_budget_w = Clamp(i->budget_w + o->slow_applied_w + o->fast_w, 0, i->budget_w + 8);
@@ -191,6 +207,97 @@ bool ChassisPowerTransientUpdate(const ChassisPowerTransientConfig_s *c,
     return true;
 }
 
+static float QuantizedGuardPower(const MotorPowerModelConfig_s models[4],
+    const float candidate[4], float scale, ChassisPowerTransientOutput_s *o)
+{
+    float total = 0;
+    for (unsigned w = 0; w < 4; ++w) {
+        const bool drive = (o->drive_mask & (1U << w)) != 0;
+        o->guarded_current[w] = (float)(int16_t)(candidate[w] * (drive ? scale : 1));
+        const float p = PowerModelPredict(&models[w], o->guarded_current[w], o->guard_rpm[w]);
+        if (!isfinite(p)) return NAN;
+        total += drive ? p : fmaxf(p, 0);
+    }
+    return total;
+}
+
+/* Step across the nearest command boundary, keeping a common drive scale. */
+static float NextLowerCommandScale(const float candidate[4], float scale, uint8_t drive_mask)
+{
+    float boundary = 0;
+    for (unsigned w = 0; w < 4; ++w) {
+        if (!(drive_mask & (1U << w)) || candidate[w] == 0) continue;
+        const float command = fabsf(candidate[w]);
+        const float quantized = floorf(command * scale);
+        if (quantized > 0) boundary = fmaxf(boundary, quantized / command);
+    }
+    return nextafterf(fminf(boundary, nextafterf(scale, 0)), 0);
+}
+
+static float IntegerIntervalMinimum(const MotorPowerModelConfig_s models[4],
+    const float candidate[4], float lo, float hi, const ChassisPowerTransientOutput_s *o,
+    bool *same_commands)
+{
+    float lower = 0;
+    *same_commands = true;
+    for (unsigned w = 0; w < 4; ++w) {
+        const MotorPowerModelConfig_s *m = &models[w];
+        const float n = o->guard_rpm[w];
+        if (!(o->drive_mask & (1U << w))) {
+            lower += fmaxf(0, PowerModelPredict(m, (float)(int16_t)candidate[w], n));
+            continue;
+        }
+        const float qlo = floorf(fabsf(candidate[w]) * lo);
+        const float qhi = floorf(fabsf(candidate[w]) * hi);
+        *same_commands &= qlo == qhi;
+        float minimum = fminf(PowerModelPredict(m, qlo, n), PowerModelPredict(m, qhi, n));
+        if (m->k4 > 0) {
+            const float vertex = -(m->k1 + m->k3 * n) / (2 * m->k4) * m->current_conversion;
+            if (vertex > qlo && vertex < qhi) {
+                minimum = fminf(minimum, PowerModelPredict(m, floorf(vertex), n));
+                minimum = fminf(minimum, PowerModelPredict(m, ceilf(vertex), n));
+            }
+        }
+        lower += minimum;
+    }
+    return lower;
+}
+
+/* Right-first search: an independent wheel minimum is a safe interval lower bound.
+ * The fixed stack and node budget bound control-task work. Exhaustion is separate
+ * from proving every interval infeasible. No recursion or dynamic allocation. */
+static bool SearchIntegerScale(const ChassisPowerTransientConfig_s *c,
+    const MotorPowerModelConfig_s models[4], const float candidate[4], float maximum,
+    float *scale, ChassisPowerTransientOutput_s *o)
+{
+    struct { float lo, hi; } stack[48];
+    unsigned pending = 1, nodes = 0;
+    stack[0].lo = 0; stack[0].hi = maximum;
+    while (pending != 0) {
+        if (++nodes > c->guard_search_nodes) { o->guard_search_exhausted = true; return false; }
+        const float lo = stack[--pending].lo, hi = stack[pending].hi;
+        o->guard_power_w = QuantizedGuardPower(models, candidate, hi, o);
+        if (!isfinite(o->guard_power_w)) { o->fault = true; return false; }
+        if (o->guard_power_w <= o->allowed_guard_w + 1e-4f) { *scale = hi; return true; }
+        bool same;
+        const float lower = IntegerIntervalMinimum(models, candidate, lo, hi, o, &same);
+        if (!isfinite(lower)) { o->fault = true; return false; }
+        if (same || lower > o->allowed_guard_w + 1e-4f) continue;
+        const float mid = lo + (hi - lo) * .5f;
+        if (mid <= lo || mid >= hi) {
+            o->guard_power_w = QuantizedGuardPower(models, candidate, lo, o);
+            if (o->guard_power_w <= o->allowed_guard_w + 1e-4f) { *scale = lo; return true; }
+            continue;
+        }
+        if (pending + 2 > sizeof(stack) / sizeof(stack[0])) {
+            o->guard_search_exhausted = true; return false;
+        }
+        stack[pending].lo = lo; stack[pending++].hi = nextafterf(mid, 0);
+        stack[pending].lo = mid; stack[pending++].hi = hi;
+    }
+    return false;
+}
+
 bool ChassisPowerTransientGuard(const ChassisPowerTransientConfig_s *c,
     const MotorPowerModelConfig_s models[4], const ChassisPowerTransientInput_s *i,
     const float candidate[4], const ChassisPowerTransientState_s *s,
@@ -198,7 +305,7 @@ bool ChassisPowerTransientGuard(const ChassisPowerTransientConfig_s *c,
 {
     if (!ConfigValid(c) || models == NULL || i == NULL || candidate == NULL || s == NULL || o == NULL) return false;
     float a = 0, b = 0, constant = 0, upper = 1;
-    o->guard_infeasible = false; o->growth_fallback = false;
+    o->guard_infeasible = o->guard_search_exhausted = false; o->growth_fallback = false;
     for (unsigned w = 0; w < 4; ++w) {
         if (!PowerModelConfigIsValid(&models[w]) || !isfinite(candidate[w]) ||
             !isfinite(o->guard_rpm[w]) || fabsf(candidate[w]) > c->max_current_command) {
@@ -224,22 +331,23 @@ bool ChassisPowerTransientGuard(const ChassisPowerTransientConfig_s *c,
     }
     o->candidate_guard_w = a + b + constant;
     float scale = 0;
-    const bool feasible = PowerModelFindFeasibleScale(a, b, constant - o->allowed_guard_w, upper, &scale);
+    bool feasible = PowerModelFindFeasibleScale(a, b, constant - o->allowed_guard_w, upper, &scale);
+    o->guard_power_w = QuantizedGuardPower(models, candidate, feasible ? scale : 0, o);
+    /* Bounded local search avoids a full scan of up to 60000 integer boundaries. */
+    for (unsigned attempt = 0; feasible && attempt < 8 &&
+        o->guard_power_w > o->allowed_guard_w + 1e-4f && scale > 0; ++attempt) {
+        scale = NextLowerCommandScale(candidate, scale, o->drive_mask);
+        o->guard_power_w = QuantizedGuardPower(models, candidate, scale, o);
+    }
+    if (!feasible || o->guard_power_w > o->allowed_guard_w + 1e-4f)
+        feasible = SearchIntegerScale(c, models, candidate, upper, &scale, o);
     o->guard_scale = feasible ? scale : 0;
-    o->guard_power_w = 0;
-    for (unsigned w = 0; w < 4; ++w) {
-        o->guarded_current[w] = (float)(int16_t)(candidate[w] * ((o->drive_mask & (1U << w)) ? o->guard_scale : 1));
-        const float p = PowerModelPredict(&models[w], o->guarded_current[w], o->guard_rpm[w]);
-        o->guard_power_w += (o->drive_mask & (1U << w)) ? p : fmaxf(p, 0);
+    o->fault |= !isfinite(o->guard_power_w) || !isfinite(o->candidate_guard_w);
+    o->guard_infeasible = (!feasible && !o->guard_search_exhausted) || o->fault;
+    if (!feasible || o->fault) {
+        o->guard_scale = 0;
+        o->guard_power_w = QuantizedGuardPower(models, candidate, 0, o);
+        if (o->fault) memset(o->guarded_current, 0, sizeof(o->guarded_current));
     }
-    o->guard_infeasible = !feasible || o->guard_power_w > o->allowed_guard_w + 1e-4f;
-    if (o->guard_infeasible) {
-        o->guard_scale = 0; o->guard_power_w = 0;
-        for (unsigned w = 0; w < 4; ++w) {
-            if (o->drive_mask & (1U << w)) o->guarded_current[w] = 0;
-            const float p = PowerModelPredict(&models[w], o->guarded_current[w], o->guard_rpm[w]);
-            o->guard_power_w += (o->drive_mask & (1U << w)) ? p : fmaxf(p, 0);
-        }
-    }
-    return !o->guard_infeasible;
+    return feasible && !o->fault;
 }

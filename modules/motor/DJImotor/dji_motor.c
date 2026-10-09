@@ -427,6 +427,8 @@ static void ApplyChassisPowerGroup(void)
         transient_input.raw_current[slot] = motor_output[index];
         transient_input.actual_rpm[slot] = chassis_power->input.speed_rpm[slot];
         transient_input.target_rpm[slot] = speed_reference_aps[index] / 6.0f;
+        state.numeric_error |= !isfinite(transient_input.actual_rpm[slot]) ||
+                               !isfinite(transient_input.target_rpm[slot]);
         transient_input.feedback_tick_ms[slot] = cycle_measure[index].rx_tick_ms;
         transient_input.feedback_sequence[slot] = cycle_measure[index].rx_sequence;
         if (cycle_online[index]) transient_input.online_mask |= (uint8_t)(1U << slot);
@@ -468,7 +470,8 @@ static void ApplyChassisPowerGroup(void)
         output_enabled[slot] = power_valid && motor_online && cycle_control.control_enabled &&
                                cycle_stop[index] != MOTOR_STOP && !state.transient.fault;
         if (motor_online) state.online_mask |= (uint8_t)(1U << slot);
-        state.base_limited |= power_output.current_scale[slot] < 0.9999f;
+        state.base_limited |= output_enabled[slot] && (state.transient.drive_mask & (1U << slot)) &&
+            fabsf(power_output.limited_current[slot]) < fabsf(state.raw_current[slot]);
         float chosen = power_output.limited_current[slot];
 #if CHASSIS_POWER_CONTROL_STAGE >= 2
         chosen = state.transient.guarded_current[slot];
@@ -487,8 +490,10 @@ static void ApplyChassisPowerGroup(void)
                                      &power_output,
                                      output_enabled,
                                      &telemetry);
-    for (unsigned i = 0; i < 4; ++i)
+    for (unsigned i = 0; i < 4; ++i) {
         telemetry.target_speed_rpm[i] = transient_input.target_rpm[i];
+        telemetry.actual_speed_rpm[i] = transient_input.actual_rpm[i];
+    }
     ChassisPowerTransientRecordSent(&chassis_power->transient, power_output.limited_current);
 
     state.power = power_output;
@@ -512,7 +517,8 @@ static void ApplyChassisPowerGroup(void)
         .enabled_mask = telemetry.motor_enabled_mask,
         .meter_age_ms = (uint8_t)fminf(255, (float)(uint32_t)(now_ms - meter_tick_ms)),
         .flags = (uint8_t)((state.numeric_error ? 1 : 0) | (state.transient.guard_infeasible ? 2 : 0) |
-                          (state.transient.growth_fallback ? 4 : 0) | (CHASSIS_POWER_CONTROL_STAGE << 4))};
+                          (state.transient.growth_fallback ? 4 : 0) |
+                          (state.transient.guard_search_exhausted ? 8 : 0) | (CHASSIS_POWER_CONTROL_STAGE << 4))};
     for (unsigned i = 0; i < 4; ++i) {
         sample.raw_current[i] = state.raw_current[i];
         sample.final_current[i] = power_output.limited_current[i];

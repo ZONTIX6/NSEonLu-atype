@@ -18,6 +18,7 @@ typedef struct {
     float peak_ratio, low_rpm, low_current, target_step_rpm;
     float zero_enter_rpm, zero_exit_rpm, demand_enter_current, demand_exit_current;
     uint32_t low_hold_ms, startup_window_ms, startup_cooldown_ms;
+    uint16_t guard_search_nodes;
 } ChassisPowerTransientConfig_s;
 typedef struct {
     float budget_w, target_w, slow_w, meter_w;
@@ -28,7 +29,7 @@ typedef struct {
     bool startup_enabled;
 } ChassisPowerTransientInput_s;
 typedef struct {
-    float fast_w, sent_current[4];
+    float fast_w, sent_current[4], slow_applied_w;
     uint32_t meter_tick_ms, below_since_ms, run_since_ms;
     uint8_t fresh_samples, below_samples;
     bool meter_initialized, below_valid, run_valid;
@@ -48,6 +49,7 @@ typedef struct {
     float guard_rpm[4], guarded_current[4], allowed_guard_w, guard_power_w, candidate_guard_w, guard_scale;
     float excess_j, allowance_j;
     bool startup_active, startup_triggered, guard_infeasible, growth_fallback;
+    bool guard_search_exhausted;
     float dt_s;
 } ChassisPowerTransientOutput_s;
 

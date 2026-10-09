@@ -256,6 +256,68 @@ bool ChassisPowerOuterLoopUpdate(
     return true;
 }
 
+static bool UpdateCompleteSlow(const ChassisPowerOuterLoopConfig_s *c,
+    const ChassisPowerOuterLoopInput_s *i, float dt, bool timing,
+    ChassisPowerOuterLoopState_s *s, ChassisPowerOuterLoopOutput_s *o)
+{
+    if (!isfinite(c->antiwindup_gain_per_s) || c->antiwindup_gain_per_s <= 0 ||
+        !isfinite(c->low_demand_delay_s) || c->low_demand_delay_s < 0 ||
+        !isfinite(c->low_demand_decay_w_per_s) || c->low_demand_decay_w_per_s <= 0 ||
+        !isfinite(s->low_demand_s)) {
+        ChassisPowerOuterLoopReset(s); return false;
+    }
+    const bool fresh = i->meter_online && isfinite(i->measured_power_w);
+    if (!fresh) { s->measurement_initialized = false; s->recovery_samples = 0; }
+    else if (timing) {
+        if (!s->measurement_initialized) {
+            s->filtered_power_w = i->measured_power_w; s->measurement_initialized = true;
+            s->recovery_samples = 1; s->last_meter_tick_ms = i->meter_tick_ms;
+        } else {
+            s->filtered_power_w += dt / (c->measurement_lpf_tau_s + dt) *
+                (i->measured_power_w - s->filtered_power_w);
+            if (s->last_meter_tick_ms != i->meter_tick_ms) {
+                s->last_meter_tick_ms = i->meter_tick_ms;
+                if (s->recovery_samples < 2) ++s->recovery_samples;
+            }
+        }
+    }
+    if (!i->demand_sufficient && timing) {
+        s->low_demand_s = fminf(s->low_demand_s + dt, c->low_demand_delay_s + dt);
+        if (s->low_demand_s > c->low_demand_delay_s) {
+            s->integral_w = MoveTowardZero(s->integral_w, c->low_demand_decay_w_per_s * dt);
+            s->correction_w = MoveTowardZero(s->correction_w, c->low_demand_decay_w_per_s * dt);
+        }
+    } else if (i->demand_sufficient) s->low_demand_s = 0;
+    const bool learn = timing && fresh && s->recovery_samples >= 2 && i->learning_allowed &&
+                       i->base_limited && i->demand_sufficient && !i->braking;
+    if (learn) {
+        const float error = i->target_power_w - s->filtered_power_w;
+        const float e_db = copysignf(fmaxf(fabsf(error) - c->error_deadband_w, 0), error);
+        const float candidate = c->kp * e_db + s->integral_w;
+        const float limited = ClampFloat(candidate, -i->nominal_budget_w, c->max_positive_correction_w);
+        s->correction_w = limited > s->correction_w ?
+            fminf(limited, s->correction_w + c->positive_slew_rate_w_per_s * dt) : limited;
+        /* Track only the slow loop's own saturation/slew, never a transient mask. */
+        s->integral_w = ClampFloat(s->integral_w + c->ki * e_db * dt +
+            c->antiwindup_gain_per_s * (s->correction_w - candidate) * dt,
+            -i->nominal_budget_w, c->max_positive_correction_w);
+        o->error_w = e_db;
+    }
+    float target = ClampFloat(s->correction_w, -i->nominal_budget_w, c->max_positive_correction_w);
+    if (!i->allow_positive_correction || !fresh || !timing || s->recovery_samples < 2 || i->braking)
+        target = fminf(target, 0);
+    s->applied_correction_w = target > s->applied_correction_w ?
+        fminf(target, s->applied_correction_w + c->positive_slew_rate_w_per_s * dt) : target;
+    s->previous_nominal_budget_w = i->nominal_budget_w;
+    o->correction_w = s->applied_correction_w;
+    o->filtered_power_w = s->filtered_power_w;
+    o->corrected_budget_w = ClampFloat(i->nominal_budget_w + o->correction_w,
+                                      0, i->nominal_budget_w + c->max_positive_correction_w);
+    o->mode = !fresh || s->recovery_samples < 2 ? CHASSIS_POWER_OUTER_OFFLINE :
+        (learn ? CHASSIS_POWER_OUTER_ACTIVE : CHASSIS_POWER_OUTER_STANDBY);
+    return isfinite(o->corrected_budget_w) && isfinite(s->integral_w) && isfinite(s->correction_w);
+}
+
 bool ChassisPowerOuterLoopUpdateIsolated(const ChassisPowerOuterLoopConfig_s *c,
     const ChassisPowerOuterLoopInput_s *i, float dt, ChassisPowerOuterLoopState_s *s,
     ChassisPowerOuterLoopOutput_s *o)
@@ -278,6 +340,7 @@ bool ChassisPowerOuterLoopUpdateIsolated(const ChassisPowerOuterLoopConfig_s *c,
         s->correction_w = fminf(s->correction_w, 0);
         s->applied_correction_w = fminf(s->applied_correction_w, 0);
     }
+    if (i->complete_slow_control) return UpdateCompleteSlow(c, i, dt, timing, s, o);
     if (i->meter_online && isfinite(i->measured_power_w) && timing && i->learning_allowed) {
         if (!ChassisPowerOuterLoopUpdate(c, i, dt, s, o)) return false;
     } else {

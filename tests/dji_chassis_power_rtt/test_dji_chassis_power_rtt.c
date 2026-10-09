@@ -208,6 +208,33 @@ static void TestAtomicPublicationAndFinalIntegerCommands(void)
     ASSERT_TRUE(chassis_power->state.power.limited_current[0] == 0);
 }
 
+static void TestZeroDemandIsNotActualBaseLimiting(void)
+{
+    PreparePowerGroup();
+    for (unsigned w = 0; w < 4; ++w) {
+        chassis_power->models[w].k0 = 30;
+        motor_output[w] = 0;
+    }
+    ApplyChassisPowerGroup();
+    ASSERT_TRUE(!chassis_power->state.base_limited);
+}
+
+static void TestTargetSnapshotDoesNotDependOnFeedbackRounding(void)
+{
+    PreparePowerGroup();
+    for (unsigned w = 0; w < 4; ++w) speed_reference_aps[w] = 6000;
+    const float feedback[] = {5.10000038f, 2700.3f, 5399.99f};
+    for (unsigned n = 0; n < 3; ++n) {
+        speed_feedback_aps[0] = feedback[n];
+        ApplyChassisPowerGroup();
+        ASSERT_TRUE(chassis_power->state.telemetry.target_speed_rpm[0] == 1000);
+    }
+    motor_output[0] = NAN;
+    ApplyChassisPowerGroup();
+    ASSERT_TRUE(chassis_power->state.numeric_error && chassis_power->state.transient.fault);
+    for (unsigned w = 0; w < 4; ++w) ASSERT_TRUE(chassis_power->state.power.limited_current[w] == 0);
+}
+
 static void TestStopPublicationDoesNotMixCanAndDiagnostics(void)
 {
     PreparePowerGroup(); idx = 4;
@@ -386,6 +413,8 @@ static void TestCalibrationPrintsLimitedCurrentsInsteadOfPidDemand(void)
 
 int main(void)
 {
+    TestZeroDemandIsNotActualBaseLimiting();
+    TestTargetSnapshotDoesNotDependOnFeedbackRounding();
     TestFastProtectionObservesOrAppliesByStage();
     TestStopPublicationDoesNotMixCanAndDiagnostics();
     TestAtomicPublicationAndFinalIntegerCommands();

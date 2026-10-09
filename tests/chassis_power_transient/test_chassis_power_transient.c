@@ -67,6 +67,11 @@ static void TestDisabledMeterResetInvalidAndWrap(void)
     Prepare(); input.meter_enabled = false; input.meter_w = 100;
     Tick(100, true);
     assert(output.fast_w == 0 && output.slow_applied_w == 0 && output.model_budget_w == 20);
+    input.meter_enabled = true; input.slow_w = -2; input.meter_w = 18;
+    Tick(101, true);
+    assert(output.slow_applied_w == -2);
+    input.meter_enabled = false; Tick(102, true);
+    assert(output.slow_applied_w == 0 && output.model_budget_w == 20);
     Prepare(); input.now_ms = UINT32_MAX - 5; input.meter_tick_ms = input.now_ms;
     input.meter_w = 36.1f; Tick(input.now_ms, true);
     input.meter_w = 18; Tick(UINT32_MAX - 4, true); Tick(7, true);
@@ -182,8 +187,125 @@ static void TestInvalidTimingConfigurationAndStartupCooldown(void)
     Tick(206, true);
     assert(!output.startup_active && !output.startup_triggered);
 }
+
+static void TestPositiveReapplicationSlewsAndBrakingCannotArm(void)
+{
+    Prepare(); input.slow_w = 8;
+    Tick(100, true); Tick(101, true);
+    assert(output.slow_applied_w <= .021f);
+    Tick(102, true); assert(output.slow_applied_w <= .041f);
+    Prepare(); input.startup_enabled = true;
+    for (unsigned w = 0; w < 4; ++w) {
+        input.actual_rpm[w] = 0; input.target_rpm[w] = 500; input.raw_current[w] = -1000;
+    }
+    for (uint32_t t = 0; t <= 100; ++t) Tick(t, true);
+    for (unsigned w = 0; w < 4; ++w) { input.target_rpm[w] = 1000; input.raw_current[w] = 1000; }
+    Tick(101, true);
+    assert(!output.startup_triggered);
+}
+static void TestCoastingCannotLearnOrApplyPositiveHistory(void)
+{
+    Prepare(); input.slow_w = 4;
+    for (unsigned w = 0; w < 4; ++w) {
+        input.actual_rpm[w] = input.target_rpm[w] = 4000;
+        input.raw_current[w] = 0;
+    }
+    for (uint32_t t = 100; t <= 201; ++t) Tick(t, true);
+    assert(output.drive_mask == 0 && !output.learning_allowed && !output.positive_allowed);
+    assert(output.slow_applied_w == 0);
+}
+static void TestFaultDoesNotRechargeStartupAndRecoveryNeedsTwoSamples(void)
+{
+    StartLowSpeed(); input.raw_current[0] = NAN;
+    assert(!ChassisPowerTransientUpdate(&config, &input, .001f, &state, &output));
+    for (unsigned w = 0; w < 4; ++w) input.target_rpm[w] = input.raw_current[w] = 0;
+    for (uint32_t t = 103; t <= 203; ++t) Tick(t, true);
+    for (unsigned w = 0; w < 4; ++w) { input.target_rpm[w] = 1000; input.raw_current[w] = 1000; }
+    Tick(204, true);
+    assert(!output.startup_triggered);
+    Prepare(); input.startup_enabled = true; input.meter_online = false;
+    for (unsigned w = 0; w < 4; ++w) input.actual_rpm[w] = input.target_rpm[w] = input.raw_current[w] = 0;
+    for (uint32_t t = 0; t <= 100; ++t) Tick(t, false);
+    input.meter_online = true;
+    for (unsigned w = 0; w < 4; ++w) { input.target_rpm[w] = 1000; input.raw_current[w] = 1000; }
+    Tick(101, true);
+    assert(!output.startup_triggered);
+    for (unsigned w = 0; w < 4; ++w) input.target_rpm[w] += 300;
+    Tick(102, true);
+    assert(output.startup_triggered);
+}
+static void TestQuantizationRetreatKeepsNearbyFeasibleCommands(void)
+{
+    Prepare(); input.meter_enabled = false; Tick(100, true);
+    MotorPowerModelConfig_s models[4] = {{.current_conversion = 1, .k0 = 10, .k1 = -5},
+        {.current_conversion = 1, .k4 = 1}, {.current_conversion = 1}, {.current_conversion = 1}};
+    const float candidate[4] = {3, 10, 0, 0};
+    output.allowed_guard_w = 14.5f;
+    for (unsigned w = 0; w < 4; ++w) state.feedback_seen[w] = 2;
+    assert(ChassisPowerTransientGuard(&config, models, &input, candidate, &state, &output));
+    assert(!output.guard_infeasible && output.guarded_current[0] == 0 && output.guarded_current[1] == 2);
+    assert(output.guard_power_w <= output.allowed_guard_w);
+    /* Regression with the unchanged production six-coefficient model. */
+    Prepare(); input.meter_enabled = false;
+    for (unsigned w = 0; w < 4; ++w) {
+        models[w] = (MotorPowerModelConfig_s){.k0 = 1.3123816f, .k1 = -.25836727f,
+            .k2 = .0007424524f, .k3 = .0024271158f, .k4 = .081198552f,
+            .k5 = 3.890596e-08f, .current_conversion = 1000};
+        input.actual_rpm[w] = 0;
+    }
+    Tick(100, true);
+    input.actual_rpm[1] = 141.613007f;
+    for (unsigned w = 0; w < 4; ++w) ++input.feedback_sequence[w];
+    Tick(101, true);
+    const float real_candidate[4] = {1000, 5000, 0, 0};
+    assert(ChassisPowerTransientGuard(&config, models, &input, real_candidate, &state, &output));
+    assert(output.guarded_current[0] > 800 && output.guarded_current[1] > 4000);
+    assert(output.guard_power_w <= 19.0001f);
+    const float narrow_candidate[4] = {200, 200, 3000, 0};
+    output.drive_mask = 7;
+    output.allowed_guard_w = 4.9878788f;
+    for (unsigned w = 0; w < 4; ++w) output.guard_rpm[w] = 0;
+    assert(ChassisPowerTransientGuard(&config, models, &input, narrow_candidate, &state, &output));
+    assert(output.guarded_current[2] > 1700 && output.guard_power_w <= 4.9879788f);
+    config.guard_search_nodes = 1;
+    assert(!ChassisPowerTransientGuard(&config, models, &input, narrow_candidate, &state, &output));
+    assert(output.guard_search_exhausted && !output.guard_infeasible && output.guarded_current[2] == 0);
+    config.guard_search_nodes = 256;
+    models[0] = (MotorPowerModelConfig_s){.current_conversion = 1, .k0 = 10, .k1 = -1.5f};
+    models[1] = (MotorPowerModelConfig_s){.current_conversion = 1, .k4 = 1};
+    models[2] = models[3] = (MotorPowerModelConfig_s){.current_conversion = 1};
+    const float narrow_cell[4] = {nextafterf(2, INFINITY), 2, 0, 0};
+    output.drive_mask = 3; output.allowed_guard_w = 9.47f;
+    assert(ChassisPowerTransientGuard(&config, models, &input, narrow_cell, &state, &output));
+    assert(output.guarded_current[0] == 2 && output.guarded_current[1] == 1);
+    assert(output.guard_power_w <= output.allowed_guard_w);
+    assert(!output.guard_infeasible && !output.guard_search_exhausted);
+}
+
+static void TestDirectionHysteresisAndStableRunGate(void)
+{
+    Prepare(); input.raw_current[0] = -1000; input.actual_rpm[0] = 40;
+    Tick(100, true); assert(output.brake_mask & 1);
+    input.actual_rpm[0] = -75; Tick(101, true);
+    assert(output.brake_mask & 1); /* target direction until exiting near zero */
+    input.actual_rpm[0] = -100; Tick(102, true); assert(output.drive_mask & 1);
+    input.actual_rpm[0] = -75; input.raw_current[0] = -150;
+    Tick(103, true); assert(output.drive_mask & 1);
+    input.raw_current[0] = -100; Tick(104, true); assert(!(output.drive_mask & 1));
+    input.raw_current[0] = -150; Tick(105, true); assert(!(output.drive_mask & 1));
+    input.raw_current[0] = -200; Tick(106, true); assert(output.drive_mask & 1);
+    Prepare(); Tick(100, true); Tick(101, true);
+    for (uint32_t t = 102; t <= 200; ++t) Tick(t, true);
+    assert(!output.learning_allowed);
+    Tick(201, true); assert(output.learning_allowed);
+}
 int main(void)
 {
+    TestFaultDoesNotRechargeStartupAndRecoveryNeedsTwoSamples();
+    TestQuantizationRetreatKeepsNearbyFeasibleCommands();
+    TestDirectionHysteresisAndStableRunGate();
+    TestCoastingCannotLearnOrApplyPositiveHistory();
+    TestPositiveReapplicationSlewsAndBrakingCannotArm();
     TestInvalidTimingConfigurationAndStartupCooldown();
     TestStartupWindowEnergyAndNoRecharge();
     TestAccelerationUsesNewFeedbackAndStaleFallback();
