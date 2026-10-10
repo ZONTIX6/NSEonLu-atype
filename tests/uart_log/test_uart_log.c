@@ -134,6 +134,36 @@ static void TestForeignUartCompletionIsIgnored(void)
     ASSERT_EQ_UINT(1U, dma_calls);
 }
 
+static void TestFullRetainedQueueRecoversWithoutCapturePolling(HAL_StatusTypeDef failure)
+{
+    static uint8_t data[4095];
+    Reset();
+    memset(data, 'q', sizeof(data));
+    dma_status = failure;
+    ASSERT_EQ_UINT(sizeof(data), BSPUARTLogWrite(data, sizeof(data)));
+    ASSERT_EQ_UINT(1U, dma_calls);
+
+    /* Ordinary firmware has no capture task to poll a failed DMA start. */
+    dma_status = HAL_OK;
+    ASSERT_EQ_UINT(0U, BSPUARTLogWrite("next", 4U));
+    ASSERT_EQ_UINT(2U, dma_calls);
+    ASSERT_EQ_UINT(sizeof(data), dma_length);
+    ASSERT_TRUE(memcmp(dma_data, data, sizeof(data)) == 0);
+    ASSERT_EQ_UINT(0U, primask);
+
+    HAL_UART_TxCpltCallback(&huart1);
+    ASSERT_TRUE(BSPUARTLogIsIdle());
+    ASSERT_EQ_UINT(4U, BSPUARTLogWrite("next", 4U));
+    /* The next message wraps across the ring boundary after 4095 bytes. */
+    ASSERT_EQ_UINT(1U, dma_length);
+    ASSERT_EQ_UINT('n', dma_data[0]);
+    HAL_UART_TxCpltCallback(&huart1);
+    ASSERT_EQ_UINT(3U, dma_length);
+    ASSERT_TRUE(memcmp(dma_data, "ext", 3U) == 0);
+    HAL_UART_TxCpltCallback(&huart1);
+    ASSERT_TRUE(BSPUARTLogIsIdle());
+}
+
 static void TestHalInitAndDmaStartFailuresAreCounted(void)
 {
     BSPUARTLogDiagnostics_s diagnostics;
@@ -164,6 +194,8 @@ int main(void)
     TestCompletionDrainsQueuedAndWrappedSegmentsInOrder();
     TestOversizeOrFullQueueDropsWholeMessage();
     TestForeignUartCompletionIsIgnored();
+    TestFullRetainedQueueRecoversWithoutCapturePolling(HAL_ERROR);
+    TestFullRetainedQueueRecoversWithoutCapturePolling(HAL_BUSY);
     TestHalInitAndDmaStartFailuresAreCounted();
     if (failures != 0)
         return 1;

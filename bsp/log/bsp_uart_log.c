@@ -82,6 +82,9 @@ unsigned BSPUARTLogWrite(const void *data, unsigned length)
     __disable_irq();
     if (length > FreeBytes())
     {
+        /* A failed DMA start may have filled the retained queue. Retry it
+         * even when this message cannot fit, without a capture-task poll. */
+        StartNextDmaSegment();
         ++diagnostics.dropped_messages;
         __set_PRIMASK(primask);
         return 0U;
