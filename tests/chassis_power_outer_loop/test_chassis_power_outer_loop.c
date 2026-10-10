@@ -69,6 +69,56 @@ static ChassisPowerOuterLoopInput_s BaseInput(void)
     return input;
 }
 
+static void TestSpinGovernorHoldsPositiveLearningWithoutDisablingOverpower(void)
+{
+    for (unsigned isolated = 0; isolated < 2; ++isolated)
+    {
+        ChassisPowerOuterLoopState_s state = {
+            .integral_w = 1, .correction_w = 2, .applied_correction_w = 2,
+            .filtered_power_w = 20, .measurement_initialized = true,
+        };
+        ChassisPowerOuterLoopInput_s input = BaseInput();
+        input.predicted_unlimited_power_w = 55;
+        input.learning_allowed = true;
+        input.hold_positive_learning = true;
+        ChassisPowerOuterLoopOutput_s output;
+        for (unsigned i = 0; i < 50; ++i)
+        {
+            ASSERT_TRUE(isolated ? ChassisPowerOuterLoopUpdateIsolated(&valid_config, &input, .005f, &state, &output) :
+                                  ChassisPowerOuterLoopUpdate(&valid_config, &input, .005f, &state, &output));
+        }
+        ASSERT_NEAR(1, state.integral_w, 1e-5f);
+        ASSERT_NEAR(2, output.correction_w, 1e-5f);
+        ASSERT_EQ_INT(CHASSIS_POWER_OUTER_STANDBY, output.mode);
+        input.hold_positive_learning = false;
+        input.base_limited = true;
+        ASSERT_TRUE(isolated ? ChassisPowerOuterLoopUpdateIsolated(&valid_config, &input, .005f, &state, &output) :
+                              ChassisPowerOuterLoopUpdate(&valid_config, &input, .005f, &state, &output));
+        ASSERT_TRUE(output.correction_w > 2);
+        input.hold_positive_learning = true;
+        input.measured_power_w = 100;
+        ASSERT_TRUE(isolated ? ChassisPowerOuterLoopUpdateIsolated(&valid_config, &input, .005f, &state, &output) :
+                              ChassisPowerOuterLoopUpdate(&valid_config, &input, .005f, &state, &output));
+        ASSERT_TRUE(output.correction_w < 0);
+    }
+    /* Stage 0 calls the unwrapped loop: braking must revoke retained positive output. */
+    ChassisPowerOuterLoopState_s braking_state = {
+        .integral_w = 1, .correction_w = 2,
+        .filtered_power_w = 20, .measurement_initialized = true,
+    };
+    ChassisPowerOuterLoopInput_s braking_input = BaseInput();
+    braking_input.nominal_budget_w = 40;
+    braking_input.target_power_w = 38;
+    braking_input.predicted_unlimited_power_w = 35;
+    braking_input.hold_positive_learning = true;
+    braking_input.allow_positive_correction = false;
+    ChassisPowerOuterLoopOutput_s braking_output;
+    ASSERT_TRUE(ChassisPowerOuterLoopUpdate(&valid_config, &braking_input, .005f,
+                                          &braking_state, &braking_output));
+    ASSERT_NEAR(0, braking_output.correction_w, 1e-5f);
+    ASSERT_NEAR(40, braking_output.corrected_budget_w, 1e-5f);
+}
+
 static void AssertStateIsReset(const ChassisPowerOuterLoopState_s *state)
 {
     ASSERT_NEAR(0.0f, state->filtered_power_w, 1.0e-5f);
@@ -865,6 +915,7 @@ int main(void)
         ASSERT_TRUE(o.correction_w <= .1f);
     }
     TestResetClearsEveryStateField();
+    TestSpinGovernorHoldsPositiveLearningWithoutDisablingOverpower();
     TestOfflineMeterPassesNominalBudgetFromReset();
     TestFirstOnlineSampleSeedsFilterWithoutZeroRamp();
     TestSubsequentOnlineSampleUsesLowPassFilter();

@@ -1,0 +1,47 @@
+#ifndef CHASSIS_SPIN_CONFIG_H
+#define CHASSIS_SPIN_CONFIG_H
+
+/* 0: legacy fixed spin; 1: increase the spin target when tracked with spare power. */
+#ifndef CHASSIS_SPIN_ADAPTIVE_ENABLE
+#define CHASSIS_SPIN_ADAPTIVE_ENABLE 0
+#endif
+#if CHASSIS_SPIN_ADAPTIVE_ENABLE != 0 && CHASSIS_SPIN_ADAPTIVE_ENABLE != 1
+#error CHASSIS_SPIN_ADAPTIVE_ENABLE must be 0 or 1.
+#endif
+
+/* These use the existing chassis wz command units, not motor rpm. */
+#ifndef CHASSIS_SPIN_FIXED_WZ
+#define CHASSIS_SPIN_FIXED_WZ 4000.0f
+#endif
+#ifndef CHASSIS_SPIN_MIN_WZ
+#define CHASSIS_SPIN_MIN_WZ 1000.0f
+#endif
+#ifndef CHASSIS_SPIN_MAX_WZ
+#define CHASSIS_SPIN_MAX_WZ 6000.0f
+#endif
+#ifndef CHASSIS_SPIN_POWER_GAIN
+#define CHASSIS_SPIN_POWER_GAIN 40.0f
+#endif
+#ifndef CHASSIS_SPIN_RISE_RATE
+#define CHASSIS_SPIN_RISE_RATE 400.0f
+#endif
+#ifndef CHASSIS_SPIN_FALL_RATE
+#define CHASSIS_SPIN_FALL_RATE 2000.0f
+#endif
+#ifndef CHASSIS_SPIN_POWER_LPF_TAU_S
+#define CHASSIS_SPIN_POWER_LPF_TAU_S 0.1f
+#endif
+#ifndef CHASSIS_SPIN_POWER_DEADBAND_W
+#define CHASSIS_SPIN_POWER_DEADBAND_W 1.0f
+#endif
+#ifndef CHASSIS_SPIN_SETTLE_TIME_S
+#define CHASSIS_SPIN_SETTLE_TIME_S 0.2f
+#endif
+#ifndef CHASSIS_SPIN_TRACKING_ERROR_RPM
+#define CHASSIS_SPIN_TRACKING_ERROR_RPM 500.0f
+#endif
+#ifndef CHASSIS_SPIN_BUDGET_DROP_RESET_W
+#define CHASSIS_SPIN_BUDGET_DROP_RESET_W 1.0f
+#endif
+
+#endif

@@ -17,6 +17,33 @@
 
 首次调试必须架空车轮，并依次给出纯前进、纯右移和原地旋转命令。如果只有某个车轮方向相反，将对应的 `OMNI_X_LF_DIRECTION`、`OMNI_X_RF_DIRECTION`、`OMNI_X_LB_DIRECTION` 或 `OMNI_X_RB_DIRECTION` 从 `1.0f` 改为 `-1.0f`，不要修改运动学公式。
 
+## 自转功率余量调节
+
+`modules/algorithm/chassis_spin_config.h` 中的宏用于对比：
+
+```c
+#define CHASSIS_SPIN_ADAPTIVE_ENABLE 0 // 默认：固定 wz=4000
+// 改为 1：在跟上目标且仍有功率余量时逐步提高自转目标
+```
+
+也可以用 Make 参数覆盖；两组必须使用不同构建目录，避免复用不同宏的对象文件：
+
+```powershell
+New-Item -ItemType Directory -Force build/spin-fixed, build/spin-adaptive | Out-Null
+make -j8 BUILD_DIR=build/spin-fixed CHASSIS_SPIN_ADAPTIVE_ENABLE=0
+make -j8 BUILD_DIR=build/spin-adaptive CHASSIS_SPIN_ADAPTIVE_ENABLE=1
+```
+
+CMake 支持 `-DCHASSIS_SPIN_ADAPTIVE_ENABLE=0` 或 `1`。功率计关闭或反馈失效时，开启宏也会回到固定目标；有效反馈恢复后重新等待稳定。
+
+目标功率沿用当前预算的 95%，包含已允许的超级电容增补。功率低于目标且超出 1 W 死区时提高目标，功率高于目标时降低目标；保留模型限流与速度 PID。自适应自转未受基础模型限流且功率低于目标时，暂停旧外环的正向学习并保留已学修正；超功率时仍可向下纠偏。正向速度调节要求四轮速度误差均不超过 500 rpm、没有基础功率限流或速度 PID 电流饱和，并且连续稳定 200 ms；启动、恢复、制动时暂停增加。阶段 2/3 的预测保护正在减流、增长兜底、无解或搜索耗尽时也暂停增加。
+
+初始目标为 4000，范围为 `CHASSIS_SPIN_MIN_WZ=1000` 至 `CHASSIS_SPIN_MAX_WZ=6000`，每秒最多增加 400、降低 2000。下限必须大于零，并足够让停稳后的目标经运动学和 PID 产生驱动需求；设置成很小的正数仍可能落入瞬态 IDLE 而无法自行恢复，初次对比保留 1000。增益 `CHASSIS_SPIN_POWER_GAIN=40` 将死区外功率误差转换为目标变化率，功率低通为 100 ms。这些值使用原工程的 `wz` 命令单位，不是电机 rpm；上下限和增益是待上板验证的实验参数。预算下降超过 1 W 时立即移除高于 4000 的目标增量。退出自转会重置，重新进入从 4000 开始。
+
+开启宏后，用相同负载、预算、电容状态、PID 和功率控制阶段比较四轮实测转速、总功率和稳定性。调试器可查看 `chassis_spin_state.target_wz` 和 `filtered_power_w`；现有遥测中的四轮目标/实际转速也可用于比较。目标动态变化时不要只比较固定阶跃的 t90。
+
+平移命令保持原值，平移消耗增加会通过总功率误差降低自转目标；此功能没有单独实现平移优先功率分配。达到电机能力、速度上限或稳定性限制时允许剩余功率未用满。
+
 ## 工作流程
 
 首先进行初始化，`ChasissInit()`会被`RobotInit()`调用，进行裁判系统、底盘电机的初始化。如果为双板模式，则还会初始化IMU，并且将消息订阅者和发布者的初始化改为`CANComm`的初始化。

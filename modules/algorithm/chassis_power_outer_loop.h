@@ -47,6 +47,7 @@ typedef struct
     bool allow_positive_correction;
     bool control_enabled;
     bool learning_allowed;
+    bool hold_positive_learning; /* Keep learned correction while a target governor uses spare power. */
     bool complete_slow_control, base_limited, demand_sufficient, braking;
     uint32_t meter_tick_ms;
 } ChassisPowerOuterLoopInput_s;

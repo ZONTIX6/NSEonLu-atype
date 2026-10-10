@@ -161,7 +161,14 @@ bool ChassisPowerOuterLoopUpdate(
                 input->target_power_w - config->activation_margin_w ||
             input->measured_power_w > input->nominal_budget_w;
 
-        if (!demand_near_limit)
+        if (input->hold_positive_learning && input->allow_positive_correction &&
+            state->filtered_power_w <= input->target_power_w &&
+            input->measured_power_w <= input->target_power_w)
+        {
+            /* The spin governor raises demand; keep prior model compensation. */
+            output->mode = CHASSIS_POWER_OUTER_STANDBY;
+        }
+        else if (!demand_near_limit)
         {
             state->integral_w = 0.0f;
             if (state->correction_w > 0.0f)
