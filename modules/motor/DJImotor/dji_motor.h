@@ -83,6 +83,7 @@ typedef struct
 {
     uint32_t version, tick_ms;
     float nominal_budget_w, target_power_w, slow_correction_w, legacy_budget_w;
+    float power_deadband_w;
     float target_rpm[POWER_MODEL_MOTOR_COUNT];
     bool control_enabled;
     ChassisPowerControlTelemetry_s telemetry;

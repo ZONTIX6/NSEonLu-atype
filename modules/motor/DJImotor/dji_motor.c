@@ -407,6 +407,7 @@ static void ApplyChassisPowerGroup(void)
     ChassisPowerTransientInput_s transient_input = {
         .budget_w = cycle_control.nominal_budget_w, .target_w = cycle_control.target_power_w,
         .slow_w = cycle_control.slow_correction_w, .meter_w = meter.power_w,
+        .power_deadband_w = cycle_control.power_deadband_w,
         .now_ms = now_ms, .meter_tick_ms = meter.last_rx_tick_ms,
         .meter_enabled = POWER_METER_ENABLE != 0, .meter_online = meter.online,
         .startup_enabled = CHASSIS_POWER_CONTROL_STAGE != 1,

@@ -288,26 +288,36 @@ static bool UpdateCompleteSlow(const ChassisPowerOuterLoopConfig_s *c,
             }
         }
     }
-    if (!i->demand_sufficient && timing) {
+    const bool negative_allowed = timing && fresh && s->recovery_samples >= 2 &&
+        i->negative_learning_allowed && !i->braking;
+    /* A newly confirmed window must not inherit the preceding spike's filter tail. */
+    if (negative_allowed && !s->negative_learning_active)
+        s->filtered_power_w = i->measured_power_w;
+    s->negative_learning_active = negative_allowed;
+    const bool negative_learn = negative_allowed &&
+        i->measured_power_w > i->target_power_w + c->error_deadband_w &&
+        s->filtered_power_w > i->target_power_w + c->error_deadband_w;
+    if (!i->demand_sufficient && !negative_learn && timing) {
         s->low_demand_s = fminf(s->low_demand_s + dt, c->low_demand_delay_s + dt);
         if (s->low_demand_s > c->low_demand_delay_s) {
             s->integral_w = MoveTowardZero(s->integral_w, c->low_demand_decay_w_per_s * dt);
             s->correction_w = MoveTowardZero(s->correction_w, c->low_demand_decay_w_per_s * dt);
         }
-    } else if (i->demand_sufficient) s->low_demand_s = 0;
-    const bool learn = timing && fresh && s->recovery_samples >= 2 && i->learning_allowed &&
-                       i->base_limited && i->demand_sufficient && !i->braking;
+    } else if (i->demand_sufficient || negative_learn) s->low_demand_s = 0;
+    const bool learn = negative_learn || (timing && fresh && s->recovery_samples >= 2 &&
+        i->learning_allowed && i->base_limited && i->demand_sufficient && !i->braking);
     if (learn) {
         const float error = i->target_power_w - s->filtered_power_w;
         const float e_db = copysignf(fmaxf(fabsf(error) - c->error_deadband_w, 0), error);
         const float candidate = c->kp * e_db + s->integral_w;
-        const float limited = ClampFloat(candidate, -i->nominal_budget_w, c->max_positive_correction_w);
+        const float upper_limit = negative_learn ? 0 : c->max_positive_correction_w;
+        const float limited = ClampFloat(candidate, -i->nominal_budget_w, upper_limit);
         s->correction_w = limited > s->correction_w ?
             fminf(limited, s->correction_w + c->positive_slew_rate_w_per_s * dt) : limited;
         /* Track only the slow loop's own saturation/slew, never a transient mask. */
         s->integral_w = ClampFloat(s->integral_w + c->ki * e_db * dt +
             c->antiwindup_gain_per_s * (s->correction_w - candidate) * dt,
-            -i->nominal_budget_w, c->max_positive_correction_w);
+            -i->nominal_budget_w, upper_limit);
         o->error_w = e_db;
     }
     float target = ClampFloat(s->correction_w, -i->nominal_budget_w, c->max_positive_correction_w);

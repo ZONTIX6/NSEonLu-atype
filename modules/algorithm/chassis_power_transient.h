@@ -22,6 +22,7 @@ typedef struct {
 } ChassisPowerTransientConfig_s;
 typedef struct {
     float budget_w, target_w, slow_w, meter_w;
+    float power_deadband_w;
     float raw_current[4], actual_rpm[4], target_rpm[4];
     uint32_t now_ms, meter_tick_ms, feedback_tick_ms[4], feedback_sequence[4];
     uint8_t online_mask, enabled_mask;
@@ -40,11 +41,17 @@ typedef struct {
     uint32_t low_since_ms, startup_since_ms, last_startup_ms;
     float startup_budget_w, peak_w, excess_j, allowance_j;
     bool initialized, low_valid, startup_active, startup_seen;
+    uint32_t overpower_since_ms;
+    float overpower_threshold_w;
+    float previous_meter_w;
+    bool overpower_valid;
 } ChassisPowerTransientState_s;
 typedef struct {
     float fast_w, slow_applied_w, model_budget_w, effective_w;
     uint8_t drive_mask, brake_mask;
     bool learning_allowed, positive_allowed, meter_fresh, feedback_fresh, timing_valid, fault;
+    bool negative_learning_allowed; /* Sustained fresh driving overpower, outside startup. */
+    float negative_learning_threshold_w;
     ChassisPowerTransientMode_e mode;
     float guard_rpm[4], guarded_current[4], allowed_guard_w, guard_power_w, candidate_guard_w, guard_scale;
     float excess_j, allowance_j;

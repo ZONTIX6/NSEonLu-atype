@@ -67,7 +67,8 @@ bool ChassisPowerTransientUpdate(const ChassisPowerTransientConfig_s *c,
     }
     bool valid = isfinite(i->budget_w) && i->budget_w > 0 && isfinite(i->target_w) &&
                  i->target_w > 0 && isfinite(i->slow_w) && isfinite(s->fast_w) &&
-                 isfinite(s->slow_applied_w);
+                 isfinite(s->slow_applied_w) && isfinite(i->power_deadband_w) &&
+                 i->power_deadband_w >= 0;
     o->feedback_fresh = i->online_mask == 15 && i->enabled_mask == 15;
     float average_rpm = 0, maximum_sent = 0;
     bool target_step = false;
@@ -120,6 +121,8 @@ bool ChassisPowerTransientUpdate(const ChassisPowerTransientConfig_s *c,
     o->meter_fresh = i->meter_enabled && i->meter_online && isfinite(i->meter_w) &&
         (uint32_t)(i->now_ms - i->meter_tick_ms) <= c->meter_fresh_ms;
     const bool new_meter = o->meter_fresh && (!s->meter_initialized || s->meter_tick_ms != i->meter_tick_ms);
+    const bool rising_power = new_meter && s->meter_initialized && i->meter_w > s->previous_meter_w;
+    const float previous_fast_w = s->fast_w;
     const bool meter_recovered = o->meter_fresh &&
         (s->fresh_samples >= 2 || (s->fresh_samples == 1 && new_meter));
     const bool low = average_rpm < c->low_rpm && maximum_sent < c->low_current &&
@@ -155,6 +158,7 @@ bool ChassisPowerTransientUpdate(const ChassisPowerTransientConfig_s *c,
     } else {
         if (new_meter) {
             s->meter_initialized = true; s->meter_tick_ms = i->meter_tick_ms;
+            s->previous_meter_w = i->meter_w;
             if (s->fresh_samples < 2) ++s->fresh_samples;
         }
         if (i->meter_w > (s->startup_active ? s->peak_w : i->budget_w)) {
@@ -191,6 +195,21 @@ bool ChassisPowerTransientUpdate(const ChassisPowerTransientConfig_s *c,
         i->meter_w >= 0 && o->timing_valid;
     o->learning_allowed = o->positive_allowed &&
         (uint32_t)(i->now_ms - s->run_since_ms) >= c->stable_run_ms;
+    const float overpower_threshold = i->target_w + i->power_deadband_w;
+    const bool overpower = o->meter_fresh && o->feedback_fresh && o->timing_valid &&
+        s->fresh_samples >= 2 && !s->startup_active && o->drive_mask != 0 &&
+        o->brake_mask == 0 && i->meter_w > overpower_threshold &&
+        (s->mode == CHASSIS_POWER_TRANSIENT_RUN || s->mode == CHASSIS_POWER_TRANSIENT_CLAMP);
+    if (overpower) {
+        if (!s->overpower_valid || (rising_power && s->fast_w < previous_fast_w) ||
+            overpower_threshold > s->overpower_threshold_w) {
+            s->overpower_valid = true; s->overpower_since_ms = i->now_ms;
+        }
+        s->overpower_threshold_w = overpower_threshold;
+    } else s->overpower_valid = false;
+    o->negative_learning_allowed = overpower &&
+        (uint32_t)(i->now_ms - s->overpower_since_ms) >= c->stable_run_ms;
+    o->negative_learning_threshold_w = overpower_threshold;
     const float slow_target = i->meter_enabled ? (o->positive_allowed ? i->slow_w : fminf(i->slow_w, 0)) : 0;
     s->slow_applied_w = slow_target > s->slow_applied_w ?
         fminf(slow_target, s->slow_applied_w + 20 * dt) : slow_target;

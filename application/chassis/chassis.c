@@ -425,6 +425,12 @@ static void UpdateChassisPowerBudget(void)
         .learning_allowed = meter_valid && power_state.transient.learning_allowed &&
             meter_status.power_w <= chassis_budget_output.applied_budget_w &&
             (uint32_t)(HAL_GetTick() - power_state.tick_ms) <= 5,
+        .negative_learning_allowed = CHASSIS_POWER_CONTROL_STAGE == 3 && meter_valid &&
+            power_state.transient.negative_learning_allowed &&
+            power_state.transient.negative_learning_threshold_w >=
+                chassis_budget_output.applied_budget_w * CHASSIS_POWER_SAFETY_FACTOR +
+                    chassis_outer_loop_config.error_deadband_w &&
+            (uint32_t)(HAL_GetTick() - power_state.tick_ms) <= 5,
         .complete_slow_control = CHASSIS_POWER_CONTROL_STAGE == 3,
         .base_limited = power_state.base_limited,
         .demand_sufficient = power_state.transient.drive_mask != 0 && predicted_unlimited_power_w >=
@@ -509,6 +515,7 @@ static void UpdateChassisPowerBudget(void)
 #endif
     pending_power_control.nominal_budget_w = chassis_budget_output.applied_budget_w;
     pending_power_control.target_power_w = chassis_budget_output.applied_budget_w * CHASSIS_POWER_SAFETY_FACTOR;
+    pending_power_control.power_deadband_w = chassis_outer_loop_config.error_deadband_w;
     pending_power_control.control_enabled = control_config_valid && chassis_power_ready &&
         chassis_cmd_recv.chassis_mode != CHASSIS_ZERO_FORCE;
 #if CHASSIS_SPIN_ADAPTIVE_ENABLE
