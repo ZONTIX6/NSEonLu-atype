@@ -62,12 +62,14 @@ static size_t BuildFrame(uint8_t *frame,
     return frame_length;
 }
 
-static void StartReferee(void)
+static referee_info_t *StartReferee(void)
 {
     static UART_HandleTypeDef uart;
     TestPlatformReset();
-    ASSERT_TRUE(RefereeInit(&uart) != NULL);
+    referee_info_t *info = RefereeInit(&uart);
+    ASSERT_TRUE(info != NULL);
     ASSERT_TRUE(TestPlatformGetUSART()->module_callback != NULL);
+    return info;
 }
 
 static void AssertFrameEquals(const uint8_t expected[8],
@@ -113,6 +115,8 @@ static void TestSplitAndCoalescedFramesDriveCompleteCommand(void)
     ASSERT_TRUE(snapshot.chassis_output_enabled);
     ASSERT_EQ_U32(120U, snapshot.chassis_power_limit_w);
     ASSERT_EQ_U32(55U, snapshot.buffer_energy_j);
+    ASSERT_FALSE(snapshot.chassis_power_valid);
+    ASSERT_TRUE(snapshot.chassis_power_w == 0.0f);
     ASSERT_EQ_U32(1U, TestPlatformTickCallsInsideCritical());
     ASSERT_EQ_U32(0U, TestPlatformTickCallsOutsideCritical());
     ASSERT_EQ_U32(0U, TestPlatformCriticalDepth());
@@ -129,6 +133,93 @@ static void TestSplitAndCoalescedFramesDriveCompleteCommand(void)
     ASSERT_TRUE(SuperCapProtocolEncodeCommand(&output.command,
                                               actual_can_frame));
     AssertFrameEquals(expected_can_frame, actual_can_frame);
+}
+
+static void TestLegacyPowerFrameUpdatesRawDataAndCommand(void)
+{
+    static const uint8_t robot_payload[13] = {
+        0x03U, 0x01U, 0U, 0U, 0U, 0U, 0U,
+        0U, 0U, 0U, 80U, 0U, 0x02U,
+    };
+    static const uint8_t legacy_payload[16] = {
+        0xA8U, 0x61U, 0xF4U, 0x01U, 0U, 0U, 0x48U, 0x41U,
+        55U, 0U, 10U, 0U, 20U, 0U, 30U, 0U,
+    };
+    static const uint8_t expected_can_frame[8] = {
+        0x01U, 80U, 0U, 55U, 0U, 0U, 0U, 0U,
+    };
+    uint8_t robot_frame[32];
+    uint8_t power_frame[32];
+    const size_t robot_length = BuildFrame(
+        robot_frame, 0x0201U, robot_payload, 13U, 0x25U);
+    const size_t power_length = BuildFrame(
+        power_frame, 0x0202U, legacy_payload, 16U, 0x26U);
+
+    referee_info_t *info = StartReferee();
+    info->GameRobotPos.x = 123.0f; /* Catch a 16-byte copy into the 14-byte structure. */
+    TestPlatformSetTick(100U);
+    ASSERT_TRUE(TestPlatformFeed(robot_frame, robot_length));
+    ASSERT_TRUE(TestPlatformFeed(power_frame, 11U));
+    ASSERT_TRUE(TestPlatformFeed(&power_frame[11], power_length - 11U));
+
+    RefereePowerSnapshot_s snapshot = {0};
+    ASSERT_TRUE(RefereeGetPowerSnapshot(&snapshot));
+    ASSERT_TRUE(snapshot.valid);
+    ASSERT_EQ_U32(80U, snapshot.chassis_power_limit_w);
+    ASSERT_EQ_U32(55U, snapshot.buffer_energy_j);
+    ASSERT_TRUE(snapshot.chassis_power_valid);
+    ASSERT_TRUE(snapshot.chassis_power_w == 12.5f);
+    ASSERT_TRUE(info->PowerHeatData.reserved_power == 12.5f);
+    ASSERT_EQ_U32(25000U, info->PowerHeatData.reserved_voltage);
+    ASSERT_EQ_U32(500U, info->PowerHeatData.reserved_current);
+    ASSERT_EQ_U32(10U, info->PowerHeatData.shooter_17mm_barrel_heat);
+    ASSERT_EQ_U32(30U, info->PowerHeatData.shooter_42mm_barrel_heat);
+    ASSERT_TRUE(info->GameRobotPos.x == 123.0f);
+
+    RefereeLinkDiagnostics_s diagnostics = {0};
+    ASSERT_TRUE(RefereeGetLinkDiagnostics(&diagnostics));
+    ASSERT_EQ_U32(0U, diagnostics.payload_length_error_count);
+
+    const ChassisPowerLinkInput_s input = {
+        .referee = snapshot,
+        .bench_enabled = false,
+        .bench_limit_w = 0.0f,
+        .chassis_zero_force = false,
+    };
+    ChassisPowerLinkOutput_s output = {0};
+    uint8_t actual[8] = {0};
+    ASSERT_TRUE(ChassisPowerLinkBuild(&input, &output));
+    ASSERT_TRUE(SuperCapProtocolEncodeCommand(&output.command, actual));
+    AssertFrameEquals(expected_can_frame, actual);
+
+    uint8_t changed_payload[16];
+    memcpy(changed_payload, legacy_payload, sizeof(changed_payload));
+    changed_payload[6] = 0xC8U; /* 25 W */
+    changed_payload[8] = 99U;
+    TestPlatformSetTick(300U);
+    size_t changed_length = BuildFrame(
+        power_frame, 0x0202U, changed_payload, 16U, 0x27U);
+    power_frame[changed_length - 1U] ^= 1U;
+    ASSERT_TRUE(TestPlatformFeed(power_frame, changed_length));
+    changed_length = BuildFrame(
+        power_frame, 0x0202U, changed_payload, 15U, 0x28U);
+    ASSERT_TRUE(TestPlatformFeed(power_frame, changed_length));
+    ASSERT_TRUE(RefereeGetPowerSnapshot(&snapshot));
+    ASSERT_TRUE(snapshot.chassis_power_valid);
+    ASSERT_TRUE(snapshot.chassis_power_w == 12.5f);
+    ASSERT_EQ_U32(55U, snapshot.buffer_energy_j);
+    ASSERT_TRUE(info->PowerHeatData.reserved_power == 12.5f);
+    ASSERT_TRUE(RefereeGetLinkDiagnostics(&diagnostics));
+    ASSERT_EQ_U32(1U, diagnostics.transport.crc16_error_count);
+    ASSERT_EQ_U32(1U, diagnostics.payload_length_error_count);
+
+    /* A fresh robot frame cannot keep a rejected power frame alive. */
+    TestPlatformSetTick(401U);
+    ASSERT_TRUE(TestPlatformFeed(robot_frame, robot_length));
+    ASSERT_TRUE(RefereeGetPowerSnapshot(&snapshot));
+    ASSERT_FALSE(snapshot.valid);
+    ASSERT_FALSE(snapshot.chassis_power_valid);
+    ASSERT_TRUE(snapshot.chassis_power_w == 0.0f);
 }
 
 static void TestOnlyOneRequiredFrameIsInvalid(void)
@@ -261,6 +352,7 @@ static void TestNullOutputsAreRejected(void)
 int main(void)
 {
     TestSplitAndCoalescedFramesDriveCompleteCommand();
+    TestLegacyPowerFrameUpdatesRawDataAndCommand();
     TestOnlyOneRequiredFrameIsInvalid();
     TestCrcAndPayloadLengthRejectionsAreDiagnosed();
     TestFreshnessBoundaryFailsSafeAndRecovers();

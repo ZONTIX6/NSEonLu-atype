@@ -1,5 +1,6 @@
 #include "referee_power.h"
 
+#include <math.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -7,6 +8,17 @@ static uint16_t ReadU16LE(const uint8_t *bytes)
 {
     return (uint16_t)((uint16_t)bytes[0] |
                       ((uint16_t)bytes[1] << 8U));
+}
+
+static float ReadF32LE(const uint8_t *bytes)
+{
+    const uint32_t bits = (uint32_t)bytes[0] |
+                          ((uint32_t)bytes[1] << 8U) |
+                          ((uint32_t)bytes[2] << 16U) |
+                          ((uint32_t)bytes[3] << 24U);
+    float value;
+    memcpy(&value, &bits, sizeof(value));
+    return value;
 }
 
 void RefereePowerStateReset(RefereePowerState_s *state)
@@ -44,11 +56,16 @@ bool RefereePowerStateAcceptFrame(RefereePowerState_s *state,
 
     if (command_id == REFEREE_POWER_HEAT_COMMAND_ID)
     {
-        if (payload_length != REFEREE_POWER_HEAT_PAYLOAD_LENGTH)
+        if (payload_length != REFEREE_POWER_HEAT_PAYLOAD_LENGTH &&
+            payload_length != REFEREE_POWER_HEAT_LEGACY_PAYLOAD_LENGTH)
         {
             return false;
         }
 
+        const bool legacy = payload_length == REFEREE_POWER_HEAT_LEGACY_PAYLOAD_LENGTH;
+        const float chassis_power_w = legacy ? ReadF32LE(&payload[4]) : 0.0f;
+        state->has_chassis_power = legacy && isfinite(chassis_power_w);
+        state->chassis_power_w = state->has_chassis_power ? chassis_power_w : 0.0f;
         state->buffer_energy_j = ReadU16LE(&payload[8]);
         state->power_heat_tick_ms = now_ms;
         state->has_power_heat = true;
@@ -86,5 +103,7 @@ bool RefereePowerBuildSnapshot(const RefereePowerState_s *state,
     snapshot->chassis_output_enabled = state->chassis_output_enabled;
     snapshot->chassis_power_limit_w = state->chassis_power_limit_w;
     snapshot->buffer_energy_j = state->buffer_energy_j;
+    snapshot->chassis_power_valid = state->has_chassis_power;
+    snapshot->chassis_power_w = state->chassis_power_w;
     return true;
 }
