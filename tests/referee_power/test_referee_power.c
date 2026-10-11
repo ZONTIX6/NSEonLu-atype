@@ -47,6 +47,7 @@ static const uint8_t legacy_power_heat[16] = {
     0xA8U, 0x61U, 0xF4U, 0x01U, 0U, 0U, 0x48U, 0x41U,
     55U, 0U, 10U, 0U, 20U, 0U, 30U, 0U};
 
+#if REFEREE_LEGACY_POWER_FIELDS_ENABLED
 static void TestAcceptsLegacyPowerHeatFrame(void)
 {
     RefereePowerState_s state;
@@ -68,6 +69,40 @@ static void TestAcceptsLegacyPowerHeatFrame(void)
     ASSERT_TRUE(snapshot.chassis_power_valid);
     ASSERT_TRUE(snapshot.chassis_power_w == 12.5f);
 }
+#else
+static void Test16ByteReservedFieldsDoNotProvidePower(void)
+{
+    for (unsigned nonzero_reserved = 0U; nonzero_reserved < 2U; ++nonzero_reserved)
+    {
+        uint8_t payload[16];
+        RefereePowerState_s state;
+        RefereePowerSnapshot_s snapshot;
+        memcpy(payload, legacy_power_heat, sizeof(payload));
+        if (nonzero_reserved == 0U)
+        {
+            memset(payload, 0, 8U);
+        }
+        RefereePowerStateReset(&state);
+        state.chassis_power_w = 99.0f;
+        state.has_chassis_power = true;
+        ASSERT_TRUE(RefereePowerStateAcceptFrame(
+            &state, 0x0201U, robot_state_enabled, 13U, 100U));
+        ASSERT_TRUE(RefereePowerStateAcceptFrame(
+            &state, 0x0202U, payload, 16U, 150U));
+        ASSERT_TRUE(state.has_power_heat);
+        ASSERT_EQ_U32(150U, state.power_heat_tick_ms);
+        ASSERT_EQ_U32(55U, state.buffer_energy_j);
+        ASSERT_FALSE(state.has_chassis_power);
+        ASSERT_TRUE(state.chassis_power_w == 0.0f);
+        ASSERT_TRUE(RefereePowerBuildSnapshot(&state, 150U, &snapshot));
+        ASSERT_TRUE(snapshot.valid);
+        ASSERT_EQ_U32(120U, snapshot.chassis_power_limit_w);
+        ASSERT_EQ_U32(55U, snapshot.buffer_energy_j);
+        ASSERT_FALSE(snapshot.chassis_power_valid);
+        ASSERT_TRUE(snapshot.chassis_power_w == 0.0f);
+    }
+}
+#endif
 
 static void TestModernFrameClearsLegacyPowerAndIgnoresReservedBytes(void)
 {
@@ -92,6 +127,7 @@ static void TestModernFrameClearsLegacyPowerAndIgnoresReservedBytes(void)
     ASSERT_TRUE(snapshot.chassis_power_w == 0.0f);
 }
 
+#if REFEREE_LEGACY_POWER_FIELDS_ENABLED
 static void TestNonFiniteLegacyPowerIsUnavailableButBufferStillUpdates(void)
 {
     static const uint8_t nonfinite_power[][4] = {
@@ -171,6 +207,7 @@ static void TestWrongLengthsPreserveLegacyPowerAndTimestamp(void)
     ASSERT_TRUE(snapshot.chassis_power_w == 12.5f);
     ASSERT_EQ_U32(55U, snapshot.buffer_energy_j);
 }
+#endif
 
 static void TestRequiresBothFreshPowerFrames(void)
 {
@@ -348,11 +385,15 @@ static void TestRejectsNullPointersAndUnknownCommands(void)
 
 int main(void)
 {
+#if REFEREE_LEGACY_POWER_FIELDS_ENABLED
     TestAcceptsLegacyPowerHeatFrame();
-    TestModernFrameClearsLegacyPowerAndIgnoresReservedBytes();
     TestNonFiniteLegacyPowerIsUnavailableButBufferStillUpdates();
     TestLegacyPowerExpiresWithEitherRequiredFrame();
     TestWrongLengthsPreserveLegacyPowerAndTimestamp();
+#else
+    Test16ByteReservedFieldsDoNotProvidePower();
+#endif
+    TestModernFrameClearsLegacyPowerAndIgnoresReservedBytes();
     TestRequiresBothFreshPowerFrames();
     TestRejectsWrongPayloadLengthsWithoutOverwritingState();
     TestExpiresWhenEitherFrameIsOlderThan300Ms();

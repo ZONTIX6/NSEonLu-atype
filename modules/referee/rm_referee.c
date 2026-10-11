@@ -85,7 +85,7 @@ static void HandleValidFrame(void *context,
 	uint16_t expected_payload_length;
 	const bool known_command =
 		GetExpectedPayloadLength(command_id, &expected_payload_length);
-	const bool legacy_power_heat = command_id == ID_power_heat_data &&
+	const bool extended_power_heat = command_id == ID_power_heat_data &&
 		payload_length == REFEREE_POWER_HEAT_LEGACY_PAYLOAD_LENGTH;
 
 	(void)context;
@@ -93,7 +93,7 @@ static void HandleValidFrame(void *context,
 	referee_info.CmdID = command_id;
 
 	if (known_command && payload_length != expected_payload_length &&
-		!legacy_power_heat)
+		!extended_power_heat)
 	{
 		++payload_length_error_count;
 	}
@@ -111,9 +111,9 @@ static void HandleValidFrame(void *context,
 		else if (command_id == ID_power_heat_data)
 		{
 			memcpy(&referee_info.PowerHeatData, payload, LEN_power_heat_data);
-			if (legacy_power_heat)
+			if (extended_power_heat)
 			{
-				/* Legacy offset 12 is the second 17 mm barrel; 42 mm is at 14. */
+				/* In 16-byte frames, offset 12 is 17 mm heat; 42 mm is at 14. */
 				memcpy(&referee_info.PowerHeatData.shooter_42mm_barrel_heat,
 					   &payload[14],
 					   sizeof(referee_info.PowerHeatData.shooter_42mm_barrel_heat));

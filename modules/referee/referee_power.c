@@ -62,9 +62,10 @@ bool RefereePowerStateAcceptFrame(RefereePowerState_s *state,
             return false;
         }
 
-        const bool legacy = payload_length == REFEREE_POWER_HEAT_LEGACY_PAYLOAD_LENGTH;
-        const float chassis_power_w = legacy ? ReadF32LE(&payload[4]) : 0.0f;
-        state->has_chassis_power = legacy && isfinite(chassis_power_w);
+        const bool has_power_fields = REFEREE_LEGACY_POWER_FIELDS_ENABLED &&
+            payload_length == REFEREE_POWER_HEAT_LEGACY_PAYLOAD_LENGTH;
+        const float chassis_power_w = has_power_fields ? ReadF32LE(&payload[4]) : 0.0f;
+        state->has_chassis_power = has_power_fields && isfinite(chassis_power_w);
         state->chassis_power_w = state->has_chassis_power ? chassis_power_w : 0.0f;
         state->buffer_energy_j = ReadU16LE(&payload[8]);
         state->power_heat_tick_ms = now_ms;

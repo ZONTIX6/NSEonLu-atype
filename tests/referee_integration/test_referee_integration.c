@@ -135,7 +135,7 @@ static void TestSplitAndCoalescedFramesDriveCompleteCommand(void)
     AssertFrameEquals(expected_can_frame, actual_can_frame);
 }
 
-static void TestLegacyPowerFrameUpdatesRawDataAndCommand(void)
+static void Test16BytePowerFrameUpdatesRawDataAndCommand(void)
 {
     static const uint8_t robot_payload[13] = {
         0x03U, 0x01U, 0U, 0U, 0U, 0U, 0U,
@@ -167,8 +167,13 @@ static void TestLegacyPowerFrameUpdatesRawDataAndCommand(void)
     ASSERT_TRUE(snapshot.valid);
     ASSERT_EQ_U32(80U, snapshot.chassis_power_limit_w);
     ASSERT_EQ_U32(55U, snapshot.buffer_energy_j);
+#if REFEREE_LEGACY_POWER_FIELDS_ENABLED
     ASSERT_TRUE(snapshot.chassis_power_valid);
     ASSERT_TRUE(snapshot.chassis_power_w == 12.5f);
+#else
+    ASSERT_FALSE(snapshot.chassis_power_valid);
+    ASSERT_TRUE(snapshot.chassis_power_w == 0.0f);
+#endif
     ASSERT_TRUE(info->PowerHeatData.reserved_power == 12.5f);
     ASSERT_EQ_U32(25000U, info->PowerHeatData.reserved_voltage);
     ASSERT_EQ_U32(500U, info->PowerHeatData.reserved_current);
@@ -205,8 +210,13 @@ static void TestLegacyPowerFrameUpdatesRawDataAndCommand(void)
         power_frame, 0x0202U, changed_payload, 15U, 0x28U);
     ASSERT_TRUE(TestPlatformFeed(power_frame, changed_length));
     ASSERT_TRUE(RefereeGetPowerSnapshot(&snapshot));
+#if REFEREE_LEGACY_POWER_FIELDS_ENABLED
     ASSERT_TRUE(snapshot.chassis_power_valid);
     ASSERT_TRUE(snapshot.chassis_power_w == 12.5f);
+#else
+    ASSERT_FALSE(snapshot.chassis_power_valid);
+    ASSERT_TRUE(snapshot.chassis_power_w == 0.0f);
+#endif
     ASSERT_EQ_U32(55U, snapshot.buffer_energy_j);
     ASSERT_TRUE(info->PowerHeatData.reserved_power == 12.5f);
     ASSERT_TRUE(RefereeGetLinkDiagnostics(&diagnostics));
@@ -352,7 +362,7 @@ static void TestNullOutputsAreRejected(void)
 int main(void)
 {
     TestSplitAndCoalescedFramesDriveCompleteCommand();
-    TestLegacyPowerFrameUpdatesRawDataAndCommand();
+    Test16BytePowerFrameUpdatesRawDataAndCommand();
     TestOnlyOneRequiredFrameIsInvalid();
     TestCrcAndPayloadLengthRejectionsAreDiagnosed();
     TestFreshnessBoundaryFailsSafeAndRecovers();
