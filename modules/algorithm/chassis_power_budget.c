@@ -9,7 +9,7 @@ static void ResetInvalid(ChassisPowerBudgetState_s *state,
 {
     if (state != NULL)
     {
-        state->applied_budget_w = 0.0f;
+        memset(state, 0, sizeof(*state));
         state->mode = CHASSIS_POWER_BUDGET_OFFLINE;
     }
     if (output != NULL)
@@ -22,6 +22,135 @@ static void ResetInvalid(ChassisPowerBudgetState_s *state,
 static float ClampFloat(float value, float minimum, float maximum)
 {
     return fminf(fmaxf(value, minimum), maximum);
+}
+
+static bool BufferConfigIsValid(const ChassisBufferBudgetConfig_s *config)
+{
+    const float values[] = {config->max_energy_j, config->recovery_enter_j,
+        config->recovery_exit_j, config->hard_floor_j, config->prediction_window_s,
+        config->guard_window_s, config->settlement_delay_s, config->energy_margin_j,
+        config->power_margin_w, config->max_boost_w, config->recovery_power_w,
+        config->recovery_hold_s, config->rise_rate_w_per_s, config->safety_factor};
+    for (size_t i = 0; i < sizeof(values) / sizeof(values[0]); ++i)
+        if (!isfinite(values[i]) || values[i] < 0)
+            return false;
+    return config->hard_floor_j < config->recovery_enter_j &&
+           config->recovery_enter_j < config->recovery_exit_j &&
+           config->recovery_exit_j <= config->max_energy_j &&
+           config->prediction_window_s > 0 && config->guard_window_s > 0 &&
+           config->rise_rate_w_per_s > 0 && config->recovery_power_w > 0 &&
+           config->safety_factor > 0 && config->safety_factor <= 1;
+}
+
+static float ApplyRise(float previous, float target, float rise)
+{
+    return target <= previous ? target : fminf(target, previous + rise);
+}
+
+static bool UpdateBufferBudget(const ChassisPowerBudgetConfig_s *config,
+                              const ChassisPowerBudgetInput_s *input, float dt_s,
+                              ChassisPowerBudgetState_s *state,
+                              ChassisPowerBudgetOutput_s *output)
+{
+    const ChassisBufferBudgetConfig_s *buffer = &config->buffer;
+    if (!BufferConfigIsValid(buffer))
+    {
+        ResetInvalid(state, output);
+        return false;
+    }
+    const bool buffer_valid = input->buffer_data_valid &&
+        isfinite(input->buffer_energy_j) && input->buffer_energy_j >= 0 &&
+        input->buffer_energy_j <= buffer->max_energy_j &&
+        isfinite(input->buffer_age_s) && input->buffer_age_s >= 0;
+    const bool meter_valid = input->input_power_valid &&
+        isfinite(input->measured_input_power_w);
+    const bool cap_healthy = input->cap_online && input->cap_output_enabled &&
+        input->cap_error_code == 0 && isfinite(input->cap_energy_ratio) &&
+        input->cap_energy_ratio >= 0 && input->cap_energy_ratio <= 1 &&
+        isfinite(input->cap_reported_limit_w) && input->cap_reported_limit_w >= 0;
+    const bool source_ready = !input->use_supercap ||
+        (cap_healthy && input->cap_input_control_ready);
+    const bool boost_ready = buffer_valid && meter_valid && source_ready;
+    /* Receipt time is not the referee settlement time. Reserve a settlement
+     * interval as well as energy used since the last accepted referee frame. */
+    const float lower = buffer_valid ? fmaxf(0,
+        input->buffer_energy_j - buffer->energy_margin_j -
+        (buffer->max_boost_w + buffer->power_margin_w) *
+            (input->buffer_age_s + buffer->settlement_delay_s)) : 0;
+    const float excess = meter_valid ? fmaxf(0,
+        input->measured_input_power_w + buffer->power_margin_w -
+            input->referee_limit_w) : 0;
+    const float predicted = lower - excess * buffer->guard_window_s;
+
+    if (buffer_valid && (lower <= buffer->recovery_enter_j ||
+                         (meter_valid && predicted <= buffer->hard_floor_j)))
+    {
+        state->recovering = true;
+        state->recovery_time_s = 0;
+    }
+    else if (state->recovering)
+    {
+        if (boost_ready && lower >= buffer->recovery_exit_j)
+        {
+            state->recovery_time_s += dt_s;
+            if (state->recovery_time_s >= buffer->recovery_hold_s)
+            {
+                state->recovering = false;
+                state->recovery_time_s = 0;
+            }
+        }
+        else
+            state->recovery_time_s = 0;
+    }
+
+    float target_input_budget = input->referee_limit_w;
+    if (state->recovering && buffer_valid)
+        target_input_budget = fmaxf(0, input->referee_limit_w - buffer->recovery_power_w);
+    else if (boost_ready)
+    {
+        const float energy_boost = fmaxf(0,
+            (lower - buffer->recovery_enter_j) / buffer->prediction_window_s);
+        const float safe_boost = fmaxf(0,
+            (lower - buffer->hard_floor_j) / buffer->guard_window_s -
+                buffer->power_margin_w);
+        target_input_budget += fminf(buffer->max_boost_w,
+                                     fminf(energy_boost, safe_boost));
+    }
+
+    if (!state->buffer_initialized || !isfinite(state->input_budget_w) ||
+        !isfinite(state->applied_budget_w))
+    {
+        state->input_budget_w = fminf(input->referee_limit_w, target_input_budget);
+        state->applied_budget_w = state->input_budget_w;
+        state->buffer_initialized = true;
+    }
+    const float rise = buffer->rise_rate_w_per_s * dt_s;
+    state->input_budget_w = ApplyRise(state->input_budget_w, target_input_budget, rise);
+
+    float factor = 0;
+    float target_load_budget = state->input_budget_w;
+    if (input->use_supercap && boost_ready)
+    {
+        factor = ClampFloat((input->cap_energy_ratio - config->empty_energy_ratio) /
+            (config->full_energy_ratio - config->empty_energy_ratio), 0, 1);
+        const float board_budget = input->cap_reported_limit_w / buffer->safety_factor;
+        const float headroom = fmaxf(0, board_budget - state->input_budget_w);
+        target_load_budget = fminf(board_budget, state->input_budget_w +
+            factor * fminf(config->max_boost_w, headroom));
+    }
+    state->applied_budget_w = ApplyRise(state->applied_budget_w, target_load_budget, rise);
+    state->mode = boost_ready ? CHASSIS_POWER_BUDGET_READY : CHASSIS_POWER_BUDGET_DEGRADED;
+    *output = (ChassisPowerBudgetOutput_s){
+        .energy_factor = factor,
+        .target_budget_w = input->use_supercap ? target_load_budget : target_input_budget,
+        .applied_budget_w = state->applied_budget_w,
+        .mode = state->mode,
+        .input_target_w = state->input_budget_w * buffer->safety_factor,
+        .buffer_lower_j = lower,
+        .buffer_predicted_j = predicted,
+        .recovering = state->recovering,
+    };
+    return true;
 }
 
 bool ChassisPowerBudgetConfigIsValid(const ChassisPowerBudgetConfig_s *config)
@@ -44,6 +173,8 @@ void ChassisPowerBudgetReset(ChassisPowerBudgetState_s *state,
     if (state == NULL)
         return;
 
+    memset(state, 0, sizeof(*state));
+
     state->applied_budget_w = isfinite(initial_budget_w) && initial_budget_w >= 0.0f
                                   ? initial_budget_w
                                   : 0.0f;
@@ -63,6 +194,14 @@ bool ChassisPowerBudgetUpdate(const ChassisPowerBudgetConfig_s *config,
         ResetInvalid(state, output);
         return false;
     }
+
+    if (input->buffer_control_enabled)
+        return UpdateBufferBudget(config, input, dt_s, state, output);
+
+    state->buffer_initialized = false;
+    state->recovering = false;
+    state->recovery_time_s = 0;
+    memset(output, 0, sizeof(*output));
 
     ChassisPowerBudgetMode_e mode = CHASSIS_POWER_BUDGET_READY;
     float energy_factor = 0.0f;

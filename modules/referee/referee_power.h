@@ -40,6 +40,7 @@ typedef struct
     bool chassis_output_enabled;
     uint16_t chassis_power_limit_w;
     uint16_t buffer_energy_j;
+    uint32_t buffer_tick_ms;
     float chassis_power_w;
     bool chassis_power_valid;
 } RefereePowerSnapshot_s;

@@ -8,6 +8,8 @@ static int failures;
 static CAN_Init_Config_s captured_can_config;
 static Daemon_Init_Config_s captured_daemon_config;
 static CANInstance fake_can_instance;
+static CANInstance fake_input_can_instance;
+static bool input_feedback_enabled;
 static DaemonInstance fake_daemon_instance;
 static uint8_t captured_dlc;
 static uint8_t transmit_result = 1U;
@@ -53,9 +55,18 @@ static SuperCapInstance *instance;
 CANInstance *CANRegister(CAN_Init_Config_s *config)
 {
     ++can_register_calls;
-    captured_can_config = *config;
+    if (config->rx_id != SUPERCAP_INPUT_POWER_CAN_ID)
+        captured_can_config = *config;
     if (can_registration_fails)
         return NULL;
+
+    if (config->rx_id == SUPERCAP_INPUT_POWER_CAN_ID)
+    {
+        fake_input_can_instance = (CANInstance){0};
+        fake_input_can_instance.id = config->id;
+        fake_input_can_instance.can_module_callback = config->can_module_callback;
+        return &fake_input_can_instance;
+    }
 
     memset(&fake_can_instance, 0, sizeof(fake_can_instance));
     fake_can_instance.can_handle = config->can_handle;
@@ -126,6 +137,7 @@ static void TestUninitializedOperationsFailAndInitRegistersDependencies(void)
             .rx_id = SUPERCAP_STATUS_CAN_ID,
         },
         .offline_reload_count = 20U,
+        .input_power_feedback_enabled = input_feedback_enabled,
     };
 
     ASSERT_FALSE(SuperCapGetStatus(&status));
@@ -220,8 +232,48 @@ static void TestStatusUsesOwnedInstanceAndOfflineCallback(void)
     ASSERT_NEAR(120.5f, status.chassis_power_w, 0.001f);
 }
 
+static void TestInputFeedbackFreshnessIsIndependent(void)
+{
+    const uint8_t status_frame[8] = {0, 0, 0, 0, 0, 180, 0, 128};
+    const uint8_t input_frame[8] = {0, 0, 0xDC, 0x42, 110, 0, 1, 1};
+    SuperCapInputPower_s power = {0};
+    input_feedback_enabled = true;
+    TestUninitializedOperationsFailAndInitRegistersDependencies();
+    ASSERT_TRUE(SuperCapGetInputPower(&power));
+    ASSERT_FALSE(power.online);
+    fake_tick_ms = 100;
+    DeliverFrame(status_frame, 8);
+    memcpy(fake_input_can_instance.rx_buff, input_frame, 8);
+    fake_input_can_instance.rx_len = 8;
+    fake_input_can_instance.can_module_callback(&fake_input_can_instance);
+    ASSERT_TRUE(SuperCapGetInputPower(&power));
+    ASSERT_TRUE(power.online);
+    ASSERT_TRUE(power.input_control_active);
+    ASSERT_NEAR(110, power.input_power_w, 0.001f);
+    ASSERT_EQ_U32(100, power.last_rx_tick_ms);
+    fake_tick_ms = 121;
+    ASSERT_TRUE(SuperCapGetInputPower(&power));
+    ASSERT_FALSE(power.online);
+    fake_daemon_instance.temp_count = 0;
+    fake_input_can_instance.can_module_callback(&fake_input_can_instance);
+    SuperCapStatus_s status;
+    ASSERT_TRUE(SuperCapGetStatus(&status));
+    ASSERT_FALSE(status.online);
+    fake_input_can_instance.rx_buff[6] = 2;
+    fake_tick_ms = 150;
+    fake_input_can_instance.can_module_callback(&fake_input_can_instance);
+    ASSERT_TRUE(SuperCapGetInputPower(&power));
+    ASSERT_EQ_U32(121, power.last_rx_tick_ms);
+    ASSERT_FALSE(power.online);
+}
+
 int main(int argc, char **argv)
 {
+    if (argc > 1 && strcmp(argv[1], "input_feedback") == 0)
+    {
+        TestInputFeedbackFreshnessIsIndependent();
+        return failures == 0 ? 0 : 1;
+    }
     if (argc > 1 && strcmp(argv[1], "can_failure") == 0)
     {
         TestCanRegistrationFailureIsLatched();

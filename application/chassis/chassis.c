@@ -14,6 +14,7 @@
 #include "chassis.h"
 #include "chassis_kinematics.h"
 #include "chassis_power_budget.h"
+#include "chassis_energy_config.h"
 #include "chassis_power_outer_loop.h"
 #include "chassis_power_link.h"
 #include "chassis_spin_config.h"
@@ -93,6 +94,22 @@ static const ChassisPowerBudgetConfig_s chassis_budget_config = {
     .full_energy_ratio = 0.30f,
     .max_boost_w = 100.0f,
     .rise_rate_w_per_s = 200.0f,
+    .buffer = {
+        .max_energy_j = CHASSIS_BUFFER_MAX_ENERGY_J,
+        .recovery_enter_j = CHASSIS_BUFFER_RECOVERY_ENTER_J,
+        .recovery_exit_j = CHASSIS_BUFFER_RECOVERY_EXIT_J,
+        .hard_floor_j = CHASSIS_BUFFER_HARD_FLOOR_J,
+        .prediction_window_s = CHASSIS_BUFFER_PREDICTION_WINDOW_S,
+        .guard_window_s = CHASSIS_BUFFER_GUARD_WINDOW_S,
+        .settlement_delay_s = CHASSIS_BUFFER_SETTLEMENT_DELAY_S,
+        .energy_margin_j = CHASSIS_BUFFER_ENERGY_MARGIN_J,
+        .power_margin_w = CHASSIS_BUFFER_POWER_MARGIN_W,
+        .max_boost_w = CHASSIS_BUFFER_BOOST_MAX_W,
+        .recovery_power_w = CHASSIS_BUFFER_RECOVERY_POWER_W,
+        .recovery_hold_s = CHASSIS_BUFFER_RECOVERY_HOLD_S,
+        .rise_rate_w_per_s = CHASSIS_BUFFER_RISE_RATE_W_PER_S,
+        .safety_factor = CHASSIS_POWER_SAFETY_FACTOR,
+    },
 };
 
 /* 功率外环:用功率计实测功率对比模型预测值,在"基准预算"上叠加一个有界的修正量 */
@@ -206,6 +223,7 @@ void ChassisInit()
         .MaxOut = 1000,
     };
     PIDInit(&buffer_PID, &Buffer_pid_conf); // 缓冲能量PID初始化
+#if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP
     SuperCap_Init_Config_s cap_conf = {
         .can_config = {
             .can_handle = &hcan1,
@@ -213,8 +231,10 @@ void ChassisInit()
             .rx_id = SUPERCAP_STATUS_CAN_ID,
         },
         .offline_reload_count = 20U,
+        .input_power_feedback_enabled = CHASSIS_BUFFER_POWER_ENABLE != 0,
     };
     (void)SuperCapInit(&cap_conf); // 超级电容初始化
+#endif
 #if POWER_METER_ENABLE
     const PowerMeter_Init_Config_s power_meter_config = {
         .can_config = {
@@ -346,10 +366,31 @@ static void UpdateChassisPowerBudget(void)
     ChassisPowerLinkOutput_s link_output = {0};
     (void)ChassisPowerLinkBuild(&link_input, &link_output);
 
-    (void)SuperCapSendCommand(&link_output.command);
-
+    const uint32_t energy_now_ms = HAL_GetTick();
     SuperCapStatus_s cap_status = {0};
+    SuperCapInputPower_s cap_input_power = {0};
+#if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP
     (void)SuperCapGetStatus(&cap_status);
+    (void)SuperCapGetInputPower(&cap_input_power);
+#if CHASSIS_BUFFER_POWER_ENABLE
+    cap_status.online = cap_status.online &&
+        (uint32_t)(HAL_GetTick() - cap_status.last_rx_tick_ms) <= 20U;
+#endif
+#endif
+    bool input_power_valid = false;
+    float measured_input_power_w = 0;
+#if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP
+    input_power_valid = cap_input_power.online;
+    measured_input_power_w = cap_input_power.input_power_w;
+#elif POWER_METER_ENABLE
+    PowerMeterStatus_s input_meter = {0};
+    if (PowerMeterGetStatus(&input_meter))
+    {
+        input_power_valid = input_meter.online &&
+            (uint32_t)(HAL_GetTick() - input_meter.last_rx_tick_ms) <= 20U;
+        measured_input_power_w = input_meter.power_w;
+    }
+#endif
 
     const ChassisPowerBudgetInput_s input = {
         .referee_limit_w = link_output.base_power_limit_w,
@@ -358,6 +399,17 @@ static void UpdateChassisPowerBudget(void)
         .cap_error_code = cap_status.error_code,
         .cap_energy_ratio = cap_status.energy_ratio,
         .cap_reported_limit_w = (float)cap_status.available_power_limit_w,
+        .buffer_control_enabled = CHASSIS_BUFFER_POWER_ENABLE != 0,
+        .use_supercap = CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP,
+        .buffer_data_valid = referee_snapshot.valid &&
+            referee_snapshot.chassis_output_enabled,
+        .buffer_energy_j = (float)referee_snapshot.buffer_energy_j,
+        .buffer_age_s = (float)(uint32_t)(energy_now_ms -
+            referee_snapshot.buffer_tick_ms) * 0.001f,
+        .input_power_valid = input_power_valid,
+        .measured_input_power_w = measured_input_power_w,
+        .cap_input_control_ready = cap_input_power.online &&
+            cap_input_power.input_control_active,
     };
     const float dt_s = DWT_GetDeltaT(&chassis_budget_dwt_count);
     if (!ChassisPowerBudgetUpdate(&chassis_budget_config,
@@ -369,6 +421,16 @@ static void UpdateChassisPowerBudget(void)
         chassis_budget_output.applied_budget_w = 0.0f;
         control_config_valid = false;
     }
+
+    if (referee_snapshot.valid && !referee_snapshot.chassis_output_enabled)
+        control_config_valid = false;
+#if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP
+    link_output.command.input_control_enabled = CHASSIS_BUFFER_POWER_ENABLE &&
+        referee_snapshot.valid && link_output.command.enable_dcdc;
+    link_output.command.input_power_target_w = (uint16_t)fminf(65535,
+        fmaxf(0, chassis_budget_output.input_target_w));
+    (void)SuperCapSendCommand(&link_output.command);
+#endif
 
 #if POWER_METER_ENABLE
     PowerMeterStatus_s meter_status = {0};

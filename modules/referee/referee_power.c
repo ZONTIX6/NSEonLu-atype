@@ -104,6 +104,7 @@ bool RefereePowerBuildSnapshot(const RefereePowerState_s *state,
     snapshot->chassis_output_enabled = state->chassis_output_enabled;
     snapshot->chassis_power_limit_w = state->chassis_power_limit_w;
     snapshot->buffer_energy_j = state->buffer_energy_j;
+    snapshot->buffer_tick_ms = state->power_heat_tick_ms;
     snapshot->chassis_power_valid = state->has_chassis_power;
     snapshot->chassis_power_w = state->chassis_power_w;
     return true;

@@ -63,6 +63,7 @@ static void TestAcceptsLegacyPowerHeatFrame(void)
     ASSERT_TRUE(state.chassis_power_w == 12.5f);
     ASSERT_EQ_U32(150U, state.power_heat_tick_ms);
     ASSERT_TRUE(RefereePowerBuildSnapshot(&state, 150U, &snapshot));
+    ASSERT_EQ_U32(150U, snapshot.buffer_tick_ms);
     ASSERT_TRUE(snapshot.valid);
     ASSERT_EQ_U32(120U, snapshot.chassis_power_limit_w);
     ASSERT_EQ_U32(55U, snapshot.buffer_energy_j);

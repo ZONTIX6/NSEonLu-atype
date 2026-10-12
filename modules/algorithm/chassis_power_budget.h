@@ -13,10 +13,29 @@ typedef enum
 
 typedef struct
 {
+    float max_energy_j;
+    float recovery_enter_j;
+    float recovery_exit_j;
+    float hard_floor_j;
+    float prediction_window_s;
+    float guard_window_s;
+    float settlement_delay_s;
+    float energy_margin_j;
+    float power_margin_w;
+    float max_boost_w;
+    float recovery_power_w;
+    float recovery_hold_s;
+    float rise_rate_w_per_s;
+    float safety_factor;
+} ChassisBufferBudgetConfig_s;
+
+typedef struct
+{
     float empty_energy_ratio;
     float full_energy_ratio;
     float max_boost_w;
     float rise_rate_w_per_s;
+    ChassisBufferBudgetConfig_s buffer;
 } ChassisPowerBudgetConfig_s;
 
 typedef struct
@@ -27,12 +46,24 @@ typedef struct
     uint8_t cap_error_code;
     float cap_energy_ratio;
     float cap_reported_limit_w;
+    bool buffer_control_enabled;
+    bool use_supercap;
+    bool buffer_data_valid;
+    float buffer_energy_j;
+    float buffer_age_s;
+    bool input_power_valid;
+    float measured_input_power_w;
+    bool cap_input_control_ready;
 } ChassisPowerBudgetInput_s;
 
 typedef struct
 {
     float applied_budget_w;// 实际应用的功率预算,由算法计算得出,用于限制底盘输出
     ChassisPowerBudgetMode_e mode;
+    float input_budget_w;
+    float recovery_time_s;
+    bool buffer_initialized;
+    bool recovering;
 } ChassisPowerBudgetState_s;
 
 typedef struct
@@ -41,6 +72,10 @@ typedef struct
     float target_budget_w;// 目标功率预算,由算法计算得出,用于限制底盘输出
     float applied_budget_w;// 实际应用的功率预算,由算法计算得出,用于限制底盘输出
     ChassisPowerBudgetMode_e mode;
+    float input_target_w;
+    float buffer_lower_j;
+    float buffer_predicted_j;
+    bool recovering;
 } ChassisPowerBudgetOutput_s;
 
 bool ChassisPowerBudgetConfigIsValid(const ChassisPowerBudgetConfig_s *config);
