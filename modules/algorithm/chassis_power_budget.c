@@ -30,6 +30,7 @@ static bool BufferConfigIsValid(const ChassisBufferBudgetConfig_s *config)
         config->recovery_exit_j, config->hard_floor_j, config->prediction_window_s,
         config->guard_window_s, config->settlement_delay_s, config->energy_margin_j,
         config->power_margin_w, config->max_boost_w, config->recovery_power_w,
+        config->recovery_target_time_s, config->observer_max_step_s,
         config->recovery_hold_s, config->rise_rate_w_per_s, config->safety_factor};
     for (size_t i = 0; i < sizeof(values) / sizeof(values[0]); ++i)
         if (!isfinite(values[i]) || values[i] < 0)
@@ -39,12 +40,71 @@ static bool BufferConfigIsValid(const ChassisBufferBudgetConfig_s *config)
            config->recovery_exit_j <= config->max_energy_j &&
            config->prediction_window_s > 0 && config->guard_window_s > 0 &&
            config->rise_rate_w_per_s > 0 && config->recovery_power_w > 0 &&
+           config->recovery_target_time_s > 0 && config->observer_max_step_s > 0 &&
+           config->energy_margin_j < config->max_energy_j &&
            config->safety_factor > 0 && config->safety_factor <= 1;
 }
 
 static float ApplyRise(float previous, float target, float rise)
 {
     return target <= previous ? target : fminf(target, previous + rise);
+}
+
+static bool UpdateBufferEstimate(const ChassisBufferBudgetConfig_s *buffer,
+                                 const ChassisPowerBudgetInput_s *input,
+                                 bool meter_valid,
+                                 ChassisPowerBudgetState_s *state,
+                                 bool *continuous_meter,
+                                 float *observed_elapsed_s)
+{
+    const uint32_t sample_delta = input->buffer_tick_ms - state->buffer_tick_ms;
+    if (state->has_buffer_sample && sample_delta > UINT32_MAX / 2U)
+    {
+        state->last_input_power_valid = false;
+        return false; /* Keep the latest timestamp so repeated old frames stay rejected. */
+    }
+    const float elapsed_s = state->has_buffer_sample ?
+        (float)sample_delta * 0.001f + input->buffer_age_s - state->last_buffer_age_s : 0;
+    if (elapsed_s < -0.000001f)
+    {
+        state->buffer_estimate_valid = false;
+        state->last_input_power_valid = false;
+        return false;
+    }
+
+    *observed_elapsed_s = fmaxf(0, elapsed_s);
+    *continuous_meter = meter_valid && (!state->has_buffer_sample ||
+        (state->last_input_power_valid &&
+         *observed_elapsed_s <= buffer->observer_max_step_s + 0.000001f));
+    const float measured_w = meter_valid ? fmaxf(0, input->measured_input_power_w) : 0;
+    if (!state->buffer_estimate_valid || sample_delta != 0U)
+    {
+        /* Unknown settlement phase and history before the first observation. */
+        const float worst_excess_w = fmaxf(buffer->max_boost_w,
+            measured_w - input->referee_limit_w);
+        state->buffer_lower_j = fmaxf(0, input->buffer_energy_j - buffer->energy_margin_j -
+            (worst_excess_w + buffer->power_margin_w) *
+                (input->buffer_age_s + buffer->settlement_delay_s));
+    }
+    else
+    {
+        const float limit_w = fminf(state->last_referee_limit_w, input->referee_limit_w);
+        const float power_w = fmaxf(state->last_input_power_w, measured_w);
+        const float energy_rate_w = *continuous_meter ?
+            limit_w - power_w - buffer->power_margin_w :
+            -fmaxf(buffer->max_boost_w, power_w - limit_w) - buffer->power_margin_w;
+        state->buffer_lower_j += energy_rate_w * *observed_elapsed_s;
+    }
+    state->buffer_lower_j = ClampFloat(state->buffer_lower_j, 0,
+        buffer->max_energy_j - buffer->energy_margin_j);
+    state->buffer_tick_ms = input->buffer_tick_ms;
+    state->last_buffer_age_s = input->buffer_age_s;
+    state->last_input_power_w = measured_w;
+    state->last_referee_limit_w = input->referee_limit_w;
+    state->last_input_power_valid = meter_valid;
+    state->has_buffer_sample = true;
+    state->buffer_estimate_valid = true;
+    return true;
 }
 
 static bool UpdateBufferBudget(const ChassisPowerBudgetConfig_s *config,
@@ -58,25 +118,30 @@ static bool UpdateBufferBudget(const ChassisPowerBudgetConfig_s *config,
         ResetInvalid(state, output);
         return false;
     }
-    const bool buffer_valid = input->buffer_data_valid &&
+    bool buffer_valid = input->buffer_data_valid &&
         isfinite(input->buffer_energy_j) && input->buffer_energy_j >= 0 &&
         input->buffer_energy_j <= buffer->max_energy_j &&
         isfinite(input->buffer_age_s) && input->buffer_age_s >= 0;
     const bool meter_valid = input->input_power_valid &&
         isfinite(input->measured_input_power_w);
+    bool continuous_meter = false;
+    float observed_elapsed_s = 0;
+    if (buffer_valid)
+        buffer_valid = UpdateBufferEstimate(buffer, input, meter_valid, state,
+                                            &continuous_meter, &observed_elapsed_s);
+    else
+    {
+        state->buffer_estimate_valid = false;
+        state->last_input_power_valid = false;
+    }
     const bool cap_healthy = input->cap_online && input->cap_output_enabled &&
         input->cap_error_code == 0 && isfinite(input->cap_energy_ratio) &&
         input->cap_energy_ratio >= 0 && input->cap_energy_ratio <= 1 &&
         isfinite(input->cap_reported_limit_w) && input->cap_reported_limit_w >= 0;
     const bool source_ready = !input->use_supercap ||
         (cap_healthy && input->cap_input_control_ready && input->load_power_valid);
-    const bool boost_ready = buffer_valid && meter_valid && source_ready;
-    /* Receipt time is not the referee settlement time. Reserve a settlement
-     * interval as well as energy used since the last accepted referee frame. */
-    const float lower = buffer_valid ? fmaxf(0,
-        input->buffer_energy_j - buffer->energy_margin_j -
-        (buffer->max_boost_w + buffer->power_margin_w) *
-            (input->buffer_age_s + buffer->settlement_delay_s)) : 0;
+    const bool boost_ready = buffer_valid && continuous_meter && source_ready;
+    const float lower = buffer_valid ? state->buffer_lower_j : 0;
     const float excess = meter_valid ? fmaxf(0,
         input->measured_input_power_w + buffer->power_margin_w -
             input->referee_limit_w) : 0;
@@ -92,7 +157,7 @@ static bool UpdateBufferBudget(const ChassisPowerBudgetConfig_s *config,
     {
         if (boost_ready && lower >= buffer->recovery_exit_j)
         {
-            state->recovery_time_s += dt_s;
+            state->recovery_time_s += observed_elapsed_s;
             if (state->recovery_time_s >= buffer->recovery_hold_s)
             {
                 state->recovering = false;
@@ -104,8 +169,16 @@ static bool UpdateBufferBudget(const ChassisPowerBudgetConfig_s *config,
     }
 
     float target_input_budget = input->referee_limit_w;
+    float recovery_reduction_w = 0;
     if (state->recovering && buffer_valid)
-        target_input_budget = fmaxf(0, input->referee_limit_w - buffer->recovery_power_w);
+    {
+        recovery_reduction_w = ClampFloat(
+            (buffer->recovery_exit_j - lower) / buffer->recovery_target_time_s,
+            0, buffer->recovery_power_w);
+        if (lower <= buffer->hard_floor_j || predicted <= buffer->hard_floor_j)
+            recovery_reduction_w = buffer->recovery_power_w;
+        target_input_budget = fmaxf(0, input->referee_limit_w - recovery_reduction_w);
+    }
     else if (boost_ready)
     {
         const float energy_boost = fmaxf(0,
@@ -151,6 +224,7 @@ static bool UpdateBufferBudget(const ChassisPowerBudgetConfig_s *config,
         .input_target_w = state->input_budget_w * buffer->safety_factor,
         .buffer_lower_j = lower,
         .buffer_predicted_j = predicted,
+        .recovery_reduction_w = recovery_reduction_w,
         .recovering = state->recovering,
     };
     return true;
@@ -202,6 +276,9 @@ bool ChassisPowerBudgetUpdate(const ChassisPowerBudgetConfig_s *config,
         return UpdateBufferBudget(config, input, dt_s, state, output);
 
     state->buffer_initialized = false;
+    state->has_buffer_sample = false;
+    state->buffer_estimate_valid = false;
+    state->last_input_power_valid = false;
     state->recovering = false;
     state->recovery_time_s = 0;
     memset(output, 0, sizeof(*output));

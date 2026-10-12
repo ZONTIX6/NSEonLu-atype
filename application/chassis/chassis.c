@@ -106,6 +106,8 @@ static const ChassisPowerBudgetConfig_s chassis_budget_config = {
         .power_margin_w = CHASSIS_BUFFER_POWER_MARGIN_W,
         .max_boost_w = CHASSIS_BUFFER_BOOST_MAX_W,
         .recovery_power_w = CHASSIS_BUFFER_RECOVERY_POWER_W,
+        .recovery_target_time_s = CHASSIS_BUFFER_RECOVERY_TARGET_TIME_S,
+        .observer_max_step_s = CHASSIS_BUFFER_OBSERVER_MAX_STEP_S,
         .recovery_hold_s = CHASSIS_BUFFER_RECOVERY_HOLD_S,
         .rise_rate_w_per_s = CHASSIS_BUFFER_RISE_RATE_W_PER_S,
         .safety_factor = CHASSIS_POWER_SAFETY_FACTOR,
@@ -406,6 +408,7 @@ static void UpdateChassisPowerBudget(void)
         .buffer_data_valid = referee_snapshot.valid &&
             referee_snapshot.chassis_output_enabled,
         .buffer_energy_j = (float)referee_snapshot.buffer_energy_j,
+        .buffer_tick_ms = referee_snapshot.buffer_tick_ms,
         .buffer_age_s = (float)(uint32_t)(energy_now_ms -
             referee_snapshot.buffer_tick_ms) * 0.001f,
         .input_power_valid = input_power_valid,

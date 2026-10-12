@@ -23,7 +23,9 @@ typedef struct
     float energy_margin_j;
     float power_margin_w;
     float max_boost_w;
-    float recovery_power_w;
+    float recovery_power_w; /* Maximum recovery reduction, not a fixed decrement. */
+    float recovery_target_time_s;
+    float observer_max_step_s;
     float recovery_hold_s;
     float rise_rate_w_per_s;
     float safety_factor;
@@ -50,6 +52,7 @@ typedef struct
     bool use_supercap;
     bool buffer_data_valid;
     float buffer_energy_j;
+    uint32_t buffer_tick_ms;
     float buffer_age_s;
     bool input_power_valid;
     float measured_input_power_w;
@@ -63,6 +66,14 @@ typedef struct
     ChassisPowerBudgetMode_e mode;
     float input_budget_w;
     float recovery_time_s;
+    float buffer_lower_j;
+    float last_buffer_age_s;
+    float last_input_power_w;
+    float last_referee_limit_w;
+    uint32_t buffer_tick_ms;
+    bool has_buffer_sample;
+    bool buffer_estimate_valid;
+    bool last_input_power_valid;
     bool buffer_initialized;
     bool recovering;
 } ChassisPowerBudgetState_s;
@@ -76,6 +87,7 @@ typedef struct
     float input_target_w;
     float buffer_lower_j;
     float buffer_predicted_j;
+    float recovery_reduction_w;
     bool recovering;
 } ChassisPowerBudgetOutput_s;
 
