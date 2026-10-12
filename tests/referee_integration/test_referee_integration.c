@@ -135,6 +135,36 @@ static void TestSplitAndCoalescedFramesDriveCompleteCommand(void)
     AssertFrameEquals(expected_can_frame, actual_can_frame);
 }
 
+static void Test17ByteRobotStateUsesStandardPrefix(void)
+{
+    static const uint8_t extended_robot_payload[17] = {
+        0x03U, 0x01U, 0xC8U, 0x00U, 0xC8U, 0x00U, 0x28U, 0x00U,
+        0xF0U, 0x00U, 0x50U, 0x00U, 0x00U, 0x00U, 0x00U, 0xF0U, 0x41U,
+    };
+    uint8_t frame[32];
+    const size_t length = BuildFrame(
+        frame, 0x0201U, extended_robot_payload, 17U, 0x24U);
+
+    referee_info_t *info = StartReferee();
+    info->PowerHeatData.reserved_voltage = 0xBEEFU;
+    TestPlatformSetTick(250U);
+    ASSERT_TRUE(TestPlatformFeed(frame, length));
+
+    ASSERT_EQ_U32(3U, info->GameRobotState.robot_id);
+    ASSERT_EQ_U32(80U, info->GameRobotState.chassis_power_limit);
+    ASSERT_EQ_U32(0xBEEFU, info->PowerHeatData.reserved_voltage);
+
+    RefereeLinkDiagnostics_s diagnostics = {0};
+    ASSERT_TRUE(RefereeGetLinkDiagnostics(&diagnostics));
+    ASSERT_EQ_U32(0U, diagnostics.payload_length_error_count);
+
+    RefereePowerSnapshot_s snapshot = {0};
+    ASSERT_TRUE(RefereeGetPowerSnapshot(&snapshot));
+    ASSERT_FALSE(snapshot.valid);
+    ASSERT_TRUE(snapshot.chassis_output_valid);
+    ASSERT_FALSE(snapshot.chassis_output_enabled);
+}
+
 static void Test16BytePowerFrameUpdatesRawDataAndCommand(void)
 {
     static const uint8_t robot_payload[13] = {
@@ -362,6 +392,7 @@ static void TestNullOutputsAreRejected(void)
 int main(void)
 {
     TestSplitAndCoalescedFramesDriveCompleteCommand();
+    Test17ByteRobotStateUsesStandardPrefix();
     Test16BytePowerFrameUpdatesRawDataAndCommand();
     TestOnlyOneRequiredFrameIsInvalid();
     TestCrcAndPayloadLengthRejectionsAreDiagnosed();

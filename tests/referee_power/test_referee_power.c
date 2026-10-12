@@ -39,6 +39,10 @@ static const uint8_t robot_state_enabled[13] = {
     3U, 1U, 100U, 0U, 200U, 0U, 50U, 0U, 100U, 0U,
     120U, 0U, 0x02U};
 
+static const uint8_t extended_robot_state[17] = {
+    0x03U, 0x01U, 0xC8U, 0x00U, 0xC8U, 0x00U, 0x28U, 0x00U,
+    0xF0U, 0x00U, 0x50U, 0x00U, 0x00U, 0x00U, 0x00U, 0xF0U, 0x41U};
+
 static const uint8_t power_heat[14] = {
     0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
     55U, 0U, 10U, 0U, 20U, 0U};
@@ -46,6 +50,19 @@ static const uint8_t power_heat[14] = {
 static const uint8_t legacy_power_heat[16] = {
     0xA8U, 0x61U, 0xF4U, 0x01U, 0U, 0U, 0x48U, 0x41U,
     55U, 0U, 10U, 0U, 20U, 0U, 30U, 0U};
+
+static void TestAcceptsExtendedRobotStateUsingStandardPrefix(void)
+{
+    RefereePowerState_s state;
+    RefereePowerStateReset(&state);
+
+    ASSERT_TRUE(RefereePowerStateAcceptFrame(
+        &state, 0x0201U, extended_robot_state, 17U, 250U));
+    ASSERT_TRUE(state.has_robot_state);
+    ASSERT_EQ_U32(80U, state.chassis_power_limit_w);
+    ASSERT_FALSE(state.chassis_output_enabled);
+    ASSERT_EQ_U32(250U, state.robot_state_tick_ms);
+}
 
 #if REFEREE_LEGACY_POWER_FIELDS_ENABLED
 static void TestAcceptsLegacyPowerHeatFrame(void)
@@ -395,6 +412,7 @@ int main(void)
     ASSERT_FALSE(partial_snapshot.valid);
     ASSERT_TRUE(partial_snapshot.chassis_output_valid);
     ASSERT_FALSE(partial_snapshot.chassis_output_enabled);
+    TestAcceptsExtendedRobotStateUsingStandardPrefix();
 #if REFEREE_LEGACY_POWER_FIELDS_ENABLED
     TestAcceptsLegacyPowerHeatFrame();
     TestNonFiniteLegacyPowerIsUnavailableButBufferStillUpdates();

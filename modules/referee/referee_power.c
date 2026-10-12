@@ -42,7 +42,8 @@ bool RefereePowerStateAcceptFrame(RefereePowerState_s *state,
 
     if (command_id == REFEREE_ROBOT_STATE_COMMAND_ID)
     {
-        if (payload_length != REFEREE_ROBOT_STATE_PAYLOAD_LENGTH)
+        if (payload_length != REFEREE_ROBOT_STATE_PAYLOAD_LENGTH &&
+            payload_length != REFEREE_ROBOT_STATE_EXTENDED_PAYLOAD_LENGTH)
         {
             return false;
         }

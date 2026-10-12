@@ -87,13 +87,15 @@ static void HandleValidFrame(void *context,
 		GetExpectedPayloadLength(command_id, &expected_payload_length);
 	const bool extended_power_heat = command_id == ID_power_heat_data &&
 		payload_length == REFEREE_POWER_HEAT_LEGACY_PAYLOAD_LENGTH;
+	const bool extended_robot_state = command_id == ID_game_robot_state &&
+		payload_length == REFEREE_ROBOT_STATE_EXTENDED_PAYLOAD_LENGTH;
 
 	(void)context;
 	referee_info.FrameHeader.Seq = sequence;
 	referee_info.CmdID = command_id;
 
 	if (known_command && payload_length != expected_payload_length &&
-		!extended_power_heat)
+		!extended_power_heat && !extended_robot_state)
 	{
 		++payload_length_error_count;
 	}
@@ -104,7 +106,7 @@ static void HandleValidFrame(void *context,
 										 HAL_GetTick()))
 	{
 		if (command_id == ID_game_robot_state &&
-			payload_length == LEN_game_robot_state)
+			(payload_length == LEN_game_robot_state || extended_robot_state))
 		{
 			memcpy(&referee_info.GameRobotState, payload, LEN_game_robot_state);
 		}
