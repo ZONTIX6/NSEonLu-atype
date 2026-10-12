@@ -413,6 +413,21 @@ static void TestCalibrationPrintsLimitedCurrentsInsteadOfPidDemand(void)
 
 int main(void)
 {
+    PreparePowerGroup();
+    chassis_power->algorithm.max_current_command = 15000;
+    chassis_power->control.power_ceiling_w = 4;
+    SetMeter(0, true, 123);
+    for (unsigned w = 0; w < 4; ++w) {
+        chassis_power->models[w].k4 = 0.0001f;
+        motor_output[w] = 1000;
+        speed_reference_aps[w] = speed_feedback_aps[w] = 6000;
+    }
+    ApplyChassisPowerGroup();
+    float ceiling_power = 0;
+    for (unsigned w = 0; w < 4; ++w)
+        ceiling_power += PowerModelPredict(&chassis_power->models[w],
+            chassis_power->state.power.limited_current[w], 1000);
+    ASSERT_TRUE(ceiling_power <= 4.0001f);
     TestZeroDemandIsNotActualBaseLimiting();
     TestTargetSnapshotDoesNotDependOnFeedbackRounding();
     TestFastProtectionObservesOrAppliesByStage();

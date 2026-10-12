@@ -386,6 +386,15 @@ static void TestRejectsNullPointersAndUnknownCommands(void)
 
 int main(void)
 {
+    RefereePowerState_s partial_state = {0};
+    RefereePowerSnapshot_s partial_snapshot = {0};
+    partial_state.has_robot_state = true;
+    partial_state.robot_state_tick_ms = 100;
+    partial_state.chassis_output_enabled = false;
+    ASSERT_TRUE(RefereePowerBuildSnapshot(&partial_state, 200, &partial_snapshot));
+    ASSERT_FALSE(partial_snapshot.valid);
+    ASSERT_TRUE(partial_snapshot.chassis_output_valid);
+    ASSERT_FALSE(partial_snapshot.chassis_output_enabled);
 #if REFEREE_LEGACY_POWER_FIELDS_ENABLED
     TestAcceptsLegacyPowerHeatFrame();
     TestNonFiniteLegacyPowerIsUnavailableButBufferStillUpdates();

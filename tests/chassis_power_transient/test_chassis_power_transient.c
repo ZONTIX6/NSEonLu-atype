@@ -301,6 +301,18 @@ static void TestDirectionHysteresisAndStableRunGate(void)
 }
 int main(void)
 {
+    StartLowSpeed();
+    input.power_ceiling_w = 20;
+    input.meter_w = 25;
+    Tick(102, true);
+    assert(!output.startup_active && output.fast_w < 0);
+    assert(output.allowed_guard_w <= 20);
+    Prepare();
+    input.power_ceiling_w = 19.2f;
+    input.meter_w = 19.5f;
+    Tick(100, true);
+    assert(output.fast_w < 0);
+    assert(output.allowed_guard_w <= 19.2f);
     TestFaultDoesNotRechargeStartupAndRecoveryNeedsTwoSamples();
     TestQuantizationRetreatKeepsNearbyFeasibleCommands();
     TestDirectionHysteresisAndStableRunGate();

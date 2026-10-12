@@ -54,6 +54,7 @@ typedef struct
     bool input_power_valid;
     float measured_input_power_w;
     bool cap_input_control_ready;
+    bool load_power_valid;
 } ChassisPowerBudgetInput_s;
 
 typedef struct

@@ -69,6 +69,7 @@ static void CapBudgetCountsBoardTotalOnlyOnce(void)
     input.use_supercap = true;
     input.cap_online = input.cap_output_enabled = true;
     input.cap_input_control_ready = true;
+    input.load_power_valid = true;
     input.cap_energy_ratio = 0.5f;
     input.cap_reported_limit_w = 180;
     ChassisPowerBudgetOutput_s out = Update(input);
@@ -117,6 +118,7 @@ static void HealthyCapCanAssistWhileBufferRecovers(void)
     input.use_supercap = true;
     input.cap_online = input.cap_output_enabled = true;
     input.cap_input_control_ready = true;
+    input.load_power_valid = true;
     input.cap_energy_ratio = 0.5f;
     input.cap_reported_limit_w = 180;
     ChassisPowerBudgetOutput_s out = Update(input);
@@ -170,6 +172,20 @@ static void BufferSpendingAndRecoveryWithDelayedPowerResponse(void)
     CHECK(energy > 59);
 }
 
+static void CapRequiresLoadFeedbackAndAlwaysHonorsBoardCapacity(void)
+{
+    ChassisPowerBudgetInput_s input = Input(60);
+    input.use_supercap = true;
+    input.cap_online = input.cap_output_enabled = true;
+    input.cap_input_control_ready = true;
+    input.cap_energy_ratio = 0.5f;
+    input.cap_reported_limit_w = 180;
+    input.load_power_valid = false;
+    NEAR(80, Update(input).applied_budget_w);
+    input.cap_reported_limit_w = 40;
+    CHECK(Update(input).applied_budget_w * config.buffer.safety_factor <= 40.01f);
+}
+
 int main(void)
 {
     HighBufferWorksWithoutCap();
@@ -181,6 +197,7 @@ int main(void)
     HealthyCapCanAssistWhileBufferRecovers();
     OldFramesAndInvalidNumbersCannotProvideFullBoost();
     BufferSpendingAndRecoveryWithDelayedPowerResponse();
+    CapRequiresLoadFeedbackAndAlwaysHonorsBoardCapacity();
     if (failures) return 1;
     puts("PASS: dynamic buffer budget tests");
     return 0;

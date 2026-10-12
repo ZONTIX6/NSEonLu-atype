@@ -37,6 +37,7 @@ typedef struct
 typedef struct
 {
     bool valid;
+    bool chassis_output_valid;
     bool chassis_output_enabled;
     uint16_t chassis_power_limit_w;
     uint16_t buffer_energy_j;

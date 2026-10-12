@@ -23,6 +23,7 @@ typedef struct {
 typedef struct {
     float budget_w, target_w, slow_w, meter_w;
     float power_deadband_w;
+    float power_ceiling_w; /* 0: legacy behavior; >0: source/energy hard ceiling. */
     float raw_current[4], actual_rpm[4], target_rpm[4];
     uint32_t now_ms, meter_tick_ms, feedback_tick_ms[4], feedback_sequence[4];
     uint8_t online_mask, enabled_mask;

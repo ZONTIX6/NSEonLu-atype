@@ -91,6 +91,11 @@ bool RefereePowerBuildSnapshot(const RefereePowerState_s *state,
         return false;
     }
 
+    snapshot->chassis_output_valid = state->has_robot_state &&
+        (uint32_t)(now_ms - state->robot_state_tick_ms) <= REFEREE_POWER_DATA_TIMEOUT_MS;
+    snapshot->chassis_output_enabled = snapshot->chassis_output_valid &&
+        state->chassis_output_enabled;
+
     if (!state->has_robot_state || !state->has_power_heat ||
         (uint32_t)(now_ms - state->robot_state_tick_ms) >
             REFEREE_POWER_DATA_TIMEOUT_MS ||

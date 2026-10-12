@@ -35,7 +35,8 @@ bool ChassisPowerLinkBuild(const ChassisPowerLinkInput_s *input,
     else if (input->bench_enabled && isfinite(input->bench_limit_w) &&
              input->bench_limit_w > 0.0f)
     {
-        result.command.enable_dcdc = !input->chassis_zero_force;
+        result.command.enable_dcdc = !input->chassis_zero_force &&
+            (!input->referee.chassis_output_valid || input->referee.chassis_output_enabled);
         result.command.referee_power_limit_w =
             BenchLimitToU16(input->bench_limit_w);
         result.base_power_limit_w = input->bench_limit_w;

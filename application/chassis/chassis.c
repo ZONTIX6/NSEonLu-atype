@@ -378,18 +378,20 @@ static void UpdateChassisPowerBudget(void)
 #endif
 #endif
     bool input_power_valid = false;
+    bool load_power_valid = false;
     float measured_input_power_w = 0;
+#if POWER_METER_ENABLE
+    PowerMeterStatus_s input_meter = {0};
+    if (PowerMeterGetStatus(&input_meter))
+        load_power_valid = input_meter.online &&
+            (uint32_t)(HAL_GetTick() - input_meter.last_rx_tick_ms) <= 20U;
+#endif
 #if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP
     input_power_valid = cap_input_power.online;
     measured_input_power_w = cap_input_power.input_power_w;
 #elif POWER_METER_ENABLE
-    PowerMeterStatus_s input_meter = {0};
-    if (PowerMeterGetStatus(&input_meter))
-    {
-        input_power_valid = input_meter.online &&
-            (uint32_t)(HAL_GetTick() - input_meter.last_rx_tick_ms) <= 20U;
-        measured_input_power_w = input_meter.power_w;
-    }
+    input_power_valid = load_power_valid;
+    measured_input_power_w = input_meter.power_w;
 #endif
 
     const ChassisPowerBudgetInput_s input = {
@@ -410,6 +412,7 @@ static void UpdateChassisPowerBudget(void)
         .measured_input_power_w = measured_input_power_w,
         .cap_input_control_ready = cap_input_power.online &&
             cap_input_power.input_control_active,
+        .load_power_valid = load_power_valid,
     };
     const float dt_s = DWT_GetDeltaT(&chassis_budget_dwt_count);
     if (!ChassisPowerBudgetUpdate(&chassis_budget_config,
@@ -422,7 +425,7 @@ static void UpdateChassisPowerBudget(void)
         control_config_valid = false;
     }
 
-    if (referee_snapshot.valid && !referee_snapshot.chassis_output_enabled)
+    if (referee_snapshot.chassis_output_valid && !referee_snapshot.chassis_output_enabled)
         control_config_valid = false;
 #if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP
     link_output.command.input_control_enabled = CHASSIS_BUFFER_POWER_ENABLE &&
@@ -578,6 +581,13 @@ static void UpdateChassisPowerBudget(void)
     pending_power_control.nominal_budget_w = chassis_budget_output.applied_budget_w;
     pending_power_control.target_power_w = chassis_budget_output.applied_budget_w * CHASSIS_POWER_SAFETY_FACTOR;
     pending_power_control.power_deadband_w = chassis_outer_loop_config.error_deadband_w;
+    pending_power_control.power_ceiling_w = CHASSIS_BUFFER_POWER_ENABLE ?
+        chassis_budget_output.applied_budget_w : 0;
+#if CHASSIS_BUFFER_POWER_ENABLE && CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP
+    if (cap_status.online && cap_status.output_enabled && cap_status.error_code == 0)
+        pending_power_control.power_ceiling_w = fminf(pending_power_control.power_ceiling_w,
+            (float)cap_status.available_power_limit_w);
+#endif
     pending_power_control.control_enabled = control_config_valid && chassis_power_ready &&
         chassis_cmd_recv.chassis_mode != CHASSIS_ZERO_FORCE;
 #if CHASSIS_SPIN_ADAPTIVE_ENABLE

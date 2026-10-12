@@ -69,7 +69,7 @@ static bool UpdateBufferBudget(const ChassisPowerBudgetConfig_s *config,
         input->cap_energy_ratio >= 0 && input->cap_energy_ratio <= 1 &&
         isfinite(input->cap_reported_limit_w) && input->cap_reported_limit_w >= 0;
     const bool source_ready = !input->use_supercap ||
-        (cap_healthy && input->cap_input_control_ready);
+        (cap_healthy && input->cap_input_control_ready && input->load_power_valid);
     const bool boost_ready = buffer_valid && meter_valid && source_ready;
     /* Receipt time is not the referee settlement time. Reserve a settlement
      * interval as well as energy used since the last accepted referee frame. */
@@ -138,6 +138,9 @@ static bool UpdateBufferBudget(const ChassisPowerBudgetConfig_s *config,
         target_load_budget = fminf(board_budget, state->input_budget_w +
             factor * fminf(config->max_boost_w, headroom));
     }
+    if (input->use_supercap && cap_healthy)
+        target_load_budget = fminf(target_load_budget,
+            input->cap_reported_limit_w / buffer->safety_factor);
     state->applied_budget_w = ApplyRise(state->applied_budget_w, target_load_budget, rise);
     state->mode = boost_ready ? CHASSIS_POWER_BUDGET_READY : CHASSIS_POWER_BUDGET_DEGRADED;
     *output = (ChassisPowerBudgetOutput_s){

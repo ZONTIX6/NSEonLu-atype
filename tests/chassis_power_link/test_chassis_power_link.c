@@ -254,6 +254,14 @@ static void TestRejectsNullPointers(void)
 
 int main(void)
 {
+    const ChassisPowerLinkInput_s disabled_partial = {
+        .bench_enabled = true, .bench_limit_w = 50,
+        .referee = {.valid = false, .chassis_output_valid = true,
+                    .chassis_output_enabled = false},
+    };
+    ChassisPowerLinkOutput_s disabled_output;
+    ASSERT_TRUE(ChassisPowerLinkBuild(&disabled_partial, &disabled_output));
+    ASSERT_FALSE(disabled_output.command.enable_dcdc);
     TestValidRefereeSnapshotDrivesCommandAndBudget();
     TestInvalidSnapshotFailsSafeInProduction();
     TestRefereeOutputPermissionAndZeroForceDisableDcdc();

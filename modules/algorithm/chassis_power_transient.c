@@ -68,7 +68,8 @@ bool ChassisPowerTransientUpdate(const ChassisPowerTransientConfig_s *c,
     bool valid = isfinite(i->budget_w) && i->budget_w > 0 && isfinite(i->target_w) &&
                  i->target_w > 0 && isfinite(i->slow_w) && isfinite(s->fast_w) &&
                  isfinite(s->slow_applied_w) && isfinite(i->power_deadband_w) &&
-                 i->power_deadband_w >= 0;
+                 i->power_deadband_w >= 0 && isfinite(i->power_ceiling_w) &&
+                 i->power_ceiling_w >= 0;
     o->feedback_fresh = i->online_mask == 15 && i->enabled_mask == 15;
     float average_rpm = 0, maximum_sent = 0;
     bool target_step = false;
@@ -138,6 +139,8 @@ bool ChassisPowerTransientUpdate(const ChassisPowerTransientConfig_s *c,
         s->allowance_j = (c->peak_ratio - 1) * i->budget_w * c->startup_window_ms * .001f;
         s->excess_j = 0; s->low_valid = false; o->startup_triggered = true;
     }
+    if (s->startup_active && i->power_ceiling_w > 0)
+        s->peak_w = fminf(s->peak_w, i->power_ceiling_w);
     if (s->startup_active) {
         if (o->timing_valid && o->meter_fresh) s->excess_j += fmaxf(i->meter_w - i->budget_w, 0) * dt;
         if (!i->startup_enabled || !o->timing_valid || !o->meter_fresh || !o->feedback_fresh ||
@@ -161,8 +164,13 @@ bool ChassisPowerTransientUpdate(const ChassisPowerTransientConfig_s *c,
             s->previous_meter_w = i->meter_w;
             if (s->fresh_samples < 2) ++s->fresh_samples;
         }
-        if (i->meter_w > (s->startup_active ? s->peak_w : i->budget_w)) {
-            const float request = Clamp(-c->fast_gain * (i->meter_w - i->target_w) / c->eta, -i->budget_w, 0);
+        const float meter_ceiling = i->power_ceiling_w > 0 ?
+            fminf(s->startup_active ? s->peak_w : i->budget_w, i->power_ceiling_w) :
+            (s->startup_active ? s->peak_w : i->budget_w);
+        if (i->meter_w > meter_ceiling) {
+            const float safe_target = i->power_ceiling_w > 0 ?
+                fminf(i->target_w, i->power_ceiling_w) : i->target_w;
+            const float request = Clamp(-c->fast_gain * (i->meter_w - safe_target) / c->eta, -i->budget_w, 0);
             s->fast_w = fminf(s->fast_w, request);
             s->below_valid = false; s->below_samples = 0;
             s->mode = CHASSIS_POWER_TRANSIENT_CLAMP;
@@ -223,6 +231,8 @@ bool ChassisPowerTransientUpdate(const ChassisPowerTransientConfig_s *c,
     o->startup_active = s->startup_active;
     o->excess_j = s->excess_j; o->allowance_j = s->allowance_j;
     o->allowed_guard_w = s->startup_active ? s->peak_w : o->effective_w;
+    if (i->power_ceiling_w > 0)
+        o->allowed_guard_w = fminf(o->allowed_guard_w, i->power_ceiling_w);
     return true;
 }
 
