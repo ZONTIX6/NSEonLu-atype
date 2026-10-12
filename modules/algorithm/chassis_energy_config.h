@@ -1,15 +1,15 @@
 #ifndef CHASSIS_ENERGY_CONFIG_H
 #define CHASSIS_ENERGY_CONFIG_H
 
-/* 0: original power budget; 1: dynamically spend referee buffer energy. */
+/* 0: 沿用原始功率预算; 1: 动态消耗裁判缓冲能量。 */
 #ifndef CHASSIS_BUFFER_POWER_ENABLE
 #define CHASSIS_BUFFER_POWER_ENABLE 1
 #endif
 
 #define CHASSIS_POWER_SOURCE_DIRECT 0
 #define CHASSIS_POWER_SOURCE_SUPERCAP 1
-/* No capacitor is currently connected. Change to SUPERCAP after flashing
- * the matching F334 firmware with input-power feedback (CAN 0x052). */
+/* 当前未接超级电容。烧录带输入功率反馈(CAN 0x052)的匹配 F334 固件后,
+ * 再改为 CHASSIS_POWER_SOURCE_SUPERCAP。 */
 #ifndef CHASSIS_POWER_SOURCE_MODE
 #define CHASSIS_POWER_SOURCE_MODE CHASSIS_POWER_SOURCE_DIRECT
 #endif
@@ -22,7 +22,7 @@
 #error Invalid CHASSIS_POWER_SOURCE_MODE
 #endif
 
-/* All thresholds refer to the conservative buffer estimate, not raw joules. */
+/* 以下阈值都针对缓冲能量的保守估计值,不等同于裁判原始焦耳读数。 */
 #define CHASSIS_BUFFER_MAX_ENERGY_J 60.0f
 #define CHASSIS_BUFFER_RECOVERY_ENTER_J 15.0f
 #define CHASSIS_BUFFER_RECOVERY_EXIT_J 30.0f
