@@ -48,8 +48,13 @@ bool RefereePowerStateAcceptFrame(RefereePowerState_s *state,
             return false;
         }
 
+        const uint16_t output_flags_offset =
+            payload_length == REFEREE_ROBOT_STATE_EXTENDED_PAYLOAD_LENGTH
+                ? 16U
+                : 12U;
         state->chassis_power_limit_w = ReadU16LE(&payload[10]);
-        state->chassis_output_enabled = (payload[12] & 0x02U) != 0U;
+        state->chassis_output_enabled =
+            (payload[output_flags_offset] & 0x02U) != 0U;
         state->robot_state_tick_ms = now_ms;
         state->has_robot_state = true;
         return true;

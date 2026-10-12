@@ -39,6 +39,11 @@ static int failures;
         }                                                                               \
     } while (0)
 
+static const uint8_t extended_robot_payload[17] = {
+    0x03U, 0x01U, 0xC8U, 0x00U, 0xC8U, 0x00U, 0x28U, 0x00U,
+    0xF0U, 0x00U, 0x50U, 0x00U, 0x00U, 0x00U, 0xF0U, 0x41U, 0x07U,
+};
+
 static size_t BuildFrame(uint8_t *frame,
                          uint16_t command_id,
                          const uint8_t *payload,
@@ -135,24 +140,31 @@ static void TestSplitAndCoalescedFramesDriveCompleteCommand(void)
     AssertFrameEquals(expected_can_frame, actual_can_frame);
 }
 
-static void Test17ByteRobotStateUsesStandardPrefix(void)
+static void Test17ByteRobotStateMapsTrailingOutputFlags(void)
 {
-    static const uint8_t extended_robot_payload[17] = {
-        0x03U, 0x01U, 0xC8U, 0x00U, 0xC8U, 0x00U, 0x28U, 0x00U,
-        0xF0U, 0x00U, 0x50U, 0x00U, 0x00U, 0x00U, 0x00U, 0xF0U, 0x41U,
-    };
     uint8_t frame[32];
     const size_t length = BuildFrame(
         frame, 0x0201U, extended_robot_payload, 17U, 0x24U);
 
     referee_info_t *info = StartReferee();
-    info->PowerHeatData.reserved_voltage = 0xBEEFU;
+    uint8_t saved_power_heat[sizeof(info->PowerHeatData)];
+    memset(&info->PowerHeatData, 0xA5, sizeof(info->PowerHeatData));
+    memcpy(saved_power_heat, &info->PowerHeatData, sizeof(saved_power_heat));
     TestPlatformSetTick(250U);
     ASSERT_TRUE(TestPlatformFeed(frame, length));
 
     ASSERT_EQ_U32(3U, info->GameRobotState.robot_id);
+    ASSERT_EQ_U32(1U, info->GameRobotState.robot_level);
+    ASSERT_EQ_U32(200U, info->GameRobotState.current_HP);
+    ASSERT_EQ_U32(200U, info->GameRobotState.maximum_HP);
+    ASSERT_EQ_U32(40U, info->GameRobotState.shooter_barrel_cooling_value);
+    ASSERT_EQ_U32(240U, info->GameRobotState.shooter_barrel_heat_limit);
     ASSERT_EQ_U32(80U, info->GameRobotState.chassis_power_limit);
-    ASSERT_EQ_U32(0xBEEFU, info->PowerHeatData.reserved_voltage);
+    ASSERT_EQ_U32(1U, info->GameRobotState.power_management_gimbal_output);
+    ASSERT_EQ_U32(1U, info->GameRobotState.power_management_chassis_output);
+    ASSERT_EQ_U32(1U, info->GameRobotState.power_management_shooter_output);
+    ASSERT_TRUE(memcmp(saved_power_heat, &info->PowerHeatData,
+                       sizeof(saved_power_heat)) == 0);
 
     RefereeLinkDiagnostics_s diagnostics = {0};
     ASSERT_TRUE(RefereeGetLinkDiagnostics(&diagnostics));
@@ -162,7 +174,96 @@ static void Test17ByteRobotStateUsesStandardPrefix(void)
     ASSERT_TRUE(RefereeGetPowerSnapshot(&snapshot));
     ASSERT_FALSE(snapshot.valid);
     ASSERT_TRUE(snapshot.chassis_output_valid);
+    ASSERT_TRUE(snapshot.chassis_output_enabled);
+}
+
+static void TestRobotStateOutputPermissionCanBeRevokedAcrossLayouts(void)
+{
+    static const uint8_t standard_robot_payload[13] = {
+        0x04U, 0x01U, 0xC8U, 0x00U, 0xC8U, 0x00U, 0x28U, 0x00U,
+        0xF0U, 0x00U, 0x5AU, 0x00U, 0x02U,
+    };
+    uint8_t disabled_payload[17];
+    uint8_t frame[32];
+    size_t length;
+    RefereePowerSnapshot_s snapshot = {0};
+    referee_info_t *info = StartReferee();
+
+    TestPlatformSetTick(100U);
+    length = BuildFrame(frame, 0x0201U, extended_robot_payload, 17U, 0x25U);
+    ASSERT_TRUE(TestPlatformFeed(frame, length));
+    ASSERT_TRUE(RefereeGetPowerSnapshot(&snapshot));
+    ASSERT_TRUE(snapshot.chassis_output_enabled);
+
+    memcpy(disabled_payload, extended_robot_payload, sizeof(disabled_payload));
+    disabled_payload[12] = 0x02U;
+    disabled_payload[16] = 0x05U;
+    TestPlatformSetTick(150U);
+    length = BuildFrame(frame, 0x0201U, disabled_payload, 17U, 0x26U);
+    ASSERT_TRUE(TestPlatformFeed(frame, length));
+    ASSERT_EQ_U32(1U, info->GameRobotState.power_management_gimbal_output);
+    ASSERT_EQ_U32(0U, info->GameRobotState.power_management_chassis_output);
+    ASSERT_EQ_U32(1U, info->GameRobotState.power_management_shooter_output);
+    ASSERT_TRUE(RefereeGetPowerSnapshot(&snapshot));
+    ASSERT_TRUE(snapshot.chassis_output_valid);
     ASSERT_FALSE(snapshot.chassis_output_enabled);
+
+    TestPlatformSetTick(200U);
+    length = BuildFrame(frame, 0x0201U, standard_robot_payload, 13U, 0x27U);
+    ASSERT_TRUE(TestPlatformFeed(frame, length));
+    ASSERT_EQ_U32(4U, info->GameRobotState.robot_id);
+    ASSERT_EQ_U32(90U, info->GameRobotState.chassis_power_limit);
+    ASSERT_EQ_U32(0U, info->GameRobotState.power_management_gimbal_output);
+    ASSERT_EQ_U32(1U, info->GameRobotState.power_management_chassis_output);
+    ASSERT_EQ_U32(0U, info->GameRobotState.power_management_shooter_output);
+    ASSERT_TRUE(RefereeGetPowerSnapshot(&snapshot));
+    ASSERT_TRUE(snapshot.chassis_output_valid);
+    ASSERT_TRUE(snapshot.chassis_output_enabled);
+
+    RefereeLinkDiagnostics_s diagnostics = {0};
+    ASSERT_TRUE(RefereeGetLinkDiagnostics(&diagnostics));
+    ASSERT_EQ_U32(0U, diagnostics.payload_length_error_count);
+    ASSERT_EQ_U32(3U, diagnostics.transport.valid_frame_count);
+}
+
+static void TestInvalidExtendedRobotLengthsPreserveStateAndFreshness(void)
+{
+    static const uint8_t standard_robot_payload[13] = {
+        0x03U, 0x01U, 0xC8U, 0x00U, 0xC8U, 0x00U, 0x28U, 0x00U,
+        0xF0U, 0x00U, 0x50U, 0x00U, 0x02U,
+    };
+    static const uint16_t invalid_lengths[] = {16U, 18U};
+    uint8_t invalid_payload[18] = {0};
+    uint8_t saved_robot_state[sizeof(ext_game_robot_state_t)];
+    uint8_t frame[32];
+    RefereePowerSnapshot_s snapshot = {0};
+    referee_info_t *info = StartReferee();
+
+    TestPlatformSetTick(100U);
+    size_t length = BuildFrame(frame, 0x0201U, standard_robot_payload, 13U, 0x28U);
+    ASSERT_TRUE(TestPlatformFeed(frame, length));
+    memcpy(saved_robot_state, &info->GameRobotState, sizeof(saved_robot_state));
+
+    TestPlatformSetTick(400U);
+    for (size_t i = 0U; i < sizeof(invalid_lengths) / sizeof(invalid_lengths[0]); ++i)
+    {
+        length = BuildFrame(frame, 0x0201U, invalid_payload, invalid_lengths[i], 0x29U);
+        ASSERT_TRUE(TestPlatformFeed(frame, length));
+        ASSERT_TRUE(memcmp(saved_robot_state, &info->GameRobotState,
+                           sizeof(saved_robot_state)) == 0);
+        ASSERT_TRUE(RefereeGetPowerSnapshot(&snapshot));
+        ASSERT_TRUE(snapshot.chassis_output_valid);
+        ASSERT_TRUE(snapshot.chassis_output_enabled);
+    }
+
+    TestPlatformSetTick(401U);
+    ASSERT_TRUE(RefereeGetPowerSnapshot(&snapshot));
+    ASSERT_FALSE(snapshot.chassis_output_valid);
+    ASSERT_FALSE(snapshot.chassis_output_enabled);
+    RefereeLinkDiagnostics_s diagnostics = {0};
+    ASSERT_TRUE(RefereeGetLinkDiagnostics(&diagnostics));
+    ASSERT_EQ_U32(2U, diagnostics.payload_length_error_count);
+    ASSERT_EQ_U32(3U, diagnostics.transport.valid_frame_count);
 }
 
 static void Test16BytePowerFrameUpdatesRawDataAndCommand(void)
@@ -392,7 +493,9 @@ static void TestNullOutputsAreRejected(void)
 int main(void)
 {
     TestSplitAndCoalescedFramesDriveCompleteCommand();
-    Test17ByteRobotStateUsesStandardPrefix();
+    Test17ByteRobotStateMapsTrailingOutputFlags();
+    TestRobotStateOutputPermissionCanBeRevokedAcrossLayouts();
+    TestInvalidExtendedRobotLengthsPreserveStateAndFreshness();
     Test16BytePowerFrameUpdatesRawDataAndCommand();
     TestOnlyOneRequiredFrameIsInvalid();
     TestCrcAndPayloadLengthRejectionsAreDiagnosed();

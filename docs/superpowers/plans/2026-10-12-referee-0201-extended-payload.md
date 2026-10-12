@@ -2,7 +2,7 @@
 
 ## 当前状态
 
-本文件只描述实施步骤，尚未修改业务代码或测试代码。
+已完成输出状态偏移与标准结构体映射修正，以及主机测试和固件构建验证。实机刷写验收仍待执行。下述问题描述为修正前的状态。
 
 实机收到的 CRC 有效载荷为：
 
@@ -65,6 +65,8 @@ robot_state_tick_ms 正确更新
 
 保留现有 13 字节用例，确认其输出状态仍从字节 12 读取。
 
+替换原有偏移错误的 17 字节测试载荷和输出关闭断言。增加 13/17 字节切换用例：先接收开启帧，再接收字节 12 为 `0x02`、字节 16 为 `0x05` 的扩展帧，确认底盘输出关闭；随后标准帧仍从字节 12 恢复输出许可。
+
 在 `tests/referee_integration/test_referee_integration.c` 中构造带 CRC 的完整帧，断言：
 
 ```text
@@ -76,6 +78,10 @@ snapshot.chassis_output_valid == true
 snapshot.chassis_output_enabled == true
 相邻结构体字段未被覆盖
 ```
+
+集成测试同时断言扩展关闭帧将三个输出位更新为 `1/0/1`，随后 13 字节帧可更新为 `0/1/0`。用相邻 `PowerHeatData` 全结构的哨兵字节验证没有越界写入。
+
+在功率状态测试和集成测试中增加 16/18 字节拒绝用例，确认原字段和时间戳保持不变，集成层长度错误计数增加。集成测试在原时间戳后 300 ms/301 ms 检查输出状态有效性，确认拒绝帧不会续期。
 
 先运行两个测试套件，确认新断言在旧实现上失败，且失败点集中在输出状态解析和结构映射。
 
@@ -104,25 +110,17 @@ state->chassis_output_enabled =
 2. 13 字节帧把 `payload[12]` 写入结构体最后一个字节。
 3. 17 字节帧把 `payload[16]` 写入结构体最后一个字节。
 
-建议封装为仅在 `rm_referee.c` 内使用的小函数：
+直接在 `rm_referee.c` 的既有机器人状态分支内完成映射：
 
 ```c
-static void CopyRobotState(referee_info_t *info,
-                           const uint8_t *payload,
-                           uint16_t payload_length)
-{
-    const uint16_t flags_offset =
-        payload_length == REFEREE_ROBOT_STATE_EXTENDED_PAYLOAD_LENGTH
-            ? 16U
-            : 12U;
-    uint8_t *const destination = (uint8_t *)&info->GameRobotState;
-
-    memcpy(destination, payload, LEN_game_robot_state - 1U);
-    destination[LEN_game_robot_state - 1U] = payload[flags_offset];
-}
+const uint16_t flags_offset = extended_robot_state ? 16U : 12U;
+uint8_t *const destination = (uint8_t *)&referee_info.GameRobotState;
+/* Extended frames insert four bytes before the output flags. */
+memcpy(destination, payload, LEN_game_robot_state - 1U);
+destination[LEN_game_robot_state - 1U] = payload[flags_offset];
 ```
 
-调用该函数前仍使用现有长度白名单，因此不会访问未知长度载荷。
+进入该分支前仍使用现有长度白名单，因此不会访问未知长度载荷。
 
 ### 4. 验证
 
@@ -131,6 +129,7 @@ static void CopyRobotState(referee_info_t *info,
 ```powershell
 make -C tests/referee_power clean test
 make -C tests/referee_integration clean test
+make -C tests/referee_stream_parser -B test
 make -j4
 ```
 
@@ -141,6 +140,13 @@ make -j4
 - 非 13/17 字节 `0x0201` 仍计入长度错误且不更新状态。
 - `0x0202` 现有测试行为不变。
 - 固件构建没有新增编译或链接错误；若本机 ARM 工具链自身仍无法启动，记录原始错误，不把它误判为本次代码问题。
+
+### 本次验证结果
+
+- 修正前：新功率状态测试在输出开启和关闭断言上失败；新集成测试在输出位映射和快照输出许可断言上失败，公共字段和长度拒绝检查通过。
+- 修正后：功率状态与集成测试的普通版和 legacy 版全部通过；独立流解析测试通过。
+- 固件构建：沙箱内 `make -j4` 与 ARM 编译器 `--version` 均在进程启动阶段报 Windows 错误 623（无效的系统 DLL 重定位）。沙箱外版本检查正常，随后 `make -j4` 编译、链接成功并生成 ELF、HEX 和 BIN。
+- 链接器报告 newlib/libnosys 的 `_close`、`_lseek`、`_read`、`_write` 未实现警告；无编译或链接错误。
 
 ### 5. 实机验收
 

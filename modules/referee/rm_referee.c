@@ -108,7 +108,11 @@ static void HandleValidFrame(void *context,
 		if (command_id == ID_game_robot_state &&
 			(payload_length == LEN_game_robot_state || extended_robot_state))
 		{
-			memcpy(&referee_info.GameRobotState, payload, LEN_game_robot_state);
+			const uint16_t flags_offset = extended_robot_state ? 16U : 12U;
+			uint8_t *const destination = (uint8_t *)&referee_info.GameRobotState;
+			/* Extended frames insert four bytes before the output flags. */
+			memcpy(destination, payload, LEN_game_robot_state - 1U);
+			destination[LEN_game_robot_state - 1U] = payload[flags_offset];
 		}
 		else if (command_id == ID_power_heat_data)
 		{

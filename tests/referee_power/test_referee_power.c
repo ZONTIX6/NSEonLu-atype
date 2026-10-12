@@ -41,7 +41,7 @@ static const uint8_t robot_state_enabled[13] = {
 
 static const uint8_t extended_robot_state[17] = {
     0x03U, 0x01U, 0xC8U, 0x00U, 0xC8U, 0x00U, 0x28U, 0x00U,
-    0xF0U, 0x00U, 0x50U, 0x00U, 0x00U, 0x00U, 0x00U, 0xF0U, 0x41U};
+    0xF0U, 0x00U, 0x50U, 0x00U, 0x00U, 0x00U, 0xF0U, 0x41U, 0x07U};
 
 static const uint8_t power_heat[14] = {
     0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
@@ -51,7 +51,7 @@ static const uint8_t legacy_power_heat[16] = {
     0xA8U, 0x61U, 0xF4U, 0x01U, 0U, 0U, 0x48U, 0x41U,
     55U, 0U, 10U, 0U, 20U, 0U, 30U, 0U};
 
-static void TestAcceptsExtendedRobotStateUsingStandardPrefix(void)
+static void TestAcceptsExtendedRobotStateUsingTrailingOutputFlags(void)
 {
     RefereePowerState_s state;
     RefereePowerStateReset(&state);
@@ -60,8 +60,35 @@ static void TestAcceptsExtendedRobotStateUsingStandardPrefix(void)
         &state, 0x0201U, extended_robot_state, 17U, 250U));
     ASSERT_TRUE(state.has_robot_state);
     ASSERT_EQ_U32(80U, state.chassis_power_limit_w);
-    ASSERT_FALSE(state.chassis_output_enabled);
+    ASSERT_TRUE(state.chassis_output_enabled);
     ASSERT_EQ_U32(250U, state.robot_state_tick_ms);
+}
+
+static void TestRobotStateOutputFlagsFollowPayloadLength(void)
+{
+    uint8_t extended_disabled[17];
+    RefereePowerState_s state;
+    RefereePowerStateReset(&state);
+    memcpy(extended_disabled, extended_robot_state, sizeof(extended_disabled));
+    extended_disabled[12] = 0x02U; /* Extension bytes do not grant output permission. */
+    extended_disabled[16] = 0x05U; /* Gimbal and shooter on, chassis off. */
+
+    ASSERT_TRUE(RefereePowerStateAcceptFrame(
+        &state, 0x0201U, robot_state_enabled, 13U, 100U));
+    ASSERT_TRUE(state.chassis_output_enabled);
+
+    ASSERT_TRUE(RefereePowerStateAcceptFrame(
+        &state, 0x0201U, extended_disabled, 17U, 150U));
+    ASSERT_TRUE(state.has_robot_state);
+    ASSERT_FALSE(state.chassis_output_enabled);
+    ASSERT_EQ_U32(80U, state.chassis_power_limit_w);
+    ASSERT_EQ_U32(150U, state.robot_state_tick_ms);
+
+    ASSERT_TRUE(RefereePowerStateAcceptFrame(
+        &state, 0x0201U, robot_state_enabled, 13U, 200U));
+    ASSERT_TRUE(state.chassis_output_enabled);
+    ASSERT_EQ_U32(120U, state.chassis_power_limit_w);
+    ASSERT_EQ_U32(200U, state.robot_state_tick_ms);
 }
 
 #if REFEREE_LEGACY_POWER_FIELDS_ENABLED
@@ -249,7 +276,7 @@ static void TestRequiresBothFreshPowerFrames(void)
 
 static void TestRejectsWrongPayloadLengthsWithoutOverwritingState(void)
 {
-    static const uint8_t changed_robot_state[13] = {
+    static const uint8_t changed_robot_state[18] = {
         3U, 1U, 100U, 0U, 200U, 0U, 50U, 0U, 100U, 0U,
         231U, 3U, 0x00U};
     static const uint8_t changed_power_heat[14] = {
@@ -268,6 +295,11 @@ static void TestRejectsWrongPayloadLengthsWithoutOverwritingState(void)
         &state, 0x0201U, changed_robot_state, 12U, 20U));
     ASSERT_FALSE(RefereePowerStateAcceptFrame(
         &state, 0x0201U, changed_robot_state, 14U, 20U));
+    ASSERT_FALSE(RefereePowerStateAcceptFrame(
+        &state, 0x0201U, changed_robot_state, 16U, 20U));
+    ASSERT_FALSE(RefereePowerStateAcceptFrame(
+        &state, 0x0201U, changed_robot_state, 18U, 20U));
+    ASSERT_EQ_U32(10U, state.robot_state_tick_ms);
     ASSERT_FALSE(RefereePowerStateAcceptFrame(
         &state, 0x0202U, changed_power_heat, 13U, 20U));
     ASSERT_FALSE(RefereePowerStateAcceptFrame(
@@ -412,7 +444,8 @@ int main(void)
     ASSERT_FALSE(partial_snapshot.valid);
     ASSERT_TRUE(partial_snapshot.chassis_output_valid);
     ASSERT_FALSE(partial_snapshot.chassis_output_enabled);
-    TestAcceptsExtendedRobotStateUsingStandardPrefix();
+    TestAcceptsExtendedRobotStateUsingTrailingOutputFlags();
+    TestRobotStateOutputFlagsFollowPayloadLength();
 #if REFEREE_LEGACY_POWER_FIELDS_ENABLED
     TestAcceptsLegacyPowerHeatFrame();
     TestNonFiniteLegacyPowerIsUnavailableButBufferStillUpdates();
