@@ -34,7 +34,7 @@ static float Update(ChassisSpinState_s *state, ChassisSpinInput_s input, unsigne
     return target;
 }
 
-#if CHASSIS_SPIN_ADAPTIVE_ENABLE
+#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
 /* A fixed legacy target must fail these tests: spare power now increases speed. */
 static void TestSparePowerWaitsForTrackingAndRisesWithinRate(void)
 {
@@ -269,7 +269,7 @@ static void TestAppliedPredictiveGuardBlocksFurtherGrowth(void)
 
 int main(void)
 {
-#if CHASSIS_SPIN_ADAPTIVE_ENABLE
+#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
     TestSparePowerWaitsForTrackingAndRisesWithinRate();
     TestContinuousDeadbandDoesNotHunt();
     TestExcessPowerLowersTargetWithoutGrowthPermission();
@@ -286,6 +286,6 @@ int main(void)
     TestDefaultMinimumKeepsARecoveryDemand();
     TestAppliedPredictiveGuardBlocksFurtherGrowth();
     if (failures) return 1;
-    printf("PASS: chassis spin (adaptive=%d)\n", CHASSIS_SPIN_ADAPTIVE_ENABLE);
+    printf("PASS: chassis spin (mode=%d, legacy=%d)\n", CHASSIS_SPIN_MODE, CHASSIS_SPIN_ADAPTIVE_ENABLE);
     return 0;
 }

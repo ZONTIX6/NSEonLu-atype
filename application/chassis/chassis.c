@@ -18,7 +18,7 @@
 #include "chassis_power_outer_loop.h"
 #include "chassis_power_link.h"
 #include "chassis_spin_config.h"
-#if CHASSIS_SPIN_ADAPTIVE_ENABLE
+#if CHASSIS_SPIN_DYNAMIC_ENABLED
 #include "chassis_spin.h"
 #endif
 #include "robot_def.h"
@@ -71,7 +71,7 @@ static uint32_t chassis_budget_dwt_count;
 static DJIChassisPowerControlSnapshot_s pending_power_control;
 static uint32_t power_control_version;
 
-#if CHASSIS_SPIN_ADAPTIVE_ENABLE
+#if CHASSIS_SPIN_DYNAMIC_ENABLED
 static ChassisSpinState_s chassis_spin_state;
 static ChassisSpinInput_s chassis_spin_input;
 static uint32_t chassis_spin_dwt_count;
@@ -86,6 +86,12 @@ static const ChassisSpinConfig_s chassis_spin_config = {
     .power_deadband_w = CHASSIS_SPIN_POWER_DEADBAND_W,
     .settle_time_s = CHASSIS_SPIN_SETTLE_TIME_S,
     .budget_drop_reset_w = CHASSIS_SPIN_BUDGET_DROP_RESET_W,
+    .sine_amplitude_wz = CHASSIS_SPIN_SINE_AMPLITUDE_WZ,
+    .sine_period_s = CHASSIS_SPIN_SINE_PERIOD_S,
+    .sine_ramp_s = CHASSIS_SPIN_SINE_RAMP_S,
+    .sine_rise_wz_per_s = CHASSIS_SPIN_SINE_RISE_RATE,
+    .sine_fall_wz_per_s = CHASSIS_SPIN_SINE_FALL_RATE,
+    .sine_direction = CHASSIS_SPIN_SINE_DIRECTION,
 };
 #endif
 
@@ -346,7 +352,7 @@ static void EstimateSpeed()
 static void UpdateChassisPowerBudget(void)
 {
     bool control_config_valid = true;
-#if CHASSIS_SPIN_ADAPTIVE_ENABLE
+#if CHASSIS_SPIN_DYNAMIC_ENABLED
     chassis_spin_input = (ChassisSpinInput_s){
         .spin_enabled = chassis_cmd_recv.chassis_mode == CHASSIS_ROTATE,
     };
@@ -486,7 +492,7 @@ static void UpdateChassisPowerBudget(void)
             meter_valid && power_state.transient.positive_allowed &&
             meter_status.power_w <= chassis_budget_output.applied_budget_w,
 #endif
-#if CHASSIS_SPIN_ADAPTIVE_ENABLE
+#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
         .hold_positive_learning = chassis_cmd_recv.chassis_mode == CHASSIS_ROTATE &&
             !power_state.base_limited,
 #endif
@@ -537,7 +543,7 @@ static void UpdateChassisPowerBudget(void)
     pending_power_control.telemetry = control_telemetry;
     pending_power_control.legacy_budget_w = chassis_outer_loop_output.corrected_budget_w;
     pending_power_control.slow_correction_w = chassis_outer_loop_output.correction_w;
-#if CHASSIS_SPIN_ADAPTIVE_ENABLE
+#if CHASSIS_SPIN_DYNAMIC_ENABLED
     const uint32_t spin_now_ms = HAL_GetTick();
     bool feedback_valid = power_state_valid && power_state.registered &&
         power_state.power.status == POWER_MODEL_STATUS_OK && !power_state.numeric_error &&
@@ -566,8 +572,9 @@ static void UpdateChassisPowerBudget(void)
     chassis_spin_input.feedback_valid = feedback_valid && meter_valid &&
         (uint32_t)(spin_now_ms - meter_status.last_rx_tick_ms) <= 20;
     chassis_spin_input.measured_power_w = meter_status.power_w;
+    chassis_spin_input.power_limited = current_limited;
     chassis_spin_input.increase_allowed = tracking && !current_limited &&
-        power_state.transient.positive_allowed && power_state.transient.brake_mask == 0;
+        ChassisSpinTransientAllowsIncrease(&power_state.transient);
 #endif
 #else
     const ChassisPowerControlTelemetry_s control_telemetry = {
@@ -593,9 +600,10 @@ static void UpdateChassisPowerBudget(void)
 #endif
     pending_power_control.control_enabled = control_config_valid && chassis_power_ready &&
         chassis_cmd_recv.chassis_mode != CHASSIS_ZERO_FORCE;
-#if CHASSIS_SPIN_ADAPTIVE_ENABLE
+#if CHASSIS_SPIN_DYNAMIC_ENABLED
     chassis_spin_input.target_power_w = pending_power_control.target_power_w;
     chassis_spin_input.control_enabled = pending_power_control.control_enabled;
+    chassis_spin_input.energy_recovering = chassis_budget_output.recovering;
 #endif
 }
 
@@ -613,7 +621,7 @@ void ChassisTask()
 
     UpdateChassisPowerBudget();
 
-#if CHASSIS_SPIN_ADAPTIVE_ENABLE
+#if CHASSIS_SPIN_DYNAMIC_ENABLED
     float spin_target_wz = 0;
     (void)ChassisSpinUpdate(&chassis_spin_config, &chassis_spin_input,
         DWT_GetDeltaT(&chassis_spin_dwt_count), &chassis_spin_state, &spin_target_wz);
@@ -628,8 +636,8 @@ void ChassisTask()
     case CHASSIS_FOLLOW_GIMBAL_YAW: // 跟随云台,不单独设置pid,以误差角度平方为速度输出
         chassis_cmd_recv.wz = -1.5f * chassis_cmd_recv.offset_angle * abs(chassis_cmd_recv.offset_angle);
         break;
-    case CHASSIS_ROTATE: // 自旋,同时保持全向机动;宏选择固定或按功率余量调节目标
-#if CHASSIS_SPIN_ADAPTIVE_ENABLE
+    case CHASSIS_ROTATE: // 自旋并保持全向机动;模式选择固定、功率自适应或同向正弦
+#if CHASSIS_SPIN_DYNAMIC_ENABLED
         chassis_cmd_recv.wz = spin_target_wz;
 #else
         chassis_cmd_recv.wz = CHASSIS_SPIN_FIXED_WZ;

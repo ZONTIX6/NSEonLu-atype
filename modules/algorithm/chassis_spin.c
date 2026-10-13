@@ -10,9 +10,24 @@ bool ChassisSpinGuardAllowsIncrease(const ChassisPowerTransientOutput_s *guard)
            !guard->growth_fallback && !guard->guard_infeasible && !guard->guard_search_exhausted;
 }
 
+bool ChassisSpinTransientAllowsIncrease(const ChassisPowerTransientOutput_s *transient)
+{
+#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE
+    /* A tracked low-load target can have no drive demand. Qualify that healthy
+     * state so startup and a braking trough can initiate the next bounded rise. */
+    return transient != NULL && !transient->fault && transient->meter_fresh &&
+        transient->feedback_fresh && transient->timing_valid && transient->brake_mask == 0 &&
+        (transient->mode == CHASSIS_POWER_TRANSIENT_RUN ||
+         transient->mode == CHASSIS_POWER_TRANSIENT_IDLE) &&
+        (transient->positive_allowed || transient->drive_mask == 0);
+#else
+    return transient != NULL && transient->positive_allowed && transient->brake_mask == 0;
+#endif
+}
+
 static bool ConfigIsValid(const ChassisSpinConfig_s *c)
 {
-    return c != NULL && isfinite(c->fixed_wz) && isfinite(c->min_wz) &&
+    const bool common = c != NULL && isfinite(c->fixed_wz) && isfinite(c->min_wz) &&
            isfinite(c->max_wz) && isfinite(c->gain_wz_per_w_s) &&
            isfinite(c->rise_wz_per_s) && isfinite(c->fall_wz_per_s) &&
            isfinite(c->power_lpf_tau_s) && isfinite(c->power_deadband_w) &&
@@ -22,12 +37,110 @@ static bool ConfigIsValid(const ChassisSpinConfig_s *c)
            c->rise_wz_per_s > 0 && c->fall_wz_per_s > 0 &&
            c->power_lpf_tau_s > 0 && c->power_deadband_w >= 0 &&
            c->settle_time_s >= 0 && c->budget_drop_reset_w >= 0;
+#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE
+    return common && isfinite(c->sine_amplitude_wz) && c->sine_amplitude_wz >= 0 &&
+        c->fixed_wz - c->sine_amplitude_wz >= c->min_wz &&
+        c->fixed_wz + c->sine_amplitude_wz <= c->max_wz &&
+        isfinite(c->sine_period_s) && c->sine_period_s > 0 &&
+        isfinite(c->sine_ramp_s) && c->sine_ramp_s > 0 &&
+        isfinite(c->sine_amplitude_wz / c->sine_ramp_s) &&
+        isfinite(c->sine_rise_wz_per_s) && c->sine_rise_wz_per_s > 0 &&
+        isfinite(c->sine_fall_wz_per_s) && c->sine_fall_wz_per_s > 0 &&
+        (c->sine_direction == 1 || c->sine_direction == -1);
+#else
+    return common;
+#endif
 }
 
+#if CHASSIS_SPIN_MODE != CHASSIS_SPIN_MODE_SINE
 static void Reset(const ChassisSpinConfig_s *config, ChassisSpinState_s *state)
 {
     *state = (ChassisSpinState_s){.target_wz = config->fixed_wz};
 }
+#else
+static float Clamp(float value, float minimum, float maximum)
+{
+    return fminf(fmaxf(value, minimum), maximum);
+}
+
+static bool UpdateSine(const ChassisSpinConfig_s *c, const ChassisSpinInput_s *i,
+                        float dt, ChassisSpinState_s *s, float *target)
+{
+    *target = 0;
+    if (!i->spin_enabled || !i->control_enabled)
+    {
+        *s = (ChassisSpinState_s){0};
+        return true;
+    }
+    if (!isfinite(dt) || dt <= 0 || dt > .020f ||
+        !isfinite(i->target_power_w) || i->target_power_w <= 0 ||
+        !isfinite(i->measured_power_w) ||
+        (s->sine_direction_locked && s->sine_direction != 1 && s->sine_direction != -1) ||
+        (s->initialized && (!isfinite(s->target_wz) || s->target_wz < c->min_wz ||
+            s->target_wz > c->max_wz || !isfinite(s->filtered_power_w) ||
+            !isfinite(s->settled_s) || s->settled_s < 0 ||
+            !isfinite(s->previous_target_power_w) || !isfinite(s->sine_phase_s) ||
+            s->sine_phase_s < 0 || !isfinite(s->sine_center_wz) ||
+            s->sine_center_wz < c->min_wz || s->sine_center_wz > c->fixed_wz ||
+            !isfinite(s->sine_amplitude_wz) || s->sine_amplitude_wz < 0 ||
+            s->sine_amplitude_wz > c->sine_amplitude_wz)))
+    {
+        *s = (ChassisSpinState_s){0};
+        return false;
+    }
+    const int8_t direction = s->sine_direction_locked ? s->sine_direction : c->sine_direction;
+    if (!s->initialized || !i->feedback_valid)
+    {
+        *s = (ChassisSpinState_s){.target_wz = c->min_wz,
+            .sine_center_wz = c->min_wz, .filtered_power_w = i->measured_power_w,
+            .previous_target_power_w = i->target_power_w, .sine_direction = direction,
+            .sine_direction_locked = true, .initialized = i->feedback_valid};
+        if (!i->feedback_valid)
+        {
+            *target = (float)direction * c->min_wz;
+            return true;
+        }
+    }
+    const float alpha = dt / (c->power_lpf_tau_s + dt);
+    s->filtered_power_w = (1 - alpha) * s->filtered_power_w + alpha * i->measured_power_w;
+    s->sine_phase_s = fmodf(s->sine_phase_s + dt, c->sine_period_s);
+    if (s->previous_target_power_w > i->target_power_w + c->budget_drop_reset_w)
+    {
+        const float ratio = i->target_power_w / s->previous_target_power_w;
+        s->sine_center_wz = fmaxf(c->min_wz, s->sine_center_wz * ratio);
+        s->sine_amplitude_wz *= ratio;
+        s->target_wz = fmaxf(c->min_wz, s->target_wz * ratio);
+        s->settled_s = 0;
+    }
+    s->previous_target_power_w = i->target_power_w;
+    const float excess_w = fmaxf(0, fmaxf(i->measured_power_w, s->filtered_power_w) -
+        i->target_power_w - c->power_deadband_w);
+    const bool restricted = i->energy_recovering || i->power_limited || excess_w > 0;
+    const bool can_increase = i->increase_allowed && !restricted && i->measured_power_w >= 0;
+    s->settled_s = can_increase ? fminf(s->settled_s + dt, c->settle_time_s) : 0;
+    const bool stable = can_increase && s->settled_s >= c->settle_time_s;
+    if (excess_w > 0)
+        s->sine_center_wz = fmaxf(c->min_wz, s->sine_center_wz -
+            fminf(c->gain_wz_per_w_s * excess_w, c->sine_fall_wz_per_s) * dt);
+    else if (stable)
+        s->sine_center_wz = fminf(c->fixed_wz, s->sine_center_wz + c->sine_rise_wz_per_s * dt);
+
+    const float amplitude_step = c->sine_amplitude_wz / c->sine_ramp_s * dt;
+    if (restricted)
+        s->sine_amplitude_wz = fmaxf(0, s->sine_amplitude_wz - amplitude_step);
+    else if (stable && s->sine_center_wz >= c->fixed_wz)
+        s->sine_amplitude_wz = fminf(c->sine_amplitude_wz, s->sine_amplitude_wz + amplitude_step);
+    const float requested = Clamp(s->sine_center_wz + s->sine_amplitude_wz *
+        (s->sine_center_wz / c->fixed_wz) *
+            sinf(6.28318530718f * (s->sine_phase_s / c->sine_period_s)), c->min_wz, c->max_wz);
+    float change = requested - s->target_wz;
+    if (change > 0 && !stable) change = 0;
+    s->target_wz = Clamp(s->target_wz + Clamp(change,
+        -c->sine_fall_wz_per_s * dt, c->sine_rise_wz_per_s * dt), c->min_wz, c->max_wz);
+    *target = (float)direction * s->target_wz;
+    return true;
+}
+#endif
 
 bool ChassisSpinUpdate(const ChassisSpinConfig_s *config,
                        const ChassisSpinInput_s *input,
@@ -38,13 +151,20 @@ bool ChassisSpinUpdate(const ChassisSpinConfig_s *config,
     if (target_wz != NULL)
         *target_wz = 0;
     if (!ConfigIsValid(config) || input == NULL || state == NULL || target_wz == NULL)
+    {
+#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE
+        if (state != NULL) *state = (ChassisSpinState_s){0};
+#endif
         return false;
+    }
     *target_wz = config->fixed_wz;
 
-#if !CHASSIS_SPIN_ADAPTIVE_ENABLE
+#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_FIXED
     (void)dt_s;
     Reset(config, state);
     return true;
+#elif CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE
+    return UpdateSine(config, input, dt_s, state, target_wz);
 #else
     if (!input->spin_enabled || !input->control_enabled || !input->feedback_valid)
     {
