@@ -1,7 +1,7 @@
 #ifndef CHASSIS_SPIN_CONFIG_H
 #define CHASSIS_SPIN_CONFIG_H
 
-/* 0: legacy fixed spin; 1: increase the spin target when tracked with spare power. */
+/* 0: 沿用原有固定自旋目标; 1: 转速已跟上且功率有余量时提高自旋目标。 */
 #ifndef CHASSIS_SPIN_ADAPTIVE_ENABLE
 #define CHASSIS_SPIN_ADAPTIVE_ENABLE 0
 #endif
