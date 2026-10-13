@@ -8,7 +8,7 @@ static int failures;
 
 static const ChassisPowerBudgetConfig_s config = {
     .empty_energy_ratio = 0.1f, .full_energy_ratio = 0.3f,
-    .max_boost_w = 100, .rise_rate_w_per_s = 200,
+    .max_boost_w = 100, .rise_rate_w_per_s = 200, .demand_margin_w = 5,
     .buffer = {.max_energy_j = 60, .recovery_enter_j = 15,
         .recovery_exit_j = 30, .hard_floor_j = 5,
         .prediction_window_s = 0.5f, .guard_window_s = 0.3f,
@@ -16,6 +16,7 @@ static const ChassisPowerBudgetConfig_s config = {
         .power_margin_w = 5, .max_boost_w = 60,
         .recovery_power_w = 20, .recovery_target_time_s = 1,
         .observer_max_step_s = 0.020f, .recovery_hold_s = 0.1f,
+        .correction_rise_j_per_s = 20,
         .rise_rate_w_per_s = 600, .safety_factor = 0.98f},
 };
 
@@ -25,6 +26,8 @@ static ChassisPowerBudgetInput_s Input(float energy)
         .referee_limit_w = 80, .buffer_control_enabled = true,
         .buffer_data_valid = true, .buffer_energy_j = energy,
         .input_power_valid = true, .measured_input_power_w = 80,
+        .demand_valid = true, .requested_load_power_w = 180,
+        .confirmed_input_target_w = 137.2f,
     };
     return input;
 }
@@ -34,7 +37,8 @@ static ChassisPowerBudgetOutput_s Update(ChassisPowerBudgetInput_s input)
     ChassisPowerBudgetState_s state;
     ChassisPowerBudgetOutput_s output = {0};
     ChassisPowerBudgetReset(&state, 80);
-    CHECK(ChassisPowerBudgetUpdate(&config, &input, 1, &state, &output));
+    for (unsigned k = 0; k < 1000; ++k)
+        CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &output));
     return output;
 }
 
@@ -102,20 +106,15 @@ static void RecoveryHasHysteresisAndImmediateDownwardLimit(void)
     input.buffer_tick_ms = 100;
     CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
     NEAR(60.5f, out.applied_budget_w);
-    input = Input(35);
-    input.buffer_tick_ms = 200;
-    CHECK(ChassisPowerBudgetUpdate(&config, &input, 1, &state, &out));
-    CHECK(out.recovering);
-    NEAR(75.5f, out.applied_budget_w);
-    input = Input(50);
-    input.buffer_tick_ms = 300;
-    CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
-    CHECK(out.recovering);
-    for (unsigned i = 1; i <= 11; ++i)
+    /* Recover at 60 W under an 80 W limit, with 10 Hz integer energy frames. */
+    input.measured_input_power_w = 60;
+    for (unsigned k = 1; k <= 200; ++k)
     {
-        input.buffer_age_s = (float)i * 0.01f;
-        CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.01f, &state, &out));
-        if (i < 9) CHECK(out.recovering);
+        input.buffer_energy_j = 20 + k / 20 * 2;
+        input.buffer_tick_ms = 100 + k / 20 * 100;
+        input.buffer_age_s = (k % 20) * 0.005f;
+        CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
+        if (k <= 100) CHECK(out.recovering);
     }
     CHECK(!out.recovering);
     CHECK(out.applied_budget_w > 80 && out.applied_budget_w < 140);
@@ -168,9 +167,10 @@ static void BufferSpendingAndRecoveryWithDelayedPowerResponse(void)
         input.buffer_tick_ms = (uint32_t)(tick / 20) * 100U;
         input.buffer_age_s = (float)(tick % 20) * 0.005f;
         input.measured_input_power_w = actual_power;
+        const float demand = tick < 400 ? 180 : 30;
+        input.requested_load_power_w = demand;
         CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
         CHECK(out.buffer_lower_j <= energy + 0.01f);
-        const float demand = tick < 400 ? 180 : 30;
         const float requested = fminf(demand, out.applied_budget_w * 0.98f);
         /* Independent plant: 20 ms power response, 10 Hz integer energy frames. */
         actual_power += 0.25f * (requested - actual_power);
@@ -243,7 +243,7 @@ static void NewSamplesReanchorEvenWhenTheirEnergyIsUnchanged(void)
     input.buffer_tick_ms = 100;
     input.buffer_age_s = 0;
     CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
-    NEAR(50.5f, out.buffer_lower_j);
+    NEAR(46, out.buffer_lower_j); /* 80 ms gap loss, then bounded new-frame correction. */
     input.buffer_energy_j = 20;
     input.buffer_tick_ms = 200;
     CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
@@ -290,7 +290,7 @@ static void TimestampWrapWorksAndOlderFramesCannotRestoreBoost(void)
     input.buffer_energy_j = 20;
     input.buffer_tick_ms = 5;
     CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
-    NEAR(10.5f, out.buffer_lower_j);
+    NEAR(11.4f, out.buffer_lower_j); /* 15 ms known + 85 ms unknown settlement history. */
     input.buffer_energy_j = 60;
     input.buffer_tick_ms = UINT32_MAX - 9U;
     for (unsigned i = 0; i < 2; ++i)
@@ -302,7 +302,7 @@ static void TimestampWrapWorksAndOlderFramesCannotRestoreBoost(void)
     }
     input.buffer_tick_ms = 10;
     CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
-    NEAR(50.5f, out.buffer_lower_j);
+    NEAR(11.175f, out.buffer_lower_j); /* A new frame cannot restore discarded energy at once. */
 }
 
 static void NewFramesCannotHideFeedbackOrDispatchGaps(void)
@@ -336,9 +336,10 @@ static void RepeatedObservationsDoNotAdvanceRecoveryConfirmation(void)
 {
     ChassisPowerBudgetState_s state;
     ChassisPowerBudgetOutput_s out;
-    ChassisPowerBudgetInput_s input = Input(20);
+    ChassisPowerBudgetInput_s input = Input(50);
     input.measured_input_power_w = 60;
     ChassisPowerBudgetReset(&state, 80);
+    state.recovering = true;
     CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
     input = Input(50);
     input.measured_input_power_w = 60;
@@ -390,12 +391,17 @@ static void RecoveryReductionFollowsDeficitAndHonorsTheHardFloor(void)
     CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
     CHECK(out.recovering);
     NEAR(65, out.target_budget_w);
-    input = Input(29.5f); /* Lower bound = 20 J; remain in recovery. */
-    input.measured_input_power_w = 60;
+    for (unsigned k = 1; k < 20; ++k)
+    {
+        input.buffer_age_s = k * 0.005f;
+        CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
+    }
+    input.buffer_energy_j = 26.5f; /* Actual energy gained 2 J at 60 W for 100 ms. */
     input.buffer_tick_ms = 100;
+    input.buffer_age_s = 0;
     CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
-    NEAR(70, out.target_budget_w);
-    CHECK(out.applied_budget_w <= 68.01f); /* Recovery rise is still limited. */
+    NEAR(68.5f, out.target_budget_w);
+    CHECK(out.applied_budget_w <= 68.51f);
     input = Input(14.5f); /* Hard floor at 5 J forces the full reduction. */
     input.measured_input_power_w = 60;
     input.buffer_tick_ms = 200;
@@ -498,12 +504,14 @@ static void CapPlantCanRecoverBufferWhileSupplyingHigherLoad(void)
         input.measured_input_power_w = input_power;
         input.cap_energy_ratio = cap_energy / 200;
         input.cap_reported_limit_w = input_target + 80;
+        input.confirmed_input_target_w = floorf(input_target);
+        const float demand = tick < 200 ? 140 : 30;
+        input.requested_load_power_w = demand;
         CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
         CHECK(out.buffer_lower_j <= buffer_energy + 0.01f);
         CHECK(out.applied_budget_w * 0.98f <= input.cap_reported_limit_w + 0.01f);
         input_target = out.input_target_w;
         input_power += 0.25f * (input_target - input_power);
-        const float demand = tick < 200 ? 140 : 30;
         const float available = input_power + fminf(80, cap_energy / 0.005f);
         const float load_target = fminf(available, fminf(demand, out.applied_budget_w * 0.98f));
         load_power += 0.25f * (load_target - load_power);
@@ -520,8 +528,206 @@ static void CapPlantCanRecoverBufferWhileSupplyingHigherLoad(void)
     CHECK(minimum_buffer > 5 && buffer_energy > 59);
 }
 
+static void LowDemandPreservesBufferAndStaleDemandRemovesBoost(void)
+{
+    ChassisPowerBudgetInput_s input = Input(60);
+    input.requested_load_power_w = 30;
+    NEAR(78.4f, Update(input).input_target_w);
+    input.requested_load_power_w = 90;
+    NEAR(95, Update(input).input_target_w); /* Physical demand plus 5 W. */
+    input.requested_load_power_w = 180;
+    CHECK(Update(input).input_target_w > 130);
+    input.demand_valid = false;
+    NEAR(78.4f, Update(input).input_target_w);
+    input.demand_valid = true;
+    input.requested_load_power_w = NAN;
+    NEAR(78.4f, Update(input).input_target_w);
+}
+
+static void InputAndCapLoadHaveIndependentRiseRates(void)
+{
+    ChassisPowerBudgetState_s state;
+    ChassisPowerBudgetOutput_s out;
+    ChassisPowerBudgetInput_s input = Input(60);
+    input.use_supercap = true;
+    input.cap_online = input.cap_output_enabled = true;
+    input.cap_input_control_ready = input.load_power_valid = true;
+    input.cap_energy_ratio = 0.5f;
+    input.cap_reported_limit_w = 180;
+    input.confirmed_input_target_w = 78.4f;
+    ChassisPowerBudgetReset(&state, 80);
+    CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
+    NEAR(81.34f, out.input_target_w);
+    NEAR(81, out.applied_budget_w);
+    CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
+    NEAR(84.28f, out.input_target_w);
+    NEAR(82, out.applied_budget_w);
+    input.cap_error_code = 1;
+    CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
+    CHECK(out.applied_budget_w <= 80);
+}
+
+static void LoadUsesConfirmedInputAndLongDispatchCannotRaiseBudget(void)
+{
+    ChassisPowerBudgetInput_s input = Input(60);
+    input.use_supercap = true;
+    input.cap_online = input.cap_output_enabled = true;
+    input.cap_input_control_ready = input.load_power_valid = true;
+    input.cap_energy_ratio = 0.1f; /* No capacitor assist. */
+    input.cap_reported_limit_w = 180;
+    input.confirmed_input_target_w = 78.4f;
+    ChassisPowerBudgetOutput_s out = Update(input);
+    CHECK(out.input_target_w > 130);
+    NEAR(80, out.applied_budget_w);
+    input.confirmed_input_target_w = 137.2f;
+    NEAR(140, Update(input).applied_budget_w);
+    input.confirmed_input_target_w = NAN;
+    NEAR(80, Update(input).applied_budget_w);
+    ChassisPowerBudgetState_s state;
+    ChassisPowerBudgetReset(&state, 80);
+    input.use_supercap = false;
+    CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.2f, &state, &out));
+    NEAR(80, out.applied_budget_w);
+    NEAR(78.4f, out.input_target_w);
+}
+
+static void ContinuousHistoryShrinksSettlementUncertainty(void)
+{
+    ChassisPowerBudgetState_s state;
+    ChassisPowerBudgetOutput_s out;
+    ChassisPowerBudgetInput_s input = Input(60);
+    ChassisPowerBudgetReset(&state, 80);
+    for (unsigned k = 0; k <= 80; ++k)
+    {
+        input.buffer_tick_ms = k / 20 * 100;
+        input.buffer_age_s = (k % 20) * 0.005f;
+        CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
+        CHECK(out.buffer_lower_j <= 60);
+        if (k == 0) NEAR(50.5f, out.buffer_lower_j);
+    }
+    NEAR(56.5f, out.buffer_lower_j); /* 3 J fixed + 5 W * 0.1 s. */
+    const float previous = out.buffer_lower_j;
+    for (unsigned k = 0; k < 30; ++k)
+        CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
+    NEAR(previous, out.buffer_lower_j);
+}
+
+static void UpwardCorrectionIsBoundedAndDownwardCorrectionIsImmediate(void)
+{
+    ChassisPowerBudgetState_s state;
+    ChassisPowerBudgetOutput_s out;
+    ChassisPowerBudgetInput_s input = Input(45);
+    ChassisPowerBudgetReset(&state, 80);
+    for (unsigned k = 0; k < 20; ++k)
+    {
+        input.buffer_age_s = k * 0.005f;
+        CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
+    }
+    input.buffer_tick_ms = 100;
+    input.buffer_age_s = 0;
+    input.buffer_energy_j = 60;
+    CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
+    NEAR(37, out.buffer_lower_j); /* 35.5 - 0.5 + 20 J/s * 0.1 s. */
+    input.buffer_tick_ms = 105;
+    input.buffer_energy_j = 10;
+    CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
+    CHECK(out.buffer_lower_j < 8 && out.recovering);
+}
+
+static void RecentPowerSpikeIsChargedEvenAfterPowerFalls(void)
+{
+    ChassisPowerBudgetConfig_s fast_correction = config;
+    fast_correction.buffer.correction_rise_j_per_s = 1000;
+    ChassisPowerBudgetState_s state;
+    ChassisPowerBudgetOutput_s out;
+    ChassisPowerBudgetInput_s input = Input(60);
+    ChassisPowerBudgetReset(&state, 80);
+    for (unsigned k = 0; k <= 40; ++k)
+    {
+        input.buffer_tick_ms = k / 20 * 100;
+        input.buffer_age_s = (k % 20) * 0.005f;
+        input.measured_input_power_w = k == 35 || k == 36 ? 200 : 80;
+        CHECK(ChassisPowerBudgetUpdate(&fast_correction, &input, 0.005f, &state, &out));
+    }
+    NEAR(54.7f, out.buffer_lower_j); /* Three conservative 5 ms spike intervals. */
+    input.input_power_valid = false;
+    input.buffer_age_s = 0.005f;
+    CHECK(ChassisPowerBudgetUpdate(&fast_correction, &input, 0.005f, &state, &out));
+    CHECK(out.mode == CHASSIS_POWER_BUDGET_DEGRADED);
+    NEAR(54.375f, out.buffer_lower_j);
+}
+
+static void MeterGapCannotBypassUpwardCorrectionLimit(void)
+{
+    ChassisPowerBudgetState_s state;
+    ChassisPowerBudgetOutput_s out;
+    ChassisPowerBudgetInput_s input = Input(45);
+    ChassisPowerBudgetReset(&state, 80);
+    for (unsigned k = 0; k < 20; ++k)
+    {
+        input.buffer_age_s = k * 0.005f;
+        CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
+    }
+    input.buffer_tick_ms = 100;
+    input.buffer_age_s = 0;
+    input.buffer_energy_j = 60;
+    input.input_power_valid = false;
+    CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
+    NEAR(36.7f, out.buffer_lower_j);
+    NEAR(80, out.applied_budget_w);
+    input.input_power_valid = true;
+    input.buffer_age_s = 0.005f;
+    CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
+    input.buffer_age_s = 0.010f;
+    CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
+    CHECK(out.buffer_lower_j < 37);
+}
+
+static void LowLoadChargesCapWithoutSpendingBuffer(void)
+{
+    ChassisPowerBudgetState_s state;
+    ChassisPowerBudgetOutput_s out;
+    ChassisPowerBudgetInput_s input = Input(60);
+    input.use_supercap = true;
+    input.cap_online = input.cap_output_enabled = true;
+    input.cap_input_control_ready = input.load_power_valid = true;
+    input.requested_load_power_w = 30;
+    ChassisPowerBudgetReset(&state, 80);
+    float cap_energy = 20, buffer_energy = 60, input_power = 80, input_target = 78;
+    for (unsigned k = 0; k < 2000; ++k)
+    {
+        input.buffer_energy_j = floorf(buffer_energy);
+        input.buffer_tick_ms = k / 20 * 100;
+        input.buffer_age_s = (k % 20) * 0.005f;
+        input.measured_input_power_w = input_power;
+        input.cap_energy_ratio = cap_energy / 400;
+        input.cap_reported_limit_w = input_target + 80;
+        input.confirmed_input_target_w = input_target;
+        CHECK(ChassisPowerBudgetUpdate(&config, &input, 0.005f, &state, &out));
+        CHECK(out.input_target_w <= 78.401f);
+        input_target = floorf(out.input_target_w);
+        input_power += 0.25f * (input_target - input_power);
+        /* Independent plant with 85% charging efficiency and 30 W load. */
+        const float charged_input = fminf(input_power,
+            30 + (400 - cap_energy) / (0.85f * 0.005f));
+        cap_energy += fmaxf(0, charged_input - 30) * 0.85f * 0.005f;
+        buffer_energy = fminf(60, buffer_energy + (80 - charged_input) * 0.005f);
+        CHECK(buffer_energy >= 59.99f);
+        CHECK(out.buffer_lower_j <= buffer_energy + 0.01f);
+    }
+    CHECK(cap_energy > 399 && cap_energy <= 400.01f);
+}
+
 int main(void)
 {
+    MeterGapCannotBypassUpwardCorrectionLimit();
+    LowLoadChargesCapWithoutSpendingBuffer();
+    ContinuousHistoryShrinksSettlementUncertainty();
+    UpwardCorrectionIsBoundedAndDownwardCorrectionIsImmediate();
+    RecentPowerSpikeIsChargedEvenAfterPowerFalls();
+    LowDemandPreservesBufferAndStaleDemandRemovesBoost();
+    InputAndCapLoadHaveIndependentRiseRates();
+    LoadUsesConfirmedInputAndLongDispatchCannotRaiseBudget();
     HighBufferWorksWithoutCap();
     LowBufferActuallyReducesBudget();
     MissingFeedbackRemovesBoost();

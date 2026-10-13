@@ -100,6 +100,7 @@ static const ChassisPowerBudgetConfig_s chassis_budget_config = {
     .full_energy_ratio = 0.30f,
     .max_boost_w = 100.0f,
     .rise_rate_w_per_s = 200.0f,
+    .demand_margin_w = CHASSIS_POWER_DEMAND_MARGIN_W,
     .buffer = {
         .max_energy_j = CHASSIS_BUFFER_MAX_ENERGY_J,
         .recovery_enter_j = CHASSIS_BUFFER_RECOVERY_ENTER_J,
@@ -117,6 +118,7 @@ static const ChassisPowerBudgetConfig_s chassis_budget_config = {
         .recovery_hold_s = CHASSIS_BUFFER_RECOVERY_HOLD_S,
         .rise_rate_w_per_s = CHASSIS_BUFFER_RISE_RATE_W_PER_S,
         .safety_factor = CHASSIS_POWER_SAFETY_FACTOR,
+        .correction_rise_j_per_s = CHASSIS_BUFFER_CORRECTION_RISE_J_PER_S,
     },
 };
 
@@ -402,6 +404,29 @@ static void UpdateChassisPowerBudget(void)
     measured_input_power_w = input_meter.power_w;
 #endif
 
+    DJIChassisPowerState_s power_state = {0};
+    const bool power_state_valid = DJIChassisPowerGetSnapshot(&power_state);
+    const uint32_t demand_now_ms = HAL_GetTick();
+    bool demand_valid = power_state_valid && power_state.registered &&
+        power_state.power.status == POWER_MODEL_STATUS_OK && !power_state.numeric_error &&
+        !power_state.transient.fault && power_state.online_mask == 0x0f &&
+        power_state.telemetry.motor_enabled_mask == 0x0f &&
+        power_state.transient.drive_mask != 0 && power_state.transient.brake_mask == 0 &&
+        (uint32_t)(demand_now_ms - power_state.tick_ms) <= 5 &&
+        chassis_cmd_recv.chassis_mode != CHASSIS_ZERO_FORCE;
+    float requested_load_power_w = 0;
+    for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
+    {
+        const float predicted_w = power_state.power.predicted_unlimited_power_w[i];
+        demand_valid &= isfinite(predicted_w) &&
+            (uint32_t)(demand_now_ms - power_state.feedback_tick_ms[i]) <= 5;
+        requested_load_power_w += predicted_w;
+    }
+#if POWER_METER_ENABLE
+    if (load_power_valid && isfinite(input_meter.power_w))
+        requested_load_power_w = fmaxf(requested_load_power_w, input_meter.power_w);
+#endif
+
     const ChassisPowerBudgetInput_s input = {
         .referee_limit_w = link_output.base_power_limit_w,
         .cap_online = cap_status.online,
@@ -422,6 +447,9 @@ static void UpdateChassisPowerBudget(void)
         .cap_input_control_ready = cap_input_power.online &&
             cap_input_power.input_control_active,
         .load_power_valid = load_power_valid,
+        .demand_valid = demand_valid,
+        .requested_load_power_w = requested_load_power_w,
+        .confirmed_input_target_w = (float)cap_input_power.input_power_target_w,
     };
     const float dt_s = DWT_GetDeltaT(&chassis_budget_dwt_count);
     if (!ChassisPowerBudgetUpdate(&chassis_budget_config,
@@ -454,8 +482,6 @@ static void UpdateChassisPowerBudget(void)
 #if CHASSIS_POWER_CONTROL_STAGE == 0
     float motoring_indicator = 0.0f;
 #endif
-    DJIChassisPowerState_s power_state = {0};
-    const bool power_state_valid = DJIChassisPowerGetSnapshot(&power_state);
     if (power_state_valid && power_state.registered &&
         power_state.power.status == POWER_MODEL_STATUS_OK)
     {

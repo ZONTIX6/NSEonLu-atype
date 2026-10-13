@@ -200,7 +200,8 @@ PID 通用可设置字段：`Kp/Ki/Kd`、`MaxOut`、`DeadBand`、`IntegralLimit`
 | `empty_energy_ratio` | `0.10f` | 电容低能量端点 |
 | `full_energy_ratio` | `0.30f` | 电容全额增补端点 |
 | `max_boost_w` | `100.0f` W | 电容负载预算最大增补 |
-| `rise_rate_w_per_s` | `200.0f` W/s | 原电容预算上升斜率 |
+| `rise_rate_w_per_s` | `200.0f` W/s | 电容负载预算独立上升斜率，动态缓冲分支也使用 |
+| `demand_margin_w` | `5.0f` W | 实际驱动需求超过基础目标时，允许的额外物理功率余量 |
 
 这里的 `100 W` 是电容负载增补上限；下节 `60 W` 是裁判缓冲输入预算增补上限，两者不同。
 
@@ -224,7 +225,15 @@ PID 通用可设置字段：`Kp/Ki/Kd`、`MaxOut`、`DeadBand`、`IntegralLimit`
 | `CHASSIS_BUFFER_RECOVERY_TARGET_TIME_S` | `1.0f` s | 按能量缺口计算减让的目标恢复时间 |
 | `CHASSIS_BUFFER_OBSERVER_MAX_STEP_S` | `0.020f` s | 最大连续积分间隔，超过撤销增补 |
 | `CHASSIS_BUFFER_RECOVERY_HOLD_S` | `0.1f` s | 退出回充的持续确认时间 |
-| `CHASSIS_BUFFER_RISE_RATE_W_PER_S` | `600.0f` W/s | 动态预算上升斜率；下降立即执行 |
+| `CHASSIS_BUFFER_RISE_RATE_W_PER_S` | `600.0f` W/s | 输入预算上升斜率；直供负载跟随，电容负载另用 200 W/s |
+| `CHASSIS_BUFFER_CORRECTION_RISE_J_PER_S` | `20.0f` J/s | 估计已建立时，新裁判帧向上校正的速度；丢帧也受限，向下立即校正 |
+| `CHASSIS_POWER_DEMAND_MARGIN_W` | `5.0f` W | 超过基础功率目标的有效需求所允许的增补余量 |
+
+缓冲增补只在新鲜、完整、非制动的驱动需求超过基础功率目标时放开，最多增加需求缺口加余量。低负载时输入目标保持基础预算，避免为回充电容主动耗用裁判缓冲。需求来自统一电机任务快照中的未限流模型功率，并结合负载侧实测功率。
+
+估算器用 `CHASSIS_BUFFER_HISTORY_LENGTH=96` 段固定历史回看帧龄与结算延迟窗口；连续反馈按实测区间上界扣能量，缺失历史按最坏消耗扣减。新帧仍保留 3 J 固定余量；稳定的 80 W 输入、80 W 限额和零帧龄下，完整历史对应的测量下限为 `60 - 3 - 5*0.1 = 56.5 J`，不是固定扣除 9.5 J。负输入功率不计作再生能量。
+
+电容负载预算中的输入贡献取本周期请求和新鲜 `0x052` 实际输入目标的较小值；反馈未确认的输入增量不提前计入负载预算。预算下降立即生效，控制步长超过 20 ms 时禁止上升。电容电量比例策略保持原样，可用焦耳与持续时间策略本次暂缓。
 
 能量门槛须满足 `HARD_FLOOR < RECOVERY_ENTER < RECOVERY_EXIT <= MAX_ENERGY`，预测窗、保护窗、恢复目标时间、积分间隔及上升斜率必须为正。
 

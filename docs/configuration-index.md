@@ -64,10 +64,10 @@
 | [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h) | 47 | 3 | 0 | 0 | 0 |
 | [modules/alarm/buzzer.c](../modules/alarm/buzzer.c) | 0 | 0 | 1 | 0 | 0 |
 | [modules/alarm/buzzer.h](../modules/alarm/buzzer.h) | 9 | 0 | 0 | 1 | 0 |
-| [modules/algorithm/chassis_energy_config.h](../modules/algorithm/chassis_energy_config.h) | 20 | 0 | 0 | 0 | 0 |
+| [modules/algorithm/chassis_energy_config.h](../modules/algorithm/chassis_energy_config.h) | 22 | 0 | 0 | 0 | 0 |
 | [modules/algorithm/chassis_kinematics.c](../modules/algorithm/chassis_kinematics.c) | 1 | 0 | 0 | 0 | 0 |
 | [modules/algorithm/chassis_kinematics.h](../modules/algorithm/chassis_kinematics.h) | 1 | 0 | 0 | 0 | 0 |
-| [modules/algorithm/chassis_power_budget.h](../modules/algorithm/chassis_power_budget.h) | 1 | 0 | 0 | 2 | 0 |
+| [modules/algorithm/chassis_power_budget.h](../modules/algorithm/chassis_power_budget.h) | 2 | 0 | 0 | 2 | 0 |
 | [modules/algorithm/chassis_power_config.h](../modules/algorithm/chassis_power_config.h) | 4 | 0 | 0 | 0 | 0 |
 | [modules/algorithm/chassis_power_outer_loop.h](../modules/algorithm/chassis_power_outer_loop.h) | 1 | 0 | 0 | 1 | 0 |
 | [modules/algorithm/chassis_power_transient.c](../modules/algorithm/chassis_power_transient.c) | 0 | 0 | 1 | 0 | 0 |
@@ -212,6 +212,7 @@ ChassisPowerBudgetConfig_s chassis_budget_config = {
     .full_energy_ratio = 0.30f,
     .max_boost_w = 100.0f,
     .rise_rate_w_per_s = 200.0f,
+    .demand_margin_w = CHASSIS_POWER_DEMAND_MARGIN_W,
     .buffer = {
         .max_energy_j = CHASSIS_BUFFER_MAX_ENERGY_J,
         .recovery_enter_j = CHASSIS_BUFFER_RECOVERY_ENTER_J,
@@ -229,6 +230,7 @@ ChassisPowerBudgetConfig_s chassis_budget_config = {
         .recovery_hold_s = CHASSIS_BUFFER_RECOVERY_HOLD_S,
         .rise_rate_w_per_s = CHASSIS_BUFFER_RISE_RATE_W_PER_S,
         .safety_factor = CHASSIS_POWER_SAFETY_FACTOR,
+        .correction_rise_j_per_s = CHASSIS_BUFFER_CORRECTION_RISE_J_PER_S,
     },
 };
 ```
@@ -1592,7 +1594,9 @@ typedef struct
 | [modules/algorithm/chassis_energy_config.h:38](../modules/algorithm/chassis_energy_config.h#L38) | `CHASSIS_BUFFER_RECOVERY_TARGET_TIME_S` | `1.0f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 目标恢复时间(s):能量缺口除以该时间得到回充减让功率 |
 | [modules/algorithm/chassis_energy_config.h:39](../modules/algorithm/chassis_energy_config.h#L39) | `CHASSIS_BUFFER_OBSERVER_MAX_STEP_S` | `0.020f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 最大连续积分间隔(s):超出时按最坏耗能扣减并撤销增补 |
 | [modules/algorithm/chassis_energy_config.h:40](../modules/algorithm/chassis_energy_config.h#L40) | `CHASSIS_BUFFER_RECOVERY_HOLD_S` | `0.1f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 退出回充的确认时长(s):在该时长内持续高于退出门槛才解除 |
-| [modules/algorithm/chassis_energy_config.h:41](../modules/algorithm/chassis_energy_config.h#L41) | `CHASSIS_BUFFER_RISE_RATE_W_PER_S` | `600.0f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 预算上升斜率上限(W/s);下降不限速,立即生效 |
+| [modules/algorithm/chassis_energy_config.h:41](../modules/algorithm/chassis_energy_config.h#L41) | `CHASSIS_BUFFER_RISE_RATE_W_PER_S` | `600.0f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 输入预算上升斜率(W/s);电容负载侧使用独立斜率,下降立即生效 |
+| [modules/algorithm/chassis_energy_config.h:42](../modules/algorithm/chassis_energy_config.h#L42) | `CHASSIS_BUFFER_CORRECTION_RISE_J_PER_S` | `20.0f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 新裁判帧向上校正估算的上限(J/s);向下立即校正 |
+| [modules/algorithm/chassis_energy_config.h:43](../modules/algorithm/chassis_energy_config.h#L43) | `CHASSIS_POWER_DEMAND_MARGIN_W` | `5.0f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 高于基础功率的真实驱动需求所允许的额外余量(W) |
 
 ## modules/algorithm/chassis_kinematics.c
 
@@ -1623,6 +1627,7 @@ typedef struct
 | 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
 | --- | --- | --- | --- | --- |
 | [modules/algorithm/chassis_power_budget.h:2](../modules/algorithm/chassis_power_budget.h#L2) | `CHASSIS_POWER_BUDGET_H` | 空定义 | `#ifndef CHASSIS_POWER_BUDGET_H` |  |
+| [modules/algorithm/chassis_power_budget.h:7](../modules/algorithm/chassis_power_budget.h#L7) | `CHASSIS_BUFFER_HISTORY_LENGTH` | `96U` | `#ifndef CHASSIS_POWER_BUDGET_H` | 固定输入功率历史段数 |
 
 ### 可设置的结构体字段
 

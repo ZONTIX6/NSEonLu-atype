@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define CHASSIS_BUFFER_HISTORY_LENGTH 96U
+
 typedef enum
 {
     CHASSIS_POWER_BUDGET_OFFLINE = 0,
@@ -29,6 +31,7 @@ typedef struct
     float recovery_hold_s;
     float rise_rate_w_per_s;
     float safety_factor;
+    float correction_rise_j_per_s;
 } ChassisBufferBudgetConfig_s;
 
 typedef struct
@@ -37,6 +40,7 @@ typedef struct
     float full_energy_ratio;
     float max_boost_w;
     float rise_rate_w_per_s;
+    float demand_margin_w; /* Physical watts above a valid load request. */
     ChassisBufferBudgetConfig_s buffer;
 } ChassisPowerBudgetConfig_s;
 
@@ -58,7 +62,16 @@ typedef struct
     float measured_input_power_w;
     bool cap_input_control_ready;
     bool load_power_valid;
+    bool demand_valid;
+    float requested_load_power_w; /* Physical load power before current limiting. */
+    float confirmed_input_target_w; /* Fresh 0x052 target, physical watts. */
 } ChassisPowerBudgetInput_s;
+
+typedef struct
+{
+    float elapsed_s;
+    float loss_w;
+} ChassisBufferHistorySample_s;
 
 typedef struct
 {
@@ -76,6 +89,9 @@ typedef struct
     bool last_input_power_valid;
     bool buffer_initialized;
     bool recovering;
+    ChassisBufferHistorySample_s history[CHASSIS_BUFFER_HISTORY_LENGTH];
+    uint16_t history_head;
+    uint16_t history_count;
 } ChassisPowerBudgetState_s;
 
 typedef struct
