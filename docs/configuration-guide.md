@@ -2,6 +2,8 @@
 
 整理日期：2026-10-13。数值来自整理时的工作区，包含已有的未提交修改；这是源码配置快照，不代表开发板当前烧录的固件。
 
+2026-10-15：第 5 节已同步正弦模式的独立中心、起步速度和可达波形参数。
+
 本文说明工程的功能开关、调参项、硬件与任务设置，以及参数实际生效的条件。[完整宏与初始化参数索引](configuration-index.md)按文件列出全部项目源码宏、条件分支、已注释的宏选项、配置结构体初值和 HAL 外设设置。
 
 范围：`application/`、`bsp/`、`modules/`、`Inc/`、`Src/`，另含 SEGGER RTT 配置、Make/CMake 和链接脚本。`Drivers/`、其余 `Middlewares/` 中的芯片寄存器和第三方库内部宏不作为机器人调参项逐条解释；`tests/` 是测试配置，`portable_modules/` 是独立移植副本，均不参与主工程配置。
@@ -297,8 +299,8 @@ PID 通用可设置字段：`Kp/Ki/Kd`、`MaxOut`、`DeadBand`、`IntegralLimit`
 
 | 宏 | 当前值 | 适用/意义 |
 | --- | --- | --- |
-| `CHASSIS_SPIN_FIXED_WZ` | `4000.0f` | 固定速度；自适应初始值；正弦中心目标 |
-| `CHASSIS_SPIN_MIN_WZ` | `1000.0f` | 动态模式速度下限 |
+| `CHASSIS_SPIN_FIXED_WZ` | `4000.0f` | 固定速度；自适应初始值 |
+| `CHASSIS_SPIN_MIN_WZ` | `1000.0f` | 自适应速度下限 |
 | `CHASSIS_SPIN_MAX_WZ` | `6000.0f` | 动态模式速度上限 |
 | `CHASSIS_SPIN_POWER_GAIN` | `40.0f` | 功率误差到调速速率的增益，命令单位/(W·s) |
 | `CHASSIS_SPIN_RISE_RATE` | `400.0f` | 自适应最大加速率 |
@@ -308,16 +310,18 @@ PID 通用可设置字段：`Kp/Ki/Kd`、`MaxOut`、`DeadBand`、`IntegralLimit`
 | `CHASSIS_SPIN_SETTLE_TIME_S` | `0.2f` s | 允许加速条件持续确认 |
 | `CHASSIS_SPIN_TRACKING_ERROR_RPM` | `500.0f` rpm | 各轮目标/实际速度误差门槛 |
 | `CHASSIS_SPIN_BUDGET_DROP_RESET_W` | `1.0f` W | 功率目标下跌后重置/收缩门槛 |
-| `CHASSIS_SPIN_SINE_AMPLITUDE_WZ` | `1000.0f` | 正弦稳态幅度 |
+| `CHASSIS_SPIN_SINE_CENTER_WZ` | `800.0f` | 正弦中心，独立于固定/自适应参数 |
+| `CHASSIS_SPIN_SINE_MIN_WZ` | `200.0f` | 正弦起步和反馈失效时的同方向低速目标 |
+| `CHASSIS_SPIN_SINE_AMPLITUDE_WZ` | `200.0f` | 正弦稳态幅度 |
 | `CHASSIS_SPIN_SINE_PERIOD_S` | `4.0f` s | 正弦周期 |
 | `CHASSIS_SPIN_SINE_RAMP_S` | `1.0f` s | 正弦幅度建立/收缩时间尺度 |
-| `CHASSIS_SPIN_SINE_RISE_RATE` | `2000.0f` | 正弦模式速度上升斜率 |
+| `CHASSIS_SPIN_SINE_RISE_RATE` | `400.0f` | 正弦模式速度上升斜率 |
 | `CHASSIS_SPIN_SINE_FALL_RATE` | `2000.0f` | 正弦模式速度下降斜率 |
 | `CHASSIS_SPIN_SINE_DIRECTION` | `1` | 正弦旋转方向，只允许 `+1/-1`；一次旋转期间锁定方向 |
 
-默认正弦目标在中心/幅度完全建立时为 `4000 + 1000*sin(2πt/4)`，即约 `3000～5000`，再经过功率、跟踪和斜率限制。进入时从下限建立中心和幅度，不保证立即输出完整正弦波。
+默认正弦目标在中心/幅度完全建立时为 `800 + 200*sin(2πt/4)`，即命令范围 `600～1000`。默认麦轮几何、没有平移时，目标轮速幅值约为 `3403～5672 rpm`，再经过功率、跟踪和斜率限制。进入时从下限 200 建立中心和幅度，不保证立即输出完整正弦波。原中心 4000 对应约 22689 rpm，在当前 50 W 台架预算下无法建立中心和振幅，因此单独下调正弦参数。
 
-约束：`0 < MIN <= FIXED <= MAX`；正弦还需 `FIXED-AMPLITUDE >= MIN`、`FIXED+AMPLITUDE <= MAX`，周期、建立时间、上升/下降斜率为正。动态更新 `dt` 最大为 `20 ms`。
+自适应约束：`0 < MIN <= FIXED <= MAX`。正弦使用独立的 `SINE_MIN` 和 `SINE_CENTER`，需满足 `0 < SINE_MIN <= SINE_CENTER`、`SINE_CENTER-AMPLITUDE >= SINE_MIN`、`SINE_CENTER+AMPLITUDE <= MAX`，周期、建立时间、上升/下降斜率为正。动态更新 `dt` 最大为 `20 ms`。
 
 ## 6. 通信、日志、缓冲区与实例容量
 

@@ -88,8 +88,13 @@ static ChassisSpinState_s chassis_spin_state;
 static ChassisSpinInput_s chassis_spin_input;
 static uint32_t chassis_spin_dwt_count;
 static const ChassisSpinConfig_s chassis_spin_config = {
+#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE
+    .fixed_wz = CHASSIS_SPIN_SINE_CENTER_WZ,
+    .min_wz = CHASSIS_SPIN_SINE_MIN_WZ,
+#else
     .fixed_wz = CHASSIS_SPIN_FIXED_WZ,
     .min_wz = CHASSIS_SPIN_MIN_WZ,
+#endif
     .max_wz = CHASSIS_SPIN_MAX_WZ,
     .gain_wz_per_w_s = CHASSIS_SPIN_POWER_GAIN,
     .rise_wz_per_s = CHASSIS_SPIN_RISE_RATE,

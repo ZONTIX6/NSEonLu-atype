@@ -44,6 +44,31 @@ CMake 支持 `-DCHASSIS_SPIN_ADAPTIVE_ENABLE=0` 或 `1`。功率计关闭或反�
 
 平移命令保持原值，平移消耗增加会通过总功率误差降低自转目标；此功能没有单独实现平移优先功率分配。达到电机能力、速度上限或稳定性限制时允许剩余功率未用满。
 
+## 正弦自转
+
+显式选择 `CHASSIS_SPIN_MODE=2` 可启用同方向正弦自转；`0` 为固定，`1` 为功率自适应。模式宏优先于旧开关。正弦参数集中于 `modules/algorithm/chassis_spin_config.h`：
+
+| 参数 | 默认值 | 含义 |
+| --- | --- | --- |
+| `CHASSIS_SPIN_SINE_CENTER_WZ` | 800 | 正弦中心，独立于固定/自适应模式的 4000 |
+| `CHASSIS_SPIN_SINE_MIN_WZ` | 200 | 起步及反馈失效时的同方向低速目标 |
+| `CHASSIS_SPIN_SINE_AMPLITUDE_WZ` | 200 | 稳态振幅 |
+| `CHASSIS_SPIN_SINE_PERIOD_S` | 4 | 周期，秒 |
+| `CHASSIS_SPIN_SINE_RISE_RATE` | 400 | 正向增长速率上限，命令单位/秒 |
+
+正常稳态指令为 `800 + 200 * sin(2*pi*t/4)`，方向由 `CHASSIS_SPIN_SINE_DIRECTION` 决定并在一次自转中锁定。以上 `wz` 均是现有工程的命令单位。默认麦轮几何且没有平移时，轮速目标幅值约为 3403..5672 rpm。进入自转后先等待保护和跟随条件稳定 200 ms，从 200 起步升到中心，再用 1 s 渐入振幅。
+
+原先沿用 4000 的中心，对应约 22689 rpm；现有功率模型在该转速、零电流时就预测四轮总功率约 153 W。在 50 W 预算下，跟随/电流保护会阻止中心到位，振幅一直为零。正弦现在单独使用可达的速度参数，保留原来的跟随、制动、功率、反馈和电流保护。受限时波形仍可能缩小或暂停，实车负载需要上板确认。
+
+使用独立目录构建，避免复用其他模式的对象文件：
+
+```powershell
+New-Item -ItemType Directory -Force build/sine-fix-usb | Out-Null
+make -j4 BUILD_DIR=build/sine-fix-usb CHASSIS_SPIN_MODE=2 USB_TELEMETRY_ENABLE=1 UART1_USE=0 CHASSIS_POWER_CONTROL_STAGE=3
+```
+
+上板后在 USB 仪表盘同时查看四轮**目标和实际 rpm**，等待起步完成，观察至少三个 4 s 周期。先检查目标是否产生正弦，再比较实际转速的跟随程度；如目标有波动而实际没有，结合功率计、输出电流及反馈在线状态判断限流或跟随能力。主机测试包含基础功率模型、最终预测保护和独立惯性负载；它不等同于实机验证。
+
 ## 工作流程
 
 首先进行初始化，`ChasissInit()`会被`RobotInit()`调用，进行裁判系统、底盘电机的初始化。如果为双板模式，则还会初始化IMU，并且将消息订阅者和发布者的初始化改为`CANComm`的初始化。

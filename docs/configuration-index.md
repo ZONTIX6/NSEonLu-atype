@@ -2,7 +2,9 @@
 
 整理日期：2026-10-13。配套说明：[宏与参数设置总表](configuration-guide.md)。
 
-扫描项目源码目录 application、bsp、modules、Inc、Src，以及 SEGGER RTT 配置文件，共 192 个 C/H 文件。收录 1076 条未被注释的宏定义、56 条注释中的宏选项、32 个配置结构体初值、27 个配置结构体字段声明、481 条 HAL 设置赋值/中断优先级。
+2026-10-15：仅同步正弦配置的独立中心/起步宏、振幅/上升速率及应用初始化分支；其余内容仍为原工作区快照。
+
+扫描项目源码目录 application、bsp、modules、Inc、Src，以及 SEGGER RTT 配置文件，共 192 个 C/H 文件。收录 1078 条未被注释的宏定义（含本次新增的 2 条正弦参数）、56 条注释中的宏选项、32 个配置结构体初值、27 个配置结构体字段声明、481 条 HAL 设置赋值/中断优先级。
 
 这里的“宏定义”是源码中的定义条目，包含头文件保护宏、函数式宏、协议常量、传感器寄存器常量和条件分支，**不代表每条都在当前编译中生效**。同名宏的不同条件分支分别列出，不合并默认值。条件路径的“→”表示同一 #if 链中经过 #elif/#else 到达该分支；#elif/#else 还隐含前面分支未命中。原行注释保留供核对，可能与代码不一致；实际替换文本以源码为准。
 
@@ -72,7 +74,7 @@
 | [modules/algorithm/chassis_power_outer_loop.h](../modules/algorithm/chassis_power_outer_loop.h) | 1 | 0 | 0 | 1 | 0 |
 | [modules/algorithm/chassis_power_transient.c](../modules/algorithm/chassis_power_transient.c) | 0 | 0 | 1 | 0 | 0 |
 | [modules/algorithm/chassis_power_transient.h](../modules/algorithm/chassis_power_transient.h) | 1 | 0 | 0 | 1 | 0 |
-| [modules/algorithm/chassis_spin_config.h](../modules/algorithm/chassis_spin_config.h) | 25 | 0 | 0 | 0 | 0 |
+| [modules/algorithm/chassis_spin_config.h](../modules/algorithm/chassis_spin_config.h) | 27 | 0 | 0 | 0 | 0 |
 | [modules/algorithm/chassis_spin.h](../modules/algorithm/chassis_spin.h) | 1 | 0 | 0 | 1 | 0 |
 | [modules/algorithm/controller.h](../modules/algorithm/controller.h) | 2 | 0 | 0 | 1 | 0 |
 | [modules/algorithm/crc16.h](../modules/algorithm/crc16.h) | 4 | 0 | 0 | 0 | 0 |
@@ -181,12 +183,17 @@
 
 以下记录原始定义，不自动推断运行路径或后续覆盖。未填字段为零；指针/回调表示绑定关系。
 
-[application/chassis/chassis.c:78](../application/chassis/chassis.c#L78)
+[application/chassis/chassis.c:90](../application/chassis/chassis.c#L90)
 
 ```c
 ChassisSpinConfig_s chassis_spin_config = {
+#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE
+    .fixed_wz = CHASSIS_SPIN_SINE_CENTER_WZ,
+    .min_wz = CHASSIS_SPIN_SINE_MIN_WZ,
+#else
     .fixed_wz = CHASSIS_SPIN_FIXED_WZ,
     .min_wz = CHASSIS_SPIN_MIN_WZ,
+#endif
     .max_wz = CHASSIS_SPIN_MAX_WZ,
     .gain_wz_per_w_s = CHASSIS_SPIN_POWER_GAIN,
     .rise_wz_per_s = CHASSIS_SPIN_RISE_RATE,
@@ -1792,12 +1799,14 @@ typedef struct {
 | [modules/algorithm/chassis_spin_config.h:53](../modules/algorithm/chassis_spin_config.h#L53) | `CHASSIS_SPIN_SETTLE_TIME_S` | `0.2f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SETTLE_TIME_S` |  |
 | [modules/algorithm/chassis_spin_config.h:56](../modules/algorithm/chassis_spin_config.h#L56) | `CHASSIS_SPIN_TRACKING_ERROR_RPM` | `500.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_TRACKING_ERROR_RPM` |  |
 | [modules/algorithm/chassis_spin_config.h:59](../modules/algorithm/chassis_spin_config.h#L59) | `CHASSIS_SPIN_BUDGET_DROP_RESET_W` | `1.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_BUDGET_DROP_RESET_W` |  |
-| [modules/algorithm/chassis_spin_config.h:63](../modules/algorithm/chassis_spin_config.h#L63) | `CHASSIS_SPIN_SINE_AMPLITUDE_WZ` | `1000.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SINE_AMPLITUDE_WZ` |  |
-| [modules/algorithm/chassis_spin_config.h:66](../modules/algorithm/chassis_spin_config.h#L66) | `CHASSIS_SPIN_SINE_PERIOD_S` | `4.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SINE_PERIOD_S` |  |
-| [modules/algorithm/chassis_spin_config.h:69](../modules/algorithm/chassis_spin_config.h#L69) | `CHASSIS_SPIN_SINE_RAMP_S` | `1.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SINE_RAMP_S` |  |
-| [modules/algorithm/chassis_spin_config.h:72](../modules/algorithm/chassis_spin_config.h#L72) | `CHASSIS_SPIN_SINE_RISE_RATE` | `2000.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SINE_RISE_RATE` |  |
-| [modules/algorithm/chassis_spin_config.h:75](../modules/algorithm/chassis_spin_config.h#L75) | `CHASSIS_SPIN_SINE_FALL_RATE` | `2000.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SINE_FALL_RATE` |  |
-| [modules/algorithm/chassis_spin_config.h:78](../modules/algorithm/chassis_spin_config.h#L78) | `CHASSIS_SPIN_SINE_DIRECTION` | `1` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SINE_DIRECTION` |  |
+| [modules/algorithm/chassis_spin_config.h:65](../modules/algorithm/chassis_spin_config.h#L65) | `CHASSIS_SPIN_SINE_CENTER_WZ` | `800.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SINE_CENTER_WZ` |  |
+| [modules/algorithm/chassis_spin_config.h:68](../modules/algorithm/chassis_spin_config.h#L68) | `CHASSIS_SPIN_SINE_MIN_WZ` | `200.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SINE_MIN_WZ` |  |
+| [modules/algorithm/chassis_spin_config.h:71](../modules/algorithm/chassis_spin_config.h#L71) | `CHASSIS_SPIN_SINE_AMPLITUDE_WZ` | `200.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SINE_AMPLITUDE_WZ` |  |
+| [modules/algorithm/chassis_spin_config.h:74](../modules/algorithm/chassis_spin_config.h#L74) | `CHASSIS_SPIN_SINE_PERIOD_S` | `4.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SINE_PERIOD_S` |  |
+| [modules/algorithm/chassis_spin_config.h:77](../modules/algorithm/chassis_spin_config.h#L77) | `CHASSIS_SPIN_SINE_RAMP_S` | `1.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SINE_RAMP_S` |  |
+| [modules/algorithm/chassis_spin_config.h:80](../modules/algorithm/chassis_spin_config.h#L80) | `CHASSIS_SPIN_SINE_RISE_RATE` | `400.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SINE_RISE_RATE` |  |
+| [modules/algorithm/chassis_spin_config.h:83](../modules/algorithm/chassis_spin_config.h#L83) | `CHASSIS_SPIN_SINE_FALL_RATE` | `2000.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SINE_FALL_RATE` |  |
+| [modules/algorithm/chassis_spin_config.h:86](../modules/algorithm/chassis_spin_config.h#L86) | `CHASSIS_SPIN_SINE_DIRECTION` | `1` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SINE_DIRECTION` |  |
 
 ## modules/algorithm/chassis_spin.h
 
