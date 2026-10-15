@@ -1,5 +1,48 @@
 (function (root) {
   'use strict';
+  const hoverStates = new WeakMap();
+  function hoverState(canvas) {
+    if (hoverStates.has(canvas)) return hoverStates.get(canvas);
+    const layer = document.createElement('div');layer.className = 'chart-hover';layer.hidden = true;
+    const guide = document.createElement('div');guide.className = 'chart-crosshair';
+    const tooltip = document.createElement('div');tooltip.className = 'chart-tooltip';tooltip.setAttribute('role', 'tooltip');
+    const heading = document.createElement('strong'), rows = document.createElement('div');rows.className = 'chart-tooltip-values';
+    tooltip.append(heading, rows);layer.append(guide, tooltip);canvas.parentElement.append(layer);
+    const state = {layer, guide, tooltip, heading, rows, pointer: null, traces: null};
+    canvas.addEventListener('pointermove', event => {
+      state.bounds = canvas.getBoundingClientRect();
+      state.pointer = {clientX: event.clientX, clientY: event.clientY};
+      renderHover(state);
+    });
+    canvas.addEventListener('pointerleave', () => {state.pointer = null;layer.hidden = true;});
+    hoverStates.set(canvas, state);
+    return state;
+  }
+  function renderHover(state) {
+    const {visible, start, end, pad, plotWidth, plotHeight} = state;
+    const pointer = state.pointer && {x: state.pointer.clientX - state.bounds.left, y: state.pointer.clientY - state.bounds.top};
+    const hide = () => {state.layer.hidden = true;};
+    if (!pointer || !visible || pointer.x < pad.left || pointer.x > pad.left + plotWidth || pointer.y < pad.top || pointer.y > pad.top + plotHeight || !visible.length) {hide();return;}
+    const time = start + (pointer.x - pad.left) / plotWidth * 60000;
+    let left = 0, right = visible.length;
+    while (left < right) {const middle = (left + right) >>> 1;if (visible[middle].arrivalMs < time) left = middle + 1;else right = middle;}
+    const before = visible[left - 1], after = visible[left];
+    if (before && after && before.segment !== after.segment && time > before.arrivalMs && time < after.arrivalMs) {hide();return;}
+    const sample = !before ? after : !after || time - before.arrivalMs <= after.arrivalMs - time ? before : after;
+    if (!sample || Math.abs(time - sample.arrivalMs) > 500) {hide();return;}
+    const pointX = pad.left + (sample.arrivalMs - start) / 60000 * plotWidth;
+    state.layer.hidden = false;
+    state.guide.style.left = `${pointX}px`;state.guide.style.top = `${pad.top}px`;state.guide.style.height = `${plotHeight}px`;
+    const seconds = Math.max(0, (end - sample.arrivalMs) / 1000);
+    state.heading.textContent = `距窗口末端 ${seconds.toFixed(2)} s · tick ${sample.tick} ms`;
+    state.traces.forEach((trace, index) => {
+      const value = sample.normalized.values[trace.key];
+      state.rows.children[index].querySelector('b').textContent = Number.isFinite(value) ? `${value.toFixed(state.unit === 'rpm' ? 0 : 2)} ${state.unit}` : '—';
+    });
+    const tooltipWidth = state.tooltip.offsetWidth, tooltipHeight = state.tooltip.offsetHeight;
+    state.tooltip.style.left = `${Math.max(0, Math.min(state.width - tooltipWidth, pointX + (pointX + tooltipWidth + 14 > state.width ? -tooltipWidth - 14 : 14)))}px`;
+    state.tooltip.style.top = `${Math.max(0, Math.min(state.height - tooltipHeight, pointer.y - 20))}px`;
+  }
   function drawChart(canvas, samples, traces, {now, unit = ''} = {}) {
     const bounds = canvas.getBoundingClientRect();
     const width = bounds.width, height = bounds.height;
@@ -56,6 +99,15 @@
     }
     ctx.restore();ctx.setLineDash([]);
     canvas.setAttribute('aria-label', `${unit} 趋势，保留最近 60 秒，${visible.length} 个样本。`);
+    const state = hoverState(canvas);
+    if (state.traces !== traces) {
+      state.rows.replaceChildren(...traces.map(trace => {
+        const row = document.createElement('div'), label = document.createElement('span'), dot = document.createElement('i'), value = document.createElement('b');
+        dot.style.background = trace.color;label.append(dot, document.createTextNode(trace.name));row.append(label, value);return row;
+      }));
+    }
+    Object.assign(state, {visible, traces, start, end, pad, plotWidth, plotHeight, width, height, unit, bounds});
+    renderHover(state);
   }
   root.TelemetryCharts = {drawChart};
 })(globalThis);

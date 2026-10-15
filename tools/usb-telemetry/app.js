@@ -24,9 +24,41 @@
   }});
   const colors = {lf: '#3478f6', rf: '#16a69b', lb: '#e3a234', rb: '#8a65d6'};
   const wheelNames = {lf: '左前 LF', rf: '右前 RF', lb: '左后 LB', rb: '右后 RB'};
-  const powerTraces = [{key: 'p_unlimited_cw', color: '#b7c1d1'}, {key: 'effective_limit_cw', color: '#8a65d6', dash: true}, {key: 'target_power_cw', color: '#e3a234', dash: true}, {key: 'p_limited_cw', color: '#16a69b'}, {key: 'p_meter_cw', color: '#3478f6'}];
-  const energyTraces = [{key: 'buffer_j', color: '#16a69b'}, {key: 'buffer_lower_cj', color: '#e3a234'}, {key: 'buffer_predicted_cj', color: '#8a65d6', dash: true}];
-  const rpmTraces = Object.keys(colors).flatMap(key => [{key: `target_${key}_rpm`, color: colors[key], dash: true}, {key: `rpm_${key}`, color: colors[key]}]);
+  const powerTraces = [{key: 'p_unlimited_cw', name: '模型未限流', color: '#b7c1d1'}, {key: 'effective_limit_cw', name: '最终限制', color: '#8a65d6', dash: true}, {key: 'target_power_cw', name: '目标功率', color: '#e3a234', dash: true}, {key: 'p_limited_cw', name: '模型限流后', color: '#16a69b'}, {key: 'p_meter_cw', name: '功率计实测', color: '#3478f6'}];
+  const energyTraces = [{key: 'buffer_j', name: '裁判原始值', color: '#16a69b'}, {key: 'buffer_lower_cj', name: '保守下限', color: '#e3a234'}, {key: 'buffer_predicted_cj', name: '预测能量', color: '#8a65d6', dash: true}];
+  const rpmTraces = Object.keys(colors).flatMap(key => [{key: `target_${key}_rpm`, name: `${wheelNames[key]} · 目标`, color: colors[key], dash: true}, {key: `rpm_${key}`, name: `${wheelNames[key]} · 实际`, color: colors[key]}]);
+  const charts = [{id: 'power-chart', title: '功率观测', unit: 'W', traces: powerTraces}, {id: 'energy-chart', title: '缓冲能量', unit: 'J', traces: energyTraces}, {id: 'rpm-chart', title: '四轮转速', unit: 'rpm', traces: rpmTraces}];
+  const chartDialog = $('chart-dialog');
+  let expandedChart = null, chartOpener = null;
+  function openChart(chart, opener) {
+    if (chartDialog.open) return;
+    expandedChart = chart;chartOpener = opener;
+    setText('expanded-chart-title', chart.title);
+    setText('expanded-chart-unit', chart.unit);
+    $('expanded-chart-legend').replaceChildren(...chart.traces.map(trace => {
+      const label = document.createElement('span'), dot = document.createElement('i');
+      dot.className = trace.dash ? 'line-dot' : 'color-dot';
+      if (trace.dash) dot.style.borderColor = trace.color;else dot.style.background = trace.color;
+      label.append(dot, document.createTextNode(trace.name));return label;
+    }));
+    chartDialog.showModal();lastRendered = null;
+  }
+  charts.forEach(chart => {
+    const canvas = $(chart.id), card = canvas.closest('.chart-card') || canvas.closest('.motor-plot');
+    const button = document.createElement('button');button.type = 'button';button.className = 'chart-expand-button';button.textContent = '放大 ↗';
+    button.setAttribute('aria-label', `放大${chart.title}`);button.setAttribute('aria-haspopup', 'dialog');button.setAttribute('aria-controls', 'chart-dialog');
+    (card.querySelector('.section-heading') || card.querySelector('.chart-legend')).append(button);
+    card.classList.add('expandable-chart');
+    card.addEventListener('click', () => openChart(chart, button));
+    canvas.tabIndex = 0;canvas.setAttribute('aria-description', '悬停查看采样值，点击或按 Enter 放大');
+    canvas.addEventListener('keydown', event => {if (event.key === 'Enter' || event.key === ' ') {event.preventDefault();openChart(chart, canvas);}});
+  });
+  $('close-chart-button').addEventListener('click', () => chartDialog.close());
+  let backdropPress = false;
+  const outsideDialog = event => {const rect = chartDialog.getBoundingClientRect();return event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom;};
+  chartDialog.addEventListener('pointerdown', event => {backdropPress = outsideDialog(event);});
+  chartDialog.addEventListener('click', event => {if (backdropPress && outsideDialog(event)) chartDialog.close();backdropPress = false;});
+  chartDialog.addEventListener('close', () => {expandedChart = null;lastRendered = null;if (chartOpener) chartOpener.focus({preventScroll: true});});
   const keys = ['W', 'S', 'D', 'A', 'SHIFT', 'CTRL', 'Q', 'E', 'R', 'F', 'G', 'Z', 'X', 'C', 'V', 'B'];
   keys.forEach(key => {const element = document.createElement('span'); element.textContent = key; $('keyboard').append(element);});
   const sources = [['remote', '遥控器', 'remote'], ['meter', '功率计', 'meter'], ['model', '电机功控模型', 'model'], ['referee', '裁判与缓冲', 'buffer'], ['cap', '超级电容', 'cap'], ['capInput', '电容输入反馈', 'capInput']];
@@ -143,9 +175,9 @@
     setText('rc-sw-left', switchNames[v.rc_sw_left] || '—');setText('rc-sw-right', switchNames[v.rc_sw_right] || '—');
     $('dial-indicator').style.left = `${50 + (valid.remote ? Math.max(-660, Math.min(660, v.rc_dial)) / 660 * 47 : 0)}%`;
     $('dial-indicator').style.opacity = valid.remote ? '1' : '.3';
-    [...$('keyboard').children].forEach((element, i) => {const pressed = valid.remote && Boolean(v.keys & (1 << i));element.classList.toggle('pressed', pressed);element.setAttribute('aria-label', `${keys[i]} ${pressed ? '按下' : valid.remote ? '松开' : '无数据'}`);});
+    [...$('keyboard').children].forEach((element, i) => {const pressed = Boolean(valid.remote && (v.keys & (1 << i)));element.classList.toggle('pressed', pressed);element.setAttribute('aria-label', `${keys[i]} ${pressed ? '按下' : valid.remote ? '松开' : '无数据'}`);});
     setText('mouse-x', format(v.mouse_x, 0));setText('mouse-y', format(v.mouse_y, 0));
-    for (const key of ['left', 'right']) {const pressed = valid.remote && Boolean(v[`mouse_${key}`]);$(`mouse-${key}`).classList.toggle('pressed', pressed);$(`mouse-${key}`).setAttribute('aria-label', `鼠标${key === 'left' ? '左' : '右'}键 ${pressed ? '按下' : valid.remote ? '松开' : '无数据'}`);}
+    for (const key of ['left', 'right']) {const pressed = Boolean(valid.remote && v[`mouse_${key}`]);$(`mouse-${key}`).classList.toggle('pressed', pressed);$(`mouse-${key}`).setAttribute('aria-label', `鼠标${key === 'left' ? '左' : '右'}键 ${pressed ? '按下' : valid.remote ? '松开' : '无数据'}`);}
     setText('rc-age', `遥控器样本年龄 ${ageText(ages.remote)} ms`);
     for (const [key, , ageKey] of sources) {
       const row = $(`source-${key}`);row.className = `source-row ${valid[key] && !(key === 'cap' && v.cap_error) ? 'good' : sample ? 'bad' : ''}`;
@@ -172,9 +204,8 @@
       const snapshot = view.snapshot(now);
       if (!view.paused || snapshot !== lastRendered) {
         renderValues(snapshot);
-        window.TelemetryCharts.drawChart($('power-chart'), snapshot.samples, powerTraces, {now: snapshot.at, unit: 'W'});
-        window.TelemetryCharts.drawChart($('energy-chart'), snapshot.samples, energyTraces, {now: snapshot.at, unit: 'J'});
-        window.TelemetryCharts.drawChart($('rpm-chart'), snapshot.samples, rpmTraces, {now: snapshot.at, unit: 'rpm'});
+        charts.forEach(chart => window.TelemetryCharts.drawChart($(chart.id), snapshot.samples, chart.traces, {now: snapshot.at, unit: chart.unit}));
+        if (expandedChart && chartDialog.open) window.TelemetryCharts.drawChart($('expanded-chart'), snapshot.samples, expandedChart.traces, {now: snapshot.at, unit: expandedChart.unit});
         lastRendered = snapshot;
       }
     }

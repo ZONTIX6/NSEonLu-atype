@@ -51,6 +51,16 @@ async (page) => {
   });
   await page.goto('http://127.0.0.1:4173');
   await page.setViewportSize({width: 1440, height: 1050});
+  const idlePresses = await page.evaluate(() => new Promise(resolve => {
+    const start = performance.now(), counts = [];
+    function observe(now) {
+      counts.push(document.querySelectorAll('#keyboard .pressed, .mouse-key.pressed').length);
+      if (now - start >= 300) resolve(counts);
+      else requestAnimationFrame(observe);
+    }
+    requestAnimationFrame(observe);
+  }));
+  check(idlePresses.every(count => count === 0), 'Disconnected keyboard/mouse flashed pressed: ' + idlePresses.join(','));
   await page.evaluate(() => {window.__cancelUsbSelection = true;});
   await page.locator('#connect-button').click();
   await page.waitForFunction(() => telemetryApp.session.state === 'idle');
@@ -61,7 +71,7 @@ async (page) => {
   await page.evaluate(() => {
     if (!__usbPort.signals.some(signal => signal.dataTerminalReady === true)) throw new Error('DTR not set');
     __usbPort.push(TelemetryProtocol.HEADER + '\r\n');
-    __sendUsbSample(1, 1000, 1234, {keys: 4, power_valid: 0});
+    __sendUsbSample(1, 1000, 1234, {keys: 4, mouse_left: 1, mouse_right: 1, power_valid: 0});
   });
   await page.waitForFunction(() => document.querySelector('#metric-meter').textContent.includes('12.34'));
   check((await page.locator('#metric-buffer').innerText()).includes('42'), 'Buffer J was not rendered');
@@ -71,6 +81,7 @@ async (page) => {
     const key = name => [...node.children].find(child => child.textContent === name);
     return key('D').classList.contains('pressed') && !key('A').classList.contains('pressed');
   }), 'Remote keyboard bit 2 must light D, not A');
+  check(await page.locator('.mouse-key.pressed').count() === 2, 'Valid mouse buttons must light up');
 
   await page.locator('#pause-button').click();
   const frozen = await page.locator('#metric-meter').innerText();
@@ -85,6 +96,7 @@ async (page) => {
   check(await page.evaluate(() => telemetryApp.store.stats.missing === 1), 'Sequence gap was not counted');
   await page.waitForFunction(() => telemetryApp.store.isStale(performance.now()));
   await page.waitForFunction(() => /陈旧|超时|无新/.test(document.querySelector('#connection-status').textContent));
+  check(await page.locator('#keyboard .pressed, .mouse-key.pressed').count() === 0, 'Stale remote buttons must be cleared');
   await page.evaluate(() => {__sendUsbSample(5, 1600);});
   await page.waitForFunction(() => document.querySelector('#metric-meter').textContent.includes('12.34'));
 
@@ -116,5 +128,5 @@ async (page) => {
   await page.waitForFunction(() => document.documentElement.scrollWidth <= innerWidth);
   await page.screenshot({path: 'output/playwright/usb-dashboard-mobile.png', fullPage: true});
   check(errors.length === 0, 'Browser page errors: ' + errors.join('; '));
-  return {passed: true, cases: ['cancel', 'Web Serial chunks', 'DTR', 'W/J/% units', 'motor health independent of model', 'keyboard bit mapping', 'pause keeps receiving', 'offline', 'sequence gap', 'stale', 'CSV export', 'unplug', 'reconnect', 'demo', '375px layout']};
+  return {passed: true, cases: ['disconnected buttons stay off', 'cancel', 'Web Serial chunks', 'DTR', 'W/J/% units', 'motor health independent of model', 'keyboard bit mapping', 'mouse buttons', 'pause keeps receiving', 'offline', 'sequence gap', 'stale buttons clear', 'CSV export', 'unplug', 'reconnect', 'demo', '375px layout']};
 }

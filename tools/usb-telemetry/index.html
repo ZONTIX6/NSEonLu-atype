@@ -49,5 +49,11 @@
     <section class="card motors-card" aria-label="底盘与电机"><div class="section-heading"><div><span class="eyebrow">CHASSIS & MOTORS</span><h2>底盘与四轮电机</h2></div><span id="chassis-mode" class="status-pill neutral">等待底盘数据</span></div><div class="chassis-commands"><span>Vx 指令 <strong id="vx-command">—</strong></span><span>Vy 指令 <strong id="vy-command">—</strong></span><span>Wz 指令 <strong id="wz-command">—</strong></span><small>控制原始单位</small></div><div class="motor-layout"><div class="motor-plot"><div class="chart-legend"><span><i class="color-dot blue"></i>左前 LF</span><span><i class="color-dot teal"></i>右前 RF</span><span><i class="color-dot amber"></i>左后 LB</span><span><i class="color-dot purple"></i>右后 RB</span><span class="legend-note">实线：实际 · 虚线：目标</span></div><div class="chart-container"><canvas id="rpm-chart" role="img" aria-label="四轮目标与实际转速，单位 rpm"></canvas><div class="chart-empty" data-empty-chart><span class="empty-wave">∿</span><strong>四轮转速 · rpm</strong></div></div></div><div class="motor-table-wrap"><table class="motor-table"><caption>电机转速与电流</caption><thead><tr><th>电机 / 状态</th><th>目标<br><small>rpm</small></th><th>实际<br><small>rpm</small></th><th>命令<br><small>电流原值</small></th><th>反馈<br><small>电流原值</small></th></tr></thead><tbody id="motor-table-body"></tbody></table><p class="table-note">电流为 DJI 原始单位；未换算为安培。</p></div></div></section>
     <footer class="app-footer"><span>USB CDC · CSV v1 · 最近 60 秒滚动窗口</span><span>只读观测 · 不发送控制指令</span></footer>
   </main>
+  <dialog id="chart-dialog" class="chart-dialog" aria-labelledby="expanded-chart-title">
+    <div class="section-heading"><div><span class="eyebrow">WAVEFORM DETAIL</span><h2><span id="expanded-chart-title">波形详情</span> <small id="expanded-chart-unit"></small></h2></div><button type="button" class="secondary-button" id="close-chart-button" autofocus>关闭 <span aria-hidden="true">×</span></button></div>
+    <div class="chart-legend" id="expanded-chart-legend"></div>
+    <div class="chart-container"><canvas id="expanded-chart" role="img" aria-label="放大波形图"></canvas><div class="chart-empty" data-empty-chart><span class="empty-wave">∿</span><strong>等待第一帧数据</strong><span>连接 C 板或启动演示，即可观察实时曲线</span></div></div>
+    <div class="chart-footer"><span>悬停查看采样值 · 最近 60 秒</span><span>跟随当前显示状态 · Esc 关闭</span></div>
+  </dialog>
 </body>
 </html>

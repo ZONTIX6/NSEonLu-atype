@@ -62,6 +62,10 @@ make -j8 BUILD_DIR=build_usb_vision UART1_USE=0 USB_TELEMETRY_ENABLE=0
 
 “暂停显示”只冻结画面，仍接收数据；恢复后回到最新值。页面最多保留最近 60 秒且不超过 3000 条样本。导出 CSV 保存这个滚动窗口，原始整数单位保持不变；可导入项目现有 [波形工具](../waveform-viewer/README.md) 做离线分析。
 
+点击功率、缓冲能量卡片或四轮转速绘图区可弹窗放大，也可使用图表旁的“放大 ↗”按钮。按 Esc、点击关闭按钮或弹窗外区域返回；图表获得键盘焦点后，Enter / 空格也能放大。放大图跟随当前实时或暂停状态，暂停时仍可打开和调整窗口大小。
+
+鼠标放在普通图或大图内，可查看定位线对应的最近真实采样，包括距窗口末端的秒数、板端 tick（ms）、各条曲线名称和数值。功率为 W，能量为 J，转速为 rpm；读数已经换算，CSV 导出仍保留原始整数单位。无效来源显示“—”，通信断点和距离采样超过 500 ms 的空白不显示读数。无数据或遥控器过期时，键盘和鼠标按键保持熄灭。
+
 ## CSV v1 协议
 
 行以 CRLF 结束，表头在串口打开后及每秒重发。串口读取块不等同于一整行，解析器能处理任意分片。
@@ -103,6 +107,7 @@ node --test tools/waveform-viewer/tests/core.test.cjs
 ```powershell
 playwright-cli -s=usb open http://127.0.0.1:4173 --browser msedge
 playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/browser-check.js
+playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/chart-check.js
 playwright-cli -s=usb close
 ```
 
