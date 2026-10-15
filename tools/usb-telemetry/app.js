@@ -29,10 +29,25 @@
   const rpmTraces = Object.keys(colors).flatMap(key => [{key: `target_${key}_rpm`, name: `${wheelNames[key]} · 目标`, color: colors[key], dash: true}, {key: `rpm_${key}`, name: `${wheelNames[key]} · 实际`, color: colors[key]}]);
   const charts = [{id: 'power-chart', title: '功率观测', unit: 'W', traces: powerTraces}, {id: 'energy-chart', title: '缓冲能量', unit: 'J', traces: energyTraces}, {id: 'rpm-chart', title: '四轮转速', unit: 'rpm', traces: rpmTraces}];
   const chartDialog = $('chart-dialog');
-  let expandedChart = null, chartOpener = null;
+  const expandedCanvas = $('expanded-chart');
+  let expandedChart = null, chartOpener = null, chartRange = [-60000, 0];
+  function renderExpandedChart(snapshot) {
+    if (!expandedChart || !chartDialog.open) return;
+    window.TelemetryCharts.drawChart(expandedCanvas, snapshot.samples, expandedChart.traces, {now: snapshot.at, unit: expandedChart.unit, range: chartRange});
+    setText('expanded-chart-range', `显示 ${Number(((chartRange[1] - chartRange[0]) / 1000).toFixed(3))} s · Ctrl + 滚轮缩放`);
+    $('reset-chart-button').disabled = chartRange[1] - chartRange[0] === 60000;
+  }
+  function zoomChart(factor, fraction = .5) {
+    const duration = chartRange[1] - chartRange[0], next = Math.max(100, Math.min(60000, duration * factor));
+    const anchor = chartRange[0] + fraction * duration;
+    const start = Math.max(-60000, Math.min(-next, anchor - fraction * next));
+    chartRange = [start, start + next];
+    renderExpandedChart(view.snapshot(clock()));
+  }
+  function resetChartZoom() {chartRange = [-60000, 0];renderExpandedChart(view.snapshot(clock()));}
   function openChart(chart, opener) {
     if (chartDialog.open) return;
-    expandedChart = chart;chartOpener = opener;
+    expandedChart = chart;chartOpener = opener;chartRange = [-60000, 0];
     setText('expanded-chart-title', chart.title);
     setText('expanded-chart-unit', chart.unit);
     $('expanded-chart-legend').replaceChildren(...chart.traces.map(trace => {
@@ -54,6 +69,21 @@
     canvas.addEventListener('keydown', event => {if (event.key === 'Enter' || event.key === ' ') {event.preventDefault();openChart(chart, canvas);}});
   });
   $('close-chart-button').addEventListener('click', () => chartDialog.close());
+  $('reset-chart-button').addEventListener('click', resetChartZoom);
+  chartDialog.addEventListener('wheel', event => {
+    if (!chartDialog.open || !event.ctrlKey) return;
+    event.preventDefault();
+    if (event.target !== expandedCanvas || !event.deltaY) return;
+    const rect = expandedCanvas.getBoundingClientRect(), x = event.clientX - rect.left, y = event.clientY - rect.top;
+    if (x < 42 || x > rect.width - 12 || y < 12 || y > rect.height - 25) return;
+    const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? rect.height : 1);
+    zoomChart(Math.exp(Math.max(-1, Math.min(1, delta * .002))), (x - 42) / (rect.width - 54));
+  }, {passive: false});
+  chartDialog.addEventListener('keydown', event => {
+    if (!chartDialog.open || !event.ctrlKey || event.altKey || !['+', '=', '-', '0'].includes(event.key)) return;
+    event.preventDefault();
+    if (event.key === '0') resetChartZoom();else zoomChart(event.key === '-' ? 1.25 : .8);
+  });
   let backdropPress = false;
   const outsideDialog = event => {const rect = chartDialog.getBoundingClientRect();return event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom;};
   chartDialog.addEventListener('pointerdown', event => {backdropPress = outsideDialog(event);});
@@ -205,7 +235,7 @@
       if (!view.paused || snapshot !== lastRendered) {
         renderValues(snapshot);
         charts.forEach(chart => window.TelemetryCharts.drawChart($(chart.id), snapshot.samples, chart.traces, {now: snapshot.at, unit: chart.unit}));
-        if (expandedChart && chartDialog.open) window.TelemetryCharts.drawChart($('expanded-chart'), snapshot.samples, expandedChart.traces, {now: snapshot.at, unit: expandedChart.unit});
+        renderExpandedChart(snapshot);
         lastRendered = snapshot;
       }
     }

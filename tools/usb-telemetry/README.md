@@ -64,6 +64,8 @@ make -j8 BUILD_DIR=build_usb_vision UART1_USE=0 USB_TELEMETRY_ENABLE=0
 
 点击功率、缓冲能量卡片或四轮转速绘图区可弹窗放大，也可使用图表旁的“放大 ↗”按钮。按 Esc、点击关闭按钮或弹窗外区域返回；图表获得键盘焦点后，Enter / 空格也能放大。放大图跟随当前实时或暂停状态，暂停时仍可打开和调整窗口大小。
 
+在放大图内按住 Ctrl 滚动滚轮，可以围绕鼠标位置缩放时间轴，查看 100 ms～60 s 的细节，纵轴自动适配可见数据。Ctrl + 加号/减号以图中心缩放；Ctrl + 0 或“恢复全图”回到 60 s。弹窗打开时这些操作只作用于波形，关闭后恢复浏览器快捷键；普通滚轮仍可滚动。缩放不改变暂停状态，实时模式保持缩放范围随数据前进，每次重新打开图表恢复全图。坐标与悬停时间均相对当前显示窗口末端。
+
 鼠标放在普通图或大图内，可查看定位线对应的最近真实采样，包括距窗口末端的秒数、板端 tick（ms）、各条曲线名称和数值。功率为 W，能量为 J，转速为 rpm；读数已经换算，CSV 导出仍保留原始整数单位。无效来源显示“—”，通信断点和距离采样超过 500 ms 的空白不显示读数。无数据或遥控器过期时，键盘和鼠标按键保持熄灭。
 
 ## CSV v1 协议
@@ -108,6 +110,7 @@ node --test tools/waveform-viewer/tests/core.test.cjs
 playwright-cli -s=usb open http://127.0.0.1:4173 --browser msedge
 playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/browser-check.js
 playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/chart-check.js
+playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/zoom-check.js
 playwright-cli -s=usb close
 ```
 

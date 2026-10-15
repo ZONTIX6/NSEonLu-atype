@@ -50,10 +50,10 @@
     <footer class="app-footer"><span>USB CDC · CSV v1 · 最近 60 秒滚动窗口</span><span>只读观测 · 不发送控制指令</span></footer>
   </main>
   <dialog id="chart-dialog" class="chart-dialog" aria-labelledby="expanded-chart-title">
-    <div class="section-heading"><div><span class="eyebrow">WAVEFORM DETAIL</span><h2><span id="expanded-chart-title">波形详情</span> <small id="expanded-chart-unit"></small></h2></div><button type="button" class="secondary-button" id="close-chart-button" autofocus>关闭 <span aria-hidden="true">×</span></button></div>
+    <div class="section-heading"><div><span class="eyebrow">WAVEFORM DETAIL</span><h2><span id="expanded-chart-title">波形详情</span> <small id="expanded-chart-unit"></small></h2></div><div class="chart-dialog-actions"><button type="button" class="secondary-button" id="reset-chart-button" disabled>恢复全图</button><button type="button" class="secondary-button" id="close-chart-button" autofocus>关闭 <span aria-hidden="true">×</span></button></div></div>
     <div class="chart-legend" id="expanded-chart-legend"></div>
     <div class="chart-container"><canvas id="expanded-chart" role="img" aria-label="放大波形图"></canvas><div class="chart-empty" data-empty-chart><span class="empty-wave">∿</span><strong>等待第一帧数据</strong><span>连接 C 板或启动演示，即可观察实时曲线</span></div></div>
-    <div class="chart-footer"><span>悬停查看采样值 · 最近 60 秒</span><span>跟随当前显示状态 · Esc 关闭</span></div>
+    <div class="chart-footer"><span id="expanded-chart-range">显示 60 s · Ctrl + 滚轮缩放</span><span>Ctrl + 加减号缩放 · Ctrl + 0 复位 · Esc 关闭</span></div>
   </dialog>
 </body>
 </html>
