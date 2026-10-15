@@ -15,7 +15,7 @@
   }});
   const session = new window.TelemetrySerial.SerialSession({serial: navigator.serial, onChunk: chunk => parser.push(chunk), onState(state) {
     if (state === 'connected') {hadError = false; message('串口已打开，等待 CSV v1 遥测。若持续无数据，请确认固件启用了 USB 遥测模式。');}
-    if (state === 'idle' && mode === 'real' && !hadError) message(store.latest ? '串口已断开，最后采集的滚动窗口仍可导出。点击“连接 C 板”可重新采集。' : '未连接。请确认 C 板已连接，点击“连接 C 板”选择串口。');
+    if (state === 'idle' && mode === 'real' && !hadError) message(store.latest ? '串口已断开，最后采集的历史数据仍可导出。点击“连接 C 板”可重新采集。' : '未连接。请确认 C 板已连接，点击“连接 C 板”选择串口。');
     renderToolbar(clock());
   }, onError(error) {
     hadError = true;
@@ -35,7 +35,22 @@
   });
   const chartDialog = $('chart-dialog');
   const expandedCanvas = $('expanded-chart');
-  let expandedChart = null, chartOpener = null, chartRange = [-60000, 0];
+  let expandedChart = null, chartOpener = null, chartRange = [-60000, 0], pan = null;
+  function earliestStart(snapshot, duration) {return Math.min(-duration, (snapshot.samples[0]?.arrivalMs ?? snapshot.at) - snapshot.at);}
+  function setChartStart(start, duration = chartRange[1] - chartRange[0]) {
+    const snapshot = view.snapshot(clock());
+    start = Math.max(earliestStart(snapshot, duration), Math.min(-duration, start));
+    chartRange = [start, start + duration];renderExpandedChart(snapshot);
+  }
+  function stopPan() {
+    const pointerId = pan?.pointerId;pan = null;expandedCanvas.classList.remove('panning');
+    if (pointerId !== undefined && expandedCanvas.hasPointerCapture(pointerId)) expandedCanvas.releasePointerCapture(pointerId);
+  }
+  function pauseDisplay() {if (!view.paused) {const now = clock();view.pause(now);lastRendered = null;renderToolbar(now);}}
+  function resumeDisplay() {
+    stopPan();view.resume();chartRange = [-60000, 0];charts.forEach(chart => {chart.historyRange = null;});
+    lastRendered = null;renderToolbar(clock());renderExpandedChart(view.snapshot(clock()));
+  }
   function drawChartView(canvas, chart, snapshot, range) {
     window.TelemetryCharts.drawChart(canvas, snapshot.samples, chart.traces, {now: snapshot.at, unit: chart.unit, rightUnit: chart.rightUnit, range});
     const empty = canvas.parentElement.querySelector('[data-empty-chart]');
@@ -86,27 +101,33 @@
   }
   function renderExpandedChart(snapshot) {
     if (!expandedChart || !chartDialog.open) return;
+    if (view.paused) expandedChart.historyRange = chartRange.slice();
     setText('expanded-chart-unit', [...new Set(expandedChart.traces.map(trace => trace.unit))].join(' / ') || expandedChart.unit);
     drawChartView(expandedCanvas, expandedChart, snapshot, chartRange);
     setText('expanded-chart-range', `显示 ${Number(((chartRange[1] - chartRange[0]) / 1000).toFixed(3))} s · Ctrl + 滚轮缩放`);
-    $('reset-chart-button').disabled = chartRange[1] - chartRange[0] === 60000;
+    $('reset-chart-button').disabled = chartRange[1] - chartRange[0] === 60000 && chartRange[1] === 0;
+    const duration = chartRange[1] - chartRange[0], minimum = earliestStart(snapshot, duration), position = $('history-position');
+    position.min = String(Math.floor(minimum));position.max = String(Math.ceil(-duration));position.value = String(chartRange[0]);
+    position.disabled = !snapshot.latest || minimum >= -duration;
+    setText('history-mode', view.paused ? '历史回看 · 已暂停' : '实时跟随');
+    setText('history-readout', `末端前 ${(-chartRange[0] / 1000).toFixed(2)} s ～ ${(-chartRange[1] / 1000).toFixed(2)} s`);
+    $('return-live-button').disabled = !store.latest || !view.paused && chartRange[0] === -60000 && chartRange[1] === 0;
   }
   function zoomChart(factor, fraction = .5) {
+    stopPan();
     const duration = chartRange[1] - chartRange[0], next = Math.max(100, Math.min(60000, duration * factor));
     const anchor = chartRange[0] + fraction * duration;
-    const start = Math.max(-60000, Math.min(-next, anchor - fraction * next));
-    chartRange = [start, start + next];
-    renderExpandedChart(view.snapshot(clock()));
+    setChartStart(anchor - fraction * next, next);
   }
-  function resetChartZoom() {chartRange = [-60000, 0];renderExpandedChart(view.snapshot(clock()));}
+  function resetChartZoom() {stopPan();chartRange = [-60000, 0];renderExpandedChart(view.snapshot(clock()));}
   function openChart(chart, opener) {
     if (chartDialog.open) return;
-    expandedChart = chart;chartOpener = opener;chartRange = [-60000, 0];
+    expandedChart = chart;chartOpener = opener;chartRange = view.paused && chart.historyRange ? chart.historyRange.slice() : [-60000, 0];
     setText('expanded-chart-title', chart.title);
     setText('expanded-chart-unit', chart.unit);
     renderLegend($('expanded-chart-legend'), chart);
     $('expanded-trace-picker').replaceChildren(createTracePicker(chart));
-    chartDialog.showModal();lastRendered = null;
+    chartDialog.showModal();lastRendered = null;renderExpandedChart(view.snapshot(clock()));
   }
   charts.forEach(chart => {
     const canvas = $(chart.id), card = canvas.closest('.chart-card') || canvas.closest('.motor-plot');
@@ -123,6 +144,26 @@
   });
   $('close-chart-button').addEventListener('click', () => chartDialog.close());
   $('reset-chart-button').addEventListener('click', resetChartZoom);
+  $('return-live-button').addEventListener('click', resumeDisplay);
+  $('history-position').addEventListener('pointerdown', pauseDisplay);
+  $('history-position').addEventListener('input', event => {pauseDisplay();setChartStart(Number(event.currentTarget.value));});
+  expandedCanvas.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || !store.latest) return;
+    const rect = expandedCanvas.getBoundingClientRect(), bounds = window.TelemetryCharts.getPlotBounds(expandedCanvas);
+    if (!bounds || event.clientX < rect.left + bounds.left || event.clientX > rect.left + bounds.left + bounds.width || event.clientY < rect.top + bounds.top || event.clientY > rect.top + bounds.top + bounds.height) return;
+    event.preventDefault();
+    pan = {pointerId: event.pointerId, x: event.clientX, width: bounds.width, range: chartRange.slice(), active: false};
+    expandedCanvas.setPointerCapture(event.pointerId);
+  });
+  expandedCanvas.addEventListener('pointermove', event => {
+    if (!pan || event.pointerId !== pan.pointerId) return;
+    const delta = event.clientX - pan.x;
+    if (!pan.active && Math.abs(delta) < 4) return;
+    if (!pan.active) {pan.active = true;pauseDisplay();expandedCanvas.classList.add('panning');}
+    const duration = pan.range[1] - pan.range[0];
+    setChartStart(pan.range[0] - delta / pan.width * duration, duration);
+  });
+  for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) expandedCanvas.addEventListener(event, stopPan);
   chartDialog.addEventListener('wheel', event => {
     if (!chartDialog.open || !event.ctrlKey) return;
     event.preventDefault();
@@ -141,7 +182,7 @@
   const outsideDialog = event => {const rect = chartDialog.getBoundingClientRect();return event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom;};
   chartDialog.addEventListener('pointerdown', event => {backdropPress = outsideDialog(event);});
   chartDialog.addEventListener('click', event => {if (backdropPress && outsideDialog(event)) chartDialog.close();backdropPress = false;});
-  chartDialog.addEventListener('close', () => {expandedChart = null;lastRendered = null;if (chartOpener) chartOpener.focus({preventScroll: true});});
+  chartDialog.addEventListener('close', () => {stopPan();expandedChart = null;lastRendered = null;if (chartOpener) chartOpener.focus({preventScroll: true});});
   const keys = ['W', 'S', 'D', 'A', 'SHIFT', 'CTRL', 'Q', 'E', 'R', 'F', 'G', 'Z', 'X', 'C', 'V', 'B'];
   keys.forEach(key => {const element = document.createElement('span'); element.textContent = key; $('keyboard').append(element);});
   const sources = [['remote', '遥控器', 'remote'], ['meter', '功率计', 'meter'], ['model', '电机功控模型', 'model'], ['referee', '裁判与缓冲', 'buffer'], ['cap', '超级电容', 'cap'], ['capInput', '电容输入反馈', 'capInput']];
@@ -159,7 +200,7 @@
     $('motor-table-body').append(row);
   });
 
-  function resetData() {store.clear(); parser.reset(); view.resume(); lastRendered = null; hadError = false;}
+  function resetData() {stopPan();store.clear();parser.reset();view.resume();chartRange = [-60000, 0];charts.forEach(chart => {chart.historyRange = null;});lastRendered = null;hadError = false;}
   function stopDemo() {if (demoTimer !== null) {clearInterval(demoTimer); demoTimer = null;} renderToolbar(clock());}
   function makeDemoSample(sequence) {
     const t = sequence / 50, wave = Math.sin(t * .8), row = Object.fromEntries(P.FIELDS.map(key => [key, 0]));
@@ -172,14 +213,17 @@
     stopDemo(); resetData(); mode = 'demo'; demoSequence = 0;
     parser.push(P.HEADER + '\r\n');
     // Synthetic history fills the visible window without affecting real sessions.
-    const start = clock() - 60000;
+    const start = clock() - P.HISTORY_MS;
     let result;
     const demoParser = new P.StreamParser({onSample: sample => {result = sample;}});
     demoParser.push(P.HEADER + '\n');
-    for (let index = 0; index < 3000; index++) {
+    for (let index = 0; index < P.MAX_SAMPLES; index++) {
       demoParser.push(makeDemoSample(demoSequence++) + '\n');
       store.add(result, start + index * 20);
     }
+    // Keep the generated history adjacent to the first live demo frame.
+    const offset = clock() - (start + P.HISTORY_MS);
+    store.samples.forEach(sample => {sample.arrivalMs += offset;});
     demoTimer = setInterval(() => {parser.push(makeDemoSample(demoSequence++) + '\r\n');}, 20);
     message('演示数据由本机生成，仅用于预览。连接真实 C 板时将自动结束演示并清空记录。');
     renderToolbar(clock());
@@ -193,7 +237,7 @@
   });
   $('demo-button').addEventListener('click', () => {if (demoTimer !== null) stopDemo();else startDemo();});
   $('stop-demo-button').addEventListener('click', stopDemo);
-  $('pause-button').addEventListener('click', () => {if (view.paused) view.resume();else view.pause(clock()); lastRendered = null;renderToolbar(clock());});
+  $('pause-button').addEventListener('click', () => {if (view.paused) resumeDisplay();else pauseDisplay();});
   $('export-button').addEventListener('click', () => {
     if (!store.samples.length) return;
     const url = URL.createObjectURL(new Blob([store.exportCSV()], {type: 'text/csv;charset=utf-8'}));
@@ -293,7 +337,7 @@
     }
     requestAnimationFrame(render);
   }
-  window.addEventListener('resize', () => {lastRendered = null;});
+  window.addEventListener('resize', () => {stopPan();lastRendered = null;});
   window.addEventListener('pagehide', () => {stopDemo();session.disconnect();});
   window.telemetryApp = {store, parser, session, view, get mode() {return mode;}, get paused() {return view.paused;}};
   if (!('serial' in navigator)) message('此浏览器不支持 Web Serial。请用桌面版 Chrome / Edge 打开 localhost 页面；演示数据仍可使用。');

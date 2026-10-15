@@ -24,7 +24,7 @@
       <p id="message" class="connection-message" role="status">将 C 板连接至电脑，点击“连接 C 板”并选择对应串口。也可用演示数据预览。</p>
     </section>
     <div class="demo-notice" id="demo-notice" hidden><span><strong>演示模式</strong> 当前为模拟数据，与真实 C 板无关。连接串口将清空演示记录。</span><button type="button" id="stop-demo-button">结束演示</button></div>
-    <div class="stream-bar"><div class="stream-stats"><span>接收 <strong id="rx-rate">—</strong><small>Hz</small></span><span>样本年龄 <strong id="sample-age">—</strong><small>ms</small></span><span>窗口 <strong id="sample-count">0</strong><small>/ 3000</small></span><span>缺行 <strong id="missing-count">0</strong></span><span>坏行 <strong id="bad-count">0</strong></span><span>板端丢弃 <strong id="tx-drop-count">—</strong></span></div><span id="display-status" class="display-status">等待数据</span></div>
+    <div class="stream-bar"><div class="stream-stats"><span>接收 <strong id="rx-rate">—</strong><small>Hz</small></span><span>样本年龄 <strong id="sample-age">—</strong><small>ms</small></span><span>历史 <strong id="sample-count">0</strong><small>/ 30000 · 10 分钟</small></span><span>缺行 <strong id="missing-count">0</strong></span><span>坏行 <strong id="bad-count">0</strong></span><span>板端丢弃 <strong id="tx-drop-count">—</strong></span></div><span id="display-status" class="display-status">等待数据</span></div>
 
     <section class="metrics" aria-label="关键数据">
       <article class="metric-card card"><div class="metric-label"><i class="color-dot blue"></i>实测底盘功率<span class="metric-tag">功率计</span></div><div class="metric-number"><strong id="metric-meter">—</strong><span>W</span></div><p id="metric-meter-detail">等待功率计数据</p><span class="metric-accent blue-accent"></span></article>
@@ -47,13 +47,14 @@
     </div>
 
     <section class="card motors-card" aria-label="底盘与电机"><div class="section-heading"><div><span class="eyebrow">CHASSIS & MOTORS</span><h2>底盘与四轮电机</h2></div><span id="chassis-mode" class="status-pill neutral">等待底盘数据</span></div><div class="chassis-commands"><span>Vx 指令 <strong id="vx-command">—</strong></span><span>Vy 指令 <strong id="vy-command">—</strong></span><span>Wz 指令 <strong id="wz-command">—</strong></span><small>控制原始单位</small></div><div class="motor-layout"><div class="motor-plot"><div class="chart-legend"><span><i class="color-dot blue"></i>左前 LF</span><span><i class="color-dot teal"></i>右前 RF</span><span><i class="color-dot amber"></i>左后 LB</span><span><i class="color-dot purple"></i>右后 RB</span><span class="legend-note">实线：实际 · 虚线：目标</span></div><div class="chart-container"><canvas id="rpm-chart" role="img" aria-label="四轮目标与实际转速，单位 rpm"></canvas><div class="chart-empty" data-empty-chart><span class="empty-wave">∿</span><strong>四轮转速 · rpm</strong></div></div></div><div class="motor-table-wrap"><table class="motor-table"><caption>电机转速与电流</caption><thead><tr><th>电机 / 状态</th><th>目标<br><small>rpm</small></th><th>实际<br><small>rpm</small></th><th>命令<br><small>电流原值</small></th><th>反馈<br><small>电流原值</small></th></tr></thead><tbody id="motor-table-body"></tbody></table><p class="table-note">电流为 DJI 原始单位；未换算为安培。</p></div></div></section>
-    <footer class="app-footer"><span>USB CDC · CSV v1 · 最近 60 秒滚动窗口</span><span>只读观测 · 不发送控制指令</span></footer>
+    <footer class="app-footer"><span>USB CDC · CSV v1 · 最近 10 分钟历史 · 默认显示 60 秒</span><span>只读观测 · 不发送控制指令</span></footer>
   </main>
   <dialog id="chart-dialog" class="chart-dialog" aria-labelledby="expanded-chart-title">
     <div class="section-heading"><div><span class="eyebrow">WAVEFORM DETAIL</span><h2><span id="expanded-chart-title">波形详情</span> <small id="expanded-chart-unit"></small></h2></div><div class="chart-dialog-actions"><button type="button" class="secondary-button" id="reset-chart-button" disabled>恢复全图</button><button type="button" class="secondary-button" id="close-chart-button" autofocus>关闭 <span aria-hidden="true">×</span></button></div></div>
     <div class="chart-legend" id="expanded-chart-legend"></div>
     <div class="chart-layout expanded-chart-layout"><div class="chart-container"><canvas id="expanded-chart" role="img" aria-label="放大波形图"></canvas><div class="chart-empty" data-empty-chart><span class="empty-wave">∿</span><strong>等待第一帧数据</strong><span>连接 C 板或启动演示，即可观察实时曲线</span></div></div><div id="expanded-trace-picker"></div></div>
-    <div class="chart-footer"><span id="expanded-chart-range">显示 60 s · Ctrl + 滚轮缩放</span><span>Ctrl + 加减号缩放 · Ctrl + 0 复位 · Esc 关闭</span></div>
+    <div class="history-navigation"><div class="history-caption"><strong id="history-mode">实时跟随</strong><output id="history-readout"></output><button type="button" class="secondary-button" id="return-live-button">返回实时</button></div><label for="history-position">历史位置</label><input type="range" id="history-position" aria-label="历史位置" min="-60000" max="-60000" value="-60000" step="1" disabled></div>
+    <div class="chart-footer"><span id="expanded-chart-range">显示 60 s · Ctrl + 滚轮缩放</span><span>拖动平移 · Ctrl + 0 复位 · Esc 关闭</span></div>
   </dialog>
 </body>
 </html>

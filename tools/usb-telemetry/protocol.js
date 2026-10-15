@@ -7,6 +7,7 @@
   const FIELDS = Object.freeze(('version,seq,tick,tx_drop_count,chassis_valid,chassis_tick_ms,chassis_mode,vx_cmd_milli,vy_cmd_milli,wz_cmd_milli,rc_online,rc_age_ms,rc_lx,rc_ly,rc_rx,rc_ry,rc_dial,rc_sw_left,rc_sw_right,mouse_x,mouse_y,mouse_left,mouse_right,keys,model_tick_ms,motor_online_mask,motor_enabled_mask,rpm_lf,rpm_rf,rpm_lb,rpm_rb,target_lf_rpm,target_rf_rpm,target_lb_rpm,target_rb_rpm,i_lf_cmd,i_rf_cmd,i_lb_cmd,i_rb_cmd,i_lf_fb,i_rf_fb,i_lb_fb,i_rb_fb,power_valid,p_unlimited_cw,p_limited_cw,effective_limit_cw,p_meter_cw,meter_online,meter_age_ms,nominal_budget_cw,target_power_cw,power_source,referee_online,referee_limit_cw,buffer_j,buffer_age_ms,buffer_control_enabled,buffer_estimate_valid,buffer_lower_cj,buffer_predicted_cj,buffer_recovering,cap_online,cap_output_enabled,cap_error,cap_energy_pm,cap_chassis_cw,cap_limit_cw,cap_age_ms,cap_input_online,cap_input_cw,cap_input_age_ms').split(','));
   const HEADER = FIELDS.join(',');
   const UINT_MAX = 4294967295;
+  const HISTORY_MS = 600000, MAX_SAMPLES = 30000;
   const SIGNED = /^(vx_cmd|vy_cmd|wz_cmd|rc_lx|rc_ly|rc_rx|rc_ry|rc_dial|mouse_x|mouse_y|rpm_|target_.*_rpm|i_|p_|effective_limit_cw|nominal_budget_cw|target_power_cw|referee_limit_cw|buffer_lower_cj|buffer_predicted_cj|cap_chassis_cw|cap_limit_cw|cap_input_cw|cap_energy_pm)/;
   const FLAGS = new Set(('chassis_valid rc_online mouse_left mouse_right power_valid meter_online referee_online buffer_control_enabled buffer_estimate_valid buffer_recovering cap_online cap_output_enabled cap_input_online').split(' '));
 
@@ -125,7 +126,7 @@
       this.latest = entry;
       this.stats.received++;
       this.stats.segments = segment;
-      while (this.samples.length > 3000 || (this.samples.length > 1 && arrivalMs - this.samples[0].arrivalMs > 60000)) this.samples.shift();
+      while (this.samples.length > MAX_SAMPLES || (this.samples.length > 1 && arrivalMs - this.samples[0].arrivalMs > HISTORY_MS)) this.samples.shift();
       return entry;
     }
     isStale(nowMs) { return !this.latest || nowMs - this.latest.arrivalMs > 500; }
@@ -138,5 +139,5 @@
     resume() { this.frozen = null; }
     snapshot(now) { return this.frozen || {samples: this.store.samples, latest: this.store.latest, at: now}; }
   }
-  return {FIELDS, HEADER, UINT_MAX, StreamParser, TelemetryStore, DisplayState, normalizeSample, normalizeForDisplay, displayValue};
+  return {FIELDS, HEADER, UINT_MAX, HISTORY_MS, MAX_SAMPLES, StreamParser, TelemetryStore, DisplayState, normalizeSample, normalizeForDisplay, displayValue};
 });

@@ -102,12 +102,20 @@ test('rollover ages stay valid while reboot, gaps and stale reception create seg
   assert.equal(store.latest.segment, 3);
   assert.equal(store.isStale(1301), true);
 });
-test('bounds storage by count and arrival time and exports only retained raw CSV', () => {
+test('keeps more than a minute available for paused history navigation', () => {
   const store = new P.TelemetryStore();
-  for (let i = 0; i < 3200; i++) store.add({...sample({seq: i, tick: i * 20}), rawLine: line(sample({seq: i, tick: i * 20}))}, i * 20);
-  assert.equal(store.samples.length, 3000);
-  assert.equal(store.exportCSV().split('\r\n').filter(Boolean).length, 3001);
-  store.add(sample({seq: 3200, tick: 200000}), 200000);
+  store.add(sample({seq: 1, tick: 0}), 0);
+  store.add(sample({seq: 2, tick: 120000}), 120000);
+  const view = new P.DisplayState(store);view.pause(120010);
+  assert.equal(view.snapshot(180000).samples.length, 2);
+  assert.equal(view.snapshot(180000).samples[0].arrivalMs, 0);
+});
+test('bounds ten-minute history by count and arrival time and exports only retained raw CSV', () => {
+  const store = new P.TelemetryStore();
+  for (let i = 0; i < 32000; i++) store.add({...sample({seq: i, tick: i * 20}), rawLine: line(sample({seq: i, tick: i * 20}))}, i * 20);
+  assert.equal(store.samples.length, 30000);
+  assert.equal(store.exportCSV().split('\r\n').filter(Boolean).length, 30001);
+  store.add(sample({seq: 32000, tick: 1400000}), 1400000);
   assert.equal(store.samples.length, 1);
   assert.ok(store.exportCSV().startsWith(P.HEADER + '\r\n'));
 });
@@ -120,8 +128,11 @@ test('paused presentation freezes samples and time while reception and retention
   assert.equal(view.snapshot(1000).latest.seq, 1);
   assert.equal(view.snapshot(1000).at, 110);
   assert.equal(view.snapshot(1000).samples.length, 1);
+  store.add(sample({seq: 3}), 1000000);
+  assert.equal(store.samples.length, 1);
+  assert.equal(view.snapshot(1000000).samples[0].seq, 1);
   view.resume();
-  assert.equal(view.snapshot(1000).latest.seq, 2);
+  assert.equal(view.snapshot(1000).latest.seq, 3);
   assert.equal(view.snapshot(1000).at, 1000);
 });
 test('presentation keeps a valid received measurement between rows and masks a stale board', () => {
