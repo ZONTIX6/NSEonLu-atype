@@ -12,7 +12,7 @@
 | --- | --- | --- |
 | 开发板分工 | `ONE_BOARD` | 单板；`CHASSIS_BOARD`、`GIMBAL_BOARD` 已注释 |
 | 实际运行的应用 | 命令输入、底盘 | `robot.c` 中云台与发射的 Init/Task 调用已注释 |
-| 视觉接口 | `VISION_USE_VCP` | USB CDC；`VisionInit(&huart1)` 的句柄在 VCP 分支不用于 UART 注册 |
+| USB 用途 | `USB_TELEMETRY_ENABLE=1` | 默认向网页上报遥测；设为 0 恢复 `VISION_USE_VCP` 的视觉 USB 协议 |
 | UART1 | 默认定义存在拼接异常 | 详见第 2 节；显式传 `UART1_USE=0/1/2` 可确定选择 |
 | 底盘轮型 | `CHASSIS_DRIVE_TYPE=CHASSIS_DRIVE_MECANUM`，即 `0` | 麦克纳姆；X 型全向轮是 `1` |
 | 台架功率回退 | `CHASSIS_POWER_BENCH_TEST=1`，`50 W` | 仅裁判功率快照无效时回退，不覆盖有效裁判功率限制 |
@@ -47,6 +47,7 @@
 | --- | --- | --- | --- |
 | `ONE_BOARD` / `CHASSIS_BOARD` / `GIMBAL_BOARD` | 仅定义 `ONE_BOARD` | 分别为单板、底盘板、云台板；按源码约定只选一个 | `application/robot_def.h` |
 | `VISION_USE_VCP` / `VISION_USE_UART` | 仅定义 VCP | USB CDC / UART 视觉通信；选择一个 | `application/robot_def.h` |
+| `USB_TELEMETRY_ENABLE` | `1` | `1` 启用 50 Hz USB CSV 网页遥测并关闭 USB 视觉收发；`0` 恢复原有视觉 USB 分支 | `modules/telemetry/usb_telemetry_config.h` |
 | `CHASSIS_DRIVE_TYPE` | `0` | `0` 麦克纳姆，`1` X 型全向轮 | `application/robot_def.h` |
 | `CHASSIS_POWER_BENCH_TEST` | `1` | `0/1`；裁判数据无效时是否允许台架功率回退。源码注明正式固件保持 0 | `application/robot_def.h` |
 | `CHASSIS_POWER_BENCH_LIMIT_W` | `50.0f` W | 台架回退预算 | `application/robot_def.h` |
@@ -66,7 +67,9 @@
 
 ### 2.3 Make / CMake 的传参边界
 
-当前两个构建入口都专门转发以下 10 项：`UART1_USE`、`POWER_METER_ENABLE`、`CHASSIS_POWER_CONTROL_STAGE`、`CHASSIS_POWER_CAPTURE_ENABLE`、`CHASSIS_SPIN_ADAPTIVE_ENABLE`、`CHASSIS_SPIN_MODE`、`CHASSIS_BUFFER_POWER_ENABLE`、`CHASSIS_POWER_SOURCE_MODE`、`REFEREE_LEGACY_POWER_FIELDS_ENABLED`、`CHASSIS_POWER_CALIBRATION_ENABLE`。
+当前两个构建入口都专门转发以下 11 项：`UART1_USE`、`POWER_METER_ENABLE`、`CHASSIS_POWER_CONTROL_STAGE`、`CHASSIS_POWER_CAPTURE_ENABLE`、`CHASSIS_SPIN_ADAPTIVE_ENABLE`、`CHASSIS_SPIN_MODE`、`CHASSIS_BUFFER_POWER_ENABLE`、`CHASSIS_POWER_SOURCE_MODE`、`REFEREE_LEGACY_POWER_FIELDS_ENABLED`、`CHASSIS_POWER_CALIBRATION_ENABLE`、`USB_TELEMETRY_ENABLE`。
+
+USB 网页遥测的本地启动、完整 72 列协议、单位和连接排查参见 [USB 遥测仪表盘](../tools/usb-telemetry/README.md)。默认周期 `USB_TELEMETRY_PERIOD_MS=20`，重复表头间隔 `USB_TELEMETRY_HEADER_PERIOD_MS=1000`，静态缓冲 `USB_TELEMETRY_BUFFER_SIZE=2048` 字节。编译时切换 USB 用途需使用独立构建目录，避免复用其他编译选项的旧对象文件。
 
 例如，使用独立目录构建直供、裁判 UART、自适应小陀螺版本：
 

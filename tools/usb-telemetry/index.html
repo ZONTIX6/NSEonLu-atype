@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>C 板遥测 · USB 实时仪表盘</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233478f6'/%3E%3Cpath d='M3 17h5l4-10 6 18 4-12 3 4h4' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <script src="protocol.js" defer></script>
+  <script src="serial.js" defer></script>
+  <script src="charts.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <a class="brand" href="./" aria-label="C 板遥测主页"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M3 17h5l4-10 6 18 4-12 3 4h4"/></svg></span><span><span class="brand-name">C 板遥测<span class="brand-tag">USB TELEMETRY</span></span><span class="brand-description">底盘、遥控器与能量，一眼掌握。</span></span></a>
+    <span class="local-badge"><i></i>本地运行 · 数据留在本机</span>
+  </header>
+  <main class="workspace">
+    <section class="connection-card card" aria-label="连接与采集">
+      <div class="connection-summary"><span id="connection-dot" class="connection-dot"></span><div><strong id="connection-status" role="status">尚未连接 C 板</strong><span id="connection-detail">USB CDC 虚拟串口 · 50 Hz 遥测</span></div></div>
+      <div class="toolbar-actions"><button type="button" class="primary-button" id="connect-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3v5m6-5v5M7 8h10v3a5 5 0 0 1-5 5v5m0-5a5 5 0 0 1-5-5V8"/></svg><span>连接 C 板</span></button><button type="button" class="secondary-button" id="demo-button">演示数据</button><span class="toolbar-divider"></span><button type="button" class="secondary-button" id="pause-button" disabled aria-pressed="false">暂停显示</button><button type="button" class="secondary-button" id="export-button" disabled>导出 CSV <span aria-hidden="true">↗</span></button></div>
+      <p id="message" class="connection-message" role="status">将 C 板连接至电脑，点击“连接 C 板”并选择对应串口。也可用演示数据预览。</p>
+    </section>
+    <div class="demo-notice" id="demo-notice" hidden><span><strong>演示模式</strong> 当前为模拟数据，与真实 C 板无关。连接串口将清空演示记录。</span><button type="button" id="stop-demo-button">结束演示</button></div>
+    <div class="stream-bar"><div class="stream-stats"><span>接收 <strong id="rx-rate">—</strong><small>Hz</small></span><span>样本年龄 <strong id="sample-age">—</strong><small>ms</small></span><span>窗口 <strong id="sample-count">0</strong><small>/ 3000</small></span><span>缺行 <strong id="missing-count">0</strong></span><span>坏行 <strong id="bad-count">0</strong></span><span>板端丢弃 <strong id="tx-drop-count">—</strong></span></div><span id="display-status" class="display-status">等待数据</span></div>
+
+    <section class="metrics" aria-label="关键数据">
+      <article class="metric-card card"><div class="metric-label"><i class="color-dot blue"></i>实测底盘功率<span class="metric-tag">功率计</span></div><div class="metric-number"><strong id="metric-meter">—</strong><span>W</span></div><p id="metric-meter-detail">等待功率计数据</p><span class="metric-accent blue-accent"></span></article>
+      <article class="metric-card card"><div class="metric-label"><i class="color-dot purple"></i>模型功率限制<span class="metric-tag">最终</span></div><div class="metric-number"><strong id="metric-limit">—</strong><span>W</span></div><p id="metric-limit-detail">名义预算 — W</p><span class="metric-accent purple-accent"></span></article>
+      <article class="metric-card card"><div class="metric-label"><i class="color-dot teal"></i>裁判缓冲能量<span class="metric-tag">原始</span></div><div class="metric-number"><strong id="metric-buffer">—</strong><span>J</span></div><p id="metric-buffer-detail">等待裁判数据</p><span class="metric-accent teal-accent"></span></article>
+      <article class="metric-card card"><div class="metric-label"><i class="color-dot amber"></i>保守能量下限<span class="metric-tag">估算</span></div><div class="metric-number"><strong id="metric-estimate">—</strong><span>J</span></div><p id="metric-estimate-detail">预测能量 — J</p><span class="metric-accent amber-accent"></span></article>
+      <article class="metric-card card"><div class="metric-label"><i class="color-dot green"></i>超级电容能量<span class="metric-tag">比例</span></div><div class="metric-number"><strong id="metric-cap">—</strong><span>%</span></div><p id="metric-cap-detail">等待电容数据</p><div class="cap-progress"><span id="cap-progress-value"></span></div></article>
+    </section>
+
+    <div class="dashboard-grid">
+      <div class="chart-stack">
+        <section class="card chart-card"><div class="section-heading"><div><span class="eyebrow">POWER MONITOR</span><h2>功率观测 <span>W</span></h2></div><span class="window-label">最近 60 秒</span></div><div class="chart-legend"><span><i class="color-dot blue"></i>功率计实测</span><span><i class="color-dot teal"></i>模型限流后</span><span><i class="color-dot gray"></i>模型未限流</span><span><i class="line-dot purple"></i>最终限制</span><span><i class="line-dot amber"></i>目标功率</span></div><div class="chart-container"><canvas id="power-chart" role="img" aria-label="最近 60 秒功率趋势，单位瓦"></canvas><div class="chart-empty" data-empty-chart><span class="empty-wave">∿</span><strong>等待第一帧数据</strong><span>连接 C 板或启动演示，即可观察实时曲线</span></div></div><div class="chart-footer"><span>实测 · 模型预测 · 控制预算</span><span>无效来源与通信中断处留空</span></div></section>
+        <section class="card chart-card energy-card"><div class="section-heading"><div><span class="eyebrow">BUFFER ENERGY</span><h2>缓冲能量 <span>J</span></h2></div><span id="buffer-state" class="status-pill neutral">等待数据</span></div><div class="chart-legend"><span><i class="color-dot teal"></i>裁判原始值</span><span><i class="color-dot amber"></i>保守下限</span><span><i class="line-dot purple"></i>预测能量</span></div><div class="chart-container"><canvas id="energy-chart" role="img" aria-label="最近 60 秒缓冲能量趋势，单位焦耳"></canvas><div class="chart-empty" data-empty-chart><span class="empty-wave">∿</span><strong>能量变化将在这里呈现</strong><span>原始值与算法估算分别显示</span></div></div><div class="chart-footer"><span>能量估算不等同于传感器实测</span><span>采集 50 Hz · 显示最高 20 Hz</span></div></section>
+      </div>
+
+      <aside class="side-stack">
+        <section class="card remote-card" aria-label="遥控器状态"><div class="section-heading"><div><span class="eyebrow">REMOTE CONTROL</span><h2>遥控器</h2></div><span id="remote-status" class="status-pill neutral">等待数据</span></div><div class="joysticks"><div class="joystick"><div class="stick-heading"><strong>左摇杆</strong><span>CH 2 / 3</span></div><div class="stick-plane" id="left-stick" aria-label="左摇杆位置"><div class="stick-ring"></div><i class="stick-point" id="left-stick-point"></i><span class="axis-x">X</span><span class="axis-y">Y</span></div><div class="stick-values"><span>X <b id="rc-lx">—</b></span><span>Y <b id="rc-ly">—</b></span></div></div><div class="joystick"><div class="stick-heading"><strong>右摇杆</strong><span>CH 0 / 1</span></div><div class="stick-plane" id="right-stick" aria-label="右摇杆位置"><div class="stick-ring"></div><i class="stick-point" id="right-stick-point"></i><span class="axis-x">X</span><span class="axis-y">Y</span></div><div class="stick-values"><span>X <b id="rc-rx">—</b></span><span>Y <b id="rc-ry">—</b></span></div></div></div><div class="remote-controls"><div><span>左拨杆</span><strong id="rc-sw-left">—</strong></div><div><span>右拨杆</span><strong id="rc-sw-right">—</strong></div><div class="dial-control"><span>拨轮 <b id="rc-dial">—</b></span><div class="dial-track"><i></i><span id="dial-indicator"></span></div></div></div><div class="input-section"><span class="sub-label">键盘按键</span><div class="keyboard" id="keyboard" aria-label="遥控器键盘状态"></div></div><div class="mouse-row"><span class="sub-label">鼠标</span><span>X <strong id="mouse-x">—</strong></span><span>Y <strong id="mouse-y">—</strong></span><span class="mouse-key" id="mouse-left">左键</span><span class="mouse-key" id="mouse-right">右键</span></div><p class="source-age" id="rc-age">遥控器样本年龄 — ms</p></section>
+        <section class="card sources-card"><div class="section-heading"><div><span class="eyebrow">SOURCE HEALTH</span><h2>设备与数据源</h2></div><span class="tiny-label">状态 / 年龄</span></div><div id="source-list" class="source-list"></div><div class="cap-details"><span>电容输出 <strong id="cap-output">—</strong></span><span>故障码 <strong id="cap-error">—</strong></span><span>底盘功率 <strong id="cap-chassis">—</strong> W</span><span>可用上限 <strong id="cap-limit">—</strong> W</span><span>输入功率 <strong id="cap-input">—</strong> W</span><span>供电来源 <strong id="power-source">—</strong></span></div></section>
+      </aside>
+    </div>
+
+    <section class="card motors-card" aria-label="底盘与电机"><div class="section-heading"><div><span class="eyebrow">CHASSIS & MOTORS</span><h2>底盘与四轮电机</h2></div><span id="chassis-mode" class="status-pill neutral">等待底盘数据</span></div><div class="chassis-commands"><span>Vx 指令 <strong id="vx-command">—</strong></span><span>Vy 指令 <strong id="vy-command">—</strong></span><span>Wz 指令 <strong id="wz-command">—</strong></span><small>控制原始单位</small></div><div class="motor-layout"><div class="motor-plot"><div class="chart-legend"><span><i class="color-dot blue"></i>左前 LF</span><span><i class="color-dot teal"></i>右前 RF</span><span><i class="color-dot amber"></i>左后 LB</span><span><i class="color-dot purple"></i>右后 RB</span><span class="legend-note">实线：实际 · 虚线：目标</span></div><div class="chart-container"><canvas id="rpm-chart" role="img" aria-label="四轮目标与实际转速，单位 rpm"></canvas><div class="chart-empty" data-empty-chart><span class="empty-wave">∿</span><strong>四轮转速 · rpm</strong></div></div></div><div class="motor-table-wrap"><table class="motor-table"><caption>电机转速与电流</caption><thead><tr><th>电机 / 状态</th><th>目标<br><small>rpm</small></th><th>实际<br><small>rpm</small></th><th>命令<br><small>电流原值</small></th><th>反馈<br><small>电流原值</small></th></tr></thead><tbody id="motor-table-body"></tbody></table><p class="table-note">电流为 DJI 原始单位；未换算为安培。</p></div></div></section>
+    <footer class="app-footer"><span>USB CDC · CSV v1 · 最近 60 秒滚动窗口</span><span>只读观测 · 不发送控制指令</span></footer>
+  </main>
+</body>
+</html>

@@ -141,6 +141,9 @@ modules/motor/step_motor/step_motor.c \
 modules/motor/servo_motor/servo_motor.c \
 modules/motor/motor_task.c \
 modules/telemetry/rtt_telemetry.c \
+modules/telemetry/usb_telemetry.c \
+modules/telemetry/usb_telemetry_format.c \
+modules/telemetry/usb_telemetry_stream.c \
 modules/telemetry/chassis_power_capture.c \
 modules/algorithm/power_model.c \
 modules/algorithm/chassis_kinematics.c \
@@ -250,6 +253,10 @@ endif
 
 ifneq ($(strip $(UART1_USE)),)
 C_DEFS += -DUART1_USE=$(UART1_USE)
+endif
+
+ifneq ($(strip $(USB_TELEMETRY_ENABLE)),)
+C_DEFS += -DUSB_TELEMETRY_ENABLE=$(USB_TELEMETRY_ENABLE)
 endif
 
 ifneq ($(strip $(REFEREE_LEGACY_POWER_FIELDS_ENABLED)),)

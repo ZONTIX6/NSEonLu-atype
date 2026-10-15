@@ -18,12 +18,26 @@
 #include "bsp_log.h"
 #include "board_config.h"
 #include "dji_motor.h"
+#include "usb_telemetry.h"
 
 osThreadId insTaskHandle;
 osThreadId robotTaskHandle;
 osThreadId motorTaskHandle;
 osThreadId daemonTaskHandle;
 osThreadId uiTaskHandle;
+#if USB_TELEMETRY_ENABLE
+osThreadId usbTelemetryTaskHandle;
+void StartUSBTelemetryTask(void const *argument)
+{
+    (void)argument;
+    USBTelemetryInit();
+    TickType_t previous_wake = xTaskGetTickCount();
+    for (;;) {
+        USBTelemetryTask();
+        vTaskDelayUntil(&previous_wake, pdMS_TO_TICKS(USB_TELEMETRY_PERIOD_MS));
+    }
+}
+#endif
 #if CHASSIS_POWER_CAPTURE_ENABLE && UART1_LOG_ENABLED
 osThreadId powerCaptureTaskHandle;
 /* Debugger-readable on-board validation; stack values are FreeRTOS words. */
@@ -69,6 +83,11 @@ void OSTaskInit()
 
     osThreadDef(robottask, StartROBOTTASK, osPriorityNormal, 0, 1024);
     robotTaskHandle = osThreadCreate(osThread(robottask), NULL);
+
+#if USB_TELEMETRY_ENABLE
+    osThreadDef(usbtelemetry, StartUSBTelemetryTask, osPriorityBelowNormal, 0, 384);
+    usbTelemetryTaskHandle = osThreadCreate(osThread(usbtelemetry), NULL);
+#endif
 
 #if CHASSIS_POWER_CAPTURE_ENABLE && UART1_LOG_ENABLED
     osThreadDef(powercapture, StartPowerCaptureTask, osPriorityBelowNormal, 0, 256);

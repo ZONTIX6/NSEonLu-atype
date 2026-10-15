@@ -36,6 +36,8 @@
 #include "referee_UI.h"
 #include "arm_math.h"
 #include <math.h>
+#include "FreeRTOS.h"
+#include "task.h"
 
 /* 根据robot_def.h中的macro自动计算的参数 */
 #define HALF_WHEEL_BASE (WHEEL_BASE / 2.0f)     // 半轴距
@@ -70,6 +72,16 @@ static ChassisPowerOuterLoopOutput_s chassis_outer_loop_output;
 static uint32_t chassis_budget_dwt_count;
 static DJIChassisPowerControlSnapshot_s pending_power_control;
 static uint32_t power_control_version;
+static ChassisTelemetrySnapshot_s chassis_telemetry;
+
+bool ChassisGetTelemetrySnapshot(ChassisTelemetrySnapshot_s *snapshot)
+{
+    if (snapshot == NULL) return false;
+    taskENTER_CRITICAL();
+    *snapshot = chassis_telemetry;
+    taskEXIT_CRITICAL();
+    return snapshot->valid;
+}
 
 #if CHASSIS_SPIN_DYNAMIC_ENABLED
 static ChassisSpinState_s chassis_spin_state;
@@ -702,6 +714,23 @@ void ChassisTask()
     ChassisPowerFeedbackUpdate(power_state_valid && power_state.registered,
                                power_state_valid ? &power_state.power : NULL);
     (void)ChassisPowerFeedbackGet(&chassis_feedback_data.power_control);
+
+    const ChassisTelemetrySnapshot_s telemetry = {
+        .valid = true,
+        .tick_ms = HAL_GetTick(),
+        .mode = (uint8_t)chassis_cmd_recv.chassis_mode,
+        .vx_cmd = chassis_vx, .vy_cmd = chassis_vy, .wz_cmd = chassis_cmd_recv.wz,
+        .nominal_budget_w = pending_power_control.nominal_budget_w,
+        .target_power_w = pending_power_control.target_power_w,
+        .buffer_control_enabled = CHASSIS_BUFFER_POWER_ENABLE != 0,
+        .buffer_estimate_valid = chassis_budget_state.buffer_estimate_valid,
+        .buffer_recovering = chassis_budget_output.recovering,
+        .buffer_lower_j = chassis_budget_output.buffer_lower_j,
+        .buffer_predicted_j = chassis_budget_output.buffer_predicted_j,
+    };
+    taskENTER_CRITICAL();
+    chassis_telemetry = telemetry;
+    taskEXIT_CRITICAL();
 
     // 推送反馈消息
 #ifdef ONE_BOARD
