@@ -66,6 +66,10 @@ make -j8 BUILD_DIR=build_usb_vision UART1_USE=0 USB_TELEMETRY_ENABLE=0
 
 在放大图内按住 Ctrl 滚动滚轮，可以围绕鼠标位置缩放时间轴，查看 100 ms～60 s 的细节，纵轴自动适配可见数据。Ctrl + 加号/减号以图中心缩放；Ctrl + 0 或“恢复全图”回到 60 s。弹窗打开时这些操作只作用于波形，关闭后恢复浏览器快捷键；普通滚轮仍可滚动。缩放不改变暂停状态，实时模式保持缩放范围随数据前进，每次重新打开图表恢复全图。坐标与悬停时间均相对当前显示窗口末端。
 
+每张图旁的“显示数据”列出该图全部曲线，勾选哪些就显示哪些，可用“全选”“清空”批量操作。普通图与放大图共享选择，暂停时也可改选，已有缩放范围保持不变；悬停只显示已选数据。窄屏时选择区移到图下方。
+
+转速图可分别选择四轮实际转速、四轮目标转速（加粗虚线）和底盘旋转目标 Wz。轮速使用左轴 rpm，Wz 使用右轴“指令值”，取自固件上报的最终 Wz 控制指令；它不是电机 rpm 或底盘实测转速。各轴独立适配有效数据，底盘数据无效时 Wz 留空。
+
 鼠标放在普通图或大图内，可查看定位线对应的最近真实采样，包括距窗口末端的秒数、板端 tick（ms）、各条曲线名称和数值。功率为 W，能量为 J，转速为 rpm；读数已经换算，CSV 导出仍保留原始整数单位。无效来源显示“—”，通信断点和距离采样超过 500 ms 的空白不显示读数。无数据或遥控器过期时，键盘和鼠标按键保持熄灭。
 
 ## CSV v1 协议
@@ -111,6 +115,7 @@ playwright-cli -s=usb open http://127.0.0.1:4173 --browser msedge
 playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/browser-check.js
 playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/chart-check.js
 playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/zoom-check.js
+playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/selection-check.js
 playwright-cli -s=usb close
 ```
 

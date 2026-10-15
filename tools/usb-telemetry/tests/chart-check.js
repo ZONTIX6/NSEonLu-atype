@@ -36,7 +36,8 @@ async (page) => {
   const hover = async (selector, fraction = .5) => {
     await page.locator(selector).scrollIntoViewIfNeeded();
     const box = await page.locator(selector).boundingBox();
-    const point = {x: box.x + 42 + (box.width - 54) * fraction, y: box.y + 60};
+    const plot = await page.locator(selector).evaluate(canvas => TelemetryCharts.getPlotBounds(canvas));
+    const point = {x: box.x + plot.left + plot.width * fraction, y: box.y + plot.top + 45};
     await page.mouse.move(point.x, point.y);
     return point;
   };
@@ -67,7 +68,7 @@ async (page) => {
     await checkReadings('#expanded-chart', [expected, 'tick 31000 ms']);
     check(await page.evaluate(() => telemetryApp.paused), 'Expanding resumed paused display');
     if (id === 'rpm-chart') {
-      const pointer = await hover('#expanded-chart');
+      const pointer = await hover('#expanded-chart', .4);
       await page.setViewportSize({width: 900, height: 700});
       await page.waitForFunction(() => document.querySelector('#expanded-chart').width < 900);
       const guide = await page.locator('#expanded-chart').locator('..').locator('.chart-crosshair').boundingBox();
@@ -120,6 +121,10 @@ async (page) => {
   await page.waitForFunction(text => document.querySelector('#expanded-chart').parentElement.querySelector('.chart-tooltip').textContent !== text, previous);
   await page.screenshot({path: 'output/playwright/usb-chart-expanded.png'});
   await page.setViewportSize({width: 375, height: 812});
+  await page.waitForFunction(() => {
+    const canvas = document.querySelector('#expanded-chart');
+    return canvas.width === Math.round(canvas.getBoundingClientRect().width * Math.min(devicePixelRatio || 1, 2));
+  });
   await hover('#expanded-chart');
   check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Expanded mobile layout overflows');
   const box = await tooltip('#expanded-chart').boundingBox();

@@ -26,14 +26,68 @@
   const wheelNames = {lf: '左前 LF', rf: '右前 RF', lb: '左后 LB', rb: '右后 RB'};
   const powerTraces = [{key: 'p_unlimited_cw', name: '模型未限流', color: '#b7c1d1'}, {key: 'effective_limit_cw', name: '最终限制', color: '#8a65d6', dash: true}, {key: 'target_power_cw', name: '目标功率', color: '#e3a234', dash: true}, {key: 'p_limited_cw', name: '模型限流后', color: '#16a69b'}, {key: 'p_meter_cw', name: '功率计实测', color: '#3478f6'}];
   const energyTraces = [{key: 'buffer_j', name: '裁判原始值', color: '#16a69b'}, {key: 'buffer_lower_cj', name: '保守下限', color: '#e3a234'}, {key: 'buffer_predicted_cj', name: '预测能量', color: '#8a65d6', dash: true}];
-  const rpmTraces = Object.keys(colors).flatMap(key => [{key: `target_${key}_rpm`, name: `${wheelNames[key]} · 目标`, color: colors[key], dash: true}, {key: `rpm_${key}`, name: `${wheelNames[key]} · 实际`, color: colors[key]}]);
-  const charts = [{id: 'power-chart', title: '功率观测', unit: 'W', traces: powerTraces}, {id: 'energy-chart', title: '缓冲能量', unit: 'J', traces: energyTraces}, {id: 'rpm-chart', title: '四轮转速', unit: 'rpm', traces: rpmTraces}];
+  const rpmTraces = Object.keys(colors).flatMap(key => [{key: `rpm_${key}`, name: `${wheelNames[key]} · 实际`, color: colors[key]}, {key: `target_${key}_rpm`, name: `${wheelNames[key]} · 目标`, color: colors[key], dash: true, width: 2, dashPattern: [7, 5]}]);
+  rpmTraces.push({key: 'wz_cmd_milli', name: '底盘旋转目标 Wz', color: '#df6f7b', axis: 'right', unit: '指令值', digits: 3, dash: true, width: 2});
+  const charts = [{id: 'power-chart', title: '功率观测', unit: 'W', traces: powerTraces}, {id: 'energy-chart', title: '缓冲能量', unit: 'J', traces: energyTraces}, {id: 'rpm-chart', title: '四轮转速', unit: 'rpm', rightUnit: 'Wz 指令', traces: rpmTraces}];
+  charts.forEach(chart => {
+    chart.allTraces = chart.traces;chart.selected = new Set(chart.traces.map(trace => trace.key));
+    chart.traces.forEach(trace => {trace.unit ??= chart.unit;trace.digits ??= chart.unit === 'rpm' ? 0 : 2;});
+  });
   const chartDialog = $('chart-dialog');
   const expandedCanvas = $('expanded-chart');
   let expandedChart = null, chartOpener = null, chartRange = [-60000, 0];
+  function drawChartView(canvas, chart, snapshot, range) {
+    window.TelemetryCharts.drawChart(canvas, snapshot.samples, chart.traces, {now: snapshot.at, unit: chart.unit, rightUnit: chart.rightUnit, range});
+    const empty = canvas.parentElement.querySelector('[data-empty-chart]');
+    empty.hidden = Boolean(snapshot.latest) && chart.traces.length > 0;
+    const heading = empty.querySelector('strong');
+    heading.dataset.originalText ??= heading.textContent;
+    heading.textContent = chart.traces.length ? heading.dataset.originalText : '请选择要显示的数据';
+    empty.querySelectorAll('span:not(.empty-wave)').forEach(span => {span.hidden = !chart.traces.length;});
+  }
+  function renderLegend(element, chart) {
+    const expandButton = element.querySelector('.chart-expand-button');
+    element.replaceChildren(...chart.traces.map(trace => {
+      const label = document.createElement('span'), dot = document.createElement('i');
+      dot.className = trace.dash ? 'line-dot' : 'color-dot';
+      if (trace.dash) dot.style.borderColor = trace.color;else dot.style.background = trace.color;
+      label.append(dot, document.createTextNode(trace.name));return label;
+    }));
+    if (expandButton) element.append(expandButton);
+  }
+  function selectTraces(chart) {
+    chart.traces = chart.allTraces.filter(trace => chart.selected.has(trace.key));
+    document.querySelectorAll(`[data-chart="${chart.id}"] input[data-trace-key]`).forEach(input => {input.checked = chart.selected.has(input.dataset.traceKey);});
+    lastRendered = null;
+    const snapshot = view.snapshot(clock());
+    renderLegend(chart.legend, chart);
+    drawChartView($(chart.id), chart, snapshot);
+    if (expandedChart === chart) {renderLegend($('expanded-chart-legend'), chart);renderExpandedChart(snapshot);}
+  }
+  function createTracePicker(chart) {
+    const picker = document.createElement('fieldset');picker.className = 'trace-picker';picker.dataset.chart = chart.id;picker.setAttribute('aria-label', `${chart.title}数据选择`);
+    const legend = document.createElement('legend');legend.textContent = '显示数据';
+    const actions = document.createElement('div');actions.className = 'trace-picker-actions';
+    for (const [label, select] of [['全选', true], ['清空', false]]) {
+      const button = document.createElement('button');button.type = 'button';button.textContent = label;
+      button.addEventListener('click', () => {chart.selected = new Set(select ? chart.allTraces.map(trace => trace.key) : []);selectTraces(chart);});actions.append(button);
+    }
+    const options = document.createElement('div');options.className = 'trace-options';
+    chart.allTraces.forEach(trace => {
+      const label = document.createElement('label'), input = document.createElement('input'), line = document.createElement('i'), name = document.createElement('span'), unit = document.createElement('small');
+      input.type = 'checkbox';input.dataset.traceKey = trace.key;input.checked = chart.selected.has(trace.key);
+      line.className = 'trace-line';line.style.borderColor = trace.color;if (trace.dash) line.style.borderTopStyle = 'dashed';
+      name.textContent = trace.name;unit.textContent = trace.unit;
+      input.addEventListener('change', () => {if (input.checked) chart.selected.add(trace.key);else chart.selected.delete(trace.key);selectTraces(chart);});
+      label.append(input, line, name, unit);options.append(label);
+    });
+    picker.addEventListener('click', event => event.stopPropagation());
+    picker.append(legend, actions, options);return picker;
+  }
   function renderExpandedChart(snapshot) {
     if (!expandedChart || !chartDialog.open) return;
-    window.TelemetryCharts.drawChart(expandedCanvas, snapshot.samples, expandedChart.traces, {now: snapshot.at, unit: expandedChart.unit, range: chartRange});
+    setText('expanded-chart-unit', [...new Set(expandedChart.traces.map(trace => trace.unit))].join(' / ') || expandedChart.unit);
+    drawChartView(expandedCanvas, expandedChart, snapshot, chartRange);
     setText('expanded-chart-range', `显示 ${Number(((chartRange[1] - chartRange[0]) / 1000).toFixed(3))} s · Ctrl + 滚轮缩放`);
     $('reset-chart-button').disabled = chartRange[1] - chartRange[0] === 60000;
   }
@@ -50,16 +104,15 @@
     expandedChart = chart;chartOpener = opener;chartRange = [-60000, 0];
     setText('expanded-chart-title', chart.title);
     setText('expanded-chart-unit', chart.unit);
-    $('expanded-chart-legend').replaceChildren(...chart.traces.map(trace => {
-      const label = document.createElement('span'), dot = document.createElement('i');
-      dot.className = trace.dash ? 'line-dot' : 'color-dot';
-      if (trace.dash) dot.style.borderColor = trace.color;else dot.style.background = trace.color;
-      label.append(dot, document.createTextNode(trace.name));return label;
-    }));
+    renderLegend($('expanded-chart-legend'), chart);
+    $('expanded-trace-picker').replaceChildren(createTracePicker(chart));
     chartDialog.showModal();lastRendered = null;
   }
   charts.forEach(chart => {
     const canvas = $(chart.id), card = canvas.closest('.chart-card') || canvas.closest('.motor-plot');
+    chart.legend = card.querySelector('.chart-legend');renderLegend(chart.legend, chart);
+    const layout = document.createElement('div');layout.className = 'chart-layout';
+    const plot = canvas.parentElement;plot.before(layout);layout.append(plot, createTracePicker(chart));
     const button = document.createElement('button');button.type = 'button';button.className = 'chart-expand-button';button.textContent = '放大 ↗';
     button.setAttribute('aria-label', `放大${chart.title}`);button.setAttribute('aria-haspopup', 'dialog');button.setAttribute('aria-controls', 'chart-dialog');
     (card.querySelector('.section-heading') || card.querySelector('.chart-legend')).append(button);
@@ -74,10 +127,10 @@
     if (!chartDialog.open || !event.ctrlKey) return;
     event.preventDefault();
     if (event.target !== expandedCanvas || !event.deltaY) return;
-    const rect = expandedCanvas.getBoundingClientRect(), x = event.clientX - rect.left, y = event.clientY - rect.top;
-    if (x < 42 || x > rect.width - 12 || y < 12 || y > rect.height - 25) return;
+    const rect = expandedCanvas.getBoundingClientRect(), bounds = window.TelemetryCharts.getPlotBounds(expandedCanvas), x = event.clientX - rect.left, y = event.clientY - rect.top;
+    if (!bounds || x < bounds.left || x > bounds.left + bounds.width || y < bounds.top || y > bounds.top + bounds.height) return;
     const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? rect.height : 1);
-    zoomChart(Math.exp(Math.max(-1, Math.min(1, delta * .002))), (x - 42) / (rect.width - 54));
+    zoomChart(Math.exp(Math.max(-1, Math.min(1, delta * .002))), (x - bounds.left) / bounds.width);
   }, {passive: false});
   chartDialog.addEventListener('keydown', event => {
     if (!chartDialog.open || !event.ctrlKey || event.altKey || !['+', '=', '-', '0'].includes(event.key)) return;
@@ -226,7 +279,6 @@
       const cells = row.querySelectorAll('td');
       for (const [cell, property] of [[1, 'target'], [2, 'rpm'], [3, 'currentCommand'], [4, 'currentFeedback']]) cells[cell].textContent = format(motor ? motor[property] : null, 0);
     }
-    document.querySelectorAll('[data-empty-chart]').forEach(element => {element.hidden = Boolean(sample);});
   }
   function render(now) {
     if (now - lastRender >= 50) {
@@ -234,7 +286,7 @@
       const snapshot = view.snapshot(now);
       if (!view.paused || snapshot !== lastRendered) {
         renderValues(snapshot);
-        charts.forEach(chart => window.TelemetryCharts.drawChart($(chart.id), snapshot.samples, chart.traces, {now: snapshot.at, unit: chart.unit}));
+        charts.forEach(chart => drawChartView($(chart.id), chart, snapshot));
         renderExpandedChart(snapshot);
         lastRendered = snapshot;
       }

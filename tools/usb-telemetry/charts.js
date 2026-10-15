@@ -22,7 +22,7 @@
     const {samples, visible, start, end, now, pad, plotWidth, plotHeight} = state;
     const pointer = state.pointer && {x: state.pointer.clientX - state.bounds.left, y: state.pointer.clientY - state.bounds.top};
     const hide = () => {state.layer.hidden = true;};
-    if (!pointer || !visible || pointer.x < pad.left || pointer.x > pad.left + plotWidth || pointer.y < pad.top || pointer.y > pad.top + plotHeight || !visible.length) {hide();return;}
+    if (!pointer || !visible || !state.traces.length || pointer.x < pad.left || pointer.x > pad.left + plotWidth || pointer.y < pad.top || pointer.y > pad.top + plotHeight || !visible.length) {hide();return;}
     const time = start + (pointer.x - pad.left) / plotWidth * (end - start);
     let left = 0, right = samples.length;
     while (left < right) {const middle = (left + right) >>> 1;if (samples[middle].arrivalMs < time) left = middle + 1;else right = middle;}
@@ -37,13 +37,29 @@
     state.heading.textContent = `距窗口末端 ${seconds.toFixed(2)} s · tick ${sample.tick} ms`;
     state.traces.forEach((trace, index) => {
       const value = sample.normalized.values[trace.key];
-      state.rows.children[index].querySelector('b').textContent = Number.isFinite(value) ? `${value.toFixed(state.unit === 'rpm' ? 0 : 2)} ${state.unit}` : '—';
+      state.rows.children[index].querySelector('b').textContent = Number.isFinite(value) ? `${value.toFixed(trace.digits ?? (state.unit === 'rpm' ? 0 : 2))} ${trace.unit || state.unit}` : '—';
     });
     const tooltipWidth = state.tooltip.offsetWidth, tooltipHeight = state.tooltip.offsetHeight;
     state.tooltip.style.left = `${Math.max(0, Math.min(state.width - tooltipWidth, pointX + (pointX + tooltipWidth + 14 > state.width ? -tooltipWidth - 14 : 14)))}px`;
     state.tooltip.style.top = `${Math.max(0, Math.min(state.height - tooltipHeight, pointer.y - 20))}px`;
   }
-  function drawChart(canvas, samples, traces, {now, unit = '', range = [-60000, 0]} = {}) {
+  function valueRange(samples, traces, fullRange) {
+    let low = fullRange ? 0 : Infinity, high = fullRange ? 1 : -Infinity;
+    for (const sample of samples) for (const trace of traces) {
+      const value = sample.normalized.values[trace.key];
+      if (Number.isFinite(value)) {low = Math.min(low, value);high = Math.max(high, value);}
+    }
+    if (!Number.isFinite(low)) {low = 0;high = 1;}
+    const spread = high - low || Math.max(1, Math.abs(high) * .1);
+    if (!fullRange || low < 0) low -= spread * .09;
+    high += spread * .12;
+    return {low, high, digits: Math.max(0, Math.min(4, 1 - Math.floor(Math.log10((high - low) / 4))))};
+  }
+  function getPlotBounds(canvas) {
+    const state = hoverStates.get(canvas);
+    return state ? {left: state.pad.left, top: state.pad.top, width: state.plotWidth, height: state.plotHeight} : null;
+  }
+  function drawChart(canvas, samples, traces, {now, unit = '', rightUnit = '', range = [-60000, 0]} = {}) {
     const bounds = canvas.getBoundingClientRect();
     const width = bounds.width, height = bounds.height;
     if (!width || !height) return;
@@ -52,21 +68,13 @@
     const ctx = canvas.getContext('2d');
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     ctx.clearRect(0, 0, width, height);
-    const pad = {left: 42, right: 12, top: 12, bottom: 25}, plotWidth = width - pad.left - pad.right, plotHeight = height - pad.top - pad.bottom;
+    const leftTraces = traces.filter(trace => trace.axis !== 'right'), rightTraces = traces.filter(trace => trace.axis === 'right');
+    const pad = {left: 42, right: rightTraces.length ? 66 : 12, top: 15, bottom: 25}, plotWidth = width - pad.left - pad.right, plotHeight = height - pad.top - pad.bottom;
     const start = now + range[0], end = now + range[1], duration = end - start, fullRange = duration === 60000;
     const visible = samples.filter(sample => sample.arrivalMs >= start && sample.arrivalMs <= end);
-    let low = fullRange ? 0 : Infinity, high = fullRange ? 1 : -Infinity;
-    for (const sample of visible) for (const trace of traces) {
-      const value = sample.normalized.values[trace.key];
-      if (value !== null && Number.isFinite(value)) {low = Math.min(low, value); high = Math.max(high, value);}
-    }
-    if (!Number.isFinite(low)) {low = 0;high = 1;}
-    const spread = high - low || Math.max(1, Math.abs(high) * .1);
-    if (!fullRange || low < 0) low -= spread * .09;
-    high += spread * .12;
-    const y = value => pad.top + plotHeight * (1 - (value - low) / (high - low));
+    const leftScale = valueRange(visible, leftTraces, fullRange), rightScale = valueRange(visible, rightTraces, fullRange);
+    const y = (value, trace) => {const scale = trace.axis === 'right' ? rightScale : leftScale;return pad.top + plotHeight * (1 - (value - scale.low) / (scale.high - scale.low));};
     const x = time => pad.left + (time - start) / duration * plotWidth;
-    const digits = Math.max(0, Math.min(4, 1 - Math.floor(Math.log10((high - low) / 4))));
     ctx.font = '9px "Segoe UI", sans-serif';
     ctx.lineWidth = 1;
     for (let i = 0; i <= 4; i++) {
@@ -74,9 +82,16 @@
       ctx.strokeStyle = '#edf1f6';
       ctx.beginPath();ctx.moveTo(pad.left, lineY);ctx.lineTo(width - pad.right, lineY);ctx.stroke();
       ctx.fillStyle = '#a4b0c1';ctx.textAlign = 'right';ctx.textBaseline = 'middle';
-      const value = high - (high - low) * i / 4;
-      ctx.fillText(value.toFixed(digits), pad.left - 8, lineY);
+      const value = leftScale.high - (leftScale.high - leftScale.low) * i / 4;
+      if (leftTraces.length) ctx.fillText(value.toFixed(leftScale.digits), pad.left - 8, lineY);
+      if (rightTraces.length) {
+        ctx.textAlign = 'left';ctx.fillStyle = '#c57279';
+        ctx.fillText((rightScale.high - (rightScale.high - rightScale.low) * i / 4).toFixed(rightScale.digits), width - pad.right + 8, lineY);
+      }
     }
+    ctx.textBaseline = 'top';ctx.textAlign = 'left';ctx.fillStyle = '#a4b0c1';
+    if (leftTraces.length) ctx.fillText(unit, pad.left, 0);
+    if (rightTraces.length) {ctx.fillStyle = '#c57279';ctx.fillText(rightUnit, width - pad.right + 8, 0);}
     for (let i = 0; i <= 4; i++) {
       const lineX = pad.left + i / 4 * plotWidth;
       ctx.strokeStyle = '#f3f5f9';ctx.beginPath();ctx.moveTo(lineX, pad.top);ctx.lineTo(lineX, height - pad.bottom);ctx.stroke();
@@ -86,23 +101,24 @@
     }
     ctx.save();ctx.beginPath();ctx.rect(pad.left, pad.top, plotWidth, plotHeight);ctx.clip();
     for (const trace of traces) {
-      ctx.beginPath();ctx.strokeStyle = trace.color;ctx.lineWidth = trace.dash ? 1.2 : 1.6;ctx.setLineDash(trace.dash ? [4, 4] : []);
+      ctx.beginPath();ctx.strokeStyle = trace.color;ctx.lineWidth = trace.width || (trace.dash ? 1.2 : 1.6);ctx.setLineDash(trace.dash ? trace.dashPattern || [4, 4] : []);
       let previous = null;
       for (const sample of visible) {
         const value = sample.normalized.values[trace.key];
         if (value === null || !Number.isFinite(value)) {previous = null; continue;}
-        const pointX = x(sample.arrivalMs), pointY = y(value);
+        const pointX = x(sample.arrivalMs), pointY = y(value, trace);
         if (!previous || previous.segment !== sample.segment || sample.arrivalMs - previous.arrivalMs > 500) ctx.moveTo(pointX, pointY);
         else ctx.lineTo(pointX, pointY);
         previous = sample;
       }
       ctx.stroke();
       if (previous && end - previous.arrivalMs <= 500) {
-        ctx.setLineDash([]);ctx.beginPath();ctx.arc(x(previous.arrivalMs), y(previous.normalized.values[trace.key]), 2.2, 0, Math.PI * 2);ctx.fillStyle = trace.color;ctx.fill();
+        ctx.setLineDash([]);ctx.beginPath();ctx.arc(x(previous.arrivalMs), y(previous.normalized.values[trace.key], trace), 2.2, 0, Math.PI * 2);ctx.fillStyle = trace.color;ctx.fill();
       }
     }
     ctx.restore();ctx.setLineDash([]);
-    canvas.setAttribute('aria-label', `${unit} 趋势，显示 ${Number((duration / 1000).toFixed(3))} 秒，${visible.length} 个样本。`);
+    const units = [leftTraces.length ? unit : '', rightTraces.length ? rightUnit : ''].filter(Boolean).join(' / ') || unit;
+    canvas.setAttribute('aria-label', `${units} 趋势，显示 ${Number((duration / 1000).toFixed(3))} 秒，${visible.length} 个样本，${traces.length} 条曲线。`);
     const state = hoverState(canvas);
     if (state.traces !== traces) {
       state.rows.replaceChildren(...traces.map(trace => {
@@ -113,5 +129,5 @@
     Object.assign(state, {samples, visible, traces, start, end, now, pad, plotWidth, plotHeight, width, height, unit, bounds});
     renderHover(state);
   }
-  root.TelemetryCharts = {drawChart};
+  root.TelemetryCharts = {drawChart, getPlotBounds};
 })(globalThis);
