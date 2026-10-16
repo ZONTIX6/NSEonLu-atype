@@ -12,9 +12,10 @@
   const FLAGS = new Set(('chassis_valid rc_online mouse_left mouse_right power_valid meter_online referee_online buffer_control_enabled buffer_estimate_valid buffer_recovering cap_online cap_output_enabled cap_input_online').split(' '));
 
   class StreamParser {
-    constructor({onSample = () => {}, onError = () => {}} = {}) {
+    constructor({onSample = () => {}, onError = () => {}, onControl = () => {}} = {}) {
       this.onSample = onSample;
       this.onError = onError;
+      this.onControl = onControl;
       this.reset();
     }
     reset() {
@@ -46,6 +47,7 @@
     }
     parseLine(line) {
       if (!line) return;
+      if (line.startsWith('@T1,')) {this.onControl(line);return;}
       if (line === HEADER) {this.hasHeader = true; this.stats.headers++; return;}
       if (line.startsWith('version,')) this.hasHeader = false;
       if (!this.hasHeader) {this.stats.bad++; this.error('header'); return;}

@@ -4,6 +4,8 @@
 typedef struct
 {
     float value;
+    float Kp, Ki, Kd, MaxOut, IntegralLimit, DeadBand;
+    float Iout, ITerm, Last_ITerm, Dout, Last_Dout, Output, Last_Output;
 } PIDInstance;
 
 typedef struct

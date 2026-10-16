@@ -144,6 +144,7 @@ modules/telemetry/rtt_telemetry.c \
 modules/telemetry/usb_telemetry.c \
 modules/telemetry/usb_telemetry_format.c \
 modules/telemetry/usb_telemetry_stream.c \
+modules/telemetry/runtime_tuning.c \
 modules/telemetry/chassis_power_capture.c \
 modules/algorithm/power_model.c \
 modules/algorithm/chassis_kinematics.c \

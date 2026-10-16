@@ -13,6 +13,18 @@ function hardware() {
 }
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
+test('writes serialized bytes and releases writer on disconnect', async () => {
+  const hw = hardware(), written = [];
+  hw.port.writable = new WritableStream({write(bytes) {written.push(new TextDecoder().decode(bytes));}});
+  const session = new SerialSession({serial: hw.serial});
+  await assert.rejects(async () => session.send('x'));
+  await session.connect();
+  await Promise.all([session.send('@T1,1,GET,pid\r\n'), session.send('@T1,2,GET,spin\r\n')]);
+  assert.deepEqual(written, ['@T1,1,GET,pid\r\n', '@T1,2,GET,spin\r\n']);
+  await session.disconnect();
+  assert.equal(hw.port.writable.locked, false);
+});
+
 test('cancelled chooser returns idle without reporting an error', async () => {
   assert.equal(typeof SerialSession, 'function');
   const errors = [], states = [];

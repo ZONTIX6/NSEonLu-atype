@@ -5,15 +5,18 @@
   const store = new P.TelemetryStore();
   const view = new P.DisplayState(store);
   let mode = 'idle', demoTimer = null, demoSequence = 0, lastRender = -Infinity, lastRendered = null, hadError = false;
+  let tuningUI = null;
+  const tuningClient = new window.TelemetryTuning.TuningClient({send: line => session.send(line)});
   const clock = () => performance.now();
   const setText = (id, text) => {if ($(id).textContent !== String(text)) $(id).textContent = text;};
   const format = (value, digits = 2) => value === null || value === undefined || !Number.isFinite(value) ? '—' : value.toFixed(digits);
   const ageText = value => value === null || value === undefined || value >= P.UINT_MAX ? '—' : String(Math.round(value));
   function message(text, error = false) {setText('message', text); $('message').classList.toggle('error', error);}
-  const parser = new P.StreamParser({onSample(sample) {store.add(sample, clock());}, onError(kind) {
+  const parser = new P.StreamParser({onSample(sample) {store.add(sample, clock());}, onControl: line => tuningClient.receive(line), onError(kind) {
     if (kind === 'version') message('收到不支持的协议版本。请使用与此仪表盘匹配的 CSV v1 遥测固件。', true);
   }});
   const session = new window.TelemetrySerial.SerialSession({serial: navigator.serial, onChunk: chunk => parser.push(chunk), onState(state) {
+    tuningUI?.setConnected(state === 'connected');
     if (state === 'connected') {hadError = false; message('串口已打开，等待 CSV v1 遥测。若持续无数据，请确认固件启用了 USB 遥测模式。');}
     if (state === 'idle' && mode === 'real' && !hadError) message(store.latest ? '串口已断开，最后采集的历史数据仍可导出。点击“连接 C 板”可重新采集。' : '未连接。请确认 C 板已连接，点击“连接 C 板”选择串口。');
     renderToolbar(clock());
@@ -22,6 +25,27 @@
     const hints = {NetworkError: '串口读取中断或设备被拔出，请检查 USB 连接后重连。', InvalidStateError: '串口可能正被其他程序占用，请关闭串口助手或调试器后重试。', SecurityError: '浏览器拒绝串口访问。请使用 Chrome / Edge，并允许此 localhost 页面访问串口。'};
     message(hints[error.name] || `无法连接或读取串口：${error.message}`, true);
   }});
+  tuningUI = window.createTuningUI(tuningClient);
+  function showPanel(key) {
+    for (const name of ['monitor','tuning']) {
+      const selected = name === key;
+      $(name+'-panel').hidden = !selected;
+      $(name+'-tab').setAttribute('aria-selected',String(selected));
+      $(name+'-tab').tabIndex = selected ? 0 : -1;
+    }
+    if (chartDialog.open) chartDialog.close();
+    lastRendered = null;
+  }
+  for (const name of ['monitor','tuning']) {
+    $(name+'-tab').addEventListener('click', () => showPanel(name));
+    $(name+'-tab').addEventListener('keydown', event => {
+      if (['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) {
+        event.preventDefault();
+        const next = event.key==='Home' ? 'monitor' : event.key==='End' ? 'tuning' : name==='monitor' ? 'tuning' : 'monitor';
+        showPanel(next);$(next+'-tab').focus();
+      }
+    });
+  }
   const colors = {lf: '#3478f6', rf: '#16a69b', lb: '#e3a234', rb: '#8a65d6'};
   const wheelNames = {lf: '左前 LF', rf: '右前 RF', lb: '左后 LB', rb: '右后 RB'};
   const powerTraces = [{key: 'p_unlimited_cw', name: '模型未限流', color: '#b7c1d1'}, {key: 'effective_limit_cw', name: '最终限制', color: '#8a65d6', dash: true}, {key: 'target_power_cw', name: '目标功率', color: '#e3a234', dash: true}, {key: 'p_limited_cw', name: '模型限流后', color: '#16a69b'}, {key: 'p_meter_cw', name: '功率计实测', color: '#3478f6'}];
@@ -330,7 +354,7 @@
       const snapshot = view.snapshot(now);
       if (!view.paused || snapshot !== lastRendered) {
         renderValues(snapshot);
-        charts.forEach(chart => drawChartView($(chart.id), chart, snapshot));
+        if (!$('monitor-panel').hidden) charts.forEach(chart => drawChartView($(chart.id), chart, snapshot));
         renderExpandedChart(snapshot);
         lastRendered = snapshot;
       }

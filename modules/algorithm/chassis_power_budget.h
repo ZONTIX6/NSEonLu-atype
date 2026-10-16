@@ -108,6 +108,7 @@ typedef struct
 } ChassisPowerBudgetOutput_s;
 
 bool ChassisPowerBudgetConfigIsValid(const ChassisPowerBudgetConfig_s *config);
+bool ChassisBufferBudgetConfigIsValid(const ChassisBufferBudgetConfig_s *config);
 void ChassisPowerBudgetReset(ChassisPowerBudgetState_s *state,
                              float initial_budget_w);
 bool ChassisPowerBudgetUpdate(const ChassisPowerBudgetConfig_s *config,

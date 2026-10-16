@@ -3,6 +3,14 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include "runtime_tuning.h"
+extern uint8_t UserRxBufferFS[];
+static void receive(const char *text)
+{
+    uint32_t length = (uint32_t)strlen(text);
+    memcpy(UserRxBufferFS, text, length);
+    assert(USBD_Interface_fops_FS.Receive(UserRxBufferFS, &length) == USBD_OK);
+}
 
 USBD_HandleTypeDef hUsbDeviceFS;
 static USBD_CDC_HandleTypeDef cdc;
@@ -108,6 +116,40 @@ int main(void)
     USBTelemetryStreamSend(&sample, 1160);
     assert(submitted == before_open + 1);
     assert(memcmp(cdc.TxBuffer, "version,seq,tick,", 17) == 0);
+    complete();
+    float tuning_pid[24] = {.75f};
+    RuntimeTuningRegister(TUNING_PID, tuning_pid, 0);
+    receive("@T1,17,GE");
+    USBTelemetryStreamSend(&sample, 1180);
+    assert(memcmp(cdc.TxBuffer, "@T1,", 4) != 0);
+    complete();
+    receive("T,pid\r");
+    receive("\n");
+    USBTelemetryStreamSend(&sample, 1200);
+    assert(memcmp(cdc.TxBuffer, "@T1,17,OK,pid,1,0,3f400000", 24) == 0);
+    uint8_t tuning_in_flight[512];
+    memcpy(tuning_in_flight, cdc.TxBuffer, cdc.TxLength);
+    uint32_t tuning_length = cdc.TxLength;
+    receive("@T1,18,GET,pid\r\n");
+    USBTelemetryStreamSend(&sample, 1220);
+    assert(memcmp(tuning_in_flight, cdc.TxBuffer, tuning_length) == 0);
+    complete();
+    USBTelemetryStreamSend(&sample, 1240);
+    assert(memcmp(cdc.TxBuffer, "@T1,18,OK,pid", 12) == 0);
+    complete();
+    /* Oversized and NUL-containing lines cannot turn into valid suffix commands. */
+    char large[600]; memset(large, 'x', sizeof large - 1); large[sizeof large - 1] = 0;
+    receive(large); receive("@T1,19,GET,pid\n");
+    USBTelemetryStreamSend(&sample, 1260);
+    assert(memcmp(cdc.TxBuffer, "@T1,", 4) != 0);
+    complete();
+    receive("@T1,20,GE");
+    dtr(0); dtr(1);
+    receive("@T1,21,GET,pid\n"); /* New-session bytes before task sees DTR. */
+    USBTelemetryStreamSend(&sample, 1280);
+    complete(); /* Session header first. */
+    USBTelemetryStreamSend(&sample, 1300);
+    assert(memcmp(cdc.TxBuffer, "@T1,21,OK,pid", 12) == 0);
     complete();
     puts("USB telemetry transport tests passed");
     return 0;

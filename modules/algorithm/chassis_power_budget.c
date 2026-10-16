@@ -24,8 +24,9 @@ static float ClampFloat(float value, float minimum, float maximum)
     return fminf(fmaxf(value, minimum), maximum);
 }
 
-static bool BufferConfigIsValid(const ChassisBufferBudgetConfig_s *config)
+bool ChassisBufferBudgetConfigIsValid(const ChassisBufferBudgetConfig_s *config)
 {
+    if (config == NULL) return false;
     const float values[] = {config->max_energy_j, config->recovery_enter_j,
         config->recovery_exit_j, config->hard_floor_j, config->prediction_window_s,
         config->guard_window_s, config->settlement_delay_s, config->energy_margin_j,
@@ -158,7 +159,7 @@ static bool UpdateBufferBudget(const ChassisPowerBudgetConfig_s *config,
                               ChassisPowerBudgetOutput_s *output)
 {
     const ChassisBufferBudgetConfig_s *buffer = &config->buffer;
-    if (!BufferConfigIsValid(buffer))
+    if (!ChassisBufferBudgetConfigIsValid(buffer))
     {
         ResetInvalid(state, output);
         return false;

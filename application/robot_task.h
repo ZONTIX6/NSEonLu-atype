@@ -85,7 +85,8 @@ void OSTaskInit()
     robotTaskHandle = osThreadCreate(osThread(robottask), NULL);
 
 #if USB_TELEMETRY_ENABLE
-    osThreadDef(usbtelemetry, StartUSBTelemetryTask, osPriorityBelowNormal, 0, 384);
+    /* Bounded tuning-line parsing and reply formatting share this task. */
+    osThreadDef(usbtelemetry, StartUSBTelemetryTask, osPriorityBelowNormal, 0, 768);
     usbTelemetryTaskHandle = osThreadCreate(osThread(usbtelemetry), NULL);
 #endif
 

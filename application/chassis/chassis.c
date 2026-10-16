@@ -18,9 +18,8 @@
 #include "chassis_power_outer_loop.h"
 #include "chassis_power_link.h"
 #include "chassis_spin_config.h"
-#if CHASSIS_SPIN_DYNAMIC_ENABLED
 #include "chassis_spin.h"
-#endif
+#include "runtime_tuning.h"
 #include "robot_def.h"
 #include "board_config.h"
 #if POWER_METER_ENABLE
@@ -87,7 +86,8 @@ bool ChassisGetTelemetrySnapshot(ChassisTelemetrySnapshot_s *snapshot)
 static ChassisSpinState_s chassis_spin_state;
 static ChassisSpinInput_s chassis_spin_input;
 static uint32_t chassis_spin_dwt_count;
-static const ChassisSpinConfig_s chassis_spin_config = {
+#endif
+static ChassisSpinConfig_s chassis_spin_config = {
 #if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE
     .fixed_wz = CHASSIS_SPIN_SINE_CENTER_WZ,
     .min_wz = CHASSIS_SPIN_SINE_MIN_WZ,
@@ -110,9 +110,8 @@ static const ChassisSpinConfig_s chassis_spin_config = {
     .sine_fall_wz_per_s = CHASSIS_SPIN_SINE_FALL_RATE,
     .sine_direction = CHASSIS_SPIN_SINE_DIRECTION,
 };
-#endif
 
-static const ChassisPowerBudgetConfig_s chassis_budget_config = {
+static ChassisPowerBudgetConfig_s chassis_budget_config = {
     .empty_energy_ratio = 0.10f,
     .full_energy_ratio = 0.30f,
     .max_boost_w = 100.0f,
@@ -140,7 +139,7 @@ static const ChassisPowerBudgetConfig_s chassis_budget_config = {
 };
 
 /* 功率外环:用功率计实测功率对比模型预测值,在"基准预算"上叠加一个有界的修正量 */
-static const ChassisPowerOuterLoopConfig_s chassis_outer_loop_config = {
+static ChassisPowerOuterLoopConfig_s chassis_outer_loop_config = {
     .kp = 0.5f, // 比例增益,误差 = 目标功率 - 实测功率(W),输出为预算修正量(W)
     .ki = 1.0f, // 积分增益,积分限幅为[-基准预算, max_positive_correction_w]
     .measurement_lpf_tau_s = 0.030f, // 功率计读数一阶低通时间常数(s),抑制采样噪声
@@ -171,8 +170,81 @@ static const MotorPowerModelConfig_s m3508_power_model = {
 static float chassis_vx, chassis_vy;                      // 将云台系的速度投影到底盘
 static float vt_lf, vt_rf, vt_lb, vt_rb;                  // 底盘速度解算后的临时输出,待进行限幅
 
+static void RegisterChassisTuning(void)
+{
+    const ChassisPowerOuterLoopConfig_s *o = &chassis_outer_loop_config;
+    const ChassisPowerBudgetConfig_s *b = &chassis_budget_config;
+    const float power[] = {o->kp, o->ki, o->measurement_lpf_tau_s,
+        o->activation_margin_w, o->error_deadband_w, o->max_positive_correction_w,
+        o->positive_slew_rate_w_per_s, o->budget_drop_reset_w, o->antiwindup_gain_per_s,
+        o->low_demand_delay_s, o->low_demand_decay_w_per_s,
+        b->max_boost_w, b->rise_rate_w_per_s, b->demand_margin_w,
+        b->empty_energy_ratio, b->full_energy_ratio, b->buffer.max_boost_w,
+        b->buffer.recovery_power_w, b->buffer.recovery_target_time_s};
+    RuntimeTuningRegister(TUNING_POWER, power, CHASSIS_POWER_CONTROL_STAGE);
+    const ChassisSpinConfig_s *s = &chassis_spin_config;
+    const float spin[] = {s->fixed_wz, s->min_wz, s->max_wz, s->gain_wz_per_w_s,
+        s->rise_wz_per_s, s->fall_wz_per_s, s->power_lpf_tau_s, s->power_deadband_w,
+        s->settle_time_s, s->budget_drop_reset_w, s->sine_amplitude_wz,
+        s->sine_period_s, s->sine_ramp_s, s->sine_rise_wz_per_s,
+        s->sine_fall_wz_per_s, (float)s->sine_direction};
+    RuntimeTuningRegister(TUNING_SPIN, spin, CHASSIS_SPIN_MODE);
+}
+static bool ApplyPowerTuning(const float *v)
+{
+    const float upper[] = {100, 100, 10, 1000, 100, 1000, 10000, 1000,
+        1000, 60, 1000, 1000, 10000, 1000, 1, 1, 1000, 1000, 60};
+    for (unsigned i = 0; i < 19; ++i)
+        if (!isfinite(v[i]) || v[i] < 0 || v[i] > upper[i]) return false;
+    ChassisPowerOuterLoopConfig_s outer = {
+        .kp=v[0], .ki=v[1], .measurement_lpf_tau_s=v[2],
+        .activation_margin_w=v[3], .error_deadband_w=v[4],
+        .max_positive_correction_w=v[5], .positive_slew_rate_w_per_s=v[6],
+        .budget_drop_reset_w=v[7], .antiwindup_gain_per_s=v[8],
+        .low_demand_delay_s=v[9], .low_demand_decay_w_per_s=v[10]};
+    ChassisPowerBudgetConfig_s budget = chassis_budget_config;
+    budget.max_boost_w=v[11]; budget.rise_rate_w_per_s=v[12];
+    budget.demand_margin_w=v[13]; budget.empty_energy_ratio=v[14];
+    budget.full_energy_ratio=v[15]; budget.buffer.max_boost_w=v[16];
+    budget.buffer.recovery_power_w=v[17]; budget.buffer.recovery_target_time_s=v[18];
+    if (!ChassisPowerOuterLoopConfigIsValid(&outer) ||
+        !ChassisPowerBudgetConfigIsValid(&budget) ||
+        !ChassisBufferBudgetConfigIsValid(&budget.buffer)) return false;
+    chassis_outer_loop_config = outer;
+    chassis_budget_config = budget;
+    ChassisPowerOuterLoopReset(&chassis_outer_loop_state);
+    return true;
+}
+static bool ApplySpinTuning(const float *v)
+{
+    const float upper[] = {6000,6000,6000,1000,10000,10000,10,1000,60,
+        1000,6000,120,60,10000,10000};
+    for (unsigned i = 0; i < 15; ++i)
+        if (!isfinite(v[i]) || v[i] < 0 || v[i] > upper[i]) return false;
+    if (v[15] != -1 && v[15] != 1) return false;
+    ChassisSpinConfig_s spin = {
+        .fixed_wz=v[0], .min_wz=v[1], .max_wz=v[2], .gain_wz_per_w_s=v[3],
+        .rise_wz_per_s=v[4], .fall_wz_per_s=v[5], .power_lpf_tau_s=v[6],
+        .power_deadband_w=v[7], .settle_time_s=v[8], .budget_drop_reset_w=v[9],
+        .sine_amplitude_wz=v[10], .sine_period_s=v[11], .sine_ramp_s=v[12],
+        .sine_rise_wz_per_s=v[13], .sine_fall_wz_per_s=v[14],
+        .sine_direction=(int8_t)v[15]};
+    if (!ChassisSpinConfigIsValid(&spin)) return false;
+#if CHASSIS_SPIN_DYNAMIC_ENABLED
+    if (chassis_cmd_recv.chassis_mode == CHASSIS_ROTATE) {
+        if (spin.sine_direction != chassis_spin_config.sine_direction ||
+            !ChassisSpinRetune(&spin, &chassis_spin_state)) return false;
+    } else chassis_spin_state = (ChassisSpinState_s){0};
+#endif
+    chassis_spin_config = spin;
+    return true;
+}
+
 void ChassisInit()
 {
+    RegisterChassisTuning();
+    RuntimeTuningRestore(TUNING_POWER, ApplyPowerTuning);
+    RuntimeTuningRestore(TUNING_SPIN, ApplySpinTuning);
     // 四个轮子的参数一样,改tx_id和反转标志位即可
     Motor_Init_Config_s chassis_motor_config = {
         .can_init_config.can_handle = &hcan1,
@@ -653,6 +725,8 @@ static void UpdateChassisPowerBudget(void)
 /* 机器人底盘控制核心任务 */
 void ChassisTask()
 {
+    RuntimeTuningProcess(TUNING_POWER, ApplyPowerTuning);
+    RuntimeTuningProcess(TUNING_SPIN, ApplySpinTuning);
     // 后续增加没收到消息的处理(双板的情况)
     // 获取新的控制信息
 #ifdef ONE_BOARD
@@ -683,7 +757,7 @@ void ChassisTask()
 #if CHASSIS_SPIN_DYNAMIC_ENABLED
         chassis_cmd_recv.wz = spin_target_wz;
 #else
-        chassis_cmd_recv.wz = CHASSIS_SPIN_FIXED_WZ;
+        chassis_cmd_recv.wz = chassis_spin_config.fixed_wz;
 #endif
         break;
     default:

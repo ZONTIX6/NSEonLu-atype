@@ -5,6 +5,7 @@
 #include "rtt_telemetry.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "runtime_tuning.h"
 #include "power_meter.h"
 #if CHASSIS_POWER_CAPTURE_ENABLE
 #include "bsp_uart_log.h"
@@ -62,6 +63,40 @@ static Motor_Working_Type_e cycle_stop[DJI_MOTOR_CNT];
 static bool cycle_online[DJI_MOTOR_CNT];
 static DJIChassisPowerControlSnapshot_s cycle_control;
 static bool cycle_ready;
+static void RegisterPIDTuning(void)
+{
+    float values[24];
+    for (unsigned i = 0; i < 4; ++i) {
+        PIDInstance *pid = &dji_motor_instance[chassis_power->motor_indices[i]]->motor_controller.speed_PID;
+        const float wheel[] = {pid->Kp, pid->Ki, pid->Kd, pid->MaxOut, pid->IntegralLimit, pid->DeadBand};
+        memcpy(&values[i * 6], wheel, sizeof wheel);
+    }
+    RuntimeTuningRegister(TUNING_PID, values, 0);
+}
+static bool ApplyPIDTuning(const float *v)
+{
+    if (!chassis_power) return false;
+    for (unsigned i = 0; i < 4; ++i) {
+        const float *w = &v[i * 6];
+        for (unsigned j = 0; j < 6; ++j)
+            if (!isfinite(w[j]) || w[j] < 0) return false;
+        if (w[0] > 1000 || w[1] > 1000 || w[2] > 1000 ||
+            w[3] <= 0 || w[3] > chassis_power->algorithm.max_current_command ||
+            w[4] > w[3] || w[5] > 10000) return false;
+    }
+    /* Runs in the motor task, before any wheel computes its next PID output. */
+    for (unsigned i = 0; i < 4; ++i) {
+        const float *w = &v[i * 6];
+        PIDInstance *pid = &dji_motor_instance[chassis_power->motor_indices[i]]->motor_controller.speed_PID;
+        pid->Kp=w[0]; pid->Ki=w[1]; pid->Kd=w[2];
+        pid->MaxOut=w[3]; pid->IntegralLimit=w[4]; pid->DeadBand=w[5];
+        pid->Iout=pid->ITerm=pid->Last_ITerm=0;
+        pid->Dout=pid->Last_Dout=0;
+        pid->Output=fminf(fmaxf(pid->Output, -pid->MaxOut), pid->MaxOut);
+        pid->Last_Output=pid->Output;
+    }
+    return true;
+}
 #if CHASSIS_POWER_CAPTURE_ENABLE
 static ChassisPowerCapture_s chassis_capture;
 #endif
@@ -314,6 +349,8 @@ bool DJIChassisPowerRegister(const DJIChassisPowerConfig_s *config)
     instance->state.registered = true;
     instance->registered = true;
     chassis_power = instance;
+    RegisterPIDTuning();
+    RuntimeTuningRestore(TUNING_PID, ApplyPIDTuning);
     (void)DWT_GetDeltaT(&instance->control_dwt_count);
 #if CHASSIS_POWER_CAPTURE_ENABLE
     ChassisPowerCaptureReset(&chassis_capture);
@@ -557,6 +594,7 @@ static void ApplyChassisPowerGroup(void)
 // 为所有电机实例计算三环PID,发送控制报文
 void DJIMotorControl()
 {
+    RuntimeTuningProcess(TUNING_PID, ApplyPIDTuning);
     uint8_t group, num;
     int16_t set;
     DJIMotorInstance *motor;

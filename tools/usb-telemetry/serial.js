@@ -15,6 +15,8 @@
       this.reader = null;
       this.readTask = null;
       this.stopping = false;
+      this.writer = null;
+      this.writeTask = Promise.resolve();
       if (serial && serial.addEventListener) serial.addEventListener('disconnect', event => {
         if (this.port && (event.port === this.port || event.target === this.port)) this.disconnect();
       });
@@ -61,9 +63,26 @@
       const port = this.port;
       this.port = null;
       if (port) {
+        const writer = this.writer;this.writer = null;
+        if (writer) {
+          try {await writer.abort();} catch (_) { /* Unplug can already have closed the writer. */ }
+          try {await this.writeTask;} catch (_) { /* Pending commands reject on disconnect. */ }
+          writer.releaseLock();
+        }
         try {await port.setSignals({dataTerminalReady: false});} catch (_) { /* Detached USB cannot accept signals. */ }
         try {await port.close();} catch (_) { /* Detached USB may already be closed. */ }
       }
+    }
+    async send(text) {
+      if (this.state !== 'connected' || !this.port?.writable) throw new Error('串口未连接或不可写。');
+      if (!this.writer) this.writer = this.port.writable.getWriter();
+      const writer = this.writer;
+      const task = this.writeTask.catch(() => {}).then(async () => {
+        if (this.state !== 'connected' || this.writer !== writer) throw new Error('串口已断开。');
+        await writer.write(new TextEncoder().encode(text));
+      });
+      this.writeTask = task;
+      return task;
     }
     async disconnect() {
       if (this.state === 'connecting') return;

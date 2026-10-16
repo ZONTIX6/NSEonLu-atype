@@ -413,6 +413,34 @@ static void TestCalibrationPrintsLimitedCurrentsInsteadOfPidDemand(void)
 
 int main(void)
 {
+    /* Live PID writes apply in the motor cycle and reject a bad whole group. */
+    PreparePowerGroup();
+    chassis_power->algorithm.max_current_command = 15000;
+    RegisterPIDTuning();
+    char tuning_set[512] = "@T1,1,SET,pid,1";
+    const float wheel[] = {1.25f, .1f, 0, 12000, 2000, 1};
+    for (unsigned i = 0; i < 24; ++i) {
+        uint32_t bits; memcpy(&bits, &wheel[i % 6], sizeof bits);
+        char cell[16]; snprintf(cell, sizeof cell, ",%08lx", (unsigned long)bits);
+        strcat(tuning_set, cell);
+    }
+    RuntimeTuningSubmit(tuning_set);
+    DJIMotorControl();
+    for (unsigned i = 0; i < 4; ++i) {
+        ASSERT_TRUE(dji_motor_instance[i]->motor_controller.speed_PID.Kp == 1.25f);
+        ASSERT_TRUE(dji_motor_instance[i]->motor_controller.speed_PID.MaxOut == 12000);
+    }
+    char tuning_reply[512];
+    ASSERT_TRUE(RuntimeTuningReply(tuning_reply, sizeof tuning_reply) > 0);
+    ASSERT_TRUE(strstr(tuning_reply, "@T1,1,OK,pid,2") != NULL);
+    RuntimeTuningReplySent();
+    /* Direct consumer validation also guarantees all-or-nothing updates. */
+    float invalid[24];
+    for (unsigned i = 0; i < 24; ++i) invalid[i] = wheel[i % 6];
+    invalid[21] = 16000;
+    ASSERT_TRUE(!ApplyPIDTuning(invalid));
+    ASSERT_TRUE(dji_motor_instance[0]->motor_controller.speed_PID.MaxOut == 12000);
+    RuntimeTuningCancel();
     PreparePowerGroup();
     chassis_power->algorithm.max_current_command = 15000;
     chassis_power->control.power_ceiling_w = 4;

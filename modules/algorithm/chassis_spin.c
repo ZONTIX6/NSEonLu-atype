@@ -25,7 +25,7 @@ bool ChassisSpinTransientAllowsIncrease(const ChassisPowerTransientOutput_s *tra
 #endif
 }
 
-static bool ConfigIsValid(const ChassisSpinConfig_s *c)
+bool ChassisSpinConfigIsValid(const ChassisSpinConfig_s *c)
 {
     const bool common = c != NULL && isfinite(c->fixed_wz) && isfinite(c->min_wz) &&
            isfinite(c->max_wz) && isfinite(c->gain_wz_per_w_s) &&
@@ -142,7 +142,7 @@ static bool UpdateSine(const ChassisSpinConfig_s *c, const ChassisSpinInput_s *i
 }
 #endif
 
-bool ChassisSpinUpdate(const ChassisSpinConfig_s *config,
+static bool UpdateTarget(const ChassisSpinConfig_s *config,
                        const ChassisSpinInput_s *input,
                        float dt_s,
                        ChassisSpinState_s *state,
@@ -150,7 +150,7 @@ bool ChassisSpinUpdate(const ChassisSpinConfig_s *config,
 {
     if (target_wz != NULL)
         *target_wz = 0;
-    if (!ConfigIsValid(config) || input == NULL || state == NULL || target_wz == NULL)
+    if (!ChassisSpinConfigIsValid(config) || input == NULL || state == NULL || target_wz == NULL)
     {
 #if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE
         if (state != NULL) *state = (ChassisSpinState_s){0};
@@ -216,4 +216,50 @@ bool ChassisSpinUpdate(const ChassisSpinConfig_s *config,
     *target_wz = state->target_wz;
     return true;
 #endif
+}
+
+bool ChassisSpinRetune(const ChassisSpinConfig_s *config, ChassisSpinState_s *state)
+{
+    if (!state || !ChassisSpinConfigIsValid(config)) return false;
+#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE
+    if (state->sine_direction_locked && config->sine_direction != state->sine_direction)
+        return false;
+#endif
+    const float previous = state->applied_wz;
+    const int8_t direction = state->sine_direction;
+    const bool locked = state->sine_direction_locked;
+    *state = (ChassisSpinState_s){.applied_wz = previous, .retuning = previous != 0,
+        .sine_direction = direction, .sine_direction_locked = locked};
+    return true;
+}
+
+bool ChassisSpinUpdate(const ChassisSpinConfig_s *config,
+                       const ChassisSpinInput_s *input, float dt_s,
+                       ChassisSpinState_s *state, float *target_wz)
+{
+    const float previous = state ? state->applied_wz : 0;
+    const bool retuning = state && state->retuning;
+    bool ok = UpdateTarget(config, input, dt_s, state, target_wz);
+    if (!state || !target_wz) return ok;
+    state->retuning = false;
+    if (ok && retuning && input->spin_enabled && input->control_enabled &&
+        input->feedback_valid && isfinite(dt_s) && dt_s > 0 && dt_s <= .020f) {
+#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE
+        float rate = fabsf(*target_wz) > fabsf(previous) ?
+            config->sine_rise_wz_per_s : config->sine_fall_wz_per_s;
+#else
+        float rate = fabsf(*target_wz) > fabsf(previous) ?
+            config->rise_wz_per_s : config->fall_wz_per_s;
+#endif
+        if (fabsf(*target_wz) > fabsf(previous) &&
+            (!input->increase_allowed || input->power_limited || input->energy_recovering ||
+             input->measured_power_w > input->target_power_w + config->power_deadband_w))
+            rate = 0;
+        const float change = *target_wz - previous;
+        const float step = fminf(fmaxf(change, -rate * dt_s), rate * dt_s);
+        state->retuning = fabsf(change - step) > .0001f;
+        *target_wz = previous + step;
+    }
+    state->applied_wz = *target_wz;
+    return ok;
 }

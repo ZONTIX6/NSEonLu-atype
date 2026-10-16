@@ -30,9 +30,14 @@ typedef struct
     float sine_phase_s, sine_center_wz, sine_amplitude_wz;
     int8_t sine_direction;
     bool sine_direction_locked;
+    float applied_wz;
+    bool retuning;
 } ChassisSpinState_s;
 
 /* Limits the target only; existing power/current protection remains authoritative. */
+bool ChassisSpinConfigIsValid(const ChassisSpinConfig_s *config);
+/* Reset learning but slew from the last emitted command; direction stays locked. */
+bool ChassisSpinRetune(const ChassisSpinConfig_s *config, ChassisSpinState_s *state);
 bool ChassisSpinUpdate(const ChassisSpinConfig_s *config,
                        const ChassisSpinInput_s *input,
                        float dt_s,

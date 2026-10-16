@@ -720,6 +720,14 @@ static void LowLoadChargesCapWithoutSpendingBuffer(void)
 
 int main(void)
 {
+    ChassisPowerBudgetConfig_s invalid_tuning = config;
+    invalid_tuning.buffer.recovery_power_w = 0;
+    CHECK(ChassisPowerBudgetConfigIsValid(&invalid_tuning));
+    CHECK(!ChassisBufferBudgetConfigIsValid(&invalid_tuning.buffer));
+    invalid_tuning = config;
+    invalid_tuning.buffer.recovery_target_time_s = 0;
+    CHECK(!ChassisBufferBudgetConfigIsValid(&invalid_tuning.buffer));
+    CHECK(ChassisBufferBudgetConfigIsValid(&config.buffer));
     MeterGapCannotBypassUpwardCorrectionLimit();
     LowLoadChargesCapWithoutSpendingBuffer();
     ContinuousHistoryShrinksSettlementUncertainty();

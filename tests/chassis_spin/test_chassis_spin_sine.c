@@ -332,6 +332,20 @@ static void RealTransientGateStartsAndResumesTheLowDragWave(void)
 
 int main(void)
 {
+    ChassisSpinState_s retuned = {0};
+    ChassisSpinInput_s retune_input = Ready();
+    float previous = Run(&config, &retuned, retune_input, 1800);
+    ChassisSpinConfig_s next = config;
+    next.sine_period_s = 6;
+    CHECK(ChassisSpinRetune(&next, &retuned));
+    float after = Run(&next, &retuned, retune_input, 1);
+    CHECK(fabsf(after - previous) <= next.sine_fall_wz_per_s * .005f + .01f);
+    next.sine_direction = -1;
+    CHECK(!ChassisSpinRetune(&next, &retuned));
+    next.sine_direction = 1;
+    retune_input.control_enabled = false;
+    CHECK(ChassisSpinUpdate(&next, &retune_input, .005f, &retuned, &after));
+    CHECK(after == 0); /* Retune slew must never delay a stop. */
     FullWaveKeepsDirectionAndHasTheRequestedPeriod();
     StartupWaitsForGuardsAndNormalStepsAreBounded();
     NegativeDirectionIsLockedUntilModeExit();

@@ -50,6 +50,9 @@ dkms.conf
 build
 /build_usb_telemetry/
 /build_usb_vision/
+/build_online_tuning*/
+/output/playwright/
+/.playwright-cli/
 !tools/usb-telemetry/start.cmd
 ./idea
 .vscode/.cortex-debug.peripherals.state.json

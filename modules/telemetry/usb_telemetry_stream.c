@@ -1,20 +1,80 @@
 #include "usb_telemetry.h"
 #include "bsp_usb.h"
 #include <stdbool.h>
+#include "runtime_tuning.h"
+#include <string.h>
 
 static char header[USB_TELEMETRY_BUFFER_SIZE];
 static char row[USB_TELEMETRY_BUFFER_SIZE];
 static size_t header_length;
 static uint32_t sequence, drop_count, session, header_tick;
 static bool header_needed;
+static uint8_t *receive_buffer;
+static uint8_t rx_ring[1024];
+static volatile unsigned rx_head, rx_tail;
+static volatile bool rx_overflow;
+static volatile uint32_t rx_session;
+static char command[TUNING_LINE_SIZE], reply[TUNING_LINE_SIZE];
+static size_t command_length;
+static bool command_dropping;
+
+/* USB interrupt: copy only; parsing and control changes run in tasks. */
+static void Receive(uint16_t length)
+{
+    if (!receive_buffer || !CDC_IsPortOpen_FS()) return;
+    uint32_t current = CDC_GetSession_FS();
+    if (rx_session != current) {
+        rx_head = rx_tail = 0;
+        rx_overflow = false;
+        rx_session = current;
+    }
+    for (uint32_t i = 0; i < length; ++i) {
+        unsigned next = (rx_head + 1U) % sizeof rx_ring;
+        if (next == rx_tail) {rx_overflow = true; break;}
+        rx_ring[rx_head] = receive_buffer[i];
+        rx_head = next;
+    }
+}
+static void ReadCommands(void)
+{
+    for (unsigned budget = 0; budget < sizeof rx_ring; ++budget) {
+        const uint32_t primask = __get_PRIMASK();
+        __disable_irq();
+        if (rx_overflow) {
+            rx_tail = rx_head; rx_overflow = false;
+            command_length = 0; command_dropping = true;
+        }
+        if (rx_head == rx_tail) {__set_PRIMASK(primask); break;}
+        uint8_t byte = rx_ring[rx_tail];
+        rx_tail = (rx_tail + 1U) % sizeof rx_ring;
+        __set_PRIMASK(primask);
+        if (byte == '\n') {
+            if (!command_dropping) {
+                if (command_length && command[command_length - 1] == '\r') --command_length;
+                command[command_length] = 0;
+                RuntimeTuningSubmit(command);
+            }
+            command_length = 0; command_dropping = false;
+        } else if (!command_dropping) {
+            if (byte == 0 || command_length >= sizeof command - 1) {
+                command_length = 0; command_dropping = true;
+            } else command[command_length++] = (char)byte;
+        }
+    }
+}
 
 void USBTelemetryStreamInit(void)
 {
-    USB_Init_Config_s config = {0};
-    (void)USBInit(config);
+    USB_Init_Config_s config = {.rx_cbk = Receive};
+    receive_buffer = USBInit(config);
+    rx_head = rx_tail = 0;
+    rx_overflow = false;
+    command_length = 0; command_dropping = false;
+    RuntimeTuningCancel();
     header_length = USBTelemetryFormatHeader(header, sizeof header);
     sequence = drop_count = header_tick = 0;
     session = CDC_GetSession_FS();
+    rx_session = session;
     header_needed = true;
 }
 
@@ -29,8 +89,17 @@ void USBTelemetryStreamSend(USBTelemetrySample_s *sample, uint32_t now_ms)
     if (session != current_session) {
         session = current_session;
         header_needed = true;
+        RuntimeTuningCancel();
+        command_length = 0; command_dropping = false;
+        const uint32_t primask = __get_PRIMASK();
+        __disable_irq();
+        if (rx_session != session) {
+            rx_head = rx_tail = 0; rx_overflow = false; rx_session = session;
+        }
+        __set_PRIMASK(primask);
     }
     if (!CDC_IsPortOpen_FS()) return;
+    ReadCommands();
     /* Never format into a buffer while the endpoint still owns its bytes. */
     if (!CDC_IsTransmitIdle_FS()) {
         ++drop_count;
@@ -43,6 +112,13 @@ void USBTelemetryStreamSend(USBTelemetrySample_s *sample, uint32_t now_ms)
         } else {
             ++drop_count;
         }
+        return;
+    }
+    size_t reply_length = RuntimeTuningReply(reply, sizeof reply);
+    if (reply_length) {
+        if (USBTransmit((uint8_t *)reply, (uint16_t)reply_length) == USBD_OK)
+            RuntimeTuningReplySent();
+        else ++drop_count;
         return;
     }
     const size_t length = USBTelemetryFormatRow(sample, row, sizeof row);

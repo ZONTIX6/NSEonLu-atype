@@ -16,6 +16,39 @@ node tools/usb-telemetry/serve.cjs
 
 网页的连接授权由浏览器弹窗完成。请在独立浏览器窗口打开页面；内嵌预览环境可能没有串口能力。
 
+## 在线调参和项目文件同步
+
+烧录支持在线调参的新固件后，重启本目录的 start.cmd，连接 C 板并进入“在线调参”页签。连接时读取当前参数；切换参数组时会读取该组。监测和调参分为两个工作区，共用连接状态与关键读数，切换页签不停止采集。
+
+| 参数组 | 首版支持范围 |
+| --- | --- |
+| PID | 底盘 LF/RF/LB/RB 四轮速度环，各自 Kp、Ki、Kd、输出限幅、积分限幅、死区；误差为度/秒，电流为 DJI 原始单位 |
+| 功控 | 功率慢外环全部 11 项；电容最大增益功率、预算上升速率、需求余量、空/满电容比例；缓冲最大增益功率、最大恢复降额、恢复目标时间 |
+| 小陀螺 | 当前编译模式使用的目标/边界、功率反馈和正弦波形参数；模式由固件决定，网页显示实际模式 |
+
+输入框下显示板端最后确认值。编辑只改变草稿，点击“应用并同步文件”后整组发送，板端校验通过，在所属控制任务下个周期应用并回传实际值。网页使用回执值同步文件，不将未确认或被拒绝的草稿写入文件。小陀螺运行中保持目标过渡速率，改变旋转方向需先退出小陀螺模式。修改 PID 会清除四轮积分，功控修改会重置慢外环学习量；保护链路继续生效。
+
+同步文件为仓库中的 modules/telemetry/tuning_overrides.h。每组的 OVERRIDE=1 表示下次编译使用文件中的 VALUES，覆盖原始源码默认；设置为 0 可恢复该组原始默认。字段顺序见 runtime_tuning.h。文件由本地 Node 服务原子替换，并保留其他组设置。
+
+板端仅保存在 RAM，断开 USB 不会复位已应用参数；重启恢复当前已烧录固件的启动值。文件同步后，需要重新编译、烧录，才能让这些值成为新的启动值；网页不写 MCU Flash，也不自动烧录。文件写入失败时，板端修改仍可能已经生效，页面分别显示状态，可“重试同步文件”；重新读取后，重试使用最新确认值。断线清除待同步记录，重连后可重新读取并应用。
+
+串口超时表示结果未确认，请重新读取实际值；旧固件需升级。演示模式停用调参。启动服务仍为旧版本时，关闭旧命令窗口并重新运行 start.cmd。源码目录必须允许当前用户写入参数配置文件。
+
+### 调参协议
+
+与 CSV v1 共用串口，使用独立 @T1 行前缀，CRLF 结束；每次只允许一个在途请求。每个 float32 以八位十六进制 IEEE754 位模式传输，避免嵌入式浮点格式化。
+
+~~~text
+@T1,<请求ID>,GET,<pid|power|spin>
+@T1,<请求ID>,SET,<组>,<读取的组版本>,<整组float32位模式...>
+@T1,<请求ID>,OK,<组>,<当前版本>,<模式>,<当前生效值...>
+@T1,<请求ID>,ERR,<组>,<错误码>
+~~~
+
+PID 为 24 项、功控 19 项、自旋 16 项。模式对 PID 为 0、功控为阶段 0～3、自旋为固定 0 / 自适应 1 / 正弦 2。版本不匹配返回 conflict；非法值、字段数量和组合约束也会拒绝。成功 SET 才递增版本，并在控制任务应用后回复。
+
+本地文件接口 POST /api/tuning 只接受本机同源 JSON 请求，不接受客户端指定文件路径；用于同步确认后的参数，不负责向 C 板发送指令。
+
 ## 固件配置与构建
 
 `modules/telemetry/usb_telemetry_config.h`：
@@ -119,6 +152,7 @@ playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/chart-check.
 playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/zoom-check.js
 playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/selection-check.js
 playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/history-check.js
+playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/tuning-check.js
 playwright-cli -s=usb close
 ```
 

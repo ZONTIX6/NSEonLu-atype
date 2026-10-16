@@ -16,6 +16,7 @@ SOURCE := test_dji_chassis_power_rtt.c \
           ../../modules/algorithm/power_model.c \
           ../../modules/algorithm/chassis_power_transient.c \
           ../../modules/telemetry/rtt_telemetry.c
+SOURCE += ../../modules/telemetry/runtime_tuning.c
 INCLUDES := -Istubs \
             -I../../modules/motor/DJImotor \
             -I../../modules/motor \

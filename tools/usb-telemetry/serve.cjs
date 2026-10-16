@@ -2,14 +2,59 @@
 const http = require('node:http');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const {validate} = require('./tuning.js');
 
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml' };
 
-function createServer(root = __dirname) {
+function createServer(root = __dirname, configPath = path.join(__dirname, '../../modules/telemetry/tuning_overrides.h')) {
+  let writing = Promise.resolve();
+  async function synchronize(group, mode, values) {
+    if (!['pid','power','spin'].includes(group) || !Number.isInteger(mode) || mode < 0 || mode > 3)
+      throw new Error('未知参数组或模式。');
+    const checked = validate(group,values,mode), name = group.toUpperCase();
+    const operation = writing.catch(() => {}).then(async () => {
+      let content = await fs.readFile(configPath,'utf8');
+      for (const key of ['OVERRIDE','VALUES'])
+        if (!new RegExp('^#define TUNING_'+name+'_'+key+' .+$','m').test(content)) throw new Error('配置文件结构不匹配，未写入。');
+      const literal = value => {
+        let text = String(value);if (!/[.e]/i.test(text)) text += '.0';return text+'f';
+      };
+      content = content.replace(new RegExp('^#define TUNING_'+name+'_OVERRIDE .+$','m'),'#define TUNING_'+name+'_OVERRIDE 1')
+        .replace(new RegExp('^#define TUNING_'+name+'_VALUES .+$','m'),'#define TUNING_'+name+'_VALUES {'+checked.map(literal).join(', ')+'}');
+      const temporary = configPath+'.tmp';
+      await fs.writeFile(temporary,content,'utf8');
+      await fs.rename(temporary,configPath);
+    });
+    writing = operation;await operation;
+  }
   return http.createServer(async (request, response) => {
     response.setHeader('Cache-Control', 'no-store');
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('Permissions-Policy', 'serial=(self)');
+    if (request.url === '/api/tuning' && request.method === 'POST') {
+      const host = request.headers.host || '';
+      if (!/^(127\.0\.0\.1|localhost)(:\d+)?$/.test(host) || request.headers.origin !== 'http://'+host) {
+        response.writeHead(403);response.end('只允许本地页面同步参数。');return;
+      }
+      if (request.headers['content-type'] !== 'application/json') {
+        response.writeHead(415);response.end('需要 JSON 参数。');return;
+      }
+      try {
+        let body = '';
+        for await (const chunk of request) {
+          body += chunk.toString('utf8');
+          if (body.length > 8192) throw new Error('参数请求过大。');
+        }
+        const data = JSON.parse(body);
+        await synchronize(data.group,data.mode,data.values);
+        response.writeHead(200,{'Content-Type':'application/json; charset=utf-8'});
+        response.end(JSON.stringify({saved:true,file:'modules/telemetry/tuning_overrides.h'}));
+      } catch(error) {
+        response.writeHead(error instanceof SyntaxError || !error.code ? 400 : 500,{'Content-Type':'application/json; charset=utf-8'});
+        response.end(JSON.stringify({error:error.code ? '配置文件写入失败，请检查文件权限或占用。' : error.message}));
+      }
+      return;
+    }
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       response.writeHead(405, { Allow: 'GET, HEAD' });
       response.end('Method not allowed');
