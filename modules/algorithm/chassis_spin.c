@@ -79,7 +79,7 @@ static bool UpdateSine(const ChassisSpinConfig_s *c, const ChassisSpinInput_s *i
         (s->initialized && (!isfinite(s->target_wz) || s->target_wz < c->min_wz ||
             s->target_wz > c->max_wz || !isfinite(s->filtered_power_w) ||
             !isfinite(s->settled_s) || s->settled_s < 0 ||
-            !isfinite(s->previous_target_power_w) || !isfinite(s->sine_phase_s) ||
+            !isfinite(s->sine_phase_s) ||
             s->sine_phase_s < 0 || !isfinite(s->sine_center_wz) ||
             s->sine_center_wz < c->min_wz || s->sine_center_wz > c->fixed_wz ||
             !isfinite(s->sine_amplitude_wz) || s->sine_amplitude_wz < 0 ||
@@ -93,7 +93,7 @@ static bool UpdateSine(const ChassisSpinConfig_s *c, const ChassisSpinInput_s *i
     {
         *s = (ChassisSpinState_s){.target_wz = c->min_wz,
             .sine_center_wz = c->min_wz, .filtered_power_w = i->measured_power_w,
-            .previous_target_power_w = i->target_power_w, .sine_direction = direction,
+            .sine_direction = direction,
             .sine_direction_locked = true, .initialized = i->feedback_valid};
         if (!i->feedback_valid)
         {
@@ -104,15 +104,9 @@ static bool UpdateSine(const ChassisSpinConfig_s *c, const ChassisSpinInput_s *i
     const float alpha = dt / (c->power_lpf_tau_s + dt);
     s->filtered_power_w = (1 - alpha) * s->filtered_power_w + alpha * i->measured_power_w;
     s->sine_phase_s = fmodf(s->sine_phase_s + dt, c->sine_period_s);
-    if (s->previous_target_power_w > i->target_power_w + c->budget_drop_reset_w)
-    {
-        const float ratio = i->target_power_w / s->previous_target_power_w;
-        s->sine_center_wz = fmaxf(c->min_wz, s->sine_center_wz * ratio);
-        s->sine_amplitude_wz *= ratio;
-        s->target_wz = fmaxf(c->min_wz, s->target_wz * ratio);
-        s->settled_s = 0;
-    }
-    s->previous_target_power_w = i->target_power_w;
+    /* A demand-driven budget can fall when buffer boost is no longer needed.
+     * Keep phase/envelope independent of that change; actual excess power and
+     * protection flags below constrain the target through the normal slew. */
     const float excess_w = fmaxf(0, fmaxf(i->measured_power_w, s->filtered_power_w) -
         i->target_power_w - c->power_deadband_w);
     const bool restricted = i->energy_recovering || i->power_limited || excess_w > 0;

@@ -309,7 +309,7 @@ PID 通用可设置字段：`Kp/Ki/Kd`、`MaxOut`、`DeadBand`、`IntegralLimit`
 | `CHASSIS_SPIN_POWER_DEADBAND_W` | `1.0f` W | 动态调速功率死区 |
 | `CHASSIS_SPIN_SETTLE_TIME_S` | `0.2f` s | 允许加速条件持续确认 |
 | `CHASSIS_SPIN_TRACKING_ERROR_RPM` | `500.0f` rpm | 各轮目标/实际速度误差门槛 |
-| `CHASSIS_SPIN_BUDGET_DROP_RESET_W` | `1.0f` W | 功率目标下跌后重置/收缩门槛 |
+| `CHASSIS_SPIN_BUDGET_DROP_RESET_W` | `1.0f` W | 仅功率自适应模式：功率目标下跌后的复位门槛；正弦模式不使用 |
 | `CHASSIS_SPIN_SINE_CENTER_WZ` | `800.0f` | 正弦中心，独立于固定/自适应参数 |
 | `CHASSIS_SPIN_SINE_MIN_WZ` | `200.0f` | 正弦起步和反馈失效时的同方向低速目标 |
 | `CHASSIS_SPIN_SINE_AMPLITUDE_WZ` | `200.0f` | 正弦稳态幅度 |
@@ -320,6 +320,8 @@ PID 通用可设置字段：`Kp/Ki/Kd`、`MaxOut`、`DeadBand`、`IntegralLimit`
 | `CHASSIS_SPIN_SINE_DIRECTION` | `1` | 正弦旋转方向，只允许 `+1/-1`；一次旋转期间锁定方向 |
 
 默认正弦目标在中心/幅度完全建立时为 `800 + 200*sin(2πt/4)`，即命令范围 `600～1000`。默认麦轮几何、没有平移时，目标轮速幅值约为 `3403～5672 rpm`，再经过功率、跟踪和斜率限制。进入时从下限 200 建立中心和幅度，不保证立即输出完整正弦波。原中心 4000 对应约 22689 rpm，在当前 50 W 台架预算下无法建立中心和振幅，因此单独下调正弦参数。
+
+正弦模式不按相邻功率预算的比例缩放波形。缓冲增补因需求下降而撤销时，只要实测功率仍有余量且保护允许，目标保持原正弦节奏；实际超功率时平滑降低中心和振幅，限流或能量恢复时收缩振幅并暂停升速。目标变化受 `SINE_RISE_RATE` / `SINE_FALL_RATE` 约束，最终功率、电流保护仍即时生效。在线调参和 Flash 字段布局保持兼容，预算跌落复位阈值仅在自适应模式显示。
 
 自适应约束：`0 < MIN <= FIXED <= MAX`。正弦使用独立的 `SINE_MIN` 和 `SINE_CENTER`，需满足 `0 < SINE_MIN <= SINE_CENTER`、`SINE_CENTER-AMPLITUDE >= SINE_MIN`、`SINE_CENTER+AMPLITUDE <= MAX`，周期、建立时间、上升/下降斜率为正。动态更新 `dt` 最大为 `20 ms`。
 

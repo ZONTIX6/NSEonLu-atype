@@ -10,7 +10,7 @@ typedef struct
     float fixed_wz, min_wz, max_wz;
     float gain_wz_per_w_s, rise_wz_per_s, fall_wz_per_s;
     float power_lpf_tau_s, power_deadband_w, settle_time_s;
-    float budget_drop_reset_w;
+    float budget_drop_reset_w; /* Adaptive mode only; sine never rescales on budget changes. */
     float sine_amplitude_wz, sine_period_s, sine_ramp_s;
     float sine_rise_wz_per_s, sine_fall_wz_per_s;
     int8_t sine_direction;

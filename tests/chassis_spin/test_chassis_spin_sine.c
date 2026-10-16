@@ -95,16 +95,20 @@ static void RecoveryAndLimitingRemoveTheHighSpeedWave(void)
     {
         ChassisSpinState_s state = {0};
         ChassisSpinInput_s input = Ready();
-        CHECK(Run(&config, &state, input, 1800) > 4900);
+        const float peak = Run(&config, &state, input, 1800);
+        CHECK(peak > 4900);
         input.energy_recovering = recovery_flags[k];
         input.power_limited = !recovery_flags[k];
         input.increase_allowed = false;
+        input.target_power_w = 40; /* The budget may also fall during recovery. */
         const float initial = Run(&config, &state, input, 1);
+        CHECK(initial >= peak - 10.01f); /* Protection cannot bypass target slew. */
         float target = initial;
         for (unsigned i = 0; i < 800; ++i)
         {
             const float next = Run(&config, &state, input, 1);
             CHECK(next <= target + .01f);
+            CHECK(target - next <= 10.01f);
             CHECK(next > 0);
             target = next;
         }
@@ -116,16 +120,16 @@ static void RecoveryAndLimitingRemoveTheHighSpeedWave(void)
     }
 }
 
-static void OverpowerAndBudgetDropsLowerTheTarget(void)
+static void OverpowerReducesTheTargetWithoutBypassingSlew(void)
 {
     ChassisSpinState_s state = {0};
     ChassisSpinInput_s input = Ready();
     const float peak = Run(&config, &state, input, 1800);
     input.target_power_w = 40;
-    const float dropped = Run(&config, &state, input, 1);
-    CHECK(dropped <= peak * .5f + .01f);
     input.measured_power_w = 100;
     input.increase_allowed = false;
+    const float dropped = Run(&config, &state, input, 1);
+    CHECK(dropped <= peak && dropped >= peak - 10.01f);
     CHECK(Run(&config, &state, input, 400) < dropped);
 }
 
@@ -350,7 +354,7 @@ int main(void)
     StartupWaitsForGuardsAndNormalStepsAreBounded();
     NegativeDirectionIsLockedUntilModeExit();
     RecoveryAndLimitingRemoveTheHighSpeedWave();
-    OverpowerAndBudgetDropsLowerTheTarget();
+    OverpowerReducesTheTargetWithoutBypassingSlew();
     ABlockedWaveDoesNotAccumulateADeferredPeak();
     LossAndDisableResetWaveWithoutChangingItsDirection();
     InvalidInputsCannotLeaveAnOldWaveRunning();
