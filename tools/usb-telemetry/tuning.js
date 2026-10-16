@@ -57,6 +57,7 @@
   }
   const errors = {conflict:'板端参数版本已改变，请重新读取后应用。',constraint:'板端拒绝参数组合，请检查范围和约束。',unavailable:'当前固件未启用这组参数。',value:'板端拒绝无效数值。',count:'参数字段数量与固件不一致。',group:'固件不支持这组参数。',operation:'固件不支持此操作。',version:'参数版本格式错误。'};
   errors.unsupported='当前固件不支持板端掉电保存，请升级固件。';
+  errors.busy='自动整定正在使用临时参数，请先结束整定。';
   class TuningClient {
     constructor({send,timeoutMs=2000}) {this.send=send;this.timeoutMs=timeoutMs;this.sequence=0;this.pending=null;}
     request(group,operation,revision,values) {

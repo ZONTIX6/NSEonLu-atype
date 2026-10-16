@@ -6,6 +6,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "runtime_tuning.h"
+#include "autotune_protocol.h"
 #include "power_meter.h"
 #if CHASSIS_POWER_CAPTURE_ENABLE
 #include "bsp_uart_log.h"
@@ -65,6 +66,64 @@ static DJIChassisPowerControlSnapshot_s cycle_control;
 static bool cycle_ready;
 static uint32_t tuning_stop_since, tuning_stop_tick;
 static bool tuning_stopped, tuning_stop_seen;
+static bool autotune_owned,autotune_inhibit;
+static uint32_t autotune_trial;
+static PIDInstance autotune_original[4];
+static AutotuneDrive autotune_drive;
+
+static void ResetTrialPID(PIDInstance *pid,float measured)
+{
+    pid->Iout=pid->ITerm=pid->Last_ITerm=0;
+    pid->Dout=pid->Last_Dout=0;
+    pid->Output=pid->Last_Output=0;
+    pid->Last_Measure=measured;pid->Last_Err=-measured;
+    (void)DWT_GetDeltaT(&pid->DWT_CNT);
+}
+static void ApplyAutotuneCycle(void)
+{
+    if (!chassis_power) return;
+    const uint32_t now=HAL_GetTick();
+    PIDAutotuneFeedback f={.now_ms=now,.can_ok=true,.feedback_ok=true,
+        .permitted=cycle_control.autotune_permitted && cycle_control.control_enabled &&
+            (uint32_t)(now-cycle_control.tick_ms)<=10 && !autotune_inhibit};
+    for(unsigned w=0;w<4;++w) {
+        unsigned i=chassis_power->motor_indices[w];
+        f.rpm[w]=cycle_measure[i].speed_aps/6;
+        f.feedback_ok &= cycle_online[i] && (uint32_t)(now-cycle_measure[i].rx_tick_ms)<=20;
+        f.permitted &= fabsf(cycle_control.target_rpm[w])<=5;
+    }
+    AutotuneMotorStep(&f,&autotune_drive);
+    if(autotune_drive.owned && !autotune_owned) {
+        for(unsigned w=0;w<4;++w) autotune_original[w]=dji_motor_instance[chassis_power->motor_indices[w]]->motor_controller.speed_PID;
+        autotune_trial=0;
+    }
+    if(!autotune_drive.owned && autotune_owned) {
+        for(unsigned w=0;w<4;++w) {
+            PIDInstance *pid=&dji_motor_instance[chassis_power->motor_indices[w]]->motor_controller.speed_PID;
+            *pid=autotune_original[w];ResetTrialPID(pid,cycle_measure[chassis_power->motor_indices[w]].speed_aps);
+        }
+        autotune_inhibit=true;
+    }
+    autotune_owned=autotune_drive.owned;
+    if(autotune_owned && autotune_drive.running && autotune_drive.trial!=autotune_trial) {
+        for(unsigned w=0;w<4;++w) {
+            PIDInstance *pid=&dji_motor_instance[chassis_power->motor_indices[w]]->motor_controller.speed_PID;
+            *pid=autotune_original[w];ResetTrialPID(pid,cycle_measure[chassis_power->motor_indices[w]].speed_aps);
+        }
+        PIDInstance *pid=&dji_motor_instance[chassis_power->motor_indices[autotune_drive.test.wheel]]->motor_controller.speed_PID;
+        pid->Kp=autotune_drive.test.kp;pid->Ki=autotune_drive.test.ki;pid->Kd=autotune_drive.test.kd;
+        pid->MaxOut=fminf(pid->MaxOut,autotune_drive.test.current_limit);
+        pid->IntegralLimit=fminf(pid->IntegralLimit,pid->MaxOut);
+        autotune_trial=autotune_drive.trial;
+    }
+    if(autotune_owned || autotune_inhibit) for(unsigned w=0;w<4;++w) {
+        unsigned i=chassis_power->motor_indices[w];
+        bool selected=autotune_owned && autotune_drive.running && w==autotune_drive.test.wheel;
+        cycle_stop[i]=selected ? MOTOR_ENALBED : MOTOR_STOP;
+        cycle_reference[i]=selected ? autotune_drive.target_rpm*6 : 0;
+    }
+    if(autotune_inhibit && cycle_control.zero_force && (uint32_t)(now-cycle_control.tick_ms)<=10) autotune_inhibit=false;
+}
 static void UpdateTuningStopState(uint32_t now,bool transmitted)
 {
     bool stopped=idx>0 && transmitted;
@@ -631,6 +690,7 @@ void DJIMotorControl()
     DJI_Motor_Measure_s *measure;
     float pid_measure, pid_ref;
     ReadMotorCycle();
+    ApplyAutotuneCycle();
 
     // 第一阶段：计算所有 DJI 电机的原始输出，暂不写入 CAN 缓冲区。
     for (size_t i = 0; i < idx; ++i)
@@ -684,6 +744,18 @@ void DJIMotorControl()
     // 第二阶段：只修改已注册的四个底盘电机输出。
     ApplyChassisPowerGroup();
 
+    /* A new stop/control message can arrive while PID/power calculations run. */
+    if(chassis_power && (autotune_owned || autotune_inhibit)) {
+        taskENTER_CRITICAL();
+        bool permitted=chassis_power->control.autotune_permitted && chassis_power->control.control_enabled &&
+            (uint32_t)(HAL_GetTick()-chassis_power->control.tick_ms)<=10;
+        taskEXIT_CRITICAL();
+        if(!permitted) {
+            if(autotune_owned) AutotuneCancel();
+            for(unsigned w=0;w<4;++w) {unsigned i=chassis_power->motor_indices[w];cycle_stop[i]=MOTOR_STOP;motor_output[i]=0;}
+        }
+    }
+
     // 第三阶段：所有 DJI 电机共用同一套 CAN 打包和发送路径。
     for (size_t i = 0; i < idx; ++i)
     {
@@ -707,6 +779,11 @@ void DJIMotorControl()
         }
     }
     UpdateTuningStopState(HAL_GetTick(),transmitted);
+    if(chassis_power && autotune_owned) {
+        unsigned w=autotune_drive.test.wheel,i=chassis_power->motor_indices[w];
+        AutotuneObserve(HAL_GetTick(),cycle_measure[i].speed_aps/6,chassis_power->state.raw_current[w],
+            motor_output[i],fabsf(motor_output[i])>=dji_motor_instance[i]->motor_controller.speed_PID.MaxOut*.98f,transmitted);
+    }
 }
 
 void DJIChassisPowerCaptureDrain(void)

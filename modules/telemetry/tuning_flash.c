@@ -58,7 +58,7 @@ void TuningFlashPoll(void)
     vTaskSuspendAll();
     ChassisTelemetrySnapshot_s chassis={0};
     uint32_t now=HAL_GetTick();
-    bool safe=ChassisGetTelemetrySnapshot(&chassis) && chassis.mode==0 &&
+    bool safe=!RuntimeTuningTrialActive() && ChassisGetTelemetrySnapshot(&chassis) && chassis.mode==0 &&
         (uint32_t)(now-chassis.tick_ms)<=5 && DJIMotorCanSaveParameters(now);
     if (!safe) {(void)xTaskResumeAll(); return;}
     bool success=false;

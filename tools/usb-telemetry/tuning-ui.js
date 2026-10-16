@@ -4,7 +4,7 @@
   const $=id=>document.getElementById(id);
   const number=value=>Number(value.toPrecision(7)).toString();
   window.createTuningUI=function(client) {
-    let connected=false,busy=false,active='pid',epoch=0,polling=false,pollTimer=null;
+    let connected=false,busy=false,active='pid',epoch=0,polling=false,pollTimer=null,locked=false;
     const states=Object.fromEntries(Object.keys(groups).map(key=>[key,{data:null,draft:null,status:'连接 C 板后读取当前参数。',error:false,sync:null,persistError:null}]));
     function renderPersistence() {
       const state=states[active],status=state.data?.storage;
@@ -24,6 +24,7 @@
       $('tuning-apply').disabled=!connected||busy||polling||!state.data;
       $('tuning-sync').disabled=busy||polling||!state.sync;
       document.querySelectorAll('[data-tuning-group]').forEach(button=>{button.disabled=busy||polling;});
+      if(locked) document.querySelectorAll('#tuning-panel button,#tuning-fields input').forEach(el=>{el.disabled=true;});
     }
     function schedulePoll() {
       clearTimeout(pollTimer);
@@ -31,7 +32,7 @@
         pollTimer=setTimeout(pollPersistence,1000);
     }
     async function pollPersistence() {
-      if (!connected) return;
+      if (!connected || locked) return;
       if (busy || client.pending) {schedulePoll();return;}
       const key=active,state=states[key],token=epoch;
       polling=true;renderPersistence();
@@ -107,7 +108,7 @@
       }
     }
     async function operate(kind) {
-      if (busy || polling || !connected) return;
+      if (busy || polling || !connected || locked) return;
       const key=active,state=states[key],token=epoch;
       let values;
       try {
@@ -148,6 +149,7 @@
     });
     render();
     return {
+      setLocked(value) {locked=value;clearTimeout(pollTimer);render();if(!locked)schedulePoll();},
       setConnected(value) {
         if (value===connected) return;
         connected=value;++epoch;client.disconnect();busy=false;polling=false;clearTimeout(pollTimer);

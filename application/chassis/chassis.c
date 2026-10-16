@@ -20,6 +20,7 @@
 #include "chassis_spin_config.h"
 #include "chassis_spin.h"
 #include "runtime_tuning.h"
+#include "remote_control.h"
 #include "robot_def.h"
 #include "board_config.h"
 #if POWER_METER_ENABLE
@@ -715,6 +716,17 @@ static void UpdateChassisPowerBudget(void)
 #endif
     pending_power_control.control_enabled = control_config_valid && chassis_power_ready &&
         chassis_cmd_recv.chassis_mode != CHASSIS_ZERO_FORCE;
+    RemoteControlSnapshot_s bench_remote={0};
+    pending_power_control.zero_force=chassis_cmd_recv.chassis_mode==CHASSIS_ZERO_FORCE;
+    pending_power_control.autotune_permitted = pending_power_control.control_enabled &&
+        chassis_cmd_recv.chassis_mode==CHASSIS_NO_FOLLOW && RemoteControlGetSnapshot(&bench_remote) &&
+        bench_remote.online && bench_remote.has_sample &&
+        (uint32_t)(HAL_GetTick()-bench_remote.last_rx_tick_ms)<=100 &&
+        bench_remote.control.rc.switch_left==2 && bench_remote.control.rc.switch_right==3 &&
+        abs(bench_remote.control.rc.rocker_l_)<=30 && abs(bench_remote.control.rc.rocker_l1)<=30 &&
+        abs(bench_remote.control.rc.rocker_r_)<=30 && abs(bench_remote.control.rc.rocker_r1)<=30 &&
+        abs(bench_remote.control.rc.dial)<=30 && !bench_remote.control.key[KEY_PRESS].keys &&
+        !bench_remote.control.mouse.press_l && !bench_remote.control.mouse.press_r;
 #if CHASSIS_SPIN_DYNAMIC_ENABLED
     chassis_spin_input.target_power_w = pending_power_control.target_power_w;
     chassis_spin_input.control_enabled = pending_power_control.control_enabled;

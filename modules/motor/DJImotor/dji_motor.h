@@ -87,6 +87,8 @@ typedef struct
     float power_deadband_w;
     float target_rpm[POWER_MODEL_MOTOR_COUNT];
     bool control_enabled;
+    bool autotune_permitted;
+    bool zero_force;
     ChassisPowerControlTelemetry_s telemetry;
 } DJIChassisPowerControlSnapshot_s;
 

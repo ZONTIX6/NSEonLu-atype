@@ -8,11 +8,14 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233478f6'/%3E%3Cpath d='M3 17h5l4-10 6 18 4-12 3 4h4' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="tuning.css">
+  <link rel="stylesheet" href="autotune.css">
   <script src="protocol.js" defer></script>
   <script src="serial.js" defer></script>
   <script src="charts.js" defer></script>
   <script src="tuning.js" defer></script>
   <script src="tuning-ui.js" defer></script>
+  <script src="autotune.js" defer></script>
+  <script src="autotune-ui.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
@@ -40,6 +43,7 @@
     <nav class="workspace-tabs" aria-label="工作区" role="tablist">
       <button type="button" id="monitor-tab" role="tab" aria-selected="true" aria-controls="monitor-panel">实时监测</button>
       <button type="button" id="tuning-tab" role="tab" aria-selected="false" aria-controls="tuning-panel" tabindex="-1">在线调参 <span>PID · 功控 · 小陀螺</span></button>
+      <button type="button" id="autotune-tab" role="tab" aria-selected="false" aria-controls="autotune-panel" tabindex="-1">自动整定 <span>单轮 PID · 台架</span></button>
     </nav>
     <div id="monitor-panel" role="tabpanel" aria-labelledby="monitor-tab">
     <div class="dashboard-grid">
@@ -74,7 +78,35 @@
         </article>
       </div>
     </section>
-    <footer class="app-footer"><span>USB CDC · CSV v1 · 最近 10 分钟历史 · 默认显示 60 秒</span><span>在线调参 · 板端确认后同步项目文件</span></footer>
+    <section id="autotune-panel" role="tabpanel" aria-labelledby="autotune-tab" hidden>
+      <div class="auto-intro"><div><span class="eyebrow">PID AUTOTUNE</span><h2>让每次调参，都有依据。</h2><p>基线测试 → 有界搜索 → 独立复测 → 查看对比后采用</p></div><span id="auto-mode" class="status-pill neutral">尚未连接</span></div>
+      <div class="auto-grid">
+        <aside id="auto-settings" class="card auto-settings">
+          <h3>台架测试设置</h3>
+          <div class="auto-instructions">底盘架空固定、四轮离地。<br>遥控器左拨杆下、右拨杆中；摇杆和拨轮居中，无键鼠输入。<br>结束后拨轮向下超过一半进入零力，再重新准备或保存。</div>
+          <label>测试电机<select id="auto-wheel"><option value="0">左前 LF</option><option value="1">右前 RF</option><option value="2">左后 LB</option><option value="3">右后 RB</option><option value="all">依次测试全部四轮</option></select></label>
+          <label>目标转速 · 电机 rpm<input id="auto-rpm" type="number" min="100" max="1500" step="50" value="500"><small>100～1500 rpm；从较低转速开始。</small></label>
+          <label>保持时间 · ms<input id="auto-hold" type="number" min="500" max="2000" step="100" value="1000"><small>每次另有前后各 300 ms 归零阶段。</small></label>
+          <label>临时电流上限 · 原值<input id="auto-cap" type="number" min="500" max="5000" step="100" value="3000"><small>保留原限幅与功率保护；不换算为安培。</small></label>
+          <label class="auto-confirm"><input id="auto-confirm" type="checkbox"><span>已确认底盘架空固定、四轮离地，可以执行单轮转速测试。</span></label>
+          <div class="auto-buttons"><button id="auto-start" class="primary-button" type="button" disabled>开始自动整定</button><button id="auto-stop" class="secondary-button auto-stop" type="button" disabled>停止并恢复</button><button id="auto-demo" class="secondary-button" type="button">演示整定流程</button></div>
+        </aside>
+        <article class="card auto-workspace">
+          <div class="auto-stage"><div><span class="eyebrow">TRIAL PROGRESS</span><p id="auto-progress-text">等待首次试验</p></div><div><strong id="auto-latest">— rpm</strong><br><small>最近一轮 RMSE</small></div></div>
+          <progress id="auto-progress" max="15" value="0" aria-label="整定进度"></progress>
+          <p id="auto-status" class="auto-status" role="status" aria-live="polite">可先运行演示，或连接支持自动整定的 C 板固件。</p>
+          <div class="chart-legend"><span><i class="color-dot blue"></i>所选轮实际转速</span><span><i class="line-dot purple"></i>目标转速</span><span>最近 5 秒 · rpm</span></div>
+          <div class="auto-plot"><canvas id="auto-chart" role="img" aria-label="整定电机目标与实际转速"></canvas></div>
+          <p class="auto-empty">自动搜索 Kp / Ki，Kd 保持原值。板端统计指标；采样波形用于观察。通信心跳超时由板端结束试验。</p>
+        </article>
+      </div>
+      <article class="card auto-results-card"><h3>参数与复测对比</h3><p>复测评分改善至少 5% 才推荐采用。架空得到的参数需要落地带负载验证。</p>
+        <div class="auto-table-wrap"><table class="auto-table"><thead><tr><th>电机</th><th>原 Kp / Ki / Kd</th><th>推荐 Kp / Ki / Kd</th><th>基线 RMSE</th><th>复测 RMSE</th><th>结论</th></tr></thead><tbody id="auto-results"></tbody></table></div>
+        <div class="auto-footer"><p id="auto-persistence" role="status">候选参数仅用于试验，点击采用后才正式应用和保存。</p><div><button id="auto-sync" type="button" class="secondary-button" hidden>重试同步文件</button><button id="auto-save" type="button" class="secondary-button" hidden>重试板端保存</button><button id="auto-adopt" type="button" class="primary-button" disabled>采用并保存推荐参数</button></div></div>
+      </article>
+      <article class="card auto-results-card"><h3>试验记录</h3><p>限流超过 5% 的试验会剔除；零力、反馈异常或操纵遥控器会停止整定。</p><div class="auto-table-wrap"><table class="auto-table"><thead><tr><th>#</th><th>电机</th><th>阶段</th><th>Kp</th><th>Ki</th><th>Kd</th><th>RMSE · rpm</th><th>超调 · rpm</th><th>稳态误差 · rpm</th><th>稳定时间</th><th>状态</th></tr></thead><tbody id="auto-trials"></tbody></table></div></article>
+    </section>
+    <footer class="app-footer"><span>USB CDC · CSV v1 · 最近 10 分钟历史 · 默认显示 60 秒</span><span>在线调参 · 单轮自动整定 · 板端确认后同步项目文件</span></footer>
   </main>
   <dialog id="chart-dialog" class="chart-dialog" aria-labelledby="expanded-chart-title">
     <div class="section-heading"><div><span class="eyebrow">WAVEFORM DETAIL</span><h2><span id="expanded-chart-title">波形详情</span> <small id="expanded-chart-unit"></small></h2></div><div class="chart-dialog-actions"><button type="button" class="secondary-button" id="reset-chart-button" disabled>恢复全图</button><button type="button" class="secondary-button" id="close-chart-button" autofocus>关闭 <span aria-hidden="true">×</span></button></div></div>

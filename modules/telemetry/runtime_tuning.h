@@ -27,4 +27,8 @@ void RuntimeTuningProcess(TuningGroup group, bool (*apply)(const float *values))
 size_t RuntimeTuningReply(char *buffer, size_t capacity);
 void RuntimeTuningReplySent(void);
 void RuntimeTuningCancel(void);
+/* Exclusive temporary motor trial; never changes group values or revisions. */
+bool RuntimeTuningBeginTrial(uint32_t pid_revision);
+void RuntimeTuningEndTrial(void);
+bool RuntimeTuningTrialActive(void);
 #endif

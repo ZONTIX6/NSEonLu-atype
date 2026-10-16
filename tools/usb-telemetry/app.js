@@ -6,17 +6,20 @@
   const view = new P.DisplayState(store);
   let mode = 'idle', demoTimer = null, demoSequence = 0, lastRender = -Infinity, lastRendered = null, hadError = false;
   let tuningUI = null;
+  let autotuneUI = null;
+  const autotuneClient = new window.TelemetryAutotune.AutotuneClient({send: line => session.send(line)});
   const tuningClient = new window.TelemetryTuning.TuningClient({send: line => session.send(line)});
   const clock = () => performance.now();
   const setText = (id, text) => {if ($(id).textContent !== String(text)) $(id).textContent = text;};
   const format = (value, digits = 2) => value === null || value === undefined || !Number.isFinite(value) ? '—' : value.toFixed(digits);
   const ageText = value => value === null || value === undefined || value >= P.UINT_MAX ? '—' : String(Math.round(value));
   function message(text, error = false) {setText('message', text); $('message').classList.toggle('error', error);}
-  const parser = new P.StreamParser({onSample(sample) {store.add(sample, clock());}, onControl: line => tuningClient.receive(line), onError(kind) {
+  const parser = new P.StreamParser({onSample(sample) {store.add(sample, clock());}, onControl: line => {if(!autotuneClient.receive(line)) tuningClient.receive(line);}, onError(kind) {
     if (kind === 'version') message('收到不支持的协议版本。请使用与此仪表盘匹配的 CSV v1 遥测固件。', true);
   }});
   const session = new window.TelemetrySerial.SerialSession({serial: navigator.serial, onChunk: chunk => parser.push(chunk), onState(state) {
     tuningUI?.setConnected(state === 'connected');
+    autotuneUI?.setConnected(state === 'connected');
     if (state === 'connected') {hadError = false; message('串口已打开，等待 CSV v1 遥测。若持续无数据，请确认固件启用了 USB 遥测模式。');}
     if (state === 'idle' && mode === 'real' && !hadError) message(store.latest ? '串口已断开，最后采集的历史数据仍可导出。点击“连接 C 板”可重新采集。' : '未连接。请确认 C 板已连接，点击“连接 C 板”选择串口。');
     renderToolbar(clock());
@@ -26,8 +29,10 @@
     message(hints[error.name] || `无法连接或读取串口：${error.message}`, true);
   }});
   tuningUI = window.createTuningUI(tuningClient);
+  autotuneUI = window.createAutotuneUI({client:autotuneClient,tuningClient,lockManual:value=>tuningUI.setLocked(value),getSamples:()=>store.samples});
+  const workspaceNames=['monitor','tuning','autotune'];
   function showPanel(key) {
-    for (const name of ['monitor','tuning']) {
+    for (const name of workspaceNames) {
       const selected = name === key;
       $(name+'-panel').hidden = !selected;
       $(name+'-tab').setAttribute('aria-selected',String(selected));
@@ -36,12 +41,12 @@
     if (chartDialog.open) chartDialog.close();
     lastRendered = null;
   }
-  for (const name of ['monitor','tuning']) {
+  for (const name of workspaceNames) {
     $(name+'-tab').addEventListener('click', () => showPanel(name));
     $(name+'-tab').addEventListener('keydown', event => {
       if (['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) {
         event.preventDefault();
-        const next = event.key==='Home' ? 'monitor' : event.key==='End' ? 'tuning' : name==='monitor' ? 'tuning' : 'monitor';
+        const next = event.key==='Home' ? workspaceNames[0] : event.key==='End' ? workspaceNames.at(-1) : workspaceNames[(workspaceNames.indexOf(name)+(event.key==='ArrowRight'?1:workspaceNames.length-1))%workspaceNames.length];
         showPanel(next);$(next+'-tab').focus();
       }
     });
@@ -351,6 +356,7 @@
   function render(now) {
     if (now - lastRender >= 50) {
       lastRender = now;renderToolbar(now);
+      autotuneUI.renderChart();
       const snapshot = view.snapshot(now);
       if (!view.paused || snapshot !== lastRendered) {
         renderValues(snapshot);
@@ -362,7 +368,7 @@
     requestAnimationFrame(render);
   }
   window.addEventListener('resize', () => {stopPan();lastRendered = null;});
-  window.addEventListener('pagehide', () => {stopDemo();session.disconnect();});
+  window.addEventListener('pagehide', () => {autotuneUI.stop();stopDemo();session.disconnect();});
   window.telemetryApp = {store, parser, session, view, get mode() {return mode;}, get paused() {return view.paused;}};
   if (!('serial' in navigator)) message('此浏览器不支持 Web Serial。请用桌面版 Chrome / Edge 打开 localhost 页面；演示数据仍可使用。');
   renderToolbar(clock());requestAnimationFrame(render);

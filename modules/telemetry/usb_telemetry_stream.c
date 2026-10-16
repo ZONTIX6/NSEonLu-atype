@@ -2,6 +2,7 @@
 #include "bsp_usb.h"
 #include <stdbool.h>
 #include "runtime_tuning.h"
+#include "autotune_protocol.h"
 #include <string.h>
 
 static char header[USB_TELEMETRY_BUFFER_SIZE];
@@ -52,7 +53,8 @@ static void ReadCommands(void)
             if (!command_dropping) {
                 if (command_length && command[command_length - 1] == '\r') --command_length;
                 command[command_length] = 0;
-                RuntimeTuningSubmit(command);
+                if (!strncmp(command,"@A1,",4)) AutotuneSubmit(command);
+                else RuntimeTuningSubmit(command);
             }
             command_length = 0; command_dropping = false;
         } else if (!command_dropping) {
@@ -71,6 +73,7 @@ void USBTelemetryStreamInit(void)
     rx_overflow = false;
     command_length = 0; command_dropping = false;
     RuntimeTuningCancel();
+    AutotuneCancel();
     header_length = USBTelemetryFormatHeader(header, sizeof header);
     sequence = drop_count = header_tick = 0;
     session = CDC_GetSession_FS();
@@ -90,6 +93,7 @@ void USBTelemetryStreamSend(USBTelemetrySample_s *sample, uint32_t now_ms)
         session = current_session;
         header_needed = true;
         RuntimeTuningCancel();
+        AutotuneCancel();
         command_length = 0; command_dropping = false;
         const uint32_t primask = __get_PRIMASK();
         __disable_irq();
@@ -98,7 +102,7 @@ void USBTelemetryStreamSend(USBTelemetrySample_s *sample, uint32_t now_ms)
         }
         __set_PRIMASK(primask);
     }
-    if (!CDC_IsPortOpen_FS()) return;
+    if (!CDC_IsPortOpen_FS()) {AutotuneCancel();return;}
     ReadCommands();
     /* Never format into a buffer while the endpoint still owns its bytes. */
     if (!CDC_IsTransmitIdle_FS()) {
@@ -115,9 +119,12 @@ void USBTelemetryStreamSend(USBTelemetrySample_s *sample, uint32_t now_ms)
         return;
     }
     size_t reply_length = RuntimeTuningReply(reply, sizeof reply);
+    bool autotune_reply=false;
+    if (!reply_length) {reply_length=AutotuneReply(reply,sizeof reply);autotune_reply=reply_length>0;}
     if (reply_length) {
-        if (USBTransmit((uint8_t *)reply, (uint16_t)reply_length) == USBD_OK)
-            RuntimeTuningReplySent();
+        if (USBTransmit((uint8_t *)reply, (uint16_t)reply_length) == USBD_OK) {
+            if (autotune_reply) AutotuneReplySent();else RuntimeTuningReplySent();
+        }
         else ++drop_count;
         return;
     }

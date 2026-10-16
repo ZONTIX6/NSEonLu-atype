@@ -29,6 +29,13 @@ int main(void)
         memcpy(&pid[i * 6], wheel, sizeof wheel);
     }
     RuntimeTuningRegister(TUNING_PID, pid, 0);
+    assert(!RuntimeTuningBeginTrial(2));
+    assert(RuntimeTuningBeginTrial(1));
+    RuntimeTuningSubmit("@T1,99,SAVE,pid,1");
+    reply_contains("ERR,pid,busy");
+    TuningStoredImage blocked;
+    assert(!RuntimeTuningPendingImage(&blocked));
+    RuntimeTuningEndTrial();
     RuntimeTuningSubmit("@T1,1,GET,pid");
     reply_contains("@T1,1,OK,pid,1,0,3f400000");
     char set[512];

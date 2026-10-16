@@ -145,6 +145,8 @@ modules/telemetry/usb_telemetry.c \
 modules/telemetry/usb_telemetry_format.c \
 modules/telemetry/usb_telemetry_stream.c \
 modules/telemetry/runtime_tuning.c \
+modules/telemetry/pid_autotune.c \
+modules/telemetry/autotune_protocol.c \
 modules/telemetry/tuning_storage.c \
 modules/telemetry/tuning_flash.c \
 modules/telemetry/chassis_power_capture.c \

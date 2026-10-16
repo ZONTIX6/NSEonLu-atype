@@ -9,6 +9,7 @@ static int failures;
 static char captured_data[RTT_TELEMETRY_CHASSIS_POWER_CSV_MAX_LENGTH];
 static PowerMeterStatus_s test_meter;
 static bool publish_stop_during_pid;
+static uint32_t test_tick=123;
 
 static void SetMeter(float power, bool online, uint32_t tick)
 {
@@ -74,7 +75,7 @@ uint8_t CANTransmit(CANInstance *instance, float timeout)
 
 uint32_t HAL_GetTick(void)
 {
-    return 123U;
+    return test_tick;
 }
 
 void PIDInit(PIDInstance *pid, PID_Init_Config_s *config)
@@ -114,7 +115,7 @@ uint8_t DaemonIsOnline(DaemonInstance *instance)
 
 float DWT_GetDeltaT(uint32_t *count)
 {
-    (void)count;
+    *count=1234;
     return 0.001f;
 }
 
@@ -411,6 +412,65 @@ static void TestCalibrationPrintsLimitedCurrentsInsteadOfPidDemand(void)
     ASSERT_STREQ(expected, captured_data);
 }
 
+static void TestAutotuneIsolationAndExplicitZeroForceRearm(void)
+{
+    PreparePowerGroup();
+    AutotuneCancel();
+    PIDAutotuneFeedback f={.now_ms=123,.permitted=true,.feedback_ok=true,.can_ok=true};
+    AutotuneDrive unused;AutotuneMotorStep(&f,&unused);
+    chassis_power->control.tick_ms=123;
+    chassis_power->control.autotune_permitted=true;
+    for(unsigned w=0;w<4;++w) {
+        dji_motor_instance[w]->measure.rx_tick_ms=123;
+        PIDInstance *pid=&dji_motor_instance[w]->motor_controller.speed_PID;
+        pid->Kp=.75f;pid->MaxOut=2000;pid->IntegralLimit=1000;pid->DWT_CNT=7;
+    }
+    RuntimeTuningCancel();RegisterPIDTuning();
+    AutotuneSubmit("@A1,1,BEGIN,1");ReadMotorCycle();ApplyAutotuneCycle();
+    char reply[512];ASSERT_TRUE(AutotuneReply(reply,sizeof reply)>0);AutotuneReplySent();
+    ASSERT_TRUE(autotune_owned);
+    AutotuneSubmit("@A1,2,TRIAL,1,2,500,500,3000,3f800000,3f000000,00000000");
+    ReadMotorCycle();ApplyAutotuneCycle();AutotuneReply(reply,sizeof reply);AutotuneReplySent();
+    ASSERT_TRUE(dji_motor_instance[2]->motor_controller.speed_PID.Kp==1);
+    ASSERT_TRUE(dji_motor_instance[2]->motor_controller.speed_PID.MaxOut==2000);
+    ASSERT_TRUE(dji_motor_instance[2]->motor_controller.speed_PID.DWT_CNT==1234);
+    for(unsigned w=0;w<4;++w) ASSERT_TRUE(cycle_stop[w]==(w==2?MOTOR_ENALBED:MOTOR_STOP));
+    AutotuneCancel();ReadMotorCycle();ApplyAutotuneCycle();
+    ASSERT_TRUE(!autotune_owned && autotune_inhibit);
+    ASSERT_TRUE(dji_motor_instance[2]->motor_controller.speed_PID.Kp==.75f);
+    chassis_power->control.control_enabled=false;
+    ReadMotorCycle();ApplyAutotuneCycle();ASSERT_TRUE(autotune_inhibit);
+    chassis_power->control.control_enabled=true;
+    ReadMotorCycle();ApplyAutotuneCycle();
+    for(unsigned w=0;w<4;++w) ASSERT_TRUE(cycle_stop[w]==MOTOR_STOP);
+    chassis_power->control.zero_force=true;chassis_power->control.control_enabled=false;
+    ReadMotorCycle();ApplyAutotuneCycle();ASSERT_TRUE(!autotune_inhibit);
+    chassis_power->control.zero_force=false;chassis_power->control.control_enabled=true;
+    AutotuneSubmit("@A1,3,BEGIN,1");DJIMotorControl();
+    ASSERT_TRUE(AutotuneReply(reply,sizeof reply)>0);AutotuneReplySent();
+    chassis_power->control.autotune_permitted=false;
+    DJIMotorControl();DJIMotorControl();
+    AutotuneSubmit("@A1,4,STATUS,2");DJIMotorControl();
+    ASSERT_TRUE(AutotuneReply(reply,sizeof reply)>0);
+    ASSERT_TRUE(strstr(reply,"OK,2,aborted,0,0,guard")!=NULL);
+    AutotuneReplySent();
+    chassis_power->control.zero_force=true;chassis_power->control.control_enabled=false;
+    DJIMotorControl();
+    chassis_power->control.zero_force=false;chassis_power->control.control_enabled=true;
+    chassis_power->control.autotune_permitted=true;
+    AutotuneSubmit("@A1,5,BEGIN,1");DJIMotorControl();AutotuneReply(reply,sizeof reply);AutotuneReplySent();
+    AutotuneSubmit("@A1,6,TRIAL,3,0,500,500,3000,3f800000,00000000,00000000");
+    DJIMotorControl();AutotuneReply(reply,sizeof reply);AutotuneReplySent();
+    test_tick=1124;chassis_power->control.tick_ms=test_tick;
+    for(unsigned w=0;w<4;++w)dji_motor_instance[w]->measure.rx_tick_ms=test_tick;
+    AutotuneSubmit("@A1,7,BEGIN,1");DJIMotorControl();
+    ASSERT_TRUE(!autotune_owned && autotune_inhibit);
+    ASSERT_TRUE(dji_motor_instance[0]->motor_controller.speed_PID.MaxOut==2000);
+    ASSERT_TRUE(AutotuneReply(reply,sizeof reply)>0 && strstr(reply,"ERR,guard"));AutotuneReplySent();
+    test_tick=123;chassis_power->control.tick_ms=test_tick;
+    chassis_power->control.zero_force=true;chassis_power->control.control_enabled=false;DJIMotorControl();
+}
+
 int main(void)
 {
     PreparePowerGroup();
@@ -488,6 +548,7 @@ int main(void)
     TestFastProtectionObservesOrAppliesByStage();
     TestStopPublicationDoesNotMixCanAndDiagnostics();
     TestAtomicPublicationAndFinalIntegerCommands();
+    TestAutotuneIsolationAndExplicitZeroForceRearm();
     if (CHASSIS_POWER_CONTROL_STAGE == 0 && POWER_METER_ENABLE) {
         TestControlAndMeasurementSnapshotsReachOneRttRow();
         TestOfflineMeasurementKeepsValueAndTick();

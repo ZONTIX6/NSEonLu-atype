@@ -4,6 +4,7 @@ INCLUDES = -Istubs -I../../modules/telemetry -I../../Inc -I../../bsp/usb
 FORMAT = ../../modules/telemetry/usb_telemetry_format.c
 HEADERS = $(wildcard stubs/*.h ../../modules/telemetry/usb_telemetry*.h) ../../Inc/usbd_cdc_if.h ../../bsp/usb/bsp_usb.h
 TRANSPORT = ../../modules/telemetry/usb_telemetry_stream.c ../../modules/telemetry/runtime_tuning.c ../../Src/usbd_cdc_if.c ../../bsp/usb/bsp_usb.c
+TRANSPORT += ../../modules/telemetry/pid_autotune.c ../../modules/telemetry/autotune_protocol.c
 REMOTE = ../../modules/remote/remote_control.c ../../modules/daemon/daemon.c
 all: test_format.exe test_transport.exe test_remote.exe test_tuning.exe test_storage.exe
 

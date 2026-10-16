@@ -17,6 +17,7 @@ SOURCE := test_dji_chassis_power_rtt.c \
           ../../modules/algorithm/chassis_power_transient.c \
           ../../modules/telemetry/rtt_telemetry.c
 SOURCE += ../../modules/telemetry/runtime_tuning.c
+SOURCE += ../../modules/telemetry/pid_autotune.c ../../modules/telemetry/autotune_protocol.c
 INCLUDES := -Istubs \
             -I../../modules/motor/DJImotor \
             -I../../modules/motor \
@@ -28,7 +29,7 @@ INCLUDES += -I../../modules/power_meter
 
 all: $(TARGET)
 
-$(TARGET): $(SOURCE)
+$(TARGET): $(SOURCE) ../../modules/motor/DJImotor/dji_motor.c ../../modules/motor/DJImotor/dji_motor.h
 	$(CC) $(CFLAGS) $(INCLUDES) $(SOURCE) $(LDFLAGS) -lm -o $(TARGET)
 
 test: $(TARGET)
