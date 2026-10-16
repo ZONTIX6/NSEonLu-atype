@@ -33,3 +33,17 @@ test('timeout and disconnect reject pending requests and allow retry', async () 
   client.disconnect();
   await assert.rejects(pending, /断开/);
 });
+test('reads persistence status and retries a specific acknowledged revision', async () => {
+  const writes=[],client=new TuningClient({send:line=>writes.push(line)});
+  const values=Array(24).fill(1).map(encodeFloat).join(',');
+  const read=client.get('pid');
+  client.receive('@T1,1,OK,pid,2,0,'+values+',pending');
+  assert.equal((await read).storage,'pending');
+  const save=client.save('pid',2);
+  assert.equal(writes[1],'@T1,2,SAVE,pid,2\r\n');
+  client.receive('@T1,2,OK,pid,2,0,'+values+',saved');
+  assert.equal((await save).storage,'saved');
+  const legacy=client.get('pid');
+  client.receive('@T1,3,OK,pid,2,0,'+values);
+  assert.equal((await legacy).storage,'unsupported');
+});

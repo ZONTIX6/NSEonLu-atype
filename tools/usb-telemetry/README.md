@@ -28,9 +28,19 @@ node tools/usb-telemetry/serve.cjs
 
 输入框下显示板端最后确认值。编辑只改变草稿，点击“应用并同步文件”后整组发送，板端校验通过，在所属控制任务下个周期应用并回传实际值。网页使用回执值同步文件，不将未确认或被拒绝的草稿写入文件。小陀螺运行中保持目标过渡速率，改变旋转方向需先退出小陀螺模式。修改 PID 会清除四轮积分，功控修改会重置慢外环学习量；保护链路继续生效。
 
-同步文件为仓库中的 modules/telemetry/tuning_overrides.h。每组的 OVERRIDE=1 表示下次编译使用文件中的 VALUES，覆盖原始源码默认；设置为 0 可恢复该组原始默认。字段顺序见 runtime_tuning.h。文件由本地 Node 服务原子替换，并保留其他组设置。
+同步文件为仓库中的 modules/telemetry/tuning_overrides.h。每组的 OVERRIDE=1 且 MODE 匹配当前固件模式时，VALUES 覆盖原始源码默认；有效的板端保存值具有更高优先级。字段顺序见 runtime_tuning.h。文件由本地 Node 服务原子替换，并保留其他组设置及对应模式。
 
-板端仅保存在 RAM，断开 USB 不会复位已应用参数；重启恢复当前已烧录固件的启动值。文件同步后，需要重新编译、烧录，才能让这些值成为新的启动值；网页不写 MCU Flash，也不自动烧录。文件写入失败时，板端修改仍可能已经生效，页面分别显示状态，可“重试同步文件”；重新读取后，重试使用最新确认值。断线清除待同步记录，重连后可重新读取并应用。
+每次成功应用会自动排队保存到板端 Flash。请进入零力模式，使全部已注册 DJI 电机停用、反馈在线且速度不超过 50 rpm，持续至少 100 ms；控制快照必须新鲜、零电流帧发送成功，才会保存。网页单独显示“等待板端保存 / 已保存到板端 / 保存失败”，确认已保存后再断电。保存前断电会恢复上一次完整保存值；文件已同步不代表 Flash 已保存。
+
+板端保存失败后停止自动重试，点击“重试板端保存”重新排队，不会再次应用草稿；尚未保存的启动参数可用“保存到板端”。断开 USB 不取消已生效参数的待保存工作。文件同步失败与板端保存状态独立，可“重试同步文件”；重新读取后使用最新确认值。网页不自动烧录固件。
+
+重启优先恢复模式匹配且校验有效的 Flash 参数；不匹配或组约束无效时，回退到模式匹配的电脑参数覆盖文件，再回退原始默认。切换控制模式后不会套用旧模式的 Flash 或源码覆盖参数。电脑文件更新仍需重新编译、烧录才进入固件，且不会覆盖已有有效板端配置。
+
+### 掉电保护与分区
+
+预留 STM32F407 扇区 10、11（0x080C0000 / 0x080E0000，各 128 KiB），应用链接空间为前 768 KiB。每条日志 512 字节，包含格式版本、序号、分组模式、参数、CRC32 与最后写入的提交标记；最新记录提交前，上一份有效记录始终保留。追加写入、相同值去重，写满才轮换擦除。
+
+Flash 擦写会影响本 MCU 从 Flash 执行代码，所以只在上述停机条件满足时写入，写入期间暂停任务调度。先发送参数回执，再尝试保存。正常项目烧录不包含预留区，J-Flash 选区限制为 0～9；使用其他工具时也应保留扇区 10/11。全片擦除会清除板端参数。
 
 串口超时表示结果未确认，请重新读取实际值；旧固件需升级。演示模式停用调参。启动服务仍为旧版本时，关闭旧命令窗口并重新运行 start.cmd。源码目录必须允许当前用户写入参数配置文件。
 
@@ -41,11 +51,14 @@ node tools/usb-telemetry/serve.cjs
 ~~~text
 @T1,<请求ID>,GET,<pid|power|spin>
 @T1,<请求ID>,SET,<组>,<读取的组版本>,<整组float32位模式...>
-@T1,<请求ID>,OK,<组>,<当前版本>,<模式>,<当前生效值...>
+@T1,<请求ID>,SAVE,<组>,<当前生效版本>
+@T1,<请求ID>,OK,<组>,<当前版本>,<模式>,<当前生效值...>,<保存状态>
 @T1,<请求ID>,ERR,<组>,<错误码>
 ~~~
 
 PID 为 24 项、功控 19 项、自旋 16 项。模式对 PID 为 0、功控为阶段 0～3、自旋为固定 0 / 自适应 1 / 正弦 2。版本不匹配返回 conflict；非法值、字段数量和组合约束也会拒绝。成功 SET 才递增版本，并在控制任务应用后回复。
+
+状态为 saved（当前值已保存）、pending（等待安全保存）、error（保存失败）、volatile（启动默认尚未单独保存）、unsupported（无持久化后端）。SAVE 只排队保存确认版本，不改变实时参数；OK,pending 不代表 Flash 提交成功，继续 GET 查询直到 saved。网页兼容不带保存状态的旧回复，但会提示旧固件不支持掉电保存。
 
 本地文件接口 POST /api/tuning 只接受本机同源 JSON 请求，不接受客户端指定文件路径；用于同步确认后的参数，不负责向 C 板发送指令。
 
@@ -137,6 +150,7 @@ version,seq,tick,tx_drop_count,chassis_valid,chassis_tick_ms,chassis_mode,vx_cmd
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tests/usb_telemetry/run_tests.ps1
+make -C tests/tuning_flash test
 node --test tools/usb-telemetry/tests/*.test.cjs
 node --test tools/waveform-viewer/tests/core.test.cjs
 ```
@@ -153,6 +167,7 @@ playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/zoom-check.j
 playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/selection-check.js
 playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/history-check.js
 playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/tuning-check.js
+playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/persistence-check.js
 playwright-cli -s=usb close
 ```
 

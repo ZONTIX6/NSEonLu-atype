@@ -63,6 +63,34 @@ static Motor_Working_Type_e cycle_stop[DJI_MOTOR_CNT];
 static bool cycle_online[DJI_MOTOR_CNT];
 static DJIChassisPowerControlSnapshot_s cycle_control;
 static bool cycle_ready;
+static uint32_t tuning_stop_since, tuning_stop_tick;
+static bool tuning_stopped, tuning_stop_seen;
+static void UpdateTuningStopState(uint32_t now,bool transmitted)
+{
+    bool stopped=idx>0 && transmitted;
+    for (unsigned i=0;i<idx;++i)
+        stopped &= cycle_stop[i]==MOTOR_STOP && cycle_online[i] &&
+            (uint32_t)(now-cycle_measure[i].rx_tick_ms)<=20 &&
+            isfinite(cycle_measure[i].speed_aps) && fabsf(cycle_measure[i].speed_aps)<=300;
+    taskENTER_CRITICAL();
+    if (!stopped) {tuning_stop_seen=false; tuning_stopped=false;}
+    else {
+        if (!tuning_stop_seen || (uint32_t)(now-tuning_stop_tick)>5)
+            tuning_stop_since=now;
+        tuning_stopped=(uint32_t)(now-tuning_stop_since)>=100;
+        tuning_stop_seen=true;
+    }
+    tuning_stop_tick=now;
+    taskEXIT_CRITICAL();
+}
+bool DJIMotorCanSaveParameters(uint32_t now)
+{
+    taskENTER_CRITICAL();
+    bool safe=tuning_stopped && (uint32_t)(now-tuning_stop_tick)<=5;
+    for (unsigned i=0;i<idx;++i) safe &= dji_motor_instance[i]->stop_flag==MOTOR_STOP;
+    taskEXIT_CRITICAL();
+    return safe;
+}
 static void RegisterPIDTuning(void)
 {
     float values[24];
@@ -670,13 +698,15 @@ void DJIMotorControl()
             memset(sender_assignment[group].tx_buff + 2 * num, 0, sizeof(uint16_t));
     }
 
+    bool transmitted = true;
     for (size_t i = 0; i < 6; ++i)
     {
         if (sender_enable_flag[i])
         {
-            CANTransmit(&sender_assignment[i], 1);
+            transmitted &= CANTransmit(&sender_assignment[i], 1)!=0;
         }
     }
+    UpdateTuningStopState(HAL_GetTick(),transmitted);
 }
 
 void DJIChassisPowerCaptureDrain(void)

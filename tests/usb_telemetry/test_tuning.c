@@ -68,5 +68,46 @@ int main(void)
     RuntimeTuningSubmit(set);
     reply_contains("@T1,9,ERR,pid,value");
     assert(applied == 2);
+    pid[0]=.75f;
+    TuningStoredImage saved={.mask=1,.modes={0}};
+    memcpy(saved.values[0],pid,sizeof pid);
+    saved.values[0][0]=1.25f;
+    RuntimeTuningPersistenceInit(&saved);
+    RuntimeTuningRegister(TUNING_PID,pid,0);
+    RuntimeTuningRestore(TUNING_PID,accept);
+    RuntimeTuningSubmit("@T1,10,GET,pid");
+    assert(RuntimeTuningReply(reply,sizeof reply)>0 && strstr(reply,",3fa00000,") && strstr(reply,",saved\r\n"));
+    RuntimeTuningReplySent();
+    TuningStoredImage pending;
+    assert(!RuntimeTuningPendingImage(&pending));
+    pid[0]=.9f; make_set(set,11,1,pid);
+    RuntimeTuningSubmit(set); RuntimeTuningProcess(TUNING_PID,accept);
+    reply_contains(",pending\r\n");
+    assert(RuntimeTuningPendingImage(&pending));
+    RuntimeTuningPersistenceComplete(&pending,false);
+    assert(!RuntimeTuningPendingImage(&saved)); /* Failed writes do not loop. */
+    RuntimeTuningSubmit("@T1,12,GET,pid"); reply_contains(",error\r\n");
+    RuntimeTuningSubmit("@T1,13,SAVE,pid,2"); reply_contains(",pending\r\n");
+    assert(RuntimeTuningPendingImage(&pending));
+    RuntimeTuningPersistenceComplete(&pending,true);
+    RuntimeTuningSubmit("@T1,14,GET,pid"); reply_contains(",saved\r\n");
+    assert(!RuntimeTuningPendingImage(&pending));
+    pid[0]=1.5f; make_set(set,15,2,pid);
+    RuntimeTuningSubmit(set); RuntimeTuningProcess(TUNING_PID,accept);
+    reply_contains(",pending\r\n");
+    assert(RuntimeTuningPendingImage(&pending));
+    pid[0]=1.75f; make_set(set,16,3,pid);
+    RuntimeTuningSubmit(set); RuntimeTuningProcess(TUNING_PID,accept);
+    reply_contains(",pending\r\n");
+    RuntimeTuningPersistenceComplete(&pending,true);
+    assert(RuntimeTuningPendingImage(&pending) && pending.values[0][0]==1.75f);
+    /* A different compiled mode must not restore a previous mode's settings. */
+    saved.modes[0]=1;
+    RuntimeTuningPersistenceInit(&saved);
+    pid[0]=.75f; RuntimeTuningRegister(TUNING_PID,pid,0);
+    RuntimeTuningRestore(TUNING_PID,accept);
+    RuntimeTuningSubmit("@T1,17,GET,pid");
+    assert(RuntimeTuningReply(reply,sizeof reply)>0 && strstr(reply,",3f400000,") && strstr(reply,",volatile\r\n"));
+    RuntimeTuningReplySent();
     puts("Runtime tuning tests passed");
 }

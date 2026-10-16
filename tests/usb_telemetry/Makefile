@@ -5,7 +5,10 @@ FORMAT = ../../modules/telemetry/usb_telemetry_format.c
 HEADERS = $(wildcard stubs/*.h ../../modules/telemetry/usb_telemetry*.h) ../../Inc/usbd_cdc_if.h ../../bsp/usb/bsp_usb.h
 TRANSPORT = ../../modules/telemetry/usb_telemetry_stream.c ../../modules/telemetry/runtime_tuning.c ../../Src/usbd_cdc_if.c ../../bsp/usb/bsp_usb.c
 REMOTE = ../../modules/remote/remote_control.c ../../modules/daemon/daemon.c
-all: test_format.exe test_transport.exe test_remote.exe test_tuning.exe
+all: test_format.exe test_transport.exe test_remote.exe test_tuning.exe test_storage.exe
+
+test_storage.exe: test_storage.c ../../modules/telemetry/tuning_storage.c ../../modules/telemetry/tuning_storage.h
+	$(CC) $(CFLAGS) $(INCLUDES) test_storage.c ../../modules/telemetry/tuning_storage.c -o $@
 
 test_tuning.exe: test_tuning.c ../../modules/telemetry/runtime_tuning.c ../../modules/telemetry/runtime_tuning.h
 	$(CC) $(CFLAGS) $(INCLUDES) test_tuning.c ../../modules/telemetry/runtime_tuning.c -lm -o $@
@@ -20,3 +23,4 @@ test: all
 	./test_transport.exe
 	./test_remote.exe
 	./test_tuning.exe
+	./test_storage.exe

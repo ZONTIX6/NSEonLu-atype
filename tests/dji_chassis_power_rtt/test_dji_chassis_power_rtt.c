@@ -413,6 +413,33 @@ static void TestCalibrationPrintsLimitedCurrentsInsteadOfPidDemand(void)
 
 int main(void)
 {
+    PreparePowerGroup();
+    for (unsigned tick=1000;tick<=1100;++tick) {
+        for (unsigned i=0;i<idx;++i) {
+            cycle_stop[i]=MOTOR_STOP; cycle_online[i]=true;
+            cycle_measure[i].rx_tick_ms=tick; cycle_measure[i].speed_aps=0;
+            dji_motor_instance[i]->stop_flag=MOTOR_STOP;
+        }
+        UpdateTuningStopState(tick,true);
+        ASSERT_TRUE(DJIMotorCanSaveParameters(tick)==(tick>=1100));
+    }
+    ASSERT_TRUE(!DJIMotorCanSaveParameters(1106)); /* Stale publication. */
+    dji_motor_instance[0]->stop_flag=MOTOR_ENALBED;
+    ASSERT_TRUE(!DJIMotorCanSaveParameters(1101)); /* Enable raced with snapshot. */
+    dji_motor_instance[0]->stop_flag=MOTOR_STOP;
+    UpdateTuningStopState(1101,false);
+    ASSERT_TRUE(!DJIMotorCanSaveParameters(1101)); /* Zero CAN frame failed. */
+    cycle_measure[0].speed_aps=1000;
+    UpdateTuningStopState(1102,true);
+    ASSERT_TRUE(!DJIMotorCanSaveParameters(1102)); /* Coasting motor. */
+    ASSERT_TRUE(!tuning_stop_seen);
+    cycle_measure[0].speed_aps=0; cycle_online[0]=false;
+    UpdateTuningStopState(1103,true);
+    ASSERT_TRUE(!DJIMotorCanSaveParameters(1103));
+    ASSERT_TRUE(!tuning_stop_seen);
+    cycle_online[0]=true;cycle_measure[0].rx_tick_ms=1000;
+    UpdateTuningStopState(1104,true);
+    ASSERT_TRUE(!tuning_stop_seen); /* Per-motor feedback age is independent of task age. */
     /* Live PID writes apply in the motor cycle and reject a bad whole group. */
     PreparePowerGroup();
     chassis_power->algorithm.max_current_command = 15000;

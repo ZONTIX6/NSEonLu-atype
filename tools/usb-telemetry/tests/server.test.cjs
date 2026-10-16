@@ -25,6 +25,7 @@ test('acknowledged values synchronize to a source header; foreign origins and in
     assert.equal((await post(base,values)).status,200);
     const saved=await fs.readFile(config,'utf8');
     assert.match(saved,/#define TUNING_PID_OVERRIDE 1/);
+    assert.match(saved,/#define TUNING_PID_MODE 0/);
     assert.match(saved,/#define TUNING_PID_VALUES \{0.75f, 0.0f/);
     assert.match(saved,/#define TUNING_POWER_OVERRIDE 0/);
     /* Compile the persisted header and exercise firmware startup restore. */
@@ -39,7 +40,9 @@ test('acknowledged values synchronize to a source header; foreign origins and in
       'int main(void) { float original[24]={0}; char reply[512];',
       'RuntimeTuningRegister(TUNING_PID,original,0); RuntimeTuningRestore(TUNING_PID,apply);',
       'assert(restored==1); RuntimeTuningSubmit("@T1,1,GET,pid");',
-      'assert(RuntimeTuningReply(reply,sizeof reply)>0); assert(strstr(reply,"3f400000")); return 0; }'
+      'assert(RuntimeTuningReply(reply,sizeof reply)>0); assert(strstr(reply,"3f400000"));',
+      'original[0]=4; restored=0; RuntimeTuningRegister(TUNING_PID,original,1);',
+      'RuntimeTuningRestore(TUNING_PID,apply); assert(restored==0); return 0; }'
     ].join('\n'));
     const binary=path.join(root,'restore.exe');
     execFileSync('gcc',['-std=c11','-Wall','-Wextra','-Werror',

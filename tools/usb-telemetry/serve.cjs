@@ -9,17 +9,19 @@ const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/cs
 function createServer(root = __dirname, configPath = path.join(__dirname, '../../modules/telemetry/tuning_overrides.h')) {
   let writing = Promise.resolve();
   async function synchronize(group, mode, values) {
-    if (!['pid','power','spin'].includes(group) || !Number.isInteger(mode) || mode < 0 || mode > 3)
+    if (!['pid','power','spin'].includes(group) || !Number.isInteger(mode) ||
+        mode < 0 || mode > (group==='pid' ? 0 : group==='spin' ? 2 : 3))
       throw new Error('未知参数组或模式。');
     const checked = validate(group,values,mode), name = group.toUpperCase();
     const operation = writing.catch(() => {}).then(async () => {
       let content = await fs.readFile(configPath,'utf8');
-      for (const key of ['OVERRIDE','VALUES'])
+      for (const key of ['OVERRIDE','MODE','VALUES'])
         if (!new RegExp('^#define TUNING_'+name+'_'+key+' .+$','m').test(content)) throw new Error('配置文件结构不匹配，未写入。');
       const literal = value => {
         let text = String(value);if (!/[.e]/i.test(text)) text += '.0';return text+'f';
       };
       content = content.replace(new RegExp('^#define TUNING_'+name+'_OVERRIDE .+$','m'),'#define TUNING_'+name+'_OVERRIDE 1')
+        .replace(new RegExp('^#define TUNING_'+name+'_MODE .+$','m'),'#define TUNING_'+name+'_MODE '+mode)
         .replace(new RegExp('^#define TUNING_'+name+'_VALUES .+$','m'),'#define TUNING_'+name+'_VALUES {'+checked.map(literal).join(', ')+'}');
       const temporary = configPath+'.tmp';
       await fs.writeFile(temporary,content,'utf8');

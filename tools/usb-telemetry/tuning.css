@@ -34,6 +34,10 @@
 .tuning-actions>div:first-child{font-size:11px;color:#4b9d7d;line-height:1.9;max-width:560px}
 .tuning-actions>div:first-child.error{color:#c2684e}
 .tuning-actions>div:last-child{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap;flex-shrink:0}
+.tuning-persistence{display:flex;justify-content:space-between;gap:16px;align-items:center;padding-top:21px}
+.tuning-persistence p{margin:0;color:#a17c3d;font-size:11px;line-height:1.8}
+.tuning-persistence p.saved{color:#459678}.tuning-persistence p.error{color:#c2684e}
+.tuning-persistence button{flex-shrink:0}
 @media(max-width:1150px){.tuning-layout{grid-template-columns:190px minmax(0,1fr);gap:18px}.tuning-editor{padding:25px}.tuning-field-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tuning-actions{align-items:flex-start;flex-direction:column}.tuning-heading{flex-direction:column;gap:12px}}
 @media(max-width:720px){.workspace-tabs{gap:22px;margin:20px 0}.workspace-tabs button{font-size:13px}.workspace-tabs button span{display:none}.tuning-layout{grid-template-columns:1fr}.tuning-intro{margin-bottom:18px;gap:10px}.tuning-intro h2{font-size:20px}.tuning-intro p{font-size:11px}.tuning-intro>.status-pill{font-size:8px;margin-top:4px}.tuning-navigation{position:static;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:7px;gap:3px}.tuning-navigation button{padding:14px 7px;margin:0}.tuning-navigation button strong{font-size:9px;display:flex;gap:6px;justify-content:center}.tuning-navigation button strong span{padding:0;font-size:11px}.tuning-navigation button small,.tuning-navigation>p{display:none}.tuning-editor{padding:22px 18px}.tuning-heading h2{font-size:17px}.tuning-field-grid{gap:24px 14px}.tuning-field{font-size:10px}.tuning-field input{padding:11px;font-size:14px}.tuning-actions{padding-top:22px}.tuning-actions>div:last-child{flex-shrink:1;justify-content:flex-start}.tuning-field small{font-size:8px}}
 @media(max-width:380px){.tuning-field-grid{grid-template-columns:1fr}.tuning-intro{flex-direction:column}.tuning-navigation button strong{font-size:8px;gap:4px}.tuning-navigation button strong span{font-size:10px}}

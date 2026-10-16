@@ -525,7 +525,7 @@ CAN 协议帧标记、命令 ID、错误位、长度和 CRC 是对端约定，�
 | HAL Prefetch / 指令缓存 / 数据缓存 | `1/1/1` | 同上；HAL 回调注册开关为 0 |
 | HAL 启用模块 | ADC/CAN/CRC/DAC/I2C/RNG/RTC/SPI/TIM/UART/PCD，以及 GPIO/EXTI/DMA/RCC/FLASH/PWR/CORTEX | 同上，其余注释选项见索引 |
 | 链接最小 Heap / Stack | `0x5000 / 0x5000`，各 20480 字节 | `STM32F407IGHx_FLASH.ld`；与 FreeRTOS 堆不是同一配置 |
-| RAM / CCMRAM / Flash | `128K / 64K / 1024K` | 同上；索引含 Flash 扇区地址宏 |
+| RAM / CCMRAM / Flash | `128K / 64K / 1024K` | Flash 前 768K 用于固件，末尾扇区 10/11 各 128K 用于在线参数掉电日志；普通烧录保留这两个扇区 |
 | Make `DEBUG / OPT / BUILD_DIR / TARGET` | `1 / -Og / build / basic_framework` | `Makefile` |
 | 架构 | Cortex-M4，Thumb，硬浮点，`fpv4-sp-d16` | Make/CMake |
 | 公共编译宏 | `USE_HAL_DRIVER / STM32F407xx / ARM_MATH_CM4` | Make/CMake |

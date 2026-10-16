@@ -159,6 +159,8 @@ void DJIMotorChangeFeed(DJIMotorInstance *motor, Closeloop_Type_e loop, Feedback
  * @brief 该函数被motor_task调用运行在rtos上,motor_stask内通过osDelay()确定控制频率
  */
 void DJIMotorControl();
+/* All registered DJI motors must be stopped, stationary and freshly observed for 100 ms. */
+bool DJIMotorCanSaveParameters(uint32_t now_ms);
 
 /**
  * @brief 停止电机,注意不是将设定值设为零,而是直接给电机发送的电流值置零

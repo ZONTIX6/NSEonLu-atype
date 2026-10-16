@@ -57,18 +57,19 @@
     <section class="card motors-card" aria-label="底盘与电机"><div class="section-heading"><div><span class="eyebrow">CHASSIS & MOTORS</span><h2>底盘与四轮电机</h2></div><span id="chassis-mode" class="status-pill neutral">等待底盘数据</span></div><div class="chassis-commands"><span>Vx 指令 <strong id="vx-command">—</strong></span><span>Vy 指令 <strong id="vy-command">—</strong></span><span>Wz 指令 <strong id="wz-command">—</strong></span><small>控制原始单位</small></div><div class="motor-layout"><div class="motor-plot"><div class="chart-legend"><span><i class="color-dot blue"></i>左前 LF</span><span><i class="color-dot teal"></i>右前 RF</span><span><i class="color-dot amber"></i>左后 LB</span><span><i class="color-dot purple"></i>右后 RB</span><span class="legend-note">实线：实际 · 虚线：目标</span></div><div class="chart-container"><canvas id="rpm-chart" role="img" aria-label="四轮目标与实际转速，单位 rpm"></canvas><div class="chart-empty" data-empty-chart><span class="empty-wave">∿</span><strong>四轮转速 · rpm</strong></div></div></div><div class="motor-table-wrap"><table class="motor-table"><caption>电机转速与电流</caption><thead><tr><th>电机 / 状态</th><th>目标<br><small>rpm</small></th><th>实际<br><small>rpm</small></th><th>命令<br><small>电流原值</small></th><th>反馈<br><small>电流原值</small></th></tr></thead><tbody id="motor-table-body"></tbody></table><p class="table-note">电流为 DJI 原始单位；未换算为安培。</p></div></div></section>
     </div>
     <section id="tuning-panel" role="tabpanel" aria-labelledby="tuning-tab" hidden>
-      <div class="tuning-intro"><div><span class="eyebrow">LIVE PARAMETERS</span><h2>在线调参</h2><p>编辑、应用、确认。参数实时生效，确认后同步到项目文件。</p></div><span class="status-pill neutral">板端仅保存在 RAM</span></div>
+      <div class="tuning-intro"><div><span class="eyebrow">LIVE PARAMETERS</span><h2>在线调参</h2><p>参数实时生效、同步项目文件，停机后自动保存到板端。</p></div><span class="status-pill neutral">支持掉电保存</span></div>
       <div class="tuning-layout">
         <aside class="tuning-navigation card" role="tablist" aria-label="参数组">
           <button type="button" data-tuning-group="pid" role="tab" aria-selected="true"><strong>01 <span>速度环 PID</span></strong><small>四轮独立增益与限幅</small></button>
           <button type="button" data-tuning-group="power" role="tab" aria-selected="false"><strong>02 <span>功率控制</span></strong><small>功率外环与能量预算</small></button>
           <button type="button" data-tuning-group="spin" role="tab" aria-selected="false"><strong>03 <span>小陀螺</span></strong><small>旋转目标与波形</small></button>
-          <p>重启恢复固件默认值。文件同步后的参数将在下次编译、烧录后作为启动值。</p>
+          <p>应用后进入零力模式并保持电机停止，等待“已保存到板端”再断电。启动优先恢复有效的板端保存值。</p>
         </aside>
         <article class="tuning-editor card">
           <div class="tuning-heading"><div><h2 id="tuning-title">四轮速度环 PID</h2><p id="tuning-description"></p></div><span id="tuning-mode" class="status-pill neutral"></span></div>
           <div class="tuning-read-bar"><span id="tuning-revision">尚未读取</span><button type="button" id="tuning-read" class="secondary-button" disabled>重新读取板端</button></div>
           <div id="tuning-fields"></div>
+          <div class="tuning-persistence"><p id="tuning-persistence-status" role="status" aria-live="polite">连接 C 板后确认掉电保存状态。</p><button type="button" id="tuning-save" class="secondary-button" hidden>保存到板端</button></div>
           <div class="tuning-actions"><div id="tuning-status" role="status" aria-live="polite">连接 C 板后读取当前参数。</div><div><button type="button" id="tuning-sync" class="secondary-button" hidden>重试同步文件</button><button type="button" id="tuning-revert" class="secondary-button" disabled>撤销草稿</button><button type="button" id="tuning-apply" class="primary-button" disabled>应用并同步文件</button></div></div>
         </article>
       </div>

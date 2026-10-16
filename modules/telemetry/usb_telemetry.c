@@ -1,6 +1,8 @@
 #include "usb_telemetry.h"
+#include "tuning_flash.h"
 
 #if USB_TELEMETRY_ENABLE
+#include "usbd_cdc_if.h"
 #include "chassis.h"
 #include "remote_control.h"
 #include "dji_motor.h"
@@ -154,6 +156,8 @@ void USBTelemetryInit(void)
 void USBTelemetryTask(void)
 {
 #if USB_TELEMETRY_ENABLE
+    /* Let the preceding USB reply finish before a potentially long sector erase. */
+    if (!CDC_IsPortOpen_FS() || CDC_IsTransmitIdle_FS()) TuningFlashPoll();
     const uint32_t now_ms = HAL_GetTick();
     Collect(now_ms);
     USBTelemetryStreamSend(&sample, HAL_GetTick());

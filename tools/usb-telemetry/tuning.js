@@ -56,6 +56,7 @@
     return values.map(value => decodeFloat(encodeFloat(value)));
   }
   const errors = {conflict:'板端参数版本已改变，请重新读取后应用。',constraint:'板端拒绝参数组合，请检查范围和约束。',unavailable:'当前固件未启用这组参数。',value:'板端拒绝无效数值。',count:'参数字段数量与固件不一致。',group:'固件不支持这组参数。',operation:'固件不支持此操作。',version:'参数版本格式错误。'};
+  errors.unsupported='当前固件不支持板端掉电保存，请升级固件。';
   class TuningClient {
     constructor({send,timeoutMs=2000}) {this.send=send;this.timeoutMs=timeoutMs;this.sequence=0;this.pending=null;}
     request(group,operation,revision,values) {
@@ -64,6 +65,7 @@
       const id=++this.sequence;
       const line=['@T1',id,operation,group];
       if (operation==='SET') line.push(revision,...values.map(encodeFloat));
+      if (operation==='SAVE') line.push(revision);
       return new Promise((resolve,reject) => {
         const finish=(error,result) => {if (this.pending?.id!==id) return;clearTimeout(this.pending.timer);this.pending=null;error ? reject(error) : resolve(result);};
         const timer=setTimeout(() => finish(new Error('参数响应超时，结果尚未确认。请重新读取；旧固件需先升级。')),this.timeoutMs);
@@ -74,15 +76,19 @@
     }
     get(group) {return this.request(group,'GET');}
     set(group,revision,values) {return this.request(group,'SET',revision,values);}
+    save(group,revision) {return this.request(group,'SAVE',revision);}
     receive(line) {
       if (!line.startsWith('@T1,')) return false;
       const cells=line.split(','), p=this.pending;
       if (!p || cells[1]!==String(p.id) || cells[3]!==p.group) return true;
       if (cells[2]==='ERR') {p.finish(new Error(errors[cells[4]] || '板端拒绝请求：'+cells[4]));return true;}
       try {
-        if (cells[2]!=='OK' || cells.length!==groups[p.group].fields.length+6 || !/^\d+$/.test(cells[4]) || !/^[0-3]$/.test(cells[5])) throw new Error('参数回执格式与网页不一致。');
+        const count=groups[p.group].fields.length;
+        if (cells[2]!=='OK' || ![count+6,count+7].includes(cells.length) || !/^\d+$/.test(cells[4]) || !/^[0-3]$/.test(cells[5])) throw new Error('参数回执格式与网页不一致。');
         const revision=Number(cells[4]);if (revision>0xffffffff) throw new Error('参数版本无效。');
-        p.finish(null,{revision,mode:Number(cells[5]),values:cells.slice(6).map(decodeFloat)});
+        const storage=cells.length===count+7 ? cells.at(-1) : 'unsupported';
+        if (!['saved','pending','error','volatile','unsupported'].includes(storage)) throw new Error('掉电保存状态无效。');
+        p.finish(null,{revision,mode:Number(cells[5]),values:cells.slice(6,6+count).map(decodeFloat),storage});
       } catch(error) {p.finish(error);}
       return true;
     }
