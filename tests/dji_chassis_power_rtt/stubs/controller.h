@@ -8,6 +8,8 @@ typedef struct
     float Iout, ITerm, Last_ITerm, Dout, Last_Dout, Output, Last_Output;
     float Last_Measure,Last_Err;
     unsigned DWT_CNT;
+    unsigned Improve;
+    float CoefA,CoefB,Output_LPF_RC,Derivative_LPF_RC;
 } PIDInstance;
 
 typedef struct

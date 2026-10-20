@@ -8,6 +8,11 @@ typedef struct {
     PIDAutotuneTrial test;
     float target_rpm;
 } AutotuneDrive;
+typedef struct {
+    uint32_t improve,motor_flags;
+    float coef_a,coef_b,output_rc,derivative_rc,speed_smooth,current_smooth,output_limit;
+} AutotuneConfiguration;
+void AutotuneSetConfiguration(unsigned wheel,const AutotuneConfiguration *config);
 /* USB task mailbox; motor task owns execution and the trial engine. */
 void AutotuneSubmit(const char *line);
 size_t AutotuneReply(char *buffer,size_t capacity);

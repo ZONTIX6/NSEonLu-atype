@@ -53,7 +53,7 @@ static void ReadCommands(void)
             if (!command_dropping) {
                 if (command_length && command[command_length - 1] == '\r') --command_length;
                 command[command_length] = 0;
-                if (!strncmp(command,"@A1,",4)) AutotuneSubmit(command);
+                if (!strncmp(command,"@A1,",4) || !strncmp(command,"@A2,",4)) AutotuneSubmit(command);
                 else RuntimeTuningSubmit(command);
             }
             command_length = 0; command_dropping = false;

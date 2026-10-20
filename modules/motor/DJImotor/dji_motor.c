@@ -89,8 +89,19 @@ static void ApplyAutotuneCycle(void)
     for(unsigned w=0;w<4;++w) {
         unsigned i=chassis_power->motor_indices[w];
         f.rpm[w]=cycle_measure[i].speed_aps/6;
+        f.rx_ms[w]=cycle_measure[i].rx_tick_ms;f.rx_sequence[w]=cycle_measure[i].rx_sequence;
         f.feedback_ok &= cycle_online[i] && (uint32_t)(now-cycle_measure[i].rx_tick_ms)<=20;
         f.permitted &= fabsf(cycle_control.target_rpm[w])<=5;
+        PIDInstance *pid=autotune_owned ? &autotune_original[w] : &dji_motor_instance[i]->motor_controller.speed_PID;
+        const Motor_Control_Setting_s *settings=&dji_motor_instance[i]->motor_settings;
+        AutotuneConfiguration config={.improve=pid->Improve,.coef_a=pid->CoefA,.coef_b=pid->CoefB,
+            .output_rc=pid->Output_LPF_RC,.derivative_rc=pid->Derivative_LPF_RC,
+            .speed_smooth=SPEED_SMOOTH_COEF,.current_smooth=CURRENT_SMOOTH_COEF,
+            .output_limit=fminf(pid->MaxOut,chassis_power->algorithm.max_current_command),
+            .motor_flags=(uint32_t)settings->close_loop_type | ((uint32_t)settings->outer_loop_type<<8) |
+                ((uint32_t)settings->motor_reverse_flag<<16) | ((uint32_t)settings->feedback_reverse_flag<<20) |
+                ((uint32_t)settings->speed_feedback_source<<24) | ((uint32_t)settings->feedforward_flag<<28)};
+        AutotuneSetConfiguration(w,&config);
     }
     AutotuneMotorStep(&f,&autotune_drive);
     if(autotune_drive.owned && !autotune_owned) {

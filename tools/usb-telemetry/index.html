@@ -14,6 +14,11 @@
   <script src="charts.js" defer></script>
   <script src="tuning.js" defer></script>
   <script src="tuning-ui.js" defer></script>
+  <script src="autotune-metrics.js" defer></script>
+  <script src="autotune-budget.js" defer></script>
+  <script src="autotune-strategy.js" defer></script>
+  <script src="autotune-report.js" defer></script>
+  <script src="autotune-runner.js" defer></script>
   <script src="autotune.js" defer></script>
   <script src="autotune-ui.js" defer></script>
   <script src="app.js" defer></script>
@@ -79,32 +84,35 @@
       </div>
     </section>
     <section id="autotune-panel" role="tabpanel" aria-labelledby="autotune-tab" hidden>
-      <div class="auto-intro"><div><span class="eyebrow">PID AUTOTUNE</span><h2>让每次调参，都有依据。</h2><p>基线测试 → 有界搜索 → 独立复测 → 查看对比后采用</p></div><span id="auto-mode" class="status-pill neutral">尚未连接</span></div>
+      <div class="auto-intro"><div><h2>PID 自动整定 V2</h2><p>三次基线 → 分阶段搜索 → 前两名复筛 → 三档转速独立验收</p></div><span id="auto-mode" class="status-pill neutral">尚未连接</span></div>
       <div class="auto-grid">
         <aside id="auto-settings" class="card auto-settings">
           <h3>台架测试设置</h3>
           <div class="auto-instructions">底盘架空固定、四轮离地。<br>遥控器左拨杆下、右拨杆中；摇杆和拨轮居中，无键鼠输入。<br>结束后拨轮向下超过一半进入零力，再重新准备或保存。</div>
           <label>测试电机<select id="auto-wheel"><option value="0">左前 LF</option><option value="1">右前 RF</option><option value="2">左后 LB</option><option value="3">右后 RB</option><option value="all">依次测试全部四轮</option></select></label>
           <label>目标转速 · 电机 rpm<input id="auto-rpm" type="number" min="100" max="1500" step="50" value="500"><small>100～1500 rpm；从较低转速开始。</small></label>
-          <label>保持时间 · ms<input id="auto-hold" type="number" min="500" max="2000" step="100" value="1000"><small>每次另有前后各 300 ms 归零阶段。</small></label>
+          <label>保持时间 · ms<input id="auto-hold" type="number" min="500" max="2000" step="100" value="1000"><small>前后均需四轮连续停稳 300 ms，最多各等 3 秒。</small></label>
           <label>临时电流上限 · 原值<input id="auto-cap" type="number" min="500" max="5000" step="100" value="3000"><small>保留原限幅与功率保护；不换算为安培。</small></label>
           <label class="auto-confirm"><input id="auto-confirm" type="checkbox"><span>已确认底盘架空固定、四轮离地，可以执行单轮转速测试。</span></label>
           <div class="auto-buttons"><button id="auto-start" class="primary-button" type="button" disabled>开始自动整定</button><button id="auto-stop" class="secondary-button auto-stop" type="button" disabled>停止并恢复</button><button id="auto-demo" class="secondary-button" type="button">演示整定流程</button></div>
+          <button id="auto-continue" class="primary-button" type="button" hidden>已重新准备，继续下一轮</button>
         </aside>
         <article class="card auto-workspace">
-          <div class="auto-stage"><div><span class="eyebrow">TRIAL PROGRESS</span><p id="auto-progress-text">等待首次试验</p></div><div><strong id="auto-latest">— rpm</strong><br><small>最近一轮 RMSE</small></div></div>
-          <progress id="auto-progress" max="15" value="0" aria-label="整定进度"></progress>
+          <div class="auto-stage"><div><h3>试验进度</h3><p id="auto-progress-text">等待首次试验</p></div><div><strong id="auto-latest">— rpm</strong><br><small>最近一次 RMSE</small></div></div>
+          <progress id="auto-progress" max="50" value="0" aria-label="当前轮试验预算"></progress>
           <p id="auto-status" class="auto-status" role="status" aria-live="polite">可先运行演示，或连接支持自动整定的 C 板固件。</p>
           <div class="chart-legend"><span><i class="color-dot blue"></i>所选轮实际转速</span><span><i class="line-dot purple"></i>目标转速</span><span>最近 5 秒 · rpm</span></div>
           <div class="auto-plot"><canvas id="auto-chart" role="img" aria-label="整定电机目标与实际转速"></canvas></div>
           <p class="auto-empty">自动搜索 Kp / Ki，Kd 保持原值。板端统计指标；采样波形用于观察。通信心跳超时由板端结束试验。</p>
         </article>
       </div>
-      <article class="card auto-results-card"><h3>参数与复测对比</h3><p>复测评分改善至少 5% 才推荐采用。架空得到的参数需要落地带负载验证。</p>
-        <div class="auto-table-wrap"><table class="auto-table"><thead><tr><th>电机</th><th>原 Kp / Ki / Kd</th><th>推荐 Kp / Ki / Kd</th><th>基线 RMSE</th><th>复测 RMSE</th><th>结论</th></tr></thead><tbody id="auto-results"></tbody></table></div>
+      <article class="card auto-results-card"><h3>参数与独立验收</h3><p>每档原参数与候选各 3 次。三档平均评分改善至少 10%，逐档退化不超过 5%，并通过重复性、硬门槛和输出波动检查。默认阈值尚待实机确认。</p>
+        <div class="auto-table-wrap"><table class="auto-table"><thead><tr><th>电机</th><th>原 Kp / Ki / Kd</th><th>候选 Kp / Ki / Kd</th><th>验收改善</th><th>搜索边界</th><th>结论</th></tr></thead><tbody id="auto-results"></tbody></table></div>
+        <div class="auto-table-wrap"><table class="auto-table"><caption>三档转速：评分中位数［范围］、输出总变差及逐项判定</caption><thead><tr><th>电机 / rpm</th><th>原评分［范围］</th><th>候选评分［范围］</th><th>原 / 候选输出 TV · 原值/s</th><th>候选硬门槛：中位数［范围］≤阈值</th><th>成对胜出</th><th>判定</th></tr></thead><tbody id="auto-comparisons"></tbody></table></div>
+        <p>适用范围：正向、架空台架；反向及带载尚未验证。输出 TV 是电流指令总变差，不是实测电流纹波。</p>
         <div class="auto-footer"><p id="auto-persistence" role="status">候选参数仅用于试验，点击采用后才正式应用和保存。</p><div><button id="auto-sync" type="button" class="secondary-button" hidden>重试同步文件</button><button id="auto-save" type="button" class="secondary-button" hidden>重试板端保存</button><button id="auto-adopt" type="button" class="primary-button" disabled>采用并保存推荐参数</button></div></div>
       </article>
-      <article class="card auto-results-card"><h3>试验记录</h3><p>限流超过 5% 的试验会剔除；零力、反馈异常或操纵遥控器会停止整定。</p><div class="auto-table-wrap"><table class="auto-table"><thead><tr><th>#</th><th>电机</th><th>阶段</th><th>Kp</th><th>Ki</th><th>Kd</th><th>RMSE · rpm</th><th>超调 · rpm</th><th>稳态误差 · rpm</th><th>稳定时间</th><th>状态</th></tr></thead><tbody id="auto-trials"></tbody></table></div></article>
+      <article class="card auto-results-card"><h3>试验记录与报告</h3><p>限流超过 5% 或覆盖质量不足的试验会剔除。未完成验收时仅提供探索记录，不能采用。</p><div class="auto-buttons auto-exports"><button id="auto-json" class="secondary-button" type="button" disabled>导出 JSON 完整报告</button><button id="auto-csv" class="secondary-button" type="button" disabled>导出 CSV 逐试验记录</button></div><div class="auto-table-wrap"><table class="auto-table"><thead><tr><th>#</th><th>电机</th><th>阶段 / rpm</th><th>Kp</th><th>Ki</th><th>Kd</th><th>RMSE · rpm</th><th>超调 · rpm</th><th>稳态误差 · rpm</th><th>稳定时间</th><th>状态 / 门槛</th></tr></thead><tbody id="auto-trials"></tbody></table></div></article>
     </section>
     <footer class="app-footer"><span>USB CDC · CSV v1 · 最近 10 分钟历史 · 默认显示 60 秒</span><span>在线调参 · 单轮自动整定 · 板端确认后同步项目文件</span></footer>
   </main>

@@ -47,7 +47,7 @@
     }
     parseLine(line) {
       if (!line) return;
-      if (line.startsWith('@T1,') || line.startsWith('@A1,')) {this.onControl(line);return;}
+      if (line.startsWith('@T1,') || line.startsWith('@A1,') || line.startsWith('@A2,')) {this.onControl(line);return;}
       if (line === HEADER) {this.hasHeader = true; this.stats.headers++; return;}
       if (line.startsWith('version,')) this.hasHeader = false;
       if (!this.hasHeader) {this.stats.bad++; this.error('header'); return;}

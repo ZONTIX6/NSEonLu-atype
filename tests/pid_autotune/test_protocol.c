@@ -30,5 +30,25 @@ int main(void)
     AutotuneCancel();AutotuneMotorStep(&f,&drive);assert(!drive.owned && !RuntimeTuningTrialActive());
     command("@A1,10,STATUS,2","OK,2,aborted,0,0,stopped");
     command("@A1,11,TRIAL,2,0,500,500,3000,7fc00000,00000000,00000000","ERR,format");
+    command("@A2,12,CAP","@A2,12,CAP,2,31,180000,1000,20");
+    command("@A2,13,CONFIG,4","ERR,format");
+    command("@A2,14,BEGIN,1","@A2,14,OK,3,ready");
+    command("@A1,15,STATUS,3","ERR,session");
+    command("@A2,16,TRIAL,3,0,500,500,3000,3f400000,00000000,00000000","@A2,16,OK,3,running");
+    assert(strlen(reply)<512 && strstr(reply,"3f400000,00000000,00000000,0,0"));
+    AutotuneSubmit("@A2,99,STATUS,3");AutotuneMotorStep(&f,&drive);
+    assert(AutotuneReply(reply,8)==0 && AutotuneReply(reply,sizeof reply)>0);AutotuneReplySent();
+    command("@A2,17,END,3","@A2,17,OK,3,aborted");
+    command("@A2,18,TRIAL,4294967296,0,500,500,3000,3f400000,00000000,00000000","ERR,format");
+    AutotuneConfiguration config={.improve=5,.coef_a=1,.coef_b=2,.speed_smooth=.85f,.current_smooth=.9f,.output_limit=2000};
+    AutotuneSetConfiguration(0,&config);
+    command("@A2,19,CONFIG,0","CONFIG,0,5,3f800000,40000000");
+    command("@A2,20,BEGIN,1","OK,4,ready");
+    command("@A2,21,TRIAL,4,0,500,500,5001,3f400000,00000000,00000000","ERR,config");
+    command("@A2,22,TRIAL,4,0,500,500,3000,3f400000,00000000,00000000","OK,4,running");
+    assert(drive.test.current_limit==2000);
+    config.improve=6;AutotuneSetConfiguration(0,&config);AutotuneMotorStep(&f,&drive);
+    assert(!drive.owned && !RuntimeTuningTrialActive());
+    command("@A2,23,STATUS,4",",aborted,0,1,config,");
     puts("Autotune protocol/session/lock/cancellation tests passed");
 }

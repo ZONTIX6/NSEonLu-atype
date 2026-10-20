@@ -70,7 +70,7 @@
       return new Promise((resolve,reject) => {
         const finish=(error,result) => {if (this.pending?.id!==id) return;clearTimeout(this.pending.timer);this.pending=null;error ? reject(error) : resolve(result);};
         const timer=setTimeout(() => finish(new Error('参数响应超时，结果尚未确认。请重新读取；旧固件需先升级。')),this.timeoutMs);
-        this.pending={id,group,timer,finish};
+        this.pending={id,group,operation,timer,finish};
         try {Promise.resolve(this.send(line.join(',')+'\r\n')).catch(error => finish(error));}
         catch(error) {finish(error);}
       });
