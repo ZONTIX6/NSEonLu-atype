@@ -1,20 +1,20 @@
 # A 板融合软件验证记录
 
-日期：2026-10-22。状态：软件验证通过；未烧录、未连接板卡、未执行架空或实车验收。本记录对应同一提交中的源码与配置。输入快照、参考版本和宏迁移见 [迁移表](atype-macro-migration.md)，接线及使用边界见 [交付说明](atype-integration.md)。
+日期：2026-10-22。状态：软件验证通过；未烧录、未连接板卡、未执行架空或实车验收。本轮封装的软件验证代码提交为 `8117e1d`；最终提交另含本报告与接入文档。验证开始时只有文档改动，详见 `build/validation/provenance.json`。输入快照、参考版本和宏迁移见 [迁移表](atype-macro-migration.md)，接线及使用边界见 [交付说明](atype-integration.md)。
 
 ## 环境与复现
 
-Windows / PowerShell；Arm GNU Toolchain 13.3.Rel1（GCC 13.3.1）、MinGW GCC 16.1.0、GNU Make 4.4.1、CMake 3.30.5、Node 24.15.0。CMake 使用 MinGW Makefiles 生成器。Make 保持 `-Werror`，CMake 使用 `-Wall -Werror`；主机回归按各测试 Makefile 的严格告警选项构建。
+Windows / PowerShell；Arm GNU Toolchain 13.3.Rel1（GCC 13.3.1）、MinGW GCC 16.1.0、GNU Make 4.4.1、CMake 3.30.5、Node 24.15.0。CMake 使用 MinGW Makefiles 生成器。Make 保持 `-Werror`，CMake 使用 `-Wall -Werror`；主机回归按各测试 Makefile 的严格告警选项构建。CMake 显式优先使用与 Make 相同的 `Middlewares/ST/ARM/DSP/Include`，避免旧 `Inc` 头掩盖算法的硬件依赖。
 
 ```powershell
 ./scripts/validate-atype.ps1 -Python "<可用的 Python 3 可执行文件>" -FirmwareMatrix -CMake
 ```
 
-所有工具须加入 PATH。脚本完成 **75 项检查命令，75 项通过**：30 个主机测试目录、2 个便携模块测试目录、板级配置测试、Node 测试、16 套 Make 构建及16次产物检查、3套 CMake 的配置/构建/产物检查。配置测试含5个用例，Node含65个用例；检查命令数量不等于单元用例数量。
+所有工具须加入 PATH。脚本完成 **88 项检查命令，88 项通过**：37 个主机测试目录、2 个便携模块测试目录、1 次严格架构检查、5 次 DJI 阶段/功率计变体回归、板级配置测试、Node 测试、16 套 Make 构建及 16 次产物检查、3 套 CMake 的配置/构建/产物检查。配置测试含 5 个用例，架构检查器含 5 个自身测试，Node 含 65 个用例；独立功控测试另执行 32 个源/功率计/缓冲/阶段组合。C 断言按各目录运行，未把检查命令数充当单元用例总数。
 
-逐项结果保存在 `build/validation/results.json`，输出位于同目录各 `.log`。构建目录及日志是本地交付产物，不纳入源码提交。
+逐项结果保存在 `build/validation/results.json`，输出位于同目录各 `.log`，`provenance.json` 记录源码提交、工作区状态和起止时间。失败时也会保存当轮已执行结果，避免遗留旧的全绿报告。构建目录及日志是本地交付产物，不纳入源码提交。
 
-另行通过旧Make入口构建检查，以及三项预期失败检查：Make/CMake传入旧UART1_USE均报DBUS迁移错误，USB视觉与遥测同时开启在编译时拒绝。后者日志为 `reject-make-uart1.log`、`reject-cmake-uart1.log`、`reject-usb-conflict.log`，不计入上述75项。
+另行通过旧Make入口构建检查，以及三项预期失败检查：Make/CMake传入旧UART1_USE均报DBUS迁移错误，USB视觉与遥测同时开启在编译时拒绝。后者日志为 `reject-make-uart1.log`、`reject-cmake-uart1.log`、`reject-usb-conflict.log`，不计入本轮 88 项（为前序集成验收记录）。
 
 ## 风险回归结果
 
@@ -31,6 +31,17 @@ Windows / PowerShell；Arm GNU Toolchain 13.3.Rel1（GCC 13.3.1）、MinGW GCC 1
 | Flash和参数 | F427扇区22/23、端点/对齐/溢出保护、CRC正确旧schema拒绝、逐字写入中断和扇区切换恢复通过；整车停止且反馈新鲜才能保存 |
 | 输入和外设 | DBUS截短/无效开关、图传错误CRC/命令/长度、TFmini校验与单位、HC05发送边界通过；可选驱动初始化和控制入口强制链接并检查已定义符号 |
 | 工具与配置 | 65项Node测试通过；旧UART1_USE、日志/设备冲突、无效功控阶段和无串口捕获配置被拒绝；有效覆盖和各配置实际构建通过 |
+
+## 封装与行为保留
+
+- 功控独立于 DJI/HAL，应用不包含功控私有头；预算/外环、瞬态/模型和遥测由模块实例管理。目标架构白名单为空，`--strict` 为零违规；删除旧功控、旧 MPU 姿态源、`chassis_power_link` 和迁移用功控/超电接口。独立 portable 超电仍不进入固件，专有测试全部保留。
+- 阶段 0/3 的 196 周期输入流黄金夹具未改写，包含已解锁启动、驱动、制动、持续限功率、恢复、离线和整定退出。四阶段及无功率计变体、九电机乱序与隔离、发布交错、完整配置版本切换继续通过。新快照只在最终门控与量化后发布；CAN 提交失败独立记录，未将其解释成实际执行确认。
+- 超电 `0x051/0x052` 各自新鲜度、20/21 ms 边界、回绕、锁定前收到新帧、非法帧和半注册回调通过。USB 消费者改为一次读取整体快照，协议与遥测格式保持。
+- SPI 完整事务在忙、超时、错误时释放片选和所有权；DWT 未初始化则拒绝。MPU 15 字节事务、正负轴值与负温度、INS 第 3000 次校准采样失败锁定、正常校准、超时偏置回退、固定姿态地址和三角色视觉桥通过。
+- OLED SPI 2128 字节、I²C 2124 字节与迁移前实际输出完全一致；两后端失败及 ADC 启动/转换/状态/停止失败不产生按键事件。VTX 不重配 DMA，错误配置拒绝，初始化期间提前接收回调安全。
+- 写前 guard 在暂停调度区重新核对；未注册、由允许转拒绝、双板辅助未停机均不擦写。旧 schema、CRC、断电模拟、失败重试及 JScope 全路径恢复原 PRIMASK 继续通过。
+
+明确行为差异：最终诊断使用实际门控后的整数命令，修正旧中间值；ADC 失败返回无效而非中键；PWM 修正 ARR/CCR 计数差一（100 μs/1 MHz：ARR=99、50% CCR=50）及 APB2 分频字段。寄存器/协议值、控制系数、CAN ID、任务周期未重新调参。功控最终记录还会拒绝计算前提交、同周期重复提交及版本不匹配。
 
 ## 固件矩阵
 
@@ -52,25 +63,31 @@ Windows / PowerShell；Arm GNU Toolchain 13.3.Rel1（GCC 13.3.1）、MinGW GCC 1
 
 CMake的 `atype-vehicle`、`atype-bench`、`atype-direct` 分别在 `build/cmake-<配置>` 通过。旧 `Makefile.upgrade` 入口转为复用主Makefile，避免维护另一份过期源文件清单。
 
-链接检查确认：F427栈顶0x20030000；参数区0x081C0000/0x081E0000；无固件段进入参数区；`.data/.bss`位于DMA可访问普通RAM；无未定义强符号；当前INS和USB/UART8中断入口存在。可选配置另检查 `config/atype-link-symbols.txt` 的所有实现入口实际保留。
+链接检查确认：F427栈顶0x20030000；参数区0x081C0000/0x081E0000；无固件段进入参数区；`.data/.bss`位于DMA可访问普通RAM；无未定义强符号；当前 INS/EKF 与 USB/UART8 中断入口存在，关键公开实现无重复定义；map 不含历史功控/INS 源。底盘角色未使用的 `INSGetSnapshot` 可被正常裁剪，仍检查活跃 INS/EKF/采样实现。可选配置另检查 `config/atype-link-symbols.txt` 的所有实现入口实际保留。
 
 | 配置 | Flash镜像 B | 静态RAM B | 含链接预留堆栈RAM B |
 | --- | ---: | ---: | ---: |
-| atype-vehicle | 143260 | 101792 | 142752 |
-| atype-bench | 142388 | 101784 | 142744 |
-| atype-direct | 142164 | 101784 | 142744 |
-| atype-capture | 146892 | 116296 | 157256 |
-| atype-optional | 163536 | 103088 | 144048 |
+| atype-vehicle | 148008 | 105744 | 146704 |
+| atype-bench | 147448 | 105736 | 146696 |
+| atype-direct | 147232 | 105736 | 146696 |
+| atype-capture | 151624 | 120240 | 161200 |
+| atype-optional | 168912 | 107120 | 148080 |
 
 普通RAM总量196608 B。静态RAM已包含FreeRTOS 64KiB堆；最后一列另计链接脚本20KiB堆、20KiB栈预留，不能把它理解为实测任务栈占用。CCM 64KiB未用于DMA数据。任务栈余量、实时执行时间和长期资源余量仍须上板测量。
 
-主要BIN产物的SHA256：
+封装前报告的整车 Flash/静态 RAM/含链接预留 RAM 为 143260/101792/142752 B；本轮分别增加 4748/3952/3952 B。增长主要来自独立配置副本、快环缓冲与新设备契约。捕获配置含链接预留后为 161200 B，仍低于 196608 B 普通 RAM。
+
+主配置 GCC `.su` 静态单帧：`DJIMotorControl` 160 B、适配限流 16 B、核心限流 392 B、整数搜索 456 B、最终记录 80 B、遥测 144 B；慢环策略 296 B、应用预算组合 920 B、`ChassisTask` 664 B、`INS_Task` 96 B、SPI 事务 72 B。任务栈保持电机 512 字（2 KiB）、应用/INS 各 1024 字（4 KiB）。单帧数不能直接视为整个调用链峰值，C 库、异常入栈和硬件高水位仍待测量。
+
+临界区内仅复制配置/快照与读状态，算法、SPI 轮询与 CAN 发送在锁外；5 ms/2 ms 交错测试验证整组版本和最终发布。前后临界区最长时间、任务最坏耗时与实际栈余量均未上板测量，无法给出真实耗时增量；保留现有电机耗时/高水位监测，按下表采集后再判定实时性。
+
+主要 BIN 产物的 SHA256：
 
 | 文件 | SHA256 |
 | --- | --- |
-| `build/atype-vehicle/basic_framework.bin` | `d863ea41d1b36a8689820fe53ac81dc5d72cdcd5045570d63c53a9b0c38296bf` |
-| `build/atype-bench/basic_framework.bin` | `034b36168e423d0d21269741d7e6bd81ef6ec0262afcde0a6054092056758abf` |
-| `build/atype-direct/basic_framework.bin` | `a181ca3f71d694e80a427acd7cb5d9e5d502c67a758be68ccaf52aacd69df613` |
+| `build/atype-vehicle/basic_framework.bin` | `8035cc10e2c4d600caf8708604bda2e66b36c6d031a6e93a5759a74c45330991` |
+| `build/atype-bench/basic_framework.bin` | `dc63693a082e2f14ff3810958f25e6e5ee021d897ff87384e432211729e00a70` |
+| `build/atype-direct/basic_framework.bin` | `d33d1a7e1ad458ac69daff5ff7609156495781e5acc4eead89d9a2124870a0f3` |
 
 ## 未执行的验收
 
@@ -89,4 +106,4 @@ CMake的 `atype-vehicle`、`atype-bench`、`atype-direct` 分别在 `build/cmake
 
 另外，`.ioc`已按运行源码修正并保留主工程USB组织，但本机未执行CubeMX重生成；后续需在独立副本进行生成前后对照，特别核对时钟、USB、UART8、DMA/IRQ、FreeRTOS和用户代码。SPI/I²C扩展DMA模式未预分配全部硬件资源，当前可选验证以轮询为基准。原有空占位目录未补造通用驱动，其可用替代与边界见交付说明。
 
-本次只修改第一套工程。参考工程最终仍为 `b4491b9178e69c3e28fb546c3ab854cbc003ea50` 且工作区干净；初始8个用户修改文件的原文保存在本地 `codex/atype-input-baseline` 提交。历史C板验证文档保留原始实验背景，当前构建与接线以本报告、配置指南和交付说明为准。
+本轮只修改第一套工程。参考工程 HEAD 仍为 `b4491b9178e69c3e28fb546c3ab854cbc003ea50`；结束检查时有 `.vscode/settings.json` 工作区修改，本轮未写入参考工程，也未处理该修改。初始8个用户修改文件的原文保存在本地 `codex/atype-input-baseline` 提交。历史C板验证文档保留原始实验背景，当前构建与接线以本报告、配置指南和交付说明为准。

@@ -2,6 +2,14 @@
 
 日期：2026-10-22。交付主体是 `NSEonLu - atype`；参考工程保持 `b4491b9178e69c3e28fb546c3ab854cbc003ea50` 且不改写。软件验证记录见 [验证报告](atype-validation.md)。所有实物验收仍待执行。
 
+## 模块与装配
+
+跃鹿封装的软件阶段 A–H 已实施，行为与架构证据见 [实施记录](superpowers/plans/2026-10-22-atype-yuelu-execution.md)。功控内部持有预算、外环、瞬态和四轮模型状态；应用提交 5 ms 完整策略与目标，DJI 适配层在 2 ms 输出链执行一次四轮处理，驱动最终门控、量化和 CAN 提交后再记录最终命令。非底盘五电机不进入功控组。
+
+模块接入、单位、所有权与失败语义见 [功控](../modules/chassis_power/chassis_power.md)、[超电](../modules/super_cap/super_cap.md)、[INS/MPU/加热](../modules/imu/ins_service.md)、[OLED](../modules/oled/oled.md)。公共功控接口不包含 DJI/HAL；超电整体快照的两帧有各自时间戳。旧功控、旧超电分项 getter 和旧 MPU 姿态实现已清除。portable 超电仍是独立可移植交付物，不进入固件，专有测试继续执行。
+
+必要设备在 BSP 后由 `board_devices` 装配；视觉在应用 INS 桥按原 1 ms 任务组合。VTX 只验证 BSP 接收配置，OLED 显式注册 SPI/I²C 后端；ADC 按键失败返回无效。共享车辆安全状态在 modules，应用注册参数保存 guard，Flash 擦写在 BSP，写前仍在暂停调度区复核整车停机证明。
+
 ## 构建与固件
 
 ```powershell
@@ -39,7 +47,7 @@ MCU 为 STM32F427IIH6；12 MHz HSE、168 MHz SYSCLK、48 MHz USB。普通 RAM 19
 | 可选串口日志 | USART2 TX PD5 / RX PD6 | 115200；TX 中断队列，无 TX DMA |
 | 可选辅助串口 | UART7 RX PE7 / TX PE8 | 115200；见 `Src/usart.c` |
 | OLED | SPI1 PB3/PB4/PA7；DC PB9、RST PB10 | 默认 SPI 后端，需显式启用 |
-| OLED 模拟按键 | ADC1 IN6 / PA6 | 源码保留参考采样逻辑 |
+| OLED 模拟按键 | ADC1 IN6 / PA6 | 板级采样；转换失败不产生按键 |
 | I²C 扩展 | I²C2 PF0 SDA / PF1 SCL | 支持轮询；可选 I²C OLED |
 | 编码器计数 | TIM5 PH10/PH11；TIM8 PI5/PI6 | 已生成编码器模式，可轮询 CNT；不启用无处理函数的更新中断 |
 

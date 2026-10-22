@@ -1,8 +1,8 @@
 # A 板跃鹿风格模块封装与融合 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 >
-> 本文是待实施方案；编写本文不代表下列重构已完成。执行时以用户授权和项目约定为准，缺少上述执行技能时不自动搜索或安装外部技能。
+> 软件阶段 A–H 已于 2026-10-22 实施并验证，记录见同目录 `2026-10-22-atype-yuelu-execution.md`；硬件验收尚未执行。执行时以用户授权和项目约定为准，缺少上述执行技能时不自动搜索或安装外部技能。
 
 **Goal:** 将 A 板集成中的功率控制、超级电容、MPU6500、INS、图传和 OLED 按跃鹿框架封装，并通过明确接口重新组合，保留已验证的控制行为与故障保护。
 
@@ -22,9 +22,9 @@
 - 保持台架模式非底盘电机锁定、急停优先、显式复位、自动整定独占和退出后零力恢复条件。
 - 参数存储继续使用 schema 2、扇区 22/23、地址 `0x081C0000/0x081E0000`；写入前在调度暂停区内重新核对全车停机证明。
 - 保持 Make/CMake 配置一致、单板/双板/台架/直供/超容/无功率计及可选模块组合可构建。
-- 本方案主体尚未实施；用户随后授权删除旧功控和超电代码。当前先删除已确认无调用方的旧功控文件，其余迁移、刷写及硬件验收分别记录，不提前勾选。
+- 用户已授权实施及清理旧功控/超电代码；软件迁移已完成，刷写和硬件验收单独记录。
 
-## 2. 现状与选择
+## 2. 实施前现状与选择
 
 | 对象 | 当前证据 | 本方案目标 |
 |---|---|---|
@@ -262,17 +262,17 @@ bool MPU6500Read(MPU6500Instance *instance, IMUSample_s *sample);
 
 ## 5. 分阶段实施与验证
 
-下列阶段尚未实施，已完成的旧功控文件清理见第 4.1 节。每阶段遵循“先固定风险测试 → 观察新增断言失败 → 实现 → 回归 → 独立提交”，不把全部文件一次搬迁后再调试。下列 `make -B` 强制重编译，避免旧 exe 造成假通过。
+下列软件阶段已实施，实际变更、偏差、验证与提交见实施记录。每阶段遵循“先固定风险测试 → 观察新增断言失败 → 实现 → 回归 → 独立提交”，不把全部文件一次搬迁后再调试。下列 `make -B` 强制重编译，避免旧 exe 造成假通过。
 
 ### 阶段 A：建立行为基线与模块边界检查
 
 **文件：** 新增 `tests/architecture/test_layers.py`；扩展 `tests/dji_chassis_power_rtt/test_dji_chassis_power_rtt.c`、`tests/super_cap/test_super_cap.c`；保存测试夹具到对应测试目录。
 
-- [ ] 在基线记录相同输入流下的四轮最终电流、控制版本、预算、瞬态故障位及超容命令字节；覆盖启动、反转/制动、持续超功率、能量恢复、失联和整定退出。
-- [ ] 增加九电机乱序注册测试：仅 LF/RF/LB/RB 参与功率分配，其余五电机正常模式输出不受功控改写，台架模式按原规则停机。
-- [ ] 增加依赖检查：解析实际 include 路径，禁止目标模块包含 application 头；禁止功控公共头包含 `dji_motor.h`；禁止纯算法包含 HAL/RTOS；硬件句柄和寄存器操作只允许在 BSP/板级装配。允许 BSP 配置类型出现在模块配置中，不将所有 HAL 类型名一律判错。
-- [ ] 现有违规项先记录明确白名单，随相应阶段清零；最终不能用新增白名单掩盖目标模块的反向依赖。
-- [ ] 执行并提交基线测试；完整构建命令见第 6 节。
+- [x] 在基线记录相同输入流下的四轮最终电流、控制版本、预算、瞬态故障位及超容命令字节；覆盖启动、反转/制动、持续超功率、能量恢复、失联和整定退出。
+- [x] 增加九电机乱序注册测试：仅 LF/RF/LB/RB 参与功率分配，其余五电机正常模式输出不受功控改写，台架模式按原规则停机。
+- [x] 增加依赖检查：解析实际 include 路径，禁止目标模块包含 application 头；禁止功控公共头包含 `dji_motor.h`；禁止纯算法包含 HAL/RTOS；硬件句柄和寄存器操作只允许在 BSP/板级装配。允许 BSP 配置类型出现在模块配置中，不将所有 HAL 类型名一律判错。
+- [x] 现有违规项先记录明确白名单，随相应阶段清零；最终不能用新增白名单掩盖目标模块的反向依赖。
+- [x] 执行并提交基线测试；完整构建命令见第 6 节。
 
 ```powershell
 make -B -C tests/dji_chassis_power_rtt test CC=gcc
@@ -285,11 +285,11 @@ make -B -C tests/chassis_power_overpower test CC=gcc
 
 **文件：** `modules/super_cap/super_cap.*`、`super_cap.md`；`tests/super_cap/test_super_cap.c`、`tests/super_cap_protocol/test_super_cap_protocol.c`。接口采用第 3.2 节定义。
 
-- [ ] 测试发送命令编码与基线逐字节相同；输入反馈在年龄 20 ms 时有效、21 ms 时失效；只收 `0x052` 不能保持 `0x051` 在线。
-- [ ] 测试无效帧不更新接收时间、两个帧的时间独立、32 位计时回绕、空指针、未初始化、重复初始化和注册失败。
-- [ ] 增加纯数据头、整体快照及诊断计数，复用现有协议和 CAN/Daemon，保持旧 getter 兼容；初始/失败快照为离线而非随机旧值。将功率计状态类型提取到纯数据头，字段不变。
-- [ ] 若 BSP 已保存半初始化对象回调，失败路径不得释放形成悬空指针；对象不发布给业务 API，禁用有效状态并拒绝二次注册。完整回滚只有在 BSP 有对应注销能力时使用。
-- [ ] 执行测试并提交 `refactor: complete supercapacitor module contracts`。
+- [x] 测试发送命令编码与基线逐字节相同；输入反馈在年龄 20 ms 时有效、21 ms 时失效；只收 `0x052` 不能保持 `0x051` 在线。
+- [x] 测试无效帧不更新接收时间、两个帧的时间独立、32 位计时回绕、空指针、未初始化、重复初始化和注册失败。
+- [x] 增加纯数据头、整体快照及诊断计数，复用现有协议和 CAN/Daemon，保持旧 getter 兼容；初始/失败快照为离线而非随机旧值。将功率计状态类型提取到纯数据头，字段不变。
+- [x] 若 BSP 已保存半初始化对象回调，失败路径不得释放形成悬空指针；对象不发布给业务 API，禁用有效状态并拒绝二次注册。完整回滚只有在 BSP 有对应注销能力时使用。
+- [x] 执行测试并提交 `refactor: complete supercapacitor module contracts`。
 
 ```powershell
 make -B -C tests/super_cap test CC=gcc
@@ -301,16 +301,16 @@ make -B -C portable_modules/modules/super_cap/tests test CC=gcc
 
 **文件：** 新增第 3.1 节模块与 `dji_power_adapter.*`；修改 `chassis.c`、`dji_motor.*`、构建文件；新增 `tests/chassis_power_module/Makefile` 与 `test_chassis_power_module.c`。接口/输入输出严格采用第 3.1 节。
 
-- [ ] 提取当前模型/瞬态/外环用例作为模块测试，输入相同数据流，断言状态切换、许可和故障位一致，整数 CAN 命令一致；浮点中间值使用绝对误差 ≤`1e-4f` 或相对误差 ≤`1e-5f`，阈值分支必须一致。
-- [ ] 将预算与外环状态迁入模块，逐项保留现有配置值、功率源分支、stage 0/1/2/3 和功率计禁用分支。把 `ChassisPowerLinkBuild` 决策迁入策略实现。
-- [ ] 将瞬态、四轮模型计算和功控遥测迁入模块；保留纯算法 API。故障输入包括 NaN、Inf、非正 dt、过期测量和非法配置；不得输出非有限电流。
-- [ ] 增加 DJI 组处理接口与适配层；四轮绑定只在适配层，保持控制快照与轮速目标原子发布。读取功率计的责任移到适配层提供周期输入。
-- [ ] 在最终门控后回报量化命令，新增“功控计算后发生急停/整定锁定”测试：CAN 对应槽位为零，最终快照也为零；CAN 提交失败明确标记失败。这类诊断纠正单列差异，不将错误旧值作为黄金结果。
-- [ ] 新增 5 ms/2 ms 交错发布测试：同一周期预算、目标、许可版本一致；两类状态互不覆盖，临界区内无整段算法运算。
-- [ ] 保留现有运行调参、RTT/USB 和参数保存测试，增加配置切换版本一致性断言，拒绝非法配置时不得改变当前参数或积分状态。
-- [ ] 扩展直供/超容、功率计有/无、缓冲控制有/无、stage 0..3 的组合测试。超容失效关闭升功率能力，能量恢复与外环学习遵循基线；控制快照过期仍最终停机。
-- [ ] 清除 `chassis.c` 的预算/外环可变实例和通用驱动的功控实例、功率计读取及功控遥测；删除迁移完成的 `chassis_power_link.c/.h` 和无人使用的旧接口，更新测试编译源。应用可通过模块接口获取显示/小陀螺需要的反馈。
-- [ ] 逐个运行下列测试，通过后提交 `refactor: isolate chassis power module and DJI adapter`。
+- [x] 提取当前模型/瞬态/外环用例作为模块测试，输入相同数据流，断言状态切换、许可和故障位一致，整数 CAN 命令一致；浮点中间值使用绝对误差 ≤`1e-4f` 或相对误差 ≤`1e-5f`，阈值分支必须一致。
+- [x] 将预算与外环状态迁入模块，逐项保留现有配置值、功率源分支、stage 0/1/2/3 和功率计禁用分支。把 `ChassisPowerLinkBuild` 决策迁入策略实现。
+- [x] 将瞬态、四轮模型计算和功控遥测迁入模块；保留纯算法 API。故障输入包括 NaN、Inf、非正 dt、过期测量和非法配置；不得输出非有限电流。
+- [x] 增加 DJI 组处理接口与适配层；四轮绑定只在适配层，保持控制快照与轮速目标原子发布。读取功率计的责任移到适配层提供周期输入。
+- [x] 在最终门控后回报量化命令，新增“功控计算后发生急停/整定锁定”测试：CAN 对应槽位为零，最终快照也为零；CAN 提交失败明确标记失败。这类诊断纠正单列差异，不将错误旧值作为黄金结果。
+- [x] 新增 5 ms/2 ms 交错发布测试：同一周期预算、目标、许可版本一致；两类状态互不覆盖，临界区内无整段算法运算。
+- [x] 保留现有运行调参、RTT/USB 和参数保存测试，增加配置切换版本一致性断言，拒绝非法配置时不得改变当前参数或积分状态。
+- [x] 扩展直供/超容、功率计有/无、缓冲控制有/无、stage 0..3 的组合测试。超容失效关闭升功率能力，能量恢复与外环学习遵循基线；控制快照过期仍最终停机。
+- [x] 清除 `chassis.c` 的预算/外环可变实例和通用驱动的功控实例、功率计读取及功控遥测；删除迁移完成的 `chassis_power_link.c/.h` 和无人使用的旧接口，更新测试编译源。应用可通过模块接口获取显示/小陀螺需要的反馈。
+- [x] 逐个运行下列测试，通过后提交 `refactor: isolate chassis power module and DJI adapter`。
 
 ```powershell
 make -B -C tests/chassis_power_module test CC=gcc
@@ -329,11 +329,11 @@ make -B -C tests/chassis_power_capture test CC=gcc
 
 **文件：** `bsp/spi/bsp_spi.*`、`modules/mpu6500/*`、新增 `imu_sample.h`；新增 `tests/bsp_spi/`、`tests/mpu6500/` 的 Makefile 和 C 测试，保留 `tests/atype` 数学与故障测试。
 
-- [ ] SPI 测试覆盖 SPI1/SPI5、忙返回、超时、HAL/外设错误、空参数、CS_NONE、异步旧接口回归；每条失败路径均检查片选抬高和所有权释放。停止系统 tick 后超时仍能结束。
-- [ ] 实现第 3.3 节事务接口及总线映射，异步回调使用活动事务所有者，不通过读片选电平猜测 CS_NONE 设备；一次事务只通知一次完成/错误。
-- [ ] 迁移 MPU 寄存器读写，测试 14 字节数据在同一片选窗口内读取，负温度、±8g/1000dps 量纲和失败样本 invalid。
-- [ ] PWM 配置从应用注入，测试 50% 对应占空比 0.5、100 μs 对应正确计数值、失败加热为零。
-- [ ] 运行测试并提交 `refactor: encapsulate MPU6500 and heater through BSP`。
+- [x] SPI 测试覆盖 SPI1/SPI5、忙返回、超时、HAL/外设错误、空参数、CS_NONE、异步旧接口回归；每条失败路径均检查片选抬高和所有权释放。停止系统 tick 后超时仍能结束。
+- [x] 实现第 3.3 节事务接口及总线映射，异步回调使用活动事务所有者，不通过读片选电平猜测 CS_NONE 设备；一次事务只通知一次完成/错误。
+- [x] 迁移 MPU 寄存器读写，测试 14 字节数据在同一片选窗口内读取，负温度、±8g/1000dps 量纲和失败样本 invalid。
+- [x] PWM 配置从应用注入，测试 50% 对应占空比 0.5、100 μs 对应正确计数值、失败加热为零。
+- [x] 运行测试并提交 `refactor: encapsulate MPU6500 and heater through BSP`。
 
 ```powershell
 make -B -C tests/bsp_spi test CC=gcc
@@ -345,11 +345,11 @@ make -B -C tests/atype test CC=gcc
 
 **文件：** `modules/imu/ins_service.c`、`ins_task.h`，`application/board_devices.*`、`ins_bridge.*`，实际机器人/RTOS 初始化入口；新增 `tests/ins_service/`。
 
-- [ ] 固定校准第 3000 次采样失败用例：之后恢复 SPI 仍不能启动 EKF，健康为 false、加热为零；另测正常启动和超时偏置回退。
-- [ ] 迁移姿态服务，注入采样/加热回调，定义 `INSGetSnapshot` 对完整姿态、tick 和 valid 的复制契约。保留稳定姿态地址及 `INS_Init/INS_Task` 调用兼容。
-- [ ] 在 `BSPInit` 后、使用设备的应用前装配必要设备；可选 OLED/键等继续按原延后阶段启动，不把所有阻塞初始化搬入关中断区。
-- [ ] 将视觉更新移到应用桥，测试单板/云台板仍为 1 ms 调用、底盘板不发送；输入失效不刷新健康时间。
-- [ ] 同时更新 Make/CMake 排除旧 INS 源，检查 EKF/INS 符号只有一份定义；测试通过后提交 `refactor: separate INS service and application bridge`。
+- [x] 固定校准第 3000 次采样失败用例：之后恢复 SPI 仍不能启动 EKF，健康为 false、加热为零；另测正常启动和超时偏置回退。
+- [x] 迁移姿态服务，注入采样/加热回调，定义 `INSGetSnapshot` 对完整姿态、tick 和 valid 的复制契约。保留稳定姿态地址及 `INS_Init/INS_Task` 调用兼容。
+- [x] 在 `BSPInit` 后、使用设备的应用前装配必要设备；可选 OLED/键等继续按原延后阶段启动，不把所有阻塞初始化搬入关中断区。
+- [x] 将视觉更新移到应用桥，测试单板/云台板仍为 1 ms 调用、底盘板不发送；输入失效不刷新健康时间。
+- [x] 同时更新 Make/CMake 排除旧 INS 源，检查 EKF/INS 符号只有一份定义；测试通过后提交 `refactor: separate INS service and application bridge`。
 
 ```powershell
 make -B -C tests/ins_service test CC=gcc
@@ -360,11 +360,11 @@ make -B -C tests/atype test CC=gcc
 
 **文件：** `modules/vtx/vt02_control.*`、`modules/oled/*`、板级装配与模拟键适配器、`.ioc`/`Src/usart.c`；扩展 `tests/vtx/`，新增 `tests/oled/`。
 
-- [ ] 保留图传合法帧、坏 CRC、短帧、失联和 100 ms 过期测试，增加初始化不修改 DMA 的检查。
-- [ ] 从 VTX 移除 HAL DMA 操作，通过配置/BSP 验证兼容接收模式；未配置时初始化失败，不在模块偷偷重配其他设备。
-- [ ] OLED 通过 SPI/I2C/GPIO BSP 接入；逐字节比较初始化、清屏和典型绘图的命令/数据输出，覆盖 CS_NONE、I2C 地址和传输失败。
-- [ ] 模拟按键测试正常区间及 ADC 失败不产生按键事件；保持旧显示入口通过已注册默认对象工作，禁止隐式注册硬编码硬件。
-- [ ] 更新可选链接符号、两种 OLED 后端构建，通过后提交 `refactor: isolate VTX and OLED hardware access`。
+- [x] 保留图传合法帧、坏 CRC、短帧、失联和 100 ms 过期测试，增加初始化不修改 DMA 的检查。
+- [x] 从 VTX 移除 HAL DMA 操作，通过配置/BSP 验证兼容接收模式；未配置时初始化失败，不在模块偷偷重配其他设备。
+- [x] OLED 通过 SPI/I2C/GPIO BSP 接入；逐字节比较初始化、清屏和典型绘图的命令/数据输出，覆盖 CS_NONE、I2C 地址和传输失败。
+- [x] 模拟按键测试正常区间及 ADC 失败不产生按键事件；保持旧显示入口通过已注册默认对象工作，禁止隐式注册硬编码硬件。
+- [x] 更新可选链接符号、两种 OLED 后端构建，通过后提交 `refactor: isolate VTX and OLED hardware access`。
 
 ```powershell
 make -B -C tests/vtx test CC=gcc
@@ -375,11 +375,11 @@ make -B -C tests/oled test CC=gcc
 
 **文件：** 迁移 `vehicle_safety.*`，新增 `application/tuning_policy.*` 与 Flash BSP；修改 `modules/telemetry/tuning_flash.*`、相关测试和 JScope 临界区实现。
 
-- [ ] 保留全车新鲜反馈、低速 50 rpm 持续 100 ms、零输出已提交、快环年龄 ≤5 ms、无整定与双板辅助停机证明测试。
-- [ ] 增加“之前允许，写前不允许”用例：回调必须在写前重新执行，拒绝时无 Flash 擦写；未注册 guard 同样拒绝。
-- [ ] 将共享安全状态下沉，应用注册保存策略，Flash HAL 操作归 BSP。保持调度暂停与写前复核顺序。
-- [ ] 验证失败写入/断电模拟、旧 schema 与 CRC 校验仍通过；临界区退出恢复进入前的中断状态。
-- [ ] 运行测试并提交 `refactor: remove safety and storage application dependencies`。
+- [x] 保留全车新鲜反馈、低速 50 rpm 持续 100 ms、零输出已提交、快环年龄 ≤5 ms、无整定与双板辅助停机证明测试。
+- [x] 增加“之前允许，写前不允许”用例：回调必须在写前重新执行，拒绝时无 Flash 擦写；未注册 guard 同样拒绝。
+- [x] 将共享安全状态下沉，应用注册保存策略，Flash HAL 操作归 BSP。保持调度暂停与写前复核顺序。
+- [x] 验证失败写入/断电模拟、旧 schema 与 CRC 校验仍通过；临界区退出恢复进入前的中断状态。
+- [x] 运行测试并提交 `refactor: remove safety and storage application dependencies`。
 
 ```powershell
 make -B -C tests/atype test CC=gcc
@@ -391,12 +391,12 @@ make -B -C tests/dji_chassis_power_rtt test CC=gcc
 
 **文件：** 构建清单、符号检查、`scripts/validate-atype.ps1`、模块 README、`docs/atype-integration.md`、`docs/atype-validation.md` 及第 1 阶段边界检查。
 
-- [ ] 将新增主机测试和架构检查接入总验证脚本，目标模块白名单清零；检查活动源码只有一套功控/INS/OLED 后端实现。
-- [ ] 文档给出超级电容和功控的独立初始化、5 ms 输入、2 ms 限流与最终提交示例；接口错误、单位和所有权可仅凭模块文档理解。
-- [ ] 运行第 6 节全部软件验收，记录真实命令数量、测试数量、配置和日志；新增测试后不能继续机械写“75 项”。
-- [ ] 审查调用图和输出路径：每帧四轮限流恰好一次、最终安全门控仍生效、功控不自行发送电机 CAN，应用无内部实例成员访问。
-- [ ] 按第 4.1 节清理被替代的旧功控/超电代码及迁移用兼容包装；迁移测试、模块说明和引用后再删除重复交付物，不保留无人调用的第二套实现。
-- [ ] 对照第 7 节完成软件验收项；硬件项目单独记录实测状态，通过后提交 `docs: validate YueLu-style A-board module integration`。
+- [x] 将新增主机测试和架构检查接入总验证脚本，目标模块白名单清零；检查活动源码只有一套功控/INS/OLED 后端实现。
+- [x] 文档给出超级电容和功控的独立初始化、5 ms 输入、2 ms 限流与最终提交示例；接口错误、单位和所有权可仅凭模块文档理解。
+- [x] 运行第 6 节全部软件验收，记录真实命令数量、测试数量、配置和日志；新增测试后不能继续机械写“75 项”。
+- [x] 审查调用图和输出路径：每帧四轮限流恰好一次、最终安全门控仍生效、功控不自行发送电机 CAN，应用无内部实例成员访问。
+- [x] 按第 4.1 节清理被替代的旧功控/超电代码及迁移用兼容包装；迁移测试、模块说明和引用后再删除重复交付物，不保留无人调用的第二套实现。
+- [x] 对照第 7 节完成软件验收项；硬件项目单独记录实测状态，通过后提交 `docs: validate YueLu-style A-board module integration`。
 
 ## 6. 验证命令与判定
 
@@ -417,13 +417,13 @@ git diff --check
 
 ### 软件封装完成标准
 
-- [ ] 功率控制可以脱离 DJI/HAL 用四轮输入流做主机测试；预算、外环、瞬态和四轮分配状态由功控模块持有。
-- [ ] `chassis.c` 不保存功控算法运行状态，`dji_motor.c` 不读取功率计/超容、不持有功控算法状态、不组织功控遥测。
-- [ ] 超级电容可独立测试通信/在线性，功控策略不在设备协议层；应用通过公开接口获取状态、发命令。
-- [ ] 四轮统一限流、其他五电机隔离、最终门控及提交结果有测试证明；新旧行为差异仅限明确列出的诊断纠正和 ADC 失败修正。
-- [ ] MPU/VTX/OLED 无板级句柄和 HAL 外设操作硬编码，INS 不依赖视觉；BSP 失败可以向上传递。
-- [ ] 目标模块无应用反向 include；初始化失败、半注册对象、快照新鲜度和重复初始化均有确定语义。
-- [ ] 构建矩阵、主机回归、依赖检查和产物检查全部通过，相关修改已提交并记录提交编号。
+- [x] 功率控制可以脱离 DJI/HAL 用四轮输入流做主机测试；预算、外环、瞬态和四轮分配状态由功控模块持有。
+- [x] `chassis.c` 不保存功控算法运行状态，`dji_motor.c` 不读取功率计/超容、不持有功控算法状态、不组织功控遥测。
+- [x] 超级电容可独立测试通信/在线性，功控策略不在设备协议层；应用通过公开接口获取状态、发命令。
+- [x] 四轮统一限流、其他五电机隔离、最终门控及提交结果有测试证明；差异已列明诊断纠正、ADC 失败修正及测试发现的 PWM 计数/分频修正，未重新调参。
+- [x] MPU/VTX/OLED 无板级句柄和 HAL 外设操作硬编码，INS 不依赖视觉；BSP 失败可以向上传递。
+- [x] 目标模块无应用反向 include；初始化失败、半注册对象、快照新鲜度和重复初始化均有确定语义。
+- [x] 构建矩阵、主机回归、依赖检查和产物检查全部通过，相关修改已提交并记录提交编号。
 
 ### 硬件独立验收项
 

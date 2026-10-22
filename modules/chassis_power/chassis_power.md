@@ -8,6 +8,19 @@
 
 配置参数保持 `application/chassis/chassis.c` 的现役值：安全系数 0.95、最大原始电流命令 15000、模型电流换算 1000；模型 K0..K5 为 `1.3123816, -0.25836727, 0.0007424524, 0.0024271158, 0.081198552, 3.890596e-08`。速度 PID Kp 保持 4.5（误差为 °/s），封装不重新调参。
 
+给定完整 `power_config` 和已注册电机，应用启动时组合如下；超电先按 [设备说明](../super_cap/super_cap.md) 独立初始化，功控初始化不访问设备：
+
+```c
+if (!ChassisPowerInit(&power_config)) return false;
+const DJIPowerAdapterConfig_s adapter = {
+    .motors = {motor_lf, motor_rf, motor_lb, motor_rb}, .count = 4,
+    .max_current_command = power_config.algorithm.max_current_command,
+};
+if (!DJIPowerAdapterInit(&adapter)) return false;
+```
+
+`power_config` 必须包含四个有效模型和完整预算/外环配置；瞬态可由 `ChassisPowerTransientDefaultConfig()` 起步。配置的全部字段见 `chassis_power_types.h`，A 板具体预算和外环常量见应用初始化与配置索引。最大电流须为正且不超过 32767，阶段为 0..3；不要以全零配置代替车辆参数。初始化与适配绑定在任务启动前完成，无销毁/重新注册接口。
+
 ## 5 ms 应用周期
 
 ```c
@@ -22,7 +35,7 @@ ChassisPowerPolicyOutput_s policy;
 bool valid = ChassisPowerUpdatePolicy(&input, &policy);
 ChassisPowerControlSnapshot_s control = policy.control;
 /* 应用补入同一版本的四轮目标、时间与整定许可。 */
-control.version = ++version;
+/* 保留策略生成的 version 和 config_version。 */
 control.tick_ms = now_ms;
 memcpy(control.target_rpm, wheel_rpm, sizeof control.target_rpm);
 control.control_enabled &= valid;
@@ -41,6 +54,23 @@ if (policy.cap_command_valid) SuperCapSendCommand(&policy.cap_command);
 限流之后，驱动继续执行急停、整定独占、显式零力恢复、反馈 20 ms 和启停门控，量化为 int16，统一组帧并提交 CAN。然后以实际最终命令调用 `ChassisPowerRecordFinal`。`final_valid` 表示本周期已记录最终命令；`can_submitted` 表示四轮对应 CAN 组提交成功，不证明电机已执行。提交失败仍记录尝试提交的命令，安全门控置零时诊断也为零。
 
 `ChassisPowerGetSnapshot` 原子复制快环与策略的独立时间/版本和有效标记。`ChassisPowerLimit` 返回 false 时输出清零，调用者不得复用旧候选；空输出失败。非有限输入、错误配置、非法 dt 或过期控制快照按失败处理。反馈不足抑制学习并沿用现有增长兜底，最终逐电机安全门控仍由驱动执行。
+
+脱离 DJI 的主机/其他驱动接入同样遵守以下顺序；`cycle_input` 为本周期完整输入，`actual_commands` 为最终门控和量化后实际放入 CAN 的四轮数组，`submitted` 为对应全部 CAN 组的提交结果：
+
+```c
+ChassisPowerCycleOutput_s candidate;
+bool calculated = ChassisPowerLimit(&cycle_input, &candidate);
+/* 驱动使用 candidate.current；calculated=false 时本周期命令必须为零。
+ * 此后执行最终门控、量化、组帧和发送，得到 actual_commands/submitted。 */
+ChassisPowerFinalInput_s final = {
+    .now_ms = now_ms, .control_version = cycle_input.control.version,
+    .enabled_mask = final_enabled_mask, .can_submitted = submitted,
+};
+memcpy(final.current_command, actual_commands, sizeof final.current_command);
+ChassisPowerRecordFinal(&final);
+```
+
+每个快周期由同一任务依次调用限流及最终记录。计算前、同周期重复记录或不匹配最近限流的控制版本时拒绝；快照中的策略、最终快环数据可来自各自最近的完整周期，消费者须检查各自时间戳、`cycle_valid/final_valid` 和提交标志，不能仅凭 getter 返回 true 判定健康。
 
 ## 调参和实时性
 

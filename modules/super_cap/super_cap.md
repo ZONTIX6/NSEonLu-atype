@@ -31,4 +31,4 @@ bool submitted = ready && SuperCapSendCommand(&command);
 
 `super_cap_types.h` 只依赖纯协议数据头，可供无 HAL 的主机功控使用。所有消费者通过整体快照读取状态；迁移用分项 getter 已删除。功率预算、裁判、台架、零力及恢复政策由功控和应用负责。
 
-协议说明：`docs/supercap-can-protocol.md`；唯一编解码实现为 `super_cap_protocol.c`。
+协议说明：`docs/supercap-can-protocol.md`；固件唯一编解码实现为 `super_cap_protocol.c`。
