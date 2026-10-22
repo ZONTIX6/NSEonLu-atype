@@ -21,6 +21,15 @@ static uint32_t daemon_register_calls;
 static bool can_registration_fails;
 static bool input_registration_fails, daemon_registration_fails;
 static void *instance;
+static bool inject_input_at_lock;
+
+void TestEnterCritical(void)
+{
+    if (!inject_input_at_lock) return;
+    inject_input_at_lock=false;
+    ++fake_tick_ms;
+    fake_input_can_instance.can_module_callback(&fake_input_can_instance);
+}
 
 #define ASSERT_TRUE(value)                                                                     \
     do                                                                                         \
@@ -348,8 +357,27 @@ static void TestDaemonFailureCanBeRetried(void)
     ASSERT_EQ_U32(20,captured_daemon_config.reload_count);
 }
 
+static void TestInputReceivedAfterCallerTimeIsFresh(void)
+{
+    input_feedback_enabled=true;
+    TestUninitializedOperationsFailAndInitRegistersDependencies();
+    const uint8_t frame[8]={0,0,0xDC,0x42,110,0,1,1};
+    memcpy(fake_input_can_instance.rx_buff,frame,8);
+    fake_input_can_instance.rx_len=8;
+    fake_tick_ms=100;
+    inject_input_at_lock=true;
+    SuperCapSnapshot_s snapshot;
+    ASSERT_TRUE(SuperCapGetSnapshot(100,&snapshot));
+    ASSERT_TRUE(snapshot.input_power.online);
+    ASSERT_EQ_U32(101,snapshot.input_power.last_rx_tick_ms);
+    ASSERT_EQ_U32(100,snapshot.snapshot_tick_ms);
+}
+
 int main(int argc, char **argv)
 {
+    if (argc > 1 && strcmp(argv[1], "interleave") == 0) {
+        TestInputReceivedAfterCallerTimeIsFresh(); return failures ? 1 : 0;
+    }
     if (argc > 1 && strcmp(argv[1], "input_failure") == 0) {
         TestInputRegistrationFailureKeepsCallbacksSafe(); return failures ? 1 : 0;
     }

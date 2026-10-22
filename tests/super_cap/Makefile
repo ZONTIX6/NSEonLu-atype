@@ -15,6 +15,7 @@ test: $(TARGET)
 	./$(TARGET) input_failure
 	./$(TARGET) daemon_failure
 	./$(TARGET) input_feedback
+	./$(TARGET) interleave
 	./$(TARGET)
 clean:
 	-if exist $(TARGET) del /Q $(TARGET)

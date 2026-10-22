@@ -147,8 +147,14 @@ bool SuperCapGetSnapshot(uint32_t now_ms, SuperCapSnapshot_s *output)
     taskENTER_CRITICAL();
     *output = cap->snapshot;
     output->status.online = output->status.online && DaemonIsOnline(cap->daemon) != 0U;
+    const uint32_t input_age = now_ms - output->input_power.last_rx_tick_ms;
+    /* A CAN IRQ may publish after the caller sampled now_ms but before this lock.
+     * Verify such a newer frame against the clock inside the lock. The live age
+     * check also prevents an ancient (> half-range) timestamp appearing fresh. */
+    const bool received_after_now = input_age > INT32_MAX &&
+        (uint32_t)(HAL_GetTick() - output->input_power.last_rx_tick_ms) <= 20U;
     output->input_power.online = output->input_feedback_enabled && output->input_power.online &&
-        (uint32_t)(now_ms - output->input_power.last_rx_tick_ms) <= 20U;
+        (input_age <= 20U || received_after_now);
     output->snapshot_tick_ms = now_ms;
     taskEXIT_CRITICAL();
     return true;
