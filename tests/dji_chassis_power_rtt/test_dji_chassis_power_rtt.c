@@ -546,8 +546,61 @@ static void TestAutotuneIsolationAndExplicitZeroForceRearm(void)
     chassis_power->control.zero_force=true;chassis_power->control.control_enabled=false;DJIMotorControl();
 }
 
-int main(void)
+static void TestBaselineScenarioStream(bool record)
 {
+    /* The same sequence is replayed after moving policy and limiting ownership. */
+    static const struct { const char *name; float rpm, target, power; bool online, enabled; } cases[] = {
+        {"startup", 0, 1000, 0, true, true},
+        {"drive", 600, 1000, 110, true, true},
+        {"brake", 600, -1000, 115, true, true},
+        {"overpower", -600, -1000, 150, true, true},
+        {"recovery", -600, -1000, 30, true, true},
+        {"offline", -600, -1000, 30, false, true},
+        {"tuning-exit", 0, 0, 0, true, false},
+    };
+    if ((CHASSIS_POWER_CONTROL_STAGE != 0 && CHASSIS_POWER_CONTROL_STAGE != 3) || !POWER_METER_ENABLE) return;
+    PreparePowerGroup();
+    char filename[64];
+    snprintf(filename, sizeof filename, "baseline-stage%d.csv", CHASSIS_POWER_CONTROL_STAGE);
+    FILE *fixture = fopen(filename, record ? "wb" : "rb");
+    ASSERT_TRUE(fixture != NULL);
+    if (fixture == NULL) return;
+    for (unsigned n = 0; n < sizeof cases / sizeof cases[0]; ++n) {
+        test_tick = 123 + n * 2;
+        DJIChassisPowerControlSnapshot_s control = chassis_power->control;
+        control.version = n + 1; control.tick_ms = test_tick;
+        control.control_enabled = cases[n].enabled;
+        for (unsigned w = 0; w < 4; ++w) control.target_rpm[w] = cases[n].target;
+        DJIChassisPowerPublishControl(&control);
+        SetMeter(cases[n].power, cases[n].online, test_tick);
+        for (unsigned w = 0; w < 4; ++w) {
+            chassis_power->models[w].k4 = .002f;
+            dji_motor_instance[w]->measure.speed_aps = cases[n].rpm * 6;
+            dji_motor_instance[w]->measure.rx_tick_ms = test_tick;
+            ++dji_motor_instance[w]->measure.rx_sequence;
+            speed_reference_aps[w] = cases[n].target * 6;
+            speed_feedback_aps[w] = cases[n].rpm * 6;
+            motor_output[w] = cases[n].target < cases[n].rpm ? -50.75f : 50.75f;
+        }
+        ReadMotorCycle(); ApplyChassisPowerGroup();
+        const DJIChassisPowerState_s *state = &chassis_power->state;
+        char row[256], expected[256];
+        snprintf(row, sizeof row, "%s,%lu,%.4f,%d,%d,%d,%d,%u,%u,%u\n", cases[n].name,
+            (unsigned long)state->control_version, chassis_power->input.referee_power_limit_w,
+            (int)state->power.limited_current[0], (int)state->power.limited_current[1],
+            (int)state->power.limited_current[2], (int)state->power.limited_current[3],
+            state->transient.fault, state->transient.mode, state->transient.meter_fresh);
+        if (record) fputs(row, fixture);
+        else { ASSERT_TRUE(fgets(expected, sizeof expected, fixture) != NULL); ASSERT_STREQ(expected, row); }
+    }
+    if (!record) ASSERT_TRUE(fgetc(fixture) == EOF);
+    fclose(fixture);
+    test_tick = 123;
+}
+
+int main(int argc, char **argv)
+{
+    TestBaselineScenarioStream(argc > 1 && strcmp(argv[1], "--record-baseline") == 0);
     PreparePowerGroup();
     for (unsigned tick=1000;tick<=1100;++tick) {
         for (unsigned i=0;i<idx;++i) {

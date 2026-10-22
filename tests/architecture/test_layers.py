@@ -1,0 +1,128 @@
+"""Check migration boundaries; exact baseline entries expire as modules move."""
+import argparse
+from collections import Counter
+import json
+from pathlib import Path
+import re
+import tempfile
+import unittest
+
+ROOT = Path(__file__).resolve().parents[2]
+BASELINE = Path(__file__).with_name("baseline.json")
+INCLUDE = re.compile(r'^\s*#\s*include\s*"([^"]+)"', re.M)
+STANDARD = {"stdint.h", "stdbool.h", "stddef.h", "stdlib.h", "stdio.h", "string.h",
+            "memory.h", "math.h", "float.h", "limits.h", "stdarg.h", "assert.h"}
+HARDWARE = re.compile(r'\b(?:HAL_(?:SPI|GPIO|I2C|ADC|DMA|TIM|FLASH)\w*|__HAL_\w+|h(?:spi|uart|adc|can|tim|i2c)\d+)\b')
+TARGETS = ("modules/chassis_power", "modules/super_cap", "modules/power_meter",
+           "modules/mpu6500", "modules/vtx", "modules/oled",
+           "modules/vehicle_safety")
+FILES = ("modules/imu/ins_service.c", "modules/imu/ins_task.h",
+         "modules/motor/DJImotor/dji_motor.c", "modules/motor/DJImotor/dji_motor.h",
+         "modules/telemetry/tuning_flash.c")
+
+
+def code_text(text):
+    # Preserve strings (include operands), removing only comments.
+    return re.sub(r'"(?:\\.|[^"\\])*"|/\*.*?\*/|//[^\n]*',
+                  lambda m: m[0] if m[0].startswith('"') else ' ', text, flags=re.S)
+
+
+def scan(root):
+    makefile = root / "Makefile"
+    include_dirs = [root / name for name in re.findall(r'(?:^|\s)-I([^\s\\]+)',
+                    makefile.read_text(encoding="utf-8-sig"))] if makefile.exists() else []
+    headers = {}
+    for base in ("application", "modules", "bsp", "Inc", "Drivers"):
+        for path in (root / base).rglob("*.h"):
+            headers.setdefault(path.name, []).append(path)
+    paths = set()
+    for target in TARGETS:
+        paths.update(p for p in (root / target).rglob("*") if p.suffix in (".h", ".c"))
+    paths.update(root / name for name in FILES if (root / name).exists())
+    algorithms = root / "modules/algorithm"
+    paths.update(p for p in algorithms.rglob("*") if p.suffix in (".h", ".c"))
+    found = Counter()
+    for path in sorted(paths):
+        rel = path.relative_to(root).as_posix()
+        text = code_text(path.read_text(encoding="utf-8-sig"))
+        for name in INCLUDE.findall(text):
+            if name in STANDARD:
+                continue
+            local = (path.parent / name).resolve()
+            matches = [directory / name for directory in include_dirs if (directory / name).is_file()]
+            candidates = [local] if local.is_file() else matches[:1] or headers.get(Path(name).name, [])
+            if len(candidates) != 1:
+                found[(rel, "unresolved-include", name)] += 1
+                continue
+            dest = candidates[0].relative_to(root).as_posix()
+            if dest.startswith("application/"):
+                found[(rel, "application-include", dest)] += 1
+            if rel.startswith("modules/algorithm/") and (
+                    dest.startswith("Drivers/") or "FreeRTOS" in name or name == "task.h"):
+                found[(rel, "algorithm-hardware", dest)] += 1
+            if rel.startswith("modules/chassis_power/") and path.suffix == ".h" and (
+                    name == "dji_motor.h"):
+                found[(rel, "power-public-motor", dest)] += 1
+        if not rel.startswith("modules/algorithm/"):
+            for symbol in HARDWARE.findall(text):
+                found[(rel, "hardware-access", symbol)] += 1
+    return found
+
+
+def records(counter):
+    return [dict(path=p, rule=r, evidence=e, count=n)
+            for (p, r, e), n in sorted(counter.items())]
+
+
+class BoundaryTests(unittest.TestCase):
+    def test_resolves_relative_and_unique_public_headers(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "modules/chassis_power").mkdir(parents=True)
+            (root / "application").mkdir()
+            (root / "application/policy.h").write_text("")
+            (root / "modules/chassis_power/x.c").write_text(
+                '#include "policy.h"\n#include "../../application/policy.h"\n'
+                '// HAL_SPI_Transmit ignored\nHAL_SPI_Transmit();\n')
+            result = scan(root)
+            self.assertEqual(result[("modules/chassis_power/x.c", "application-include",
+                                     "application/policy.h")], 2)
+            self.assertEqual(result[("modules/chassis_power/x.c", "hardware-access",
+                                     "HAL_SPI_Transmit")], 1)
+
+    def test_ambiguous_include_is_not_silently_accepted(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for directory in ("modules/chassis_power", "application/a", "application/b"):
+                (root / directory).mkdir(parents=True)
+            for directory in ("a", "b"):
+                (root / f"application/{directory}/config.h").write_text("")
+            (root / "modules/chassis_power/x.c").write_text('#include "config.h"')
+            self.assertEqual(sum(scan(root).values()), 1)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--record-baseline", action="store_true")
+    parser.add_argument("--strict", action="store_true")
+    args = parser.parse_args()
+    result = unittest.TextTestRunner().run(unittest.defaultTestLoader.loadTestsFromTestCase(BoundaryTests))
+    if not result.wasSuccessful():
+        return 1
+    actual = scan(ROOT)
+    if args.record_baseline:
+        BASELINE.write_text(json.dumps(records(actual), indent=2) + "\n", encoding="utf-8")
+    allowed = Counter() if args.strict else Counter({
+        (x["path"], x["rule"], x["evidence"]): x["count"]
+        for x in json.loads(BASELINE.read_text(encoding="utf-8"))})
+    added, stale = actual - allowed, allowed - actual
+    for label, issues in (("NEW", added), ("REMOVE STALE BASELINE", stale)):
+        for item in records(issues):
+            print(label, json.dumps(item))
+    print(f"Architecture: {sum(actual.values())} recorded boundary violations; "
+          f"{sum(added.values())} new, {sum(stale.values())} stale")
+    return int(bool(added or stale))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

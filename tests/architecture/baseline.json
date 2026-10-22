@@ -1,0 +1,188 @@
+[
+  {
+    "path": "modules/algorithm/kalman_filter.h",
+    "rule": "algorithm-hardware",
+    "evidence": "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h",
+    "count": 1
+  },
+  {
+    "path": "modules/algorithm/user_lib.h",
+    "rule": "algorithm-hardware",
+    "evidence": "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h",
+    "count": 1
+  },
+  {
+    "path": "modules/motor/DJImotor/dji_motor.c",
+    "rule": "application-include",
+    "evidence": "application/vehicle_safety.h",
+    "count": 1
+  },
+  {
+    "path": "modules/motor/DJImotor/dji_motor.c",
+    "rule": "hardware-access",
+    "evidence": "hcan1",
+    "count": 10
+  },
+  {
+    "path": "modules/motor/DJImotor/dji_motor.c",
+    "rule": "hardware-access",
+    "evidence": "hcan2",
+    "count": 3
+  },
+  {
+    "path": "modules/mpu6500/imu_temperature.c",
+    "rule": "hardware-access",
+    "evidence": "htim3",
+    "count": 1
+  },
+  {
+    "path": "modules/mpu6500/mpu6500driver.c",
+    "rule": "hardware-access",
+    "evidence": "HAL_SPI_TransmitReceive",
+    "count": 6
+  },
+  {
+    "path": "modules/mpu6500/mpu6500driver.h",
+    "rule": "hardware-access",
+    "evidence": "HAL_GPIO_WritePin",
+    "count": 2
+  },
+  {
+    "path": "modules/mpu6500/mpu6500driver.h",
+    "rule": "hardware-access",
+    "evidence": "hspi5",
+    "count": 1
+  },
+  {
+    "path": "modules/oled/oled.c",
+    "rule": "hardware-access",
+    "evidence": "HAL_I2C_Master_Transmit",
+    "count": 1
+  },
+  {
+    "path": "modules/oled/oled.c",
+    "rule": "hardware-access",
+    "evidence": "hi2c2",
+    "count": 2
+  },
+  {
+    "path": "modules/oled/oled_spi.c",
+    "rule": "hardware-access",
+    "evidence": "HAL_ADC_GetState",
+    "count": 1
+  },
+  {
+    "path": "modules/oled/oled_spi.c",
+    "rule": "hardware-access",
+    "evidence": "HAL_ADC_GetValue",
+    "count": 1
+  },
+  {
+    "path": "modules/oled/oled_spi.c",
+    "rule": "hardware-access",
+    "evidence": "HAL_ADC_PollForConversion",
+    "count": 1
+  },
+  {
+    "path": "modules/oled/oled_spi.c",
+    "rule": "hardware-access",
+    "evidence": "HAL_ADC_STATE_REG_EOC",
+    "count": 1
+  },
+  {
+    "path": "modules/oled/oled_spi.c",
+    "rule": "hardware-access",
+    "evidence": "HAL_ADC_Start",
+    "count": 1
+  },
+  {
+    "path": "modules/oled/oled_spi.c",
+    "rule": "hardware-access",
+    "evidence": "HAL_SPI_Transmit",
+    "count": 1
+  },
+  {
+    "path": "modules/oled/oled_spi.c",
+    "rule": "hardware-access",
+    "evidence": "hadc1",
+    "count": 4
+  },
+  {
+    "path": "modules/oled/oled_spi.c",
+    "rule": "hardware-access",
+    "evidence": "hspi1",
+    "count": 1
+  },
+  {
+    "path": "modules/oled/oled_spi.h",
+    "rule": "hardware-access",
+    "evidence": "HAL_GPIO_WritePin",
+    "count": 4
+  },
+  {
+    "path": "modules/telemetry/tuning_flash.c",
+    "rule": "application-include",
+    "evidence": "application/chassis/chassis.h",
+    "count": 1
+  },
+  {
+    "path": "modules/telemetry/tuning_flash.c",
+    "rule": "application-include",
+    "evidence": "application/vehicle_safety.h",
+    "count": 1
+  },
+  {
+    "path": "modules/telemetry/tuning_flash.c",
+    "rule": "hardware-access",
+    "evidence": "HAL_FLASHEx_Erase",
+    "count": 1
+  },
+  {
+    "path": "modules/telemetry/tuning_flash.c",
+    "rule": "hardware-access",
+    "evidence": "HAL_FLASH_Lock",
+    "count": 1
+  },
+  {
+    "path": "modules/telemetry/tuning_flash.c",
+    "rule": "hardware-access",
+    "evidence": "HAL_FLASH_Program",
+    "count": 1
+  },
+  {
+    "path": "modules/telemetry/tuning_flash.c",
+    "rule": "hardware-access",
+    "evidence": "HAL_FLASH_Unlock",
+    "count": 1
+  },
+  {
+    "path": "modules/telemetry/tuning_flash.c",
+    "rule": "hardware-access",
+    "evidence": "__HAL_FLASH_CLEAR_FLAG",
+    "count": 1
+  },
+  {
+    "path": "modules/telemetry/tuning_flash.c",
+    "rule": "hardware-access",
+    "evidence": "__HAL_FLASH_DATA_CACHE_DISABLE",
+    "count": 1
+  },
+  {
+    "path": "modules/telemetry/tuning_flash.c",
+    "rule": "hardware-access",
+    "evidence": "__HAL_FLASH_DATA_CACHE_ENABLE",
+    "count": 1
+  },
+  {
+    "path": "modules/telemetry/tuning_flash.c",
+    "rule": "hardware-access",
+    "evidence": "__HAL_FLASH_DATA_CACHE_RESET",
+    "count": 1
+  },
+  {
+    "path": "modules/vtx/vt02_control.c",
+    "rule": "hardware-access",
+    "evidence": "HAL_DMA_Init",
+    "count": 1
+  }
+]
