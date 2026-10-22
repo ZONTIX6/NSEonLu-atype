@@ -2,10 +2,13 @@
 #include "imu_temperature.h"
 #include "tim.h"
 #include "spi.h"
+#include "ins_task.h"
 
 static MPU6500Instance *board_imu;
 static bool started,ready;
 MPU6500Instance *BoardIMUDevice(void) {return board_imu;}
+static bool SampleIMU(void *context,IMUSample_s *sample) {return MPU6500Read(context,sample);}
+static void HeatIMU(void *context,float duty) {(void)context;IMU_Temperature_Update(duty);}
 
 bool BoardDevicesInit(void)
 {
@@ -19,6 +22,10 @@ bool BoardDevicesInit(void)
         .timeout_us=500};
     board_imu=MPU6500Register(&imu);
     ready=board_imu!=NULL;
+    if(ready) {
+        const INSServiceConfig_s service={.sample=SampleIMU,.heat=HeatIMU,.context=board_imu};
+        ready=INSServiceConfigure(&service);
+    }
     if(!ready) IMU_Temperature_Update(0);
     return ready;
 }

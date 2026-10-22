@@ -10,19 +10,20 @@
  ***************************************(C) COPYRIGHT 2018 DJI***************************************
  */
 
-#include "mpu6500.h"
+#include "ins_task.h"
+#include "QuaternionEKF.h"
 #include "mpu6500_math.h"
-#include "master_process.h"
+
 static bool sample_valid, ins_healthy;
 static uint32_t ins_sample_tick;
-bool INSIsHealthy(uint32_t now_ms) { return ins_healthy && (uint32_t)(now_ms-ins_sample_tick)<=10U; }
+
 #include <math.h>
 #include <string.h>
 #include "controller.h"
-#include "imu_temperature.h"
+
 #include "user_lib.h"
 #include "bsp_dwt.h"
-#include "mpu6500driver.h"
+
 #include "QuaternionEKF.h"
 #include "general_def.h"
 #include "SEGGER_RTT.h"
@@ -31,8 +32,59 @@ bool INSIsHealthy(uint32_t now_ms) { return ins_healthy && (uint32_t)(now_ms-ins
 #define GYRO_OFFSET_LIMIT_X 0.04f
 #define GYRO_OFFSET_LIMIT_Y 0.04f
 #define GYRO_OFFSET_LIMIT_Z 0.04f
-float MPU6500_ACCEL_SEN = MPU6500_ACCEL_8G_SEN;
-float MPU6500_GYRO_SEN = MPU6500_GYRO_1000_SEN;
+#ifdef STM32F427xx
+#include "FreeRTOS.h"
+#include "task.h"
+#define INS_LOCK() taskENTER_CRITICAL()
+#define INS_UNLOCK() taskEXIT_CRITICAL()
+#else
+#define INS_LOCK() ((void)0)
+#define INS_UNLOCK() ((void)0)
+#endif
+#define GxOFFSET .037452f
+#define GyOFFSET .003360f
+#define GzOFFSET .008532f
+#define gNORM 9.605101f
+typedef struct {float Accel[3],Gyro[3],TempWhenCali,Temperature,AccelScale,GyroOffset[3],gNorm;} mpu_data_t;
+static INSServiceConfig_s service_config;
+static bool service_configured;
+static attitude_t published_attitude;
+static uint32_t sample_tick;
+static void IMU_Temperature_Update(float duty)
+{
+    if(service_configured) service_config.heat(service_config.context,duty);
+}
+bool INSServiceConfigure(const INSServiceConfig_s *config)
+{
+    if(config==NULL || config->sample==NULL || config->heat==NULL || service_configured) return false;
+    service_config=*config;service_configured=true;return true;
+}
+bool INSIsHealthy(uint32_t now_ms)
+{
+    INS_LOCK();bool valid=ins_healthy && (uint32_t)(now_ms-ins_sample_tick)<=10U;INS_UNLOCK();return valid;
+}
+bool INSGetSnapshot(INSSnapshot_s *output)
+{
+    if(output==NULL) return false;
+    INS_LOCK();
+    *output=(INSSnapshot_s){.attitude=published_attitude,.tick_ms=ins_sample_tick,
+        .valid=ins_healthy && (uint32_t)(HAL_GetTick()-ins_sample_tick)<=10U};
+    INS_UNLOCK();
+    return output->valid;
+}
+static bool ReadSample(IMUSample_s *sample)
+{
+    if(!service_configured || !service_config.sample(service_config.context,sample) || !sample->valid ||
+        (uint32_t)(HAL_GetTick()-sample->tick_ms)>10U) return false;
+    float norm=0;
+    for(unsigned axis=0;axis<3;++axis) {
+        if(!isfinite(sample->accel_m_s2[axis]) || !isfinite(sample->gyro_rad_s[axis])) return false;
+        norm+=sample->accel_m_s2[axis]*sample->accel_m_s2[axis];
+    }
+    norm=sqrtf(norm);
+    return isfinite(norm) && norm>.1f && norm<300 && isfinite(sample->temperature_c) &&
+        sample->temperature_c>=-40 && sample->temperature_c<=100;
+}
 
 static INS_t INS;
 static mpu_data_t  mpu_data;
@@ -51,7 +103,7 @@ static float RefTemp = 40; // 恒温设定温度
 
 static bool mpu_offset_call(void);
 static void IMU_Param_Correction(IMU_Param_t *param, float gyro[3], float accel[3]);
-void mpu_get_data();
+static void mpu_get_data(void);
 void EarthFrameToBodyFrame(const float *vecEF, float *vecBF, float *q);
 void BodyFrameToEarthFrame(const float *vecBF, float *vecEF, float *q);
 /**
@@ -81,46 +133,17 @@ static bool InitQuaternion(float *init_q4)
         acc_init[i] /= 100;
     return MPU6500InitialQuaternion(acc_init,init_q4);
 }
-/**
-	* @brief  get the data of IST8310
-  * @param  buff: the buffer to save the data of IST8310
-	* @retval
-  * @usage  call in mpu_get_data() function
-	*/
-void ist8310_get_data(uint8_t* buff)
+static void mpu_get_data(void)
 {
-    mpu_read_bytes(MPU6500_EXT_SENS_DATA_00, buff, 6);
-}
-
-
-/**
-	* @brief  get the data of imu
-  * @param
-	* @retval
-  * @usage  call in main() function
-	*/
-void mpu_get_data()
-{
-	uint8_t mpu_buf[14] ={0};        /* buffer to save imu raw data */
-    sample_valid=mpu_read_bytes(MPU6500_ACCEL_XOUT_H, mpu_buf, 14)==0;
+    IMUSample_s sample;
+    sample_valid=ReadSample(&sample);
     if(!sample_valid) return;
-	mpu_data.Accel[0] = ((int16_t)((mpu_buf[0]) << 8) | mpu_buf[1]) * MPU6500_ACCEL_SEN * mpu_data.AccelScale;
-
-	mpu_data.Accel[1] = ((int16_t)((mpu_buf[2]) << 8) | mpu_buf[3]) * MPU6500_ACCEL_SEN * mpu_data.AccelScale;
-
-	mpu_data.Accel[2] = ((int16_t)((mpu_buf[4]) << 8) | mpu_buf[5]) * MPU6500_ACCEL_SEN * mpu_data.AccelScale;
-	mpu_data.Temperature = MPU6500Temperature(mpu_buf[6],mpu_buf[7]);
-
-	mpu_data.Gyro[0] = ((int16_t)((mpu_buf[8]) << 8) | mpu_buf[9]) * MPU6500_GYRO_SEN - mpu_data.GyroOffset[0];
-
-	mpu_data.Gyro[1] = ((int16_t)((mpu_buf[10]) << 8) | mpu_buf[11]) * MPU6500_GYRO_SEN - mpu_data.GyroOffset[1];
-
-    mpu_data.Gyro[2] = ((int16_t)((mpu_buf[12]) << 8) | mpu_buf[13]) * MPU6500_GYRO_SEN - mpu_data.GyroOffset[2];
-    const float norm=sqrtf(mpu_data.Accel[0]*mpu_data.Accel[0]+mpu_data.Accel[1]*mpu_data.Accel[1]+mpu_data.Accel[2]*mpu_data.Accel[2]);
-    sample_valid=isfinite(norm) && norm>0.1f && norm<300 &&
-        isfinite(mpu_data.Temperature) && mpu_data.Temperature>=-40 && mpu_data.Temperature<=100;
+    for(unsigned axis=0;axis<3;++axis) {
+        mpu_data.Accel[axis]=sample.accel_m_s2[axis]*mpu_data.AccelScale;
+        mpu_data.Gyro[axis]=sample.gyro_rad_s[axis]-mpu_data.GyroOffset[axis];
+    }
+    mpu_data.Temperature=sample.temperature_c;sample_tick=sample.tick_ms;
 }
-
 
 /**
 	* @brief  initialize imu mpu6500 and magnet meter ist3810
@@ -130,17 +153,15 @@ void mpu_get_data()
 	*/
 attitude_t *INS_Init(void)
 {
+    if(!service_configured) return &published_attitude;
     if (!INS.init)
     {
         INS.init = 1;
     }else{
-        return (attitude_t *)&INS.Gyro;
+        return &published_attitude;
     }
 
-    if(mpu_read_byte(MPU6500_GYRO_CONFIG)!=0x10 || mpu_read_byte(MPU6500_ACCEL_CONFIG)!=0x10) {
-        return (attitude_t *)&INS.Gyro;
-    }
-	PID_Init_Config_s config = {.MaxOut = 100,
+    PID_Init_Config_s config = {.MaxOut = 100,
                                 .IntegralLimit = 15,
                                 .DeadBand = 0,
                                 .Kp = 50,
@@ -148,7 +169,7 @@ attitude_t *INS_Init(void)
                                 .Kd = 0,
                                 .Improve = 0x01}; // enable integratiaon limit
     PIDInit(&TempCtrl, &config);
-    if(!mpu_offset_call()) return (attitude_t *)&INS.Gyro;
+    if(!mpu_offset_call()) return &published_attitude;
 	IMU_Param.scale[0] = 1;
     IMU_Param.scale[1] = 1;
     IMU_Param.scale[2] = 1;
@@ -158,12 +179,12 @@ attitude_t *INS_Init(void)
     IMU_Param.flag = 1;
 
     float init_quaternion[4] = {0};
-    if(!InitQuaternion(init_quaternion)) return (attitude_t *)&INS.Gyro;
+    if(!InitQuaternion(init_quaternion)) {IMU_Temperature_Update(0);return &published_attitude;}
     IMU_QuaternionEKF_Init(init_quaternion, 10, 0.001, 1000000, 1, 0);
 	INS.AccelLPF = 0.0085;
 	DWT_GetDeltaT(&INS_DWT_Count);
 	INS_Init_flag = 1;
-	return (attitude_t *)&INS.Gyro;
+	return &published_attitude;
 }
 
 /**
@@ -176,8 +197,7 @@ static bool mpu_offset_call(void)
 {
 	static float startTime;
     static uint16_t CaliTimes = 6000;
-    uint8_t buf[14];        /* buffer to save imu raw data */
-    int16_t mpu6500_raw_temp;
+    IMUSample_s sample;
     float gyroMax[3], gyroMin[3];
     float gNormTemp, gNormMax, gNormMin;
 	float gyroDiff[3] = {0}, gNormDiff = 0.0f;
@@ -219,26 +239,17 @@ static bool mpu_offset_call(void)
 
 		for (uint16_t i = 0; i < CaliTimes; ++i)
 		{
-            if(mpu_read_bytes(MPU6500_ACCEL_XOUT_H,buf,14)!=0) {
+            if(!ReadSample(&sample)) {
                 mpu_data.gNorm=gNORM;mpu_data.AccelScale=9.81f/gNORM;
                 IMU_Temperature_Update(0);return false;
             }
-			mpu6500_raw_temp = (int16_t)((buf[0]) << 8) | buf[1];
-			mpu_data.Accel[0] = mpu6500_raw_temp * MPU6500_ACCEL_SEN;
-			mpu6500_raw_temp = (int16_t)((buf[2]) << 8) | buf[3];
-			mpu_data.Accel[1] = mpu6500_raw_temp * MPU6500_ACCEL_SEN;
-			mpu6500_raw_temp = (int16_t)((buf[4]) << 8) | buf[5];
-			mpu_data.Accel[2] = mpu6500_raw_temp * MPU6500_ACCEL_SEN;
-			mpu_data.Temperature = MPU6500Temperature(buf[6],buf[7]);
-			mpu6500_raw_temp = (int16_t)((buf[8]) << 8) | buf[9];
-			mpu_data.Gyro[0] = mpu6500_raw_temp * MPU6500_GYRO_SEN;
-			mpu_data.GyroOffset[0] += mpu_data.Gyro[0];
-			mpu6500_raw_temp = (int16_t)((buf[10]) << 8) | buf[11];
-			mpu_data.Gyro[1] = mpu6500_raw_temp * MPU6500_GYRO_SEN;
-			mpu_data.GyroOffset[1] += mpu_data.Gyro[1];
-			mpu6500_raw_temp = (int16_t)((buf[12]) << 8) | buf[13];
-			mpu_data.Gyro[2] = mpu6500_raw_temp * MPU6500_GYRO_SEN;
-			mpu_data.GyroOffset[2] += mpu_data.Gyro[2];
+            for(unsigned axis=0;axis<3;++axis) {
+                mpu_data.Accel[axis]=sample.accel_m_s2[axis];
+                mpu_data.Gyro[axis]=sample.gyro_rad_s[axis];
+                mpu_data.GyroOffset[axis]+=mpu_data.Gyro[axis];
+            }
+            mpu_data.Temperature=sample.temperature_c;
+
 			gNormTemp = sqrtf(mpu_data.Accel[0] * mpu_data.Accel[0] + mpu_data.Accel[1] * mpu_data.Accel[1] + mpu_data.Accel[2] * mpu_data.Accel[2]);
 			mpu_data.gNorm += gNormTemp;
 			IMU_Temperature_Ctrl();
@@ -373,8 +384,13 @@ void INS_Task(void)
         INS.YawTotalAngle = QEKF_INS.YawTotalAngle;
         ins_healthy=isfinite(INS.YawTotalAngle) && isfinite(INS.Pitch) && isfinite(INS.Roll);
         if(ins_healthy) {
-            ins_sample_tick=HAL_GetTick();
-            VisionSetAltitude(INS.Yaw,INS.Pitch,INS.Roll);
+            INS_LOCK();
+            published_attitude=(attitude_t){.Roll=INS.Roll,.Pitch=INS.Pitch,.Yaw=INS.Yaw,
+                .YawTotalAngle=INS.YawTotalAngle};
+            memcpy(published_attitude.Gyro,INS.Gyro,sizeof INS.Gyro);
+            memcpy(published_attitude.Accel,INS.Accel,sizeof INS.Accel);
+            ins_sample_tick=sample_tick;
+            INS_UNLOCK();
         } else {IMU_Temperature_Update(0);return;}
 
     }

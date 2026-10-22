@@ -22,11 +22,4 @@ bool MPU6500Read(MPU6500Instance *instance, IMUSample_s *sample);
 #define MPU6500_GYRO_500_SEN 2.6646247667514843087362171331637e-4
 #define MPU6500_GYRO_250_SEN 1.3323123833757421543681085665818e-4
 
-uint8_t mpu_write_byte(uint8_t const reg, uint8_t const data);
-uint8_t mpu_read_byte(uint8_t const reg);
-uint8_t mpu_read_bytes(uint8_t const regAddr, uint8_t* pData, uint8_t len);
-
-void mpu6500_device_init(void);
-
-
 #endif // !MPU6500Driver_H

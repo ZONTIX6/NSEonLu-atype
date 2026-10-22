@@ -8,6 +8,7 @@
 
 #include "robot.h"
 #include "ins_task.h"
+#include "ins_bridge.h"
 #include "motor_task.h"
 #include "referee_task.h"
 #include "master_process.h"
@@ -115,13 +116,10 @@ __attribute__((noreturn)) void StartINSTASK(void const *argument)
     {
         // 1kHz
         ins_start = DWT_GetTimeline_ms();
-        INS_Task();
+        INSBridgeTask();
         ins_dt = DWT_GetTimeline_ms() - ins_start;
         if (ins_dt > 1)
             LOGERROR("[freeRTOS] INS Task is being DELAY! dt = [%f]", &ins_dt);
-#if defined(ONE_BOARD) || defined(GIMBAL_BOARD)
-        VisionSend();
-#endif
         // // 解算完成后发送视觉数据,但是当前的实现不太优雅,后续若添加硬件触发需要重新考虑结构的组织
         osDelay(1);
     }

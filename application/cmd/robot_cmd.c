@@ -8,7 +8,7 @@
 // module
 #include "remote_control.h"
 #include "vt02_control.h"
-#include "mpu6500.h"
+#include "ins_task.h"
 #include "master_process.h"
 #include "message_center.h"
 #include "general_def.h"

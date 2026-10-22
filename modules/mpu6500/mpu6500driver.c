@@ -6,21 +6,21 @@ struct MPU6500Instance { SPIInstance *spi;uint32_t timeout_us;bool ready,error; 
 static MPU6500Instance device;
 static bool registration_started;
 
-uint8_t mpu_write_byte(uint8_t reg,uint8_t data)
+static uint8_t mpu_write_byte(uint8_t reg,uint8_t data)
 {
     uint8_t tx[2]={reg&0x7F,data},rx[2];
     bool valid=device.spi!=NULL && SPITransferChecked(device.spi,tx,rx,2,device.timeout_us)==BSP_SPI_OK;
     device.error |= !valid;
     return valid ? 0 : 1;
 }
-uint8_t mpu_read_byte(uint8_t reg)
+static uint8_t mpu_read_byte(uint8_t reg)
 {
     uint8_t tx[2]={reg|0x80,0xFF},rx[2]={0};
     bool valid=device.spi!=NULL && SPITransferChecked(device.spi,tx,rx,2,device.timeout_us)==BSP_SPI_OK;
     device.error |= !valid;
     return valid ? rx[1] : 0xFF;
 }
-uint8_t mpu_read_bytes(uint8_t reg,uint8_t *data,uint8_t length)
+static uint8_t mpu_read_bytes(uint8_t reg,uint8_t *data,uint8_t length)
 {
     if(data==NULL || length==0 || length>14 || device.spi==NULL) return 1;
     uint8_t tx[15],rx[15];
@@ -200,7 +200,7 @@ static uint8_t mpu_set_accel_fsr(uint8_t fsr)
   return mpu_write_byte(MPU6500_ACCEL_CONFIG, fsr << 3);
 }
 
-void mpu6500_device_init(void)
+static void mpu6500_device_init(void)
 {
   MPU_DELAY(100);
 

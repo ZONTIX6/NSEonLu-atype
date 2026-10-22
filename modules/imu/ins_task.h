@@ -19,11 +19,9 @@
 #include <stdbool.h>
 bool INSIsHealthy(uint32_t now_ms);
 
-#include "QuaternionEKF.h"
+#include "imu_sample.h"
 
-#define X 0
-#define Y 1
-#define Z 2
+typedef enum { INS_AXIS_X=0, INS_AXIS_Y, INS_AXIS_Z } INS_Axis_e;
 
 #define INS_TASK_PERIOD 1
 
@@ -37,6 +35,16 @@ typedef struct
     float Yaw;
     float YawTotalAngle;
 } attitude_t; // 最终解算得到的角度,以及yaw转动的总角度(方便多圈控制)
+
+typedef struct
+{
+    bool (*sample)(void *context, IMUSample_s *output);
+    void (*heat)(void *context, float duty);
+    void *context;
+} INSServiceConfig_s;
+typedef struct {attitude_t attitude; uint32_t tick_ms; bool valid;} INSSnapshot_s;
+bool INSServiceConfigure(const INSServiceConfig_s *config);
+bool INSGetSnapshot(INSSnapshot_s *snapshot);
 
 typedef struct
 {

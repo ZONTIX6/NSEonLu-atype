@@ -1,7 +1,7 @@
 #include "gimbal.h"
 #include "robot_def.h"
 #include "dji_motor.h"
-#include "mpu6500.h"
+#include "ins_task.h"
 #include "message_center.h"
 #include "general_def.h"
 #include "jscope.h"
