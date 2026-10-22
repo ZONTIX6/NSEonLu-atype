@@ -2,11 +2,11 @@
 #if OLED_USE_I2C
 #include "oled.h" 
 #include "oledfont.h"
-#include "main.h"
+#include "oled_transport.h"
 #include <stdio.h>
 #include <stdarg.h>
 
-extern I2C_HandleTypeDef hi2c2;
+
 static uint8_t OLED_GRAM[128][8];
 
 /**
@@ -15,19 +15,9 @@ static uint8_t OLED_GRAM[128][8];
   * @param[in]      cmd: OLED_CMD 代表写入的字节是指令; OLED_DATA 代表写入的字节是数据
   * @retval         none
   */
-void oled_write_byte(uint8_t dat, uint8_t cmd)
+void oled_write_byte(uint8_t dat,uint8_t cmd)
 {
-    static uint8_t cmd_data[2];
-    if(cmd == OLED_CMD)
-    {
-        cmd_data[0] = 0x00;
-    }
-    else
-    {
-        cmd_data[0] = 0x40;
-    }
-    cmd_data[1] = dat;
-    HAL_I2C_Master_Transmit(&hi2c2, OLED_I2C_ADDRESS, cmd_data, 2, 10);
+    (void)OLEDTransportWrite(dat,cmd!=0);
 }
 
 
@@ -38,6 +28,7 @@ void oled_write_byte(uint8_t dat, uint8_t cmd)
   */
 void OLED_init(void)
 {
+    if(!OLEDTransportBegin()) return;
     oled_write_byte(0xAE, OLED_CMD);    //display off
     oled_write_byte(0x20, OLED_CMD);    //Set Memory Addressing Mode	
     oled_write_byte(0x10, OLED_CMD);    //00,Horizontal Addressing Mode;01,Vertical Addressing Mode;10,Page Addressing Mode (RESET);11,Invalid
@@ -330,6 +321,7 @@ void OLED_printf(uint8_t row, uint8_t col, const char *fmt,...)
   */
 void OLED_refresh_gram(void)
 {
+    if(!OLEDTransportBegin()) return;
     uint8_t i, n;
 
     for (i = 0; i < 8; i++)

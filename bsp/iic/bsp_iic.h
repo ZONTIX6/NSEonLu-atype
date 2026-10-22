@@ -1,5 +1,8 @@
+#ifndef BSP_IIC_H
+#define BSP_IIC_H
 #include "i2c.h"
 #include "stdint.h"
+#include <stdbool.h>
 
 #define IIC_DEVICE_CNT 2   // C板引出了I2C2和I2C3
 #define MX_IIC_SLAVE_CNT 8 // 最大从机数目,根据需要修改
@@ -60,6 +63,7 @@ typedef struct
  * @return IICInstance*
  */
 IICInstance *IICRegister(IIC_Init_Config_s *conf);
+bool IICTransmitChecked(IICInstance *instance, const uint8_t *data, uint16_t length, uint32_t timeout_ms);
 
 /**
  * @brief IIC设置工作模式
@@ -104,3 +108,4 @@ void IICReceive(IICInstance *iic, uint8_t *data, uint16_t size, IIC_Seq_Mode_e m
  * @param mem8bit_flag 从机内存地址是否为8位
  */
 void IICAccessMem(IICInstance *iic, uint16_t mem_addr, uint8_t *data, uint16_t size, IIC_Mem_Mode_e mode, uint8_t mem8bit_flag);
+#endif

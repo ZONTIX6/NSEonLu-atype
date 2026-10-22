@@ -155,6 +155,7 @@ modules/algorithm/chassis_power_budget.c \
 modules/algorithm/chassis_power_outer_loop.c \
 modules/algorithm/chassis_power_transient.c \
 modules/oled/oled.c \
+modules/oled/oled_transport.c \
 modules/referee/crc_ref.c \
 modules/referee/referee_stream_parser.c \
 modules/referee/referee_power.c \
@@ -177,7 +178,7 @@ application/cmd/robot_cmd.c \
 application/robot.c
 
 C_SOURCES += $(wildcard modules/chassis_power/*.c) modules/motor/DJImotor/dji_power_adapter.c
-C_SOURCES += modules/imu/ins_math.c application/vehicle_safety.c application/board_optional.c application/board_devices.c Src/syscalls.c Src/sysmem.c modules/oled/oled_spi.c
+C_SOURCES += modules/imu/ins_math.c application/vehicle_safety.c application/board_optional.c application/board_devices.c application/board_analog_key.c Src/syscalls.c Src/sysmem.c modules/oled/oled_spi.c
 C_SOURCES += $(wildcard modules/TFminiPlus/*.c modules/key/*.c modules/jam_detector/*.c)
 
 C_SOURCES += modules/mpu6500/mpu6500_math.c modules/mpu6500/imu_temperature.c modules/imu/ins_service.c application/ins_bridge.c modules/mpu6500/mpu6500driver.c modules/heat_control/heat_control.c modules/vtx/vt02_control.c modules/jscope/jscope.c

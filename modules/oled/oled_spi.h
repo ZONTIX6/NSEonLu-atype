@@ -2,8 +2,7 @@
 #ifndef OLED_H
 #define OLED_H
 #include <stdint.h>
-#include "spi.h"
-#include "stm32f4xx_hal.h"
+#include "oled_input.h"
 #define Max_Column      128
 #define Max_Row         64
 
@@ -16,21 +15,7 @@
 #define CHAR_SIZE_WIDTH     6
 #define VHAR_SIZE_HIGHT     12
 
-#define OLED_CMD_Set()      HAL_GPIO_WritePin(OLED_DC_GPIO_Port, OLED_DC_Pin, GPIO_PIN_SET)
-#define OLED_CMD_Clr()      HAL_GPIO_WritePin(OLED_DC_GPIO_Port, OLED_DC_Pin, GPIO_PIN_RESET)
 
-#define OLED_RST_Set()      HAL_GPIO_WritePin(OLED_RST_GPIO_Port, OLED_RST_Pin, GPIO_PIN_SET)
-#define OLED_RST_Clr()      HAL_GPIO_WritePin(OLED_RST_GPIO_Port, OLED_RST_Pin, GPIO_PIN_RESET)
-
-typedef enum
-{
-  OLED_BUTTON_NONE = 0,
-  OLED_BUTTON_MID = 1,
-  OLED_BUTTON_LEFT = 2,
-  OLED_BUTTON_RIGHT = 3,
-  OLED_BUTTON_UP = 4,
-  OLED_BUTTON_DOWN = 5,
-}OLED_button_e;
 typedef enum
 {
     Pen_Clear = 0x00,

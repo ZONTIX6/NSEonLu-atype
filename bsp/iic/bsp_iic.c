@@ -7,11 +7,10 @@ static IICInstance *iic_instance[MX_IIC_SLAVE_CNT] = {NULL};
 
 IICInstance *IICRegister(IIC_Init_Config_s *conf)
 {
-    if (idx >= MX_IIC_SLAVE_CNT) // 超过最大实例数
-        while (1)                // 酌情增加允许的实例上限,也有可能是内存泄漏
-            ;
+    if(conf==NULL || conf->handle==NULL || conf->dev_address>0x7F || idx>=MX_IIC_SLAVE_CNT) return NULL;
     // 申请到的空间未必是0, 所以需要手动初始化
     IICInstance *instance = (IICInstance *)malloc(sizeof(IICInstance));
+    if(instance==NULL) return NULL;
     memset(instance, 0, sizeof(IICInstance));
 
     instance->dev_address = conf->dev_address << 1; // 地址左移一位,最低位为读写位
@@ -22,6 +21,12 @@ IICInstance *IICRegister(IIC_Init_Config_s *conf)
 
     iic_instance[idx++] = instance;
     return instance;
+}
+
+bool IICTransmitChecked(IICInstance *instance,const uint8_t *data,uint16_t length,uint32_t timeout_ms)
+{
+    if(instance==NULL || data==NULL || length==0 || timeout_ms==0 || timeout_ms>100) return false;
+    return HAL_I2C_Master_Transmit(instance->handle,instance->dev_address,(uint8_t *)data,length,timeout_ms)==HAL_OK;
 }
 
 void IICSetMode(IICInstance *iic, IIC_Work_Mode_e mode)

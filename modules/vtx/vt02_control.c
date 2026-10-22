@@ -259,6 +259,7 @@ static void Vt02StreamDecode(const uint8_t *data, uint16_t data_length)
  */
 static void Vt02RxCallback(void)
 {
+    if(!vt02_init_flag || vt02_usart_instance==NULL) return;
     UART_HandleTypeDef *usart_handle = vt02_usart_instance->usart_handle;
     uint16_t received_length = vt02_usart_instance->recv_data_len;
     (void)usart_handle;
@@ -305,33 +306,32 @@ static void Vt02LostCallback(void *id)
 {
     (void)id;
     vt02_ctrl.online = 0u;
-    USARTServiceInit(vt02_usart_instance);
+    if(vt02_usart_instance!=NULL) USARTServiceInit(vt02_usart_instance);
 }
 
 Vt02_Ctrl_t *Vt02ControlInit(UART_HandleTypeDef *vt02_usart_handle)
 {
-    /* DMA FIFO会在IDLE中止时丢弃不足阈值的尾部字节,变长协议使用direct mode接收. */
-    if ((vt02_usart_handle != NULL) &&
-        (vt02_usart_handle->hdmarx != NULL) &&
-        (vt02_usart_handle->hdmarx->Init.FIFOMode != DMA_FIFOMODE_DISABLE))
-    {
-        vt02_usart_handle->hdmarx->Init.FIFOMode = DMA_FIFOMODE_DISABLE;
-        (void)HAL_DMA_Init(vt02_usart_handle->hdmarx);
-    }
+    if (!USARTSupportsIdleStream(vt02_usart_handle)) return NULL;
+    if (vt02_init_flag) return vt02_usart_instance->usart_handle==vt02_usart_handle ? &vt02_ctrl : NULL;
 
     USART_Init_Config_s usart_conf = {
         .module_callback = Vt02RxCallback,
         .usart_handle = vt02_usart_handle,
         .recv_buff_size = (uint8_t)(VT02_RX_BUFFER_SIZE - 1u),
     };
-    vt02_usart_instance = USARTRegister(&usart_conf);
 
     Daemon_Init_Config_s daemon_conf = {
         .reload_count = VT02_DAEMON_RELOAD,
         .callback = Vt02LostCallback,
         .owner_id = NULL,
     };
+    static bool registration_started;
+    if(registration_started) return NULL;
     vt02_daemon = DaemonRegister(&daemon_conf);
+    if(vt02_daemon==NULL) return NULL;
+    registration_started=true;
+    vt02_usart_instance = USARTRegister(&usart_conf);
+    if(vt02_usart_instance==NULL) return NULL;
 
     vt02_init_flag = 1u;
     return &vt02_ctrl;

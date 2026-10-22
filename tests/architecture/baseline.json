@@ -36,72 +36,6 @@
     "count": 3
   },
   {
-    "path": "modules/oled/oled.c",
-    "rule": "hardware-access",
-    "evidence": "HAL_I2C_Master_Transmit",
-    "count": 1
-  },
-  {
-    "path": "modules/oled/oled.c",
-    "rule": "hardware-access",
-    "evidence": "hi2c2",
-    "count": 2
-  },
-  {
-    "path": "modules/oled/oled_spi.c",
-    "rule": "hardware-access",
-    "evidence": "HAL_ADC_GetState",
-    "count": 1
-  },
-  {
-    "path": "modules/oled/oled_spi.c",
-    "rule": "hardware-access",
-    "evidence": "HAL_ADC_GetValue",
-    "count": 1
-  },
-  {
-    "path": "modules/oled/oled_spi.c",
-    "rule": "hardware-access",
-    "evidence": "HAL_ADC_PollForConversion",
-    "count": 1
-  },
-  {
-    "path": "modules/oled/oled_spi.c",
-    "rule": "hardware-access",
-    "evidence": "HAL_ADC_STATE_REG_EOC",
-    "count": 1
-  },
-  {
-    "path": "modules/oled/oled_spi.c",
-    "rule": "hardware-access",
-    "evidence": "HAL_ADC_Start",
-    "count": 1
-  },
-  {
-    "path": "modules/oled/oled_spi.c",
-    "rule": "hardware-access",
-    "evidence": "HAL_SPI_Transmit",
-    "count": 1
-  },
-  {
-    "path": "modules/oled/oled_spi.c",
-    "rule": "hardware-access",
-    "evidence": "hadc1",
-    "count": 4
-  },
-  {
-    "path": "modules/oled/oled_spi.c",
-    "rule": "hardware-access",
-    "evidence": "hspi1",
-    "count": 1
-  },
-  {
-    "path": "modules/oled/oled_spi.h",
-    "rule": "hardware-access",
-    "evidence": "HAL_GPIO_WritePin",
-    "count": 4
-  },
-  {
     "path": "modules/telemetry/tuning_flash.c",
     "rule": "application-include",
     "evidence": "application/chassis/chassis.h",
@@ -165,12 +99,6 @@
     "path": "modules/telemetry/tuning_flash.c",
     "rule": "register-access",
     "evidence": "FLASH",
-    "count": 1
-  },
-  {
-    "path": "modules/vtx/vt02_control.c",
-    "rule": "hardware-access",
-    "evidence": "HAL_DMA_Init",
     "count": 1
   }
 ]

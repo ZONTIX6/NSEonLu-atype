@@ -18,6 +18,15 @@
 static uint8_t idx;
 static USARTInstance *usart_instance[DEVICE_USART_CNT] = {NULL};
 
+bool USARTSupportsIdleStream(const UART_HandleTypeDef *handle)
+{
+    return handle!=NULL && handle->hdmarx!=NULL &&
+        handle->hdmarx->Init.FIFOMode==DMA_FIFOMODE_DISABLE &&
+        handle->hdmarx->Init.Mode==DMA_NORMAL &&
+        handle->hdmarx->Init.PeriphDataAlignment==DMA_PDATAALIGN_BYTE &&
+        handle->hdmarx->Init.MemDataAlignment==DMA_MDATAALIGN_BYTE;
+}
+
 /**
  * @brief 启动串口服务,会在每个实例注册之后自动启用接收,当前实现为DMA接收,后续可能添加IT和BLOCKING接收
  *

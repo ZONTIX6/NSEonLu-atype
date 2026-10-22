@@ -2,6 +2,7 @@
 #define BSP_RC_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "main.h"
 
 #define DEVICE_USART_CNT 6     // C板至多分配3个串口
@@ -44,6 +45,8 @@ typedef struct
  * @param init_config 传入串口初始化结构体
  */
 USARTInstance *USARTRegister(USART_Init_Config_s *init_config);
+/* IDLE stream protocols require the board's byte-wise normal/direct DMA setup. */
+bool USARTSupportsIdleStream(const UART_HandleTypeDef *handle);
 
 /**
  * @brief 启动串口服务,需要传入一个usart实例.一般用于lost callback的情况(使用串口的模块daemon)

@@ -29,7 +29,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 GPIOInstance *GPIORegister(GPIO_Init_Config_s *GPIO_config)
 {
+    if(GPIO_config==NULL || GPIO_config->GPIOx==NULL || GPIO_config->GPIO_Pin==0 || idx>=GPIO_MX_DEVICE_NUM) return NULL;
     GPIOInstance *ins = (GPIOInstance *)malloc(sizeof(GPIOInstance));
+    if(ins==NULL) return NULL;
     memset(ins, 0, sizeof(GPIOInstance));
 
     ins->GPIOx = GPIO_config->GPIOx;

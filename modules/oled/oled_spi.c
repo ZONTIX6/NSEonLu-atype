@@ -2,11 +2,11 @@
 #if !OLED_USE_I2C
 #include "oled_spi.h"
 #include "oledfont_spi.h"
-#include "main.h"
+#include "oled_transport.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include "bsp_dwt.h"
-#include "adc.h"
+
 static uint8_t OLED_GRAM[128][8];
 /**
  * @brief   write data/command to OLED
@@ -14,14 +14,9 @@ static uint8_t OLED_GRAM[128][8];
  * @param   cmd: 0x00,command 0x01,data
  * @retval
  */
-void oled_write_byte(uint8_t dat, uint8_t cmd)
+void oled_write_byte(uint8_t dat,uint8_t cmd)
 {
-    if (cmd != 0)
-        OLED_CMD_Set();
-    else
-        OLED_CMD_Clr();
-
-    HAL_SPI_Transmit(&hspi1, &dat, 1, 10);
+    (void)OLEDTransportWrite(dat,cmd!=0);
 }
 /**
  * @brief   clear the screen
@@ -61,9 +56,10 @@ void OLED_clear(Pen_Typedef pen)
  */
 void OLED_init(void)
 {
-    OLED_RST_Clr();
+    if(!OLEDTransportBegin()) return;
+    OLEDTransportReset(false);
     DWT_Delay_ms(500);
-    OLED_RST_Set();
+    OLEDTransportReset(true);
 
     oled_write_byte(0xae, OLED_CMD); // turn off oled panel
     oled_write_byte(0x00, OLED_CMD); // set low column address
@@ -374,6 +370,7 @@ void OLED_printf(uint8_t row, uint8_t col, const char *fmt, ...)
  */
 void OLED_refresh_gram(void)
 {
+    if(!OLEDTransportBegin()) return;
     uint8_t i, n;
 
     for (i = 0; i < 8; i++)
@@ -415,26 +412,6 @@ void OLED_LOGO(void)
     OLED_refresh_gram();
 }
 
-OLED_button_e GetOlED_Button(void)
-{
-    float button_vol =0 ;
-    HAL_ADC_Start(&hadc1);
-    HAL_ADC_PollForConversion(&hadc1, 1);
-    if(HAL_IS_BIT_SET(HAL_ADC_GetState(&hadc1),HAL_ADC_STATE_REG_EOC))
-        button_vol=HAL_ADC_GetValue(&hadc1);
-    if(button_vol>4000)
-        return OLED_BUTTON_NONE;
-    else if(button_vol>3000)
-        return OLED_BUTTON_DOWN;
-    else if(button_vol>2000)
-        return OLED_BUTTON_UP;
-    else if(button_vol>1000)
-        return OLED_BUTTON_RIGHT;
-    else if(button_vol>500)
-        return OLED_BUTTON_LEFT;
-    else if(button_vol==0)
-        return OLED_BUTTON_MID;
-    else
-        return OLED_BUTTON_NONE;
-}
+OLED_button_e GetOlED_Button(void) { return OLEDReadButton(); }
+
 #endif

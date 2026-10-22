@@ -1,4 +1,5 @@
 #include "board_config.h"
+#include "oled_transport.h"
 #if OLED_USE_I2C
 /**
  * @file oled.h
@@ -17,7 +18,7 @@
 #include <stdint.h>
 
 // the I2C address of oled
-#define OLED_I2C_ADDRESS 0x78
+#define OLED_I2C_ADDRESS 0x3C /* 7-bit BSP address */
 
 // the resolution of oled   128*64
 #define MAX_COLUMN 128
