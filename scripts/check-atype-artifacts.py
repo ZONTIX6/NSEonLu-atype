@@ -24,11 +24,11 @@ assert not re.search(r"^\s+U ",raw,re.M), "Undefined strong symbols"
 for name,address in {"_estack":0x20030000,"__tuning_bank0_start__":0x081c0000,
                      "__tuning_bank1_start__":0x081e0000}.items():
     assert symbols[name][0]==address,(name,symbols.get(name))
-for name in ["INS_Init","INS_Task","INSGetSnapshot","IMU_QuaternionEKF_Init",
+for name in ["INS_Init","INS_Task","IMU_QuaternionEKF_Init",
              "IMU_QuaternionEKF_Update","BoardDevicesInit","MPU6500Read","MPU6500Register",
              "RobotTask","OTG_FS_IRQHandler","UART8_IRQHandler"]:
     assert symbols[name][1] in "Tt",name
-for name in ("INS_Init","INS_Task","OLED_init","ChassisPowerInit","ChassisPowerLimit",
+for name in ("INS_Init","INS_Task","INSGetSnapshot","OLED_init","ChassisPowerInit","ChassisPowerLimit",
              "ChassisPowerRecordFinal","ChassisPowerUpdatePolicy","ChassisPowerGetSnapshot",
              "DJIPowerAdapterInit","DJIPowerAdapterPublish"):
     if name in symbols:
