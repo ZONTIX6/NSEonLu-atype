@@ -47,10 +47,7 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
-build
-/build_usb_telemetry/
-/build_usb_vision/
-/build_online_tuning*/
+/build/
 /output/playwright/
 /.playwright-cli/
 !tools/usb-telemetry/start.cmd

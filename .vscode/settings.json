@@ -15,6 +15,7 @@
         "bsp_log.h": "c"
     },
     "cmake.cmakePath": "cube-cmake",
+    "cmake.buildDirectory": "${workspaceFolder}/build/cmake-atype-vehicle",
     "cmake.configureArgs": [
         "-DCMAKE_COMMAND=cube-cmake"
     ],

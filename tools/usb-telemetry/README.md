@@ -115,15 +115,15 @@ V2 浏览器脚本 `tests/autotune-v2-check.js` 使用本地端口 4176，覆盖
 使用项目现有 ARM GCC 和 make 工具链，从仓库根目录构建：
 
 ```powershell
-make -j8 BUILD_DIR=build_usb_telemetry REFEREE_ENABLE=1 USB_TELEMETRY_ENABLE=1
+make -j8 BUILD_DIR=build/usb-telemetry REFEREE_ENABLE=1 USB_TELEMETRY_ENABLE=1
 ```
 
-使用项目现有烧录方式，将 `build_usb_telemetry/basic_framework.hex` 或 `.bin` 写入 A 板。构建命令不会自动烧录。遥测模式与 USB 视觉模式互斥；USB 遥测启用时，原有 `VisionSend()` 不再往 USB 混入视觉二进制帧。
+使用项目现有烧录方式，将 `build/usb-telemetry/basic_framework.hex` 或 `.bin` 写入 A 板。构建命令不会自动烧录。遥测模式与 USB 视觉模式互斥；USB 遥测启用时，原有 `VisionSend()` 不再往 USB 混入视觉二进制帧。
 
 切回视觉模式，使用独立构建目录，避免沿用其他编译选项生成的旧对象文件：
 
 ```powershell
-make -j8 BUILD_DIR=build_usb_vision REFEREE_ENABLE=1 VISION_USE_VCP=1 USB_TELEMETRY_ENABLE=0
+make -j8 BUILD_DIR=build/usb-vision REFEREE_ENABLE=1 VISION_USE_VCP=1 USB_TELEMETRY_ENABLE=0
 ```
 
 `REFEREE_ENABLE=1` 启用 USART6 裁判链路。USART1 固定 DBUS；可选 USART2 日志不占用裁判链路。功率计、电容、遥控器等也必须已连接并启用对应固件配置，页面才会显示为在线。
