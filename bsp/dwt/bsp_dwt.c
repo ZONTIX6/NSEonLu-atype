@@ -17,6 +17,9 @@ static uint32_t CYCCNT_RountCount;
 static uint32_t CYCCNT_LAST;
 static uint64_t CYCCNT64;
 
+uint32_t DWT_GetCycleCount(void) { return DWT->CYCCNT; }
+uint32_t DWT_GetFrequencyHz(void) { return CPU_FREQ_Hz; }
+
 /**
  * @brief 私有函数,用于检查DWT CYCCNT寄存器是否溢出,并更新CYCCNT_RountCount
  * @attention 此函数假设两次调用之间的时间间隔不超过一次溢出

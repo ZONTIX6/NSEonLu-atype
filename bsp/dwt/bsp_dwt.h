@@ -45,6 +45,9 @@ typedef struct
  * @param CPU_Freq_mHz c板为168MHz,A板为180MHz
  */
 void DWT_Init(uint32_t CPU_Freq_mHz);
+/* Raw wrap-safe clock for bounded BSP polling; frequency is zero before init. */
+uint32_t DWT_GetCycleCount(void);
+uint32_t DWT_GetFrequencyHz(void);
 
 /**
  * @brief 获取两次调用之间的时间间隔,单位为秒/s

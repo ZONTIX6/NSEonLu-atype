@@ -22,7 +22,6 @@ uint8_t mpu_read_bytes(uint8_t reg,uint8_t *out,uint8_t len)
     out[9]=10;out[11]=20;out[13]=30;
     return 0;
 }
-void IMU_Temperature_Init(void) {}
 void IMU_Temperature_Update(float duty) {heater=duty;}
 void PIDInit(PIDInstance *pid,PID_Init_Config_s *config) {(void)config;pid->Output=10;}
 float PIDCalculate(PIDInstance *pid,float measured,float target)

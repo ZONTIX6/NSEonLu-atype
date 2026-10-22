@@ -1,6 +1,9 @@
+#ifndef BSP_SPI_H
+#define BSP_SPI_H
 #include "spi.h"
 #include "stdint.h"
 #include "gpio.h"
+#include <stdbool.h>
 
 /* 根据开发板引出的spi引脚以及CubeMX中的初始化配置设定 */
 #define SPI_DEVICE_CNT 2       // C型开发板引出两路spi,分别连接BMI088/作为扩展IO在8pin牛角座引出
@@ -14,12 +17,17 @@ typedef enum
     SPI_DMA_MODE,
 } SPI_TXRX_MODE_e;
 
+typedef enum { SPI_CS_GPIO=0, SPI_CS_NONE } SPI_CS_Mode_e;
+typedef enum { BSP_SPI_OK, BSP_SPI_BUSY, BSP_SPI_TIMEOUT, BSP_SPI_ERROR, BSP_SPI_INVALID } BSP_SPI_Result_e;
+
 /* SPI实例结构体定义 */
 typedef struct spi_ins_temp
 {
     SPI_HandleTypeDef *spi_handle; // SPI外设handle
     GPIO_TypeDef *GPIOx;           // 片选信号对应的GPIO,如GPIOA,GPIOB等等
     uint16_t cs_pin;               // 片选信号对应的引脚号,GPIO_PIN_1,GPIO_PIN_2等等
+    SPI_CS_Mode_e cs_mode;
+    BSP_SPI_Result_e last_result;
 
     SPI_TXRX_MODE_e spi_work_mode; // 传输工作模式
     uint8_t rx_size;               // 本次接收的数据长度
@@ -40,6 +48,7 @@ typedef struct
     SPI_HandleTypeDef *spi_handle; // SPI外设handle
     GPIO_TypeDef *GPIOx;           // 片选信号对应的GPIO,如GPIOA,GPIOB等等
     uint16_t cs_pin;               // 片选信号对应的引脚号,GPIO_PIN_1,GPIO_PIN_2等等
+    SPI_CS_Mode_e cs_mode;
 
     SPI_TXRX_MODE_e spi_work_mode; // 传输工作模式
 
@@ -54,6 +63,8 @@ typedef struct
  * @return SPIInstance* 返回一个spi实例指针,之后通过该指针操作spi外设
  */
 SPIInstance *SPIRegister(SPI_Init_Config_s *conf);
+BSP_SPI_Result_e SPITransferChecked(SPIInstance *instance, const uint8_t *tx, uint8_t *rx,
+                                    uint16_t length, uint32_t timeout_us);
 
 /**
  * @brief 通过spi向对应从机发送数据
@@ -96,3 +107,4 @@ void SPITransRecv(SPIInstance *spi_ins, uint8_t *ptr_data_rx, uint8_t *ptr_data_
  * @todo 是否直接将mode作为transmit/recv的参数,而不是作为spi实例的属性?两者各有优劣
  */
 void SPISetMode(SPIInstance *spi_ins, SPI_TXRX_MODE_e spi_mode);
+#endif

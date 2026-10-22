@@ -2,12 +2,15 @@
 #define MPU6500Driver_H
 #include "mpu6500_reg.h"
 #include "ist8310_reg.h"
-#include "spi.h"
+#include "bsp_spi.h"
+#include "imu_sample.h"
 #include "bsp_dwt.h"
-#define MPU_HSPI hspi5
-#define MPU_NSS_LOW HAL_GPIO_WritePin(GPIOF, GPIO_PIN_6, GPIO_PIN_RESET)
-#define MPU_NSS_HIGH HAL_GPIO_WritePin(GPIOF, GPIO_PIN_6, GPIO_PIN_SET)
 #define MPU_DELAY(x) DWT_Delay_ms(x)
+
+typedef struct MPU6500Instance MPU6500Instance;
+typedef struct { SPI_Init_Config_s spi_config; uint32_t timeout_us; } MPU6500_Init_Config_s;
+MPU6500Instance *MPU6500Register(const MPU6500_Init_Config_s *config);
+bool MPU6500Read(MPU6500Instance *instance, IMUSample_s *sample);
 
 #define MPU6500_ACCEL_2G_SEN 0.00059814453125f
 #define MPU6500_ACCEL_4G_SEN 0.0011962890625f

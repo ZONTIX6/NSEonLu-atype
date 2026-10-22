@@ -4,6 +4,7 @@
 #include "robot_task.h"
 #include "tuning_flash.h"
 #include "jscope.h"
+#include "board_devices.h"
 
 // 编译warning,提醒开发者修改机器人参数
 #ifndef ROBOT_DEF_PARAM_WARNING
@@ -30,6 +31,7 @@ void RobotInit()
     __disable_irq();
     
     BSPInit();
+    (void)BoardDevicesInit();
     TuningFlashInit();
     JScopeInit();
 

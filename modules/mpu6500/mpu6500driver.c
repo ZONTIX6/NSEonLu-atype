@@ -1,71 +1,34 @@
 #include "mpu6500driver.h"
+#include "mpu6500_math.h"
+#include <string.h>
 
+struct MPU6500Instance { SPIInstance *spi;uint32_t timeout_us;bool ready,error; };
+static MPU6500Instance device;
+static bool registration_started;
 
-
-static uint8_t        tx, rx;
-static uint8_t        tx_buff[14] = { 0xff };
-
-/**
-  * @brief  write a byte of data to specified register
-  * @param  reg:  the address of register to be written
-  *         data: data to be written
-  * @retval
-  * @usage  call in ist_reg_write_by_mpu(),
-  *                 ist_reg_read_by_mpu(),
-  *                 mpu_master_i2c_auto_read_config(),
-  *                 ist8310_init(),
-  *                 mpu_set_gyro_fsr(),
-  *                 mpu_set_accel_fsr(),
-  *                 mpu6500_init() function
-  */
-uint8_t mpu_write_byte(uint8_t const reg, uint8_t const data)
+uint8_t mpu_write_byte(uint8_t reg,uint8_t data)
 {
-    MPU_NSS_LOW;
-    tx = reg & 0x7F;
-    HAL_SPI_TransmitReceive(&MPU_HSPI, &tx, &rx, 1, 55);
-    tx = data;
-    HAL_SPI_TransmitReceive(&MPU_HSPI, &tx, &rx, 1, 55);
-    MPU_NSS_HIGH;
-    return 0;
+    uint8_t tx[2]={reg&0x7F,data},rx[2];
+    bool valid=device.spi!=NULL && SPITransferChecked(device.spi,tx,rx,2,device.timeout_us)==BSP_SPI_OK;
+    device.error |= !valid;
+    return valid ? 0 : 1;
 }
-
-/**
-  * @brief  read a byte of data from specified register
-  * @param  reg: the address of register to be read
-  * @retval
-  * @usage  call in ist_reg_read_by_mpu(),
-  *                 mpu6500_init() function
-  */
-uint8_t mpu_read_byte(uint8_t const reg)
+uint8_t mpu_read_byte(uint8_t reg)
 {
-    MPU_NSS_LOW;
-    tx = reg | 0x80;
-    HAL_SPI_TransmitReceive(&MPU_HSPI, &tx, &rx, 1, 55);
-    HAL_SPI_TransmitReceive(&MPU_HSPI, &tx, &rx, 1, 55);
-    MPU_NSS_HIGH;
-    return rx;
+    uint8_t tx[2]={reg|0x80,0xFF},rx[2]={0};
+    bool valid=device.spi!=NULL && SPITransferChecked(device.spi,tx,rx,2,device.timeout_us)==BSP_SPI_OK;
+    device.error |= !valid;
+    return valid ? rx[1] : 0xFF;
 }
-
-
-/**
-  * @brief  read bytes of data from specified register
-  * @param  reg: address from where data is to be written
-  * @retval
-  * @usage  call in ist8310_get_data(),
-  *                 mpu_get_data(),
-  *                 mpu_offset_call() function
-  */
-uint8_t mpu_read_bytes(uint8_t const regAddr, uint8_t* pData, uint8_t len)
+uint8_t mpu_read_bytes(uint8_t reg,uint8_t *data,uint8_t length)
 {
-    if(pData==NULL || len==0 || len>sizeof tx_buff) return 1;
-    MPU_NSS_LOW;
-    tx=regAddr|0x80;
-    HAL_StatusTypeDef status=HAL_SPI_TransmitReceive(&MPU_HSPI,&tx,&rx,1,55);
-    if(status==HAL_OK) status=HAL_SPI_TransmitReceive(&MPU_HSPI,tx_buff,pData,len,55);
-    MPU_NSS_HIGH;
-    return status==HAL_OK ? 0 : 1;
+    if(data==NULL || length==0 || length>14 || device.spi==NULL) return 1;
+    uint8_t tx[15],rx[15];
+    memset(tx,0xFF,sizeof tx);tx[0]=reg|0x80;
+    bool valid=SPITransferChecked(device.spi,tx,rx,(uint16_t)(length+1),device.timeout_us)==BSP_SPI_OK;
+    if(valid) memcpy(data,rx+1,length);
+    return valid ? 0 : 1;
 }
-
 
 /**
 	* @brief  write IST8310 register through MPU6500's I2C master
@@ -260,4 +223,35 @@ void mpu6500_device_init(void)
 	mpu_set_accel_fsr(2);
 
   ist8310_init();
+}
+
+MPU6500Instance *MPU6500Register(const MPU6500_Init_Config_s *config)
+{
+    if(config==NULL || registration_started || config->timeout_us==0 || config->timeout_us>100000) return NULL;
+    SPI_Init_Config_s spi=config->spi_config;
+    spi.spi_work_mode=SPI_BLOCK_MODE;
+    device.spi=SPIRegister(&spi);
+    if(device.spi==NULL) return NULL;
+    registration_started=true;device.timeout_us=config->timeout_us;
+    mpu6500_device_init();
+    device.ready=!device.error && mpu_read_byte(MPU6500_GYRO_CONFIG)==0x10 &&
+        mpu_read_byte(MPU6500_ACCEL_CONFIG)==0x10;
+    return device.ready ? &device : NULL;
+}
+bool MPU6500Read(MPU6500Instance *instance,IMUSample_s *sample)
+{
+    if(sample==NULL) return false;
+    memset(sample,0,sizeof *sample);
+    if(instance!=&device || !device.ready) return false;
+    uint8_t raw[14];
+    if(mpu_read_bytes(MPU6500_ACCEL_XOUT_H,raw,14)!=0) return false;
+    for(unsigned axis=0;axis<3;++axis) {
+        int16_t accel=(int16_t)((uint16_t)raw[axis*2]<<8 | raw[axis*2+1]);
+        int16_t gyro=(int16_t)((uint16_t)raw[axis*2+8]<<8 | raw[axis*2+9]);
+        sample->accel_m_s2[axis]=accel*MPU6500_ACCEL_8G_SEN;
+        sample->gyro_rad_s[axis]=gyro*MPU6500_GYRO_1000_SEN;
+    }
+    sample->temperature_c=MPU6500Temperature(raw[6],raw[7]);
+    sample->tick_ms=HAL_GetTick();sample->valid=true;
+    return true;
 }

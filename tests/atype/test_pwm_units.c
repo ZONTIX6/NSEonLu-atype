@@ -16,9 +16,14 @@ void PWMSetDutyRatio(PWMInstance *instance,float ratio)
 {assert(instance==&pwm);pwm.duty=ratio;}
 int main(void)
 {
-    IMU_Temperature_Init();IMU_Temperature_Update(60);
+    PWM_Init_Config_s config={.htim=&htim3,.channel=TIM_CHANNEL_2,.period=.0001f,.dutyratio=.5f};
+    assert(!IMU_Temperature_Init(NULL));
+    assert(IMU_Temperature_Init(&config));
+    assert(!IMU_Temperature_Init(&config));
+    IMU_Temperature_Update(.6f);
     assert(fabsf(pwm.duty-0.6f)<0.0001f);
     IMU_Temperature_Update(0);assert(pwm.duty==0);
-    IMU_Temperature_Update(100);assert(pwm.duty==1);
+    IMU_Temperature_Update(1);assert(pwm.duty==1);
+    IMU_Temperature_Update(NAN);assert(pwm.duty==0);
     puts("PASS: heater PWM uses 100 us period and fractional duty");
 }

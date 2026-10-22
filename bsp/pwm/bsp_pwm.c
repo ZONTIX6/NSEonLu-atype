@@ -1,6 +1,7 @@
 #include "bsp_pwm.h"
 #include "stdlib.h"
 #include "memory.h"
+#include <math.h>
 
 // 配合中断以及初始化
 static uint8_t idx;
@@ -26,10 +27,11 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 
 PWMInstance *PWMRegister(PWM_Init_Config_s *config)
 {
-    if (idx >= PWM_DEVICE_CNT) // 超过最大实例数,考虑增加或查看是否有内存泄漏
-        while (1)
-            ;
+    if (config==NULL || config->htim==NULL || idx>=PWM_DEVICE_CNT ||
+        !isfinite(config->period) || config->period<=0 ||
+        !isfinite(config->dutyratio) || config->dutyratio<0 || config->dutyratio>1) return NULL;
     PWMInstance *pwm = (PWMInstance *)malloc(sizeof(PWMInstance));
+    if(pwm==NULL) return NULL;
     memset(pwm, 0, sizeof(PWMInstance));
 
     pwm->htim = config->htim;
@@ -39,10 +41,12 @@ PWMInstance *PWMRegister(PWM_Init_Config_s *config)
     pwm->callback = config->callback;
     pwm->id = config->id;
     pwm->tclk = PWMSelectTclk(pwm->htim);
-    // 启动PWM
-    HAL_TIM_PWM_Start(pwm->htim, pwm->channel);
+    if(pwm->tclk==0) {free(pwm);return NULL;}
     PWMSetPeriod(pwm, pwm->period);
     PWMSetDutyRatio(pwm, pwm->dutyratio);
+    if(HAL_TIM_PWM_Start(pwm->htim,pwm->channel)!=HAL_OK) {
+        PWMSetDutyRatio(pwm,0);HAL_TIM_PWM_Stop(pwm->htim,pwm->channel);free(pwm);return NULL;
+    }
     pwm_instance[idx++] = pwm;
     return pwm;
 }
@@ -67,7 +71,11 @@ void PWMStop(PWMInstance *pwm)
  */
 void PWMSetPeriod(PWMInstance *pwm, float period)
 {
-    __HAL_TIM_SetAutoreload(pwm->htim, period*((pwm->tclk)/(pwm->htim->Init.Prescaler+1)));
+    if(pwm==NULL || !isfinite(period) || period<=0) return;
+    const float ticks=roundf(period*((float)pwm->tclk/(pwm->htim->Init.Prescaler+1U)));
+    if(ticks<1 || ticks>4294967040.0f) return;
+    pwm->period=period;
+    __HAL_TIM_SetAutoreload(pwm->htim, (uint32_t)ticks-1U);
 }
 /*
     * @brief 设置pwm占空比
@@ -77,7 +85,9 @@ void PWMSetPeriod(PWMInstance *pwm, float period)
 */
 void PWMSetDutyRatio(PWMInstance *pwm, float dutyratio)
 {
-    __HAL_TIM_SetCompare(pwm->htim, pwm->channel, dutyratio * (pwm->htim->Instance->ARR));
+    if(pwm==NULL) return;
+    pwm->dutyratio=isfinite(dutyratio) ? fminf(1,fmaxf(0,dutyratio)) : 0;
+    __HAL_TIM_SetCompare(pwm->htim, pwm->channel, pwm->dutyratio * ((float)pwm->htim->Instance->ARR+1.0f));
 }
 
 /* 只是对HAL的函数进行了形式上的封装 */
@@ -103,7 +113,7 @@ static uint32_t PWMSelectTclk(TIM_HandleTypeDef *htim )
             ((tclk_temp <= (APB2PERIPH_BASE + 0x4800UL)) &&
              (tclk_temp >= (APB2PERIPH_BASE + 0x4000UL))))
     {
-        return (HAL_RCC_GetPCLK2Freq() * (APBPrescTable[(RCC->CFGR & RCC_CFGR_PPRE1)>> RCC_CFGR_PPRE1_Pos] == 0 ? 1 : 2));
+        return (HAL_RCC_GetPCLK2Freq() * (APBPrescTable[(RCC->CFGR & RCC_CFGR_PPRE2)>> RCC_CFGR_PPRE2_Pos] == 0 ? 1 : 2));
     }
     return 0;
 }

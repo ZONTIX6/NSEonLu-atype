@@ -1,19 +1,20 @@
 #include  "imu_temperature.h"
 #include "bsp_pwm.h"
+#include <math.h>
+#include <stddef.h>
 static PWMInstance *imu_pwm;
-void IMU_Temperature_Init(void)
+bool IMU_Temperature_Init(const PWM_Init_Config_s *config)
 {
-    PWM_Init_Config_s imu_config = {
-        .htim = &htim3,
-        .channel = TIM_CHANNEL_2,
-        .period = 0.0001f,
-        .dutyratio = 0.5f,
-    };
-    imu_pwm = PWMRegister(&imu_config);
+    if(config==NULL || imu_pwm!=NULL || config->htim==NULL ||
+        !isfinite(config->period) || config->period<=0 ||
+        !isfinite(config->dutyratio) || config->dutyratio<0 || config->dutyratio>1) return false;
+    PWM_Init_Config_s owned=*config;
+    imu_pwm = PWMRegister(&owned);
+    return imu_pwm!=NULL;
 }
 
 
 void IMU_Temperature_Update(float duty_ratio)
 {
-    PWMSetDutyRatio(imu_pwm, duty_ratio * 0.01f);
+    if(imu_pwm!=NULL) PWMSetDutyRatio(imu_pwm, isfinite(duty_ratio) ? fminf(1,fmaxf(0,duty_ratio)) : 0);
 }

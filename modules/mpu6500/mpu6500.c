@@ -61,7 +61,7 @@ void BodyFrameToEarthFrame(const float *vecBF, float *vecEF, float *q);
 static void IMU_Temperature_Ctrl(void)
 {
     PIDCalculate(&TempCtrl,mpu_data.Temperature , RefTemp);
-    IMU_Temperature_Update(float_constrain(float_rounding(TempCtrl.Output), 0, UINT32_MAX));
+    IMU_Temperature_Update(float_constrain(float_rounding(TempCtrl.Output), 0, 100) * .01f);
 }
 // 使用加速度计的数据初始化Roll和Pitch,而Yaw置0,这样可以避免在初始时候的姿态估计误差
 static bool InitQuaternion(float *init_q4)
@@ -137,11 +137,9 @@ attitude_t *INS_Init(void)
         return (attitude_t *)&INS.Gyro;
     }
 
-    mpu6500_device_init(); //启动mpu6500和ist8310
     if(mpu_read_byte(MPU6500_GYRO_CONFIG)!=0x10 || mpu_read_byte(MPU6500_ACCEL_CONFIG)!=0x10) {
         return (attitude_t *)&INS.Gyro;
     }
-	IMU_Temperature_Init();
 	PID_Init_Config_s config = {.MaxOut = 100,
                                 .IntegralLimit = 15,
                                 .DeadBand = 0,

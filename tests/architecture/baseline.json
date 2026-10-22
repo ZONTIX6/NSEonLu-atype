@@ -36,30 +36,6 @@
     "count": 3
   },
   {
-    "path": "modules/mpu6500/imu_temperature.c",
-    "rule": "hardware-access",
-    "evidence": "htim3",
-    "count": 1
-  },
-  {
-    "path": "modules/mpu6500/mpu6500driver.c",
-    "rule": "hardware-access",
-    "evidence": "HAL_SPI_TransmitReceive",
-    "count": 6
-  },
-  {
-    "path": "modules/mpu6500/mpu6500driver.h",
-    "rule": "hardware-access",
-    "evidence": "HAL_GPIO_WritePin",
-    "count": 2
-  },
-  {
-    "path": "modules/mpu6500/mpu6500driver.h",
-    "rule": "hardware-access",
-    "evidence": "hspi5",
-    "count": 1
-  },
-  {
     "path": "modules/oled/oled.c",
     "rule": "hardware-access",
     "evidence": "HAL_I2C_Master_Transmit",
