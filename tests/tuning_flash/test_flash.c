@@ -2,17 +2,21 @@
 #include "chassis.h"
 #include "runtime_tuning.h"
 #include "tuning_flash.h"
+#include "tuning_policy.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 uint32_t __tuning_bank0_start__[32768],__tuning_bank1_start__[32768];
 FlashRegisters test_flash_registers={.ACR=1};
 static unsigned suspended,writes;
-static bool stopped,unlock_failed;
+static bool stopped,unlock_failed,invalidate_on_suspend;
+static bool aux_stopped=true;
 bool VehicleSafetyIsStopped(uint32_t now) {(void)now;return stopped;}
+bool VehicleSafetyAuxStopped(uint32_t now) {(void)now;return aux_stopped;}
 static uint32_t tick=1000;
 static ChassisTelemetrySnapshot_s telemetry={.valid=true,.tick_ms=1000,.mode=1};
-void vTaskSuspendAll(void) {assert(suspended==0); ++suspended;}
+void vTaskSuspendAll(void) {assert(suspended==0); ++suspended;
+    if(invalidate_on_suspend) {stopped=false;invalidate_on_suspend=false;}}
 int xTaskResumeAll(void) {assert(suspended==1); --suspended; return 1;}
 uint32_t HAL_GetTick(void) {return tick;}
 bool ChassisGetTelemetrySnapshot(ChassisTelemetrySnapshot_s *s) {*s=telemetry; return s->valid;}
@@ -58,12 +62,22 @@ int main(void)
     TuningFlashInit(); float values[24]={0};
     RuntimeTuningRegister(TUNING_PID,values,0);set(.75f,1);
     TuningFlashPoll(); assert(!writes && !suspended);
+    stopped=true;telemetry.mode=0;
+    TuningFlashPoll();assert(!writes); /* No registered guard rejects an otherwise safe save. */
+    assert(!TuningFlashRegisterSaveGuard(NULL,NULL));
+    TuningPolicyInit();telemetry.mode=1;stopped=false;
     stopped=true;TuningFlashPoll();assert(!writes); /* Active mode. */
     telemetry.mode=0;telemetry.tick_ms=994;TuningFlashPoll();assert(!writes);
-    telemetry.tick_ms=1000;TuningFlashPoll();assert(writes && !suspended);
+    telemetry.tick_ms=1000;
+#ifdef CHASSIS_BOARD
+    aux_stopped=false;TuningFlashPoll();assert(!writes);aux_stopped=true;
+#endif
+    assert(TuningPolicyCanSave(NULL,tick));
+    invalidate_on_suspend=true;TuningFlashPoll();assert(!writes && !suspended);
+    stopped=true;TuningFlashPoll();assert(writes && !suspended);
     TuningStoredImage pending;
     assert(!RuntimeTuningPendingImage(&pending));
-    TuningFlashInit();RuntimeTuningRegister(TUNING_PID,values,0);
+    TuningFlashInit();TuningPolicyInit();RuntimeTuningRegister(TUNING_PID,values,0);
     RuntimeTuningRestore(TUNING_PID,apply);assert(restored==.75f);
     set(1.5f,1);unlock_failed=true;TuningFlashPoll();
     assert(!RuntimeTuningPendingImage(&pending) && !suspended);
@@ -71,7 +85,7 @@ int main(void)
     RuntimeTuningSubmit("@T1,2,SAVE,pid,2");
     char reply[512];RuntimeTuningReply(reply,sizeof reply);RuntimeTuningReplySent();
     TuningFlashPoll();assert(!RuntimeTuningPendingImage(&pending));
-    TuningFlashInit();RuntimeTuningRegister(TUNING_PID,values,0);
+    TuningFlashInit();TuningPolicyInit();RuntimeTuningRegister(TUNING_PID,values,0);
     RuntimeTuningRestore(TUNING_PID,apply);assert(restored==1.5f);
     puts("Flash adapter gate/restore/retry tests passed");
 }

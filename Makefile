@@ -147,6 +147,8 @@ modules/telemetry/pid_autotune.c \
 modules/telemetry/autotune_protocol.c \
 modules/telemetry/tuning_storage.c \
 modules/telemetry/tuning_flash.c \
+bsp/flash/bsp_tuning_flash.c \
+application/tuning_policy.c \
 modules/telemetry/chassis_power_capture.c \
 modules/algorithm/power_model.c \
 modules/algorithm/chassis_kinematics.c \
@@ -178,7 +180,7 @@ application/cmd/robot_cmd.c \
 application/robot.c
 
 C_SOURCES += $(wildcard modules/chassis_power/*.c) modules/motor/DJImotor/dji_power_adapter.c
-C_SOURCES += modules/imu/ins_math.c application/vehicle_safety.c application/board_optional.c application/board_devices.c application/board_analog_key.c Src/syscalls.c Src/sysmem.c modules/oled/oled_spi.c
+C_SOURCES += modules/imu/ins_math.c modules/vehicle_safety/vehicle_safety.c application/board_optional.c application/board_devices.c application/board_analog_key.c Src/syscalls.c Src/sysmem.c modules/oled/oled_spi.c
 C_SOURCES += $(wildcard modules/TFminiPlus/*.c modules/key/*.c modules/jam_detector/*.c)
 
 C_SOURCES += modules/mpu6500/mpu6500_math.c modules/mpu6500/imu_temperature.c modules/imu/ins_service.c application/ins_bridge.c modules/mpu6500/mpu6500driver.c modules/heat_control/heat_control.c modules/vtx/vt02_control.c modules/jscope/jscope.c
@@ -261,6 +263,7 @@ C_INCLUDES =  \
 -Iapplication/gimbal \
 -Iapplication/cmd \
 -Iapplication \
+-Imodules/vehicle_safety \
 -Ibsp/dwt \
 -Ibsp/can \
 -Ibsp/usart \

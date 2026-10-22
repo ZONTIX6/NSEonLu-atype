@@ -9,8 +9,8 @@
 #include <stddef.h>
 
 #define JSCOPE_BUFFER_SIZE 1024U
-#define JSCOPE_ENTER_CRITICAL() __disable_irq()
-#define JSCOPE_EXIT_CRITICAL()  __enable_irq()
+#define JSCOPE_ENTER_CRITICAL() uint32_t interrupt_mask=__get_PRIMASK(); __disable_irq()
+#define JSCOPE_EXIT_CRITICAL()  __set_PRIMASK(interrupt_mask)
 
 static uint8_t jscope_buffer[JSCOPE_BUFFER_SIZE];
 static int jscope_buffer_index = -1;

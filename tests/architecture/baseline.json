@@ -19,12 +19,6 @@
   },
   {
     "path": "modules/motor/DJImotor/dji_motor.c",
-    "rule": "application-include",
-    "evidence": "application/vehicle_safety.h",
-    "count": 1
-  },
-  {
-    "path": "modules/motor/DJImotor/dji_motor.c",
     "rule": "hardware-access",
     "evidence": "hcan1",
     "count": 10
@@ -34,71 +28,5 @@
     "rule": "hardware-access",
     "evidence": "hcan2",
     "count": 3
-  },
-  {
-    "path": "modules/telemetry/tuning_flash.c",
-    "rule": "application-include",
-    "evidence": "application/chassis/chassis.h",
-    "count": 1
-  },
-  {
-    "path": "modules/telemetry/tuning_flash.c",
-    "rule": "application-include",
-    "evidence": "application/vehicle_safety.h",
-    "count": 1
-  },
-  {
-    "path": "modules/telemetry/tuning_flash.c",
-    "rule": "hardware-access",
-    "evidence": "HAL_FLASHEx_Erase",
-    "count": 1
-  },
-  {
-    "path": "modules/telemetry/tuning_flash.c",
-    "rule": "hardware-access",
-    "evidence": "HAL_FLASH_Lock",
-    "count": 1
-  },
-  {
-    "path": "modules/telemetry/tuning_flash.c",
-    "rule": "hardware-access",
-    "evidence": "HAL_FLASH_Program",
-    "count": 1
-  },
-  {
-    "path": "modules/telemetry/tuning_flash.c",
-    "rule": "hardware-access",
-    "evidence": "HAL_FLASH_Unlock",
-    "count": 1
-  },
-  {
-    "path": "modules/telemetry/tuning_flash.c",
-    "rule": "hardware-access",
-    "evidence": "__HAL_FLASH_CLEAR_FLAG",
-    "count": 1
-  },
-  {
-    "path": "modules/telemetry/tuning_flash.c",
-    "rule": "hardware-access",
-    "evidence": "__HAL_FLASH_DATA_CACHE_DISABLE",
-    "count": 1
-  },
-  {
-    "path": "modules/telemetry/tuning_flash.c",
-    "rule": "hardware-access",
-    "evidence": "__HAL_FLASH_DATA_CACHE_ENABLE",
-    "count": 1
-  },
-  {
-    "path": "modules/telemetry/tuning_flash.c",
-    "rule": "hardware-access",
-    "evidence": "__HAL_FLASH_DATA_CACHE_RESET",
-    "count": 1
-  },
-  {
-    "path": "modules/telemetry/tuning_flash.c",
-    "rule": "register-access",
-    "evidence": "FLASH",
-    "count": 1
   }
 ]

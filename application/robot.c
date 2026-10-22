@@ -3,6 +3,7 @@
 #include "robot_def.h"
 #include "robot_task.h"
 #include "tuning_flash.h"
+#include "tuning_policy.h"
 #include "jscope.h"
 #include "board_devices.h"
 
@@ -33,6 +34,7 @@ void RobotInit()
     BSPInit();
     (void)BoardDevicesInit();
     TuningFlashInit();
+    TuningPolicyInit();
     JScopeInit();
 
 #if defined(ONE_BOARD) || defined(GIMBAL_BOARD)
