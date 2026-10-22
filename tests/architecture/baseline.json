@@ -12,6 +12,12 @@
     "count": 1
   },
   {
+    "path": "modules/algorithm/user_lib.h",
+    "rule": "algorithm-hardware",
+    "evidence": "Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h",
+    "count": 1
+  },
+  {
     "path": "modules/motor/DJImotor/dji_motor.c",
     "rule": "application-include",
     "evidence": "application/vehicle_safety.h",

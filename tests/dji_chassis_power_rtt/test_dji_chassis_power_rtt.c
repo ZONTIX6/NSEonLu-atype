@@ -10,6 +10,7 @@ static char captured_data[RTT_TELEMETRY_CHASSIS_POWER_CSV_MAX_LENGTH];
 static PowerMeterStatus_s test_meter;
 static bool publish_stop_during_pid;
 static uint32_t test_tick=123;
+static float test_delta_s=.001f;
 static bool safety_drive=true, safety_bench=true;
 bool VehicleSafetyAllowsDrive(uint32_t now) {(void)now;return safety_drive;}
 bool VehicleSafetyAllowsAutotune(uint32_t now) {(void)now;return safety_bench;}
@@ -120,7 +121,7 @@ uint8_t DaemonIsOnline(DaemonInstance *instance)
 float DWT_GetDeltaT(uint32_t *count)
 {
     *count=1234;
-    return 0.001f;
+    return test_delta_s;
 }
 
 unsigned BSPLogWrite(const void *data, unsigned length)
@@ -549,41 +550,56 @@ static void TestAutotuneIsolationAndExplicitZeroForceRearm(void)
 static void TestBaselineScenarioStream(bool record)
 {
     /* The same sequence is replayed after moving policy and limiting ownership. */
-    static const struct { const char *name; float rpm, target, power; bool online, enabled; } cases[] = {
-        {"startup", 0, 1000, 0, true, true},
-        {"drive", 600, 1000, 110, true, true},
-        {"brake", 600, -1000, 115, true, true},
-        {"overpower", -600, -1000, 150, true, true},
-        {"recovery", -600, -1000, 30, true, true},
-        {"offline", -600, -1000, 30, false, true},
-        {"tuning-exit", 0, 0, 0, true, false},
+    static const struct { const char *name; unsigned cycles; float rpm, target, power, current;
+                          bool online, enabled; } cases[] = {
+        {"arm", 60, 0, 0, 0, 0, true, true},
+        {"startup", 1, 0, 1000, 0, 5000, true, true},
+        {"drive", 20, 600, 1000, 19, 5000, true, true},
+        {"brake", 4, 600, -1000, 19, -5000, true, true},
+        {"overpower", 80, -600, -1000, 30, -5000, true, true},
+        {"recovery", 15, -600, -1000, 10, -5000, true, true},
+        {"offline", 15, -600, -1000, 10, -5000, false, true},
+        {"tuning-exit", 1, 0, 0, 0, 0, true, false},
     };
     if ((CHASSIS_POWER_CONTROL_STAGE != 0 && CHASSIS_POWER_CONTROL_STAGE != 3) || !POWER_METER_ENABLE) return;
     PreparePowerGroup();
+    test_delta_s = .002f;
+    chassis_power->algorithm.max_current_command = 15000;
     char filename[64];
     snprintf(filename, sizeof filename, "baseline-stage%d.csv", CHASSIS_POWER_CONTROL_STAGE);
     FILE *fixture = fopen(filename, record ? "wb" : "rb");
     ASSERT_TRUE(fixture != NULL);
     if (fixture == NULL) return;
+    test_tick = 123;
     for (unsigned n = 0; n < sizeof cases / sizeof cases[0]; ++n) {
-        test_tick = 123 + n * 2;
+      for (unsigned cycle = 0; cycle < cases[n].cycles; ++cycle) {
+        test_tick += 2;
         DJIChassisPowerControlSnapshot_s control = chassis_power->control;
         control.version = n + 1; control.tick_ms = test_tick;
+        control.nominal_budget_w = control.legacy_budget_w = 20;
+        control.target_power_w = 19;
         control.control_enabled = cases[n].enabled;
         for (unsigned w = 0; w < 4; ++w) control.target_rpm[w] = cases[n].target;
         DJIChassisPowerPublishControl(&control);
         SetMeter(cases[n].power, cases[n].online, test_tick);
         for (unsigned w = 0; w < 4; ++w) {
-            chassis_power->models[w].k4 = .002f;
+            chassis_power->models[w].k4 = .000001f;
             dji_motor_instance[w]->measure.speed_aps = cases[n].rpm * 6;
             dji_motor_instance[w]->measure.rx_tick_ms = test_tick;
             ++dji_motor_instance[w]->measure.rx_sequence;
             speed_reference_aps[w] = cases[n].target * 6;
             speed_feedback_aps[w] = cases[n].rpm * 6;
-            motor_output[w] = cases[n].target < cases[n].rpm ? -50.75f : 50.75f;
+            motor_output[w] = cases[n].current;
         }
         ReadMotorCycle(); ApplyChassisPowerGroup();
+      }
         const DJIChassisPowerState_s *state = &chassis_power->state;
+        if (n == 1) ASSERT_TRUE(state->transient.mode == CHASSIS_POWER_TRANSIENT_STARTUP);
+        if (n == 4) {
+            ASSERT_TRUE(state->transient.negative_learning_allowed);
+            ASSERT_TRUE(fabsf(state->power.limited_current[0]) < 5000);
+        }
+        if (n == 5) ASSERT_TRUE(state->transient.mode == CHASSIS_POWER_TRANSIENT_RECOVERY);
         char row[256], expected[256];
         snprintf(row, sizeof row, "%s,%lu,%.4f,%d,%d,%d,%d,%u,%u,%u\n", cases[n].name,
             (unsigned long)state->control_version, chassis_power->input.referee_power_limit_w,
@@ -595,7 +611,9 @@ static void TestBaselineScenarioStream(bool record)
     }
     if (!record) ASSERT_TRUE(fgetc(fixture) == EOF);
     fclose(fixture);
+    ASSERT_TRUE(chassis_power->transient.startup_seen);
     test_tick = 123;
+    test_delta_s = .001f;
 }
 
 int main(int argc, char **argv)

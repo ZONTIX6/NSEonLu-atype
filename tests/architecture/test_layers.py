@@ -12,7 +12,7 @@ BASELINE = Path(__file__).with_name("baseline.json")
 INCLUDE = re.compile(r'^\s*#\s*include\s*["<]([^">]+)[">]', re.M)
 STANDARD = {"stdint.h", "stdbool.h", "stddef.h", "stdlib.h", "stdio.h", "string.h",
             "memory.h", "math.h", "float.h", "limits.h", "stdarg.h", "assert.h"}
-HARDWARE = re.compile(r'\b(?:HAL_(?:SPI|GPIO|I2C|ADC|DMA|TIM|FLASH)\w*|__HAL_\w+|h(?:spi|uart|adc|can|tim|i2c)\d+)\b')
+HARDWARE = re.compile(r'\b(?:HAL_(?:SPI|GPIO|I2C|ADC|DMA|TIM|FLASH|CAN|UART|USART)\w*|__HAL_\w+|h(?:spi|uart|adc|can|tim|i2c)\d+)\b')
 REGISTER = re.compile(r'\b(GPIO[A-K]|SPI[1-6]|TIM\d+|DMA\w*|FLASH|ADC\d+|USART\d+|UART\d+)\s*->')
 TARGETS = ("modules/chassis_power", "modules/super_cap", "modules/power_meter",
            "modules/mpu6500", "modules/vtx", "modules/oled",
@@ -59,10 +59,10 @@ def scan(root):
             if dest.startswith("application/"):
                 found[(rel, "application-include", dest)] += 1
             if rel.startswith("modules/algorithm/") and (
-                    dest.startswith("Drivers/") or "FreeRTOS" in name or name == "task.h"):
+                    dest.startswith("Drivers/") or "FreeRTOS" in dest):
                 found[(rel, "algorithm-hardware", dest)] += 1
             if rel.startswith("modules/chassis_power/") and path.suffix == ".h" and (
-                    name == "dji_motor.h"):
+                    candidates[0].name == "dji_motor.h"):
                 found[(rel, "power-public-motor", dest)] += 1
         if not rel.startswith("modules/algorithm/"):
             for symbol in HARDWARE.findall(text):
@@ -116,6 +116,21 @@ class BoundaryTests(unittest.TestCase):
                                      "application/policy.h")], 1)
             self.assertEqual(result[("modules/chassis_power/x.c", "register-access", "GPIOF")], 1)
             self.assertEqual(result[("modules/chassis_power/x.c", "register-access", "SPI5")], 1)
+
+    def test_resolved_motor_rtos_and_can_uart_boundaries(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for directory in ("modules/chassis_power", "modules/motor/DJImotor",
+                              "modules/algorithm", "Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS"):
+                (root / directory).mkdir(parents=True)
+            (root / "Makefile").write_text('-IMiddlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS')
+            (root / "modules/motor/DJImotor/dji_motor.h").write_text("")
+            (root / "Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h").write_text("")
+            (root / "modules/chassis_power/chassis_power.h").write_text(
+                '#include "../motor/DJImotor/dji_motor.h"\nHAL_CAN_AddTxMessage(); HAL_UART_Transmit();')
+            (root / "modules/algorithm/x.c").write_text('#include "cmsis_os.h"')
+            result = scan(root)
+            self.assertEqual(sum(result.values()), 4)
 
 
 def main():
