@@ -19,7 +19,8 @@ static uint32_t fake_tick_ms;
 static uint32_t can_register_calls;
 static uint32_t daemon_register_calls;
 static bool can_registration_fails;
-static SuperCapInstance *instance;
+static bool input_registration_fails, daemon_registration_fails;
+static void *instance;
 
 #define ASSERT_TRUE(value)                                                                     \
     do                                                                                         \
@@ -57,7 +58,7 @@ CANInstance *CANRegister(CAN_Init_Config_s *config)
     ++can_register_calls;
     if (config->rx_id != SUPERCAP_INPUT_POWER_CAN_ID)
         captured_can_config = *config;
-    if (can_registration_fails)
+    if (can_registration_fails || (input_registration_fails && config->rx_id == SUPERCAP_INPUT_POWER_CAN_ID))
         return NULL;
 
     if (config->rx_id == SUPERCAP_INPUT_POWER_CAN_ID)
@@ -94,6 +95,7 @@ uint8_t CANTransmit(CANInstance *can_instance, float timeout_ms)
 DaemonInstance *DaemonRegister(Daemon_Init_Config_s *config)
 {
     ++daemon_register_calls;
+    if (daemon_registration_fails) return NULL;
     captured_daemon_config = *config;
     fake_daemon_instance.reload_count = config->reload_count;
     fake_daemon_instance.temp_count = config->init_count;
@@ -130,6 +132,8 @@ static void TestUninitializedOperationsFailAndInitRegistersDependencies(void)
     static CAN_HandleTypeDef can1;
     const SuperCapCommand_s command = {0};
     SuperCapStatus_s status = {0};
+    SuperCapSnapshot_s snapshot;
+    memset(&snapshot, 0xFF, sizeof snapshot);
     const SuperCap_Init_Config_s config = {
         .can_config = {
             .can_handle = &can1,
@@ -141,10 +145,13 @@ static void TestUninitializedOperationsFailAndInitRegistersDependencies(void)
     };
 
     ASSERT_FALSE(SuperCapGetStatus(&status));
+    ASSERT_FALSE(SuperCapGetSnapshot(0, &snapshot));
+    ASSERT_FALSE(snapshot.status.online);
+    ASSERT_FALSE(snapshot.input_power.online);
     ASSERT_FALSE(SuperCapSendCommand(&command));
     ASSERT_FALSE(SuperCapInit(NULL));
     ASSERT_TRUE(SuperCapInit(&config));
-    instance = (SuperCapInstance *)captured_can_config.id;
+    instance = captured_can_config.id;
     ASSERT_TRUE(instance != NULL);
     ASSERT_FALSE(SuperCapInit(&config));
     ASSERT_TRUE(captured_can_config.can_handle == &can1);
@@ -154,6 +161,10 @@ static void TestUninitializedOperationsFailAndInitRegistersDependencies(void)
     ASSERT_TRUE(captured_daemon_config.owner_id == instance);
     ASSERT_EQ_U32(20U, captured_daemon_config.reload_count);
     ASSERT_EQ_U32(SUPERCAP_CAN_DLC, captured_dlc);
+    ASSERT_FALSE(SuperCapGetSnapshot(0, NULL));
+    ASSERT_TRUE(SuperCapGetSnapshot(0, &snapshot));
+    ASSERT_FALSE(snapshot.status.online);
+    ASSERT_EQ_U32(input_feedback_enabled, snapshot.input_feedback_enabled);
 }
 
 static void TestCanRegistrationFailureIsLatched(void)
@@ -176,6 +187,9 @@ static void TestCanRegistrationFailureIsLatched(void)
     ASSERT_EQ_U32(1U, can_register_calls);
     ASSERT_FALSE(SuperCapGetStatus(&status));
     ASSERT_FALSE(SuperCapSendCommand(&command));
+    SuperCapSnapshot_s snapshot;
+    ASSERT_FALSE(SuperCapGetSnapshot(fake_tick_ms, &snapshot));
+    ASSERT_FALSE(snapshot.status.online);
 
     ASSERT_FALSE(SuperCapInit(&config));
     ASSERT_EQ_U32(1U, daemon_register_calls);
@@ -202,6 +216,9 @@ static void TestCommandUsesOwnedInstance(void)
 
     transmit_result = 0U;
     ASSERT_FALSE(SuperCapSendCommand(&command));
+    SuperCapSnapshot_s snapshot;
+    ASSERT_TRUE(SuperCapGetSnapshot(fake_tick_ms, &snapshot));
+    ASSERT_EQ_U32(2, snapshot.command_fail_count);
 }
 
 static void TestStatusUsesOwnedInstanceAndOfflineCallback(void)
@@ -220,8 +237,10 @@ static void TestStatusUsesOwnedInstanceAndOfflineCallback(void)
     ASSERT_EQ_U32(0U, status.error_code);
     ASSERT_NEAR(120.5f, status.chassis_power_w, 0.001f);
     ASSERT_EQ_U32(180U, status.available_power_limit_w);
-    ASSERT_EQ_U32(1U, instance->received_frame_count);
-    ASSERT_EQ_U32(1234U, instance->last_rx_tick_ms);
+    SuperCapSnapshot_s snapshot;
+    ASSERT_TRUE(SuperCapGetSnapshot(fake_tick_ms, &snapshot));
+    ASSERT_EQ_U32(1U, snapshot.received_frame_count);
+    ASSERT_EQ_U32(1234U, snapshot.status.last_rx_tick_ms);
     ASSERT_EQ_U32(1U, daemon_reload_calls);
     ASSERT_FALSE(SuperCapGetStatus(NULL));
 
@@ -254,6 +273,12 @@ static void TestInputFeedbackFreshnessIsIndependent(void)
     fake_tick_ms = 121;
     ASSERT_TRUE(SuperCapGetInputPower(&power));
     ASSERT_FALSE(power.online);
+    SuperCapSnapshot_s snapshot;
+    ASSERT_TRUE(SuperCapGetSnapshot(120, &snapshot));
+    ASSERT_TRUE(snapshot.input_power.online);
+    ASSERT_EQ_U32(120, snapshot.snapshot_tick_ms);
+    ASSERT_EQ_U32(100, snapshot.status.last_rx_tick_ms);
+    ASSERT_EQ_U32(1, snapshot.input_received_frame_count);
     fake_daemon_instance.temp_count = 0;
     fake_input_can_instance.can_module_callback(&fake_input_can_instance);
     SuperCapStatus_s status;
@@ -265,10 +290,72 @@ static void TestInputFeedbackFreshnessIsIndependent(void)
     ASSERT_TRUE(SuperCapGetInputPower(&power));
     ASSERT_EQ_U32(121, power.last_rx_tick_ms);
     ASSERT_FALSE(power.online);
+    ASSERT_TRUE(SuperCapGetSnapshot(150, &snapshot));
+    ASSERT_EQ_U32(1, snapshot.input_rejected_frame_count);
+    ASSERT_EQ_U32(2, snapshot.input_received_frame_count);
+    ASSERT_FALSE(snapshot.status.online);
+
+    /* Invalid status frames do not refresh status time or the status daemon. */
+    const uint32_t reloads = daemon_reload_calls;
+    DeliverFrame(status_frame, 7);
+    uint8_t invalid[8]; memcpy(invalid, status_frame, 8);
+    invalid[1] = 0; invalid[2] = 0; invalid[3] = 0xC0; invalid[4] = 0x7F;
+    DeliverFrame(invalid, 8);
+    ASSERT_TRUE(SuperCapGetSnapshot(150, &snapshot));
+    ASSERT_EQ_U32(2, snapshot.rejected_frame_count);
+    ASSERT_EQ_U32(100, snapshot.status.last_rx_tick_ms);
+    ASSERT_EQ_U32(reloads, daemon_reload_calls);
+
+    fake_tick_ms = UINT32_MAX - 10;
+    memcpy(fake_input_can_instance.rx_buff, input_frame, 8);
+    fake_input_can_instance.can_module_callback(&fake_input_can_instance);
+    ASSERT_TRUE(SuperCapGetSnapshot(9, &snapshot));
+    ASSERT_TRUE(snapshot.input_power.online);
+    ASSERT_TRUE(SuperCapGetSnapshot(10, &snapshot));
+    ASSERT_FALSE(snapshot.input_power.online);
+}
+
+static void TestInputRegistrationFailureKeepsCallbacksSafe(void)
+{
+    static CAN_HandleTypeDef bus;
+    const SuperCap_Init_Config_s config = {.can_config = {.can_handle=&bus,
+        .rx_id=SUPERCAP_STATUS_CAN_ID, .tx_id=SUPERCAP_COMMAND_CAN_ID},
+        .input_power_feedback_enabled=true};
+    input_registration_fails=true;
+    ASSERT_FALSE(SuperCapInit(&config));
+    ASSERT_FALSE(SuperCapInit(&config));
+    ASSERT_EQ_U32(2, can_register_calls);
+    const uint8_t frame[8]={0,0,0,0,0,180,0,128};
+    DeliverFrame(frame,8);
+    ASSERT_EQ_U32(0, daemon_reload_calls);
+    captured_daemon_config.callback(captured_daemon_config.owner_id);
+    SuperCapSnapshot_s snapshot;
+    memset(&snapshot,0xFF,sizeof snapshot);
+    ASSERT_FALSE(SuperCapGetSnapshot(0,&snapshot));
+    ASSERT_FALSE(snapshot.status.online);
+}
+
+static void TestDaemonFailureCanBeRetried(void)
+{
+    static CAN_HandleTypeDef bus;
+    const SuperCap_Init_Config_s config={.can_config={.can_handle=&bus}};
+    daemon_registration_fails=true;
+    ASSERT_FALSE(SuperCapInit(&config));
+    ASSERT_EQ_U32(0,can_register_calls);
+    daemon_registration_fails=false;
+    ASSERT_TRUE(SuperCapInit(&config));
+    ASSERT_EQ_U32(2,daemon_register_calls);
+    ASSERT_EQ_U32(20,captured_daemon_config.reload_count);
 }
 
 int main(int argc, char **argv)
 {
+    if (argc > 1 && strcmp(argv[1], "input_failure") == 0) {
+        TestInputRegistrationFailureKeepsCallbacksSafe(); return failures ? 1 : 0;
+    }
+    if (argc > 1 && strcmp(argv[1], "daemon_failure") == 0) {
+        TestDaemonFailureCanBeRetried(); return failures ? 1 : 0;
+    }
     if (argc > 1 && strcmp(argv[1], "input_feedback") == 0)
     {
         TestInputFeedbackFreshnessIsIndependent();

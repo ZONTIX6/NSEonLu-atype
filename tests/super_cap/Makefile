@@ -12,6 +12,8 @@ $(TARGET): $(SOURCE)
 	$(CC) $(CFLAGS) $(INCLUDES) $(SOURCE) -lm -o $(TARGET)
 test: $(TARGET)
 	./$(TARGET) can_failure
+	./$(TARGET) input_failure
+	./$(TARGET) daemon_failure
 	./$(TARGET) input_feedback
 	./$(TARGET)
 clean:
