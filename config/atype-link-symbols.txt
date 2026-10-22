@@ -36,3 +36,10 @@ flash_write_single_address
 flash_write_muli_address
 CANCommInit
 CANCommCopy
+SPITransferChecked
+IICTransmitChecked
+OLEDRegister
+OLEDReadButton
+MPU6500Register
+MPU6500Read
+INSGetSnapshot

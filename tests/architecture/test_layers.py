@@ -59,7 +59,7 @@ def scan(root):
             if dest.startswith("application/"):
                 found[(rel, "application-include", dest)] += 1
             if rel.startswith("modules/algorithm/") and (
-                    dest.startswith("Drivers/") or "FreeRTOS" in dest):
+                    dest.startswith("Drivers/") or dest == "Inc/main.h" or "FreeRTOS" in dest):
                 found[(rel, "algorithm-hardware", dest)] += 1
             if rel.startswith("modules/chassis_power/") and path.suffix == ".h" and (
                     candidates[0].name == "dji_motor.h"):
@@ -78,6 +78,16 @@ def records(counter):
 
 
 class BoundaryTests(unittest.TestCase):
+    def test_main_header_is_a_hardware_dependency(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "modules/algorithm").mkdir(parents=True)
+            (root / "Inc").mkdir()
+            (root / "Inc/main.h").write_text('#include "stm32f4xx_hal.h"')
+            (root / "modules/algorithm/x.h").write_text('#include "main.h"')
+            result = scan(root)
+            self.assertEqual(result[("modules/algorithm/x.h", "algorithm-hardware", "Inc/main.h")], 1)
+
     def test_resolves_relative_and_unique_public_headers(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

@@ -46,6 +46,9 @@ typedef struct
  */
 CANInstance *CANRegister(CAN_Init_Config_s *config);
 
+/** Return the zero-based board bus index, or -1 for an unsupported handle. */
+int CANBusIndex(const CAN_HandleTypeDef *handle);
+
 /**
  * @brief 修改CAN发送报文的数据帧长度;注意最大长度为8,在没有进行修改的时候,默认长度为8
  *

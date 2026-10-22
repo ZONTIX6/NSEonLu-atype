@@ -13,12 +13,20 @@ try {
         if(-not $ok) { $output | Select-Object -Last 30 | Write-Output; throw "$Name failed" }
         Write-Host "PASS $Name"
     }
+    $started=(Get-Date).ToUniversalTime().ToString('o')
+    $revision=git rev-parse HEAD
+    $sourceStatus=@(git status --porcelain)
+    Run 'architecture' $Python @('tests/architecture/test_layers.py','--strict')
     foreach($makefile in Get-ChildItem tests -Filter Makefile -Recurse) {
         Run "host-$($makefile.Directory.Name)" 'make' @('-B','-C',$makefile.Directory.FullName,'test','CC=gcc')
     }
     foreach($makefile in Get-ChildItem portable_modules -Filter Makefile -Recurse) {
         Run "portable-$($makefile.Directory.Parent.Name)" 'make' @('-B','-C',$makefile.Directory.FullName,'test','CC=gcc')
     }
+    foreach($stage in 0..3) {
+        Run "dji-stage$stage" 'make' @('-B','-C','tests/dji_chassis_power_rtt','test','CC=gcc',"CHASSIS_POWER_CONTROL_STAGE=$stage")
+    }
+    Run 'dji-no-meter' 'make' @('-B','-C','tests/dji_chassis_power_rtt','test','CC=gcc','POWER_METER_ENABLE=0')
     Run 'board-config' $Python @('tests/atype/test_board.py')
     Run 'node' 'node' @('--test','tools/usb-telemetry/tests/*.test.cjs','tools/waveform-viewer/tests/core.test.cjs')
     if($FirmwareMatrix) {
@@ -56,5 +64,13 @@ try {
             Run "cmake-layout-$profile" $Python @('scripts/check-atype-artifacts.py',$dir)
         }
     }
-    $results | ConvertTo-Json -Depth 3 | Set-Content (Join-Path $logDir 'results.json') -Encoding utf8
-} finally { Pop-Location }
+} finally {
+    if($null -ne $results) {
+        $results | ConvertTo-Json -Depth 3 | Set-Content (Join-Path $logDir 'results.json') -Encoding utf8
+        [pscustomobject]@{revision=$revision;sourceStatus=$sourceStatus;startedUtc=$started;
+            finishedUtc=(Get-Date).ToUniversalTime().ToString('o');commands=$results.Count;
+            passed=@($results | Where-Object passed).Count} |
+            ConvertTo-Json -Depth 3 | Set-Content (Join-Path $logDir 'provenance.json') -Encoding utf8
+    }
+    Pop-Location
+}

@@ -22,7 +22,6 @@
 #define ARM_MATH_DSP    // define in arm_math.h
 */
 
-#include "stm32f4xx.h"
 #include "arm_math.h"
 //#include "dsp/matrix_functions.h"
 #include "math.h"
@@ -30,11 +29,7 @@
 #include "stdlib.h"
 
 #ifndef user_malloc
-#ifdef _CMSIS_OS_H
-#define user_malloc pvPortMalloc
-#else
 #define user_malloc malloc
-#endif
 #endif
 
 // 若运算速度不够,可以使用q31代替f32,但是精度会降低

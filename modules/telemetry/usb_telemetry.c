@@ -124,8 +124,9 @@ static void Collect(uint32_t now_ms)
         sample.buffer_age_ms = Age(HAL_GetTick(), referee.buffer_tick_ms,
                                   referee.valid || referee.buffer_tick_ms != 0);
     }
-    SuperCapStatus_s cap = {0};
-    if (SuperCapGetStatus(&cap)) {
+    SuperCapSnapshot_s capacitor = {0};
+    if (SuperCapGetSnapshot(HAL_GetTick(), &capacitor)) {
+        const SuperCapStatus_s cap = capacitor.status;
         sample.cap_online = cap.online && isfinite(cap.energy_ratio) && isfinite(cap.chassis_power_w);
         sample.cap_output_enabled = cap.output_enabled;
         sample.cap_error = cap.error_code;
@@ -135,8 +136,8 @@ static void Collect(uint32_t now_ms)
         sample.cap_age_ms = Age(HAL_GetTick(), cap.last_rx_tick_ms,
                                cap.online || cap.last_rx_tick_ms != 0);
     }
-    SuperCapInputPower_s cap_input = {0};
-    if (SuperCapGetInputPower(&cap_input)) {
+    if (capacitor.input_feedback_enabled) {
+        const SuperCapInputPower_s cap_input = capacitor.input_power;
         sample.cap_input_online = cap_input.online && isfinite(cap_input.input_power_w);
         sample.cap_input_cw = USBTelemetryFixed(cap_input.input_power_w, 100);
         sample.cap_input_age_ms = Age(HAL_GetTick(), cap_input.last_rx_tick_ms,

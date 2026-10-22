@@ -1,6 +1,6 @@
 #ifndef __CRC16_H
 #define __CRC16_H
-#include "main.h"
+#include <stdint.h>
 
 #define CRC_START_16 0xFFFF
 #define CRC_START_MODBUS 0xFFFF

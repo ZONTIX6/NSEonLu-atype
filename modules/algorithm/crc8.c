@@ -1,4 +1,5 @@
 #include "crc8.h"
+#include <stddef.h>
 
 /*
  * static uint8_t sht75_crc_table[];

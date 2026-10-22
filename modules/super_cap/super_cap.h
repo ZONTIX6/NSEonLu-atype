@@ -15,7 +15,5 @@ typedef struct
 bool SuperCapInit(const SuperCap_Init_Config_s *config);
 bool SuperCapSendCommand(const SuperCapCommand_s *command);
 bool SuperCapGetSnapshot(uint32_t now_ms, SuperCapSnapshot_s *output);
-bool SuperCapGetStatus(SuperCapStatus_s *status);
-bool SuperCapGetInputPower(SuperCapInputPower_s *power);
 
 #endif

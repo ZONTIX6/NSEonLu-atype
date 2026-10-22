@@ -1,4 +1,5 @@
 #include "crc16.h"
+#include <stddef.h>
 
 static uint8_t crc_tab16_init = 0;
 static uint16_t crc_tab16[256];

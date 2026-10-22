@@ -11,6 +11,13 @@
 static CANInstance *can_instance[CAN_MX_REGISTER_CNT] = {NULL};
 static uint8_t idx; // 全局CAN实例索引,每次有新的模块注册会自增
 
+int CANBusIndex(const CAN_HandleTypeDef *handle)
+{
+    if (handle == &hcan1) return 0;
+    if (handle == &hcan2) return 1;
+    return -1;
+}
+
 /* ----------------two static function called by CANRegister()-------------------- */
 
 /**

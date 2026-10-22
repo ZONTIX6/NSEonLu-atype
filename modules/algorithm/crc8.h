@@ -1,7 +1,7 @@
 #ifndef __CRC8_H
 #define __CRC8_H
 
-#include "main.h"
+#include <stdint.h>
 
 #define CRC_START_8 0x00
 

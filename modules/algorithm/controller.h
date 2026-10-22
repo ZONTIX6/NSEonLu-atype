@@ -13,11 +13,9 @@
 #ifndef _CONTROLLER_H
 #define _CONTROLLER_H
 
-#include "main.h"
 #include "stdint.h"
 #include "memory.h"
 #include "stdlib.h"
-#include "bsp_dwt.h"
 #include "arm_math.h"
 #include <math.h>
 

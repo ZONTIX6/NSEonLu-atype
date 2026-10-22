@@ -14,18 +14,12 @@
 #define _USER_LIB_H
 
 #include "stdint.h"
-#include "main.h"
-#include "cmsis_os.h"
-#include "stm32f4xx.h"
+#include <stdlib.h>
 #include "arm_math.h"
 
 
 #ifndef user_malloc
-#ifdef _CMSIS_OS_H
-#define user_malloc pvPortMalloc
-#else
 #define user_malloc malloc
-#endif
 #endif
 
 #define msin(x) (arm_sin_f32(x))

@@ -159,21 +159,3 @@ bool SuperCapGetSnapshot(uint32_t now_ms, SuperCapSnapshot_s *output)
     taskEXIT_CRITICAL();
     return true;
 }
-
-bool SuperCapGetStatus(SuperCapStatus_s *status)
-{
-    if (status == NULL) return false;
-    SuperCapSnapshot_s snapshot;
-    const bool valid = SuperCapGetSnapshot(HAL_GetTick(), &snapshot);
-    *status = snapshot.status;
-    return valid;
-}
-
-bool SuperCapGetInputPower(SuperCapInputPower_s *power)
-{
-    if (power == NULL) return false;
-    SuperCapSnapshot_s snapshot;
-    const bool valid = SuperCapGetSnapshot(HAL_GetTick(), &snapshot);
-    *power = snapshot.input_power;
-    return valid && snapshot.input_feedback_enabled;
-}

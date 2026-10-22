@@ -29,6 +29,6 @@ bool submitted = ready && SuperCapSendCommand(&command);
 
 未初始化或初始化失败时，快照返回 false 并清零；空输出返回 false。初始化成功后拒绝重复注册。若 Daemon/CAN 已保存回调，后续注册失败将保留失效对象以避免悬空回调，并拒绝再次注册；未注册依赖前的分配失败可重试。半初始化回调不更新状态或刷新 Daemon。
 
-`super_cap_types.h` 只依赖纯协议数据头，可供无 HAL 的主机功控使用。`SuperCapGetStatus/GetInputPower` 是迁移期间的兼容包装。功率预算、裁判、台架、零力及恢复政策由功控和应用负责。
+`super_cap_types.h` 只依赖纯协议数据头，可供无 HAL 的主机功控使用。所有消费者通过整体快照读取状态；迁移用分项 getter 已删除。功率预算、裁判、台架、零力及恢复政策由功控和应用负责。
 
 协议说明：`docs/supercap-can-protocol.md`；唯一编解码实现为 `super_cap_protocol.c`。

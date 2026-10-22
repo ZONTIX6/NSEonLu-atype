@@ -112,6 +112,11 @@ static void AssertControlColumnsMatch(const char *expected)
 CAN_HandleTypeDef hcan1;
 CAN_HandleTypeDef hcan2;
 
+int CANBusIndex(const CAN_HandleTypeDef *handle)
+{
+    return handle==&hcan1 ? 0 : handle==&hcan2 ? 1 : -1;
+}
+
 CANInstance *CANRegister(CAN_Init_Config_s *config)
 {
     (void)config;
@@ -204,6 +209,7 @@ static void PreparePowerGroup(void)
     memset(&test_meter, 0, sizeof(test_meter));
     safety_drive=safety_bench=true;
     idx = 4;
+    sender_assignment[1].can_handle=&hcan1;
 
     power_group.state.registered = true;
     power_group.config.stage=CHASSIS_POWER_CONTROL_STAGE;
@@ -564,6 +570,7 @@ static void AddVehicleMotors(void)
     for(unsigned j=0;j<5;++j) {
         ASSERT_TRUE(extra[j].sender_group==groups[j]);
         ASSERT_TRUE(extra[j].message_num==slots[j]);
+        ASSERT_TRUE(sender_assignment[groups[j]].can_handle==&hcan2);
     }
 }
 
@@ -826,6 +833,11 @@ int main(int argc, char **argv)
         TestCalibrationUsesOutputCommandsAndActualRpm();
         TestCalibrationPrintsLimitedCurrentsInsteadOfPidDemand();
     }
+
+    CAN_HandleTypeDef unknown_bus={0};
+    Motor_Init_Config_s invalid_motor={.motor_type=M3508,
+        .can_init_config={.can_handle=&unknown_bus,.tx_id=1}};
+    ASSERT_TRUE(DJIMotorInit(&invalid_motor)==NULL);
 
     if (failures != 0)
         return 1;

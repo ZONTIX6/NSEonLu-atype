@@ -140,7 +140,6 @@ static void TestUninitializedOperationsFailAndInitRegistersDependencies(void)
 {
     static CAN_HandleTypeDef can1;
     const SuperCapCommand_s command = {0};
-    SuperCapStatus_s status = {0};
     SuperCapSnapshot_s snapshot;
     memset(&snapshot, 0xFF, sizeof snapshot);
     const SuperCap_Init_Config_s config = {
@@ -153,7 +152,6 @@ static void TestUninitializedOperationsFailAndInitRegistersDependencies(void)
         .input_power_feedback_enabled = input_feedback_enabled,
     };
 
-    ASSERT_FALSE(SuperCapGetStatus(&status));
     ASSERT_FALSE(SuperCapGetSnapshot(0, &snapshot));
     ASSERT_FALSE(snapshot.status.online);
     ASSERT_FALSE(snapshot.input_power.online);
@@ -179,7 +177,6 @@ static void TestUninitializedOperationsFailAndInitRegistersDependencies(void)
 static void TestCanRegistrationFailureIsLatched(void)
 {
     static CAN_HandleTypeDef can1;
-    SuperCapStatus_s status = {0};
     const SuperCapCommand_s command = {0};
     const SuperCap_Init_Config_s config = {
         .can_config = {
@@ -194,7 +191,6 @@ static void TestCanRegistrationFailureIsLatched(void)
     ASSERT_FALSE(SuperCapInit(&config));
     ASSERT_EQ_U32(1U, daemon_register_calls);
     ASSERT_EQ_U32(1U, can_register_calls);
-    ASSERT_FALSE(SuperCapGetStatus(&status));
     ASSERT_FALSE(SuperCapSendCommand(&command));
     SuperCapSnapshot_s snapshot;
     ASSERT_FALSE(SuperCapGetSnapshot(fake_tick_ms, &snapshot));
@@ -234,55 +230,53 @@ static void TestStatusUsesOwnedInstanceAndOfflineCallback(void)
 {
     static const uint8_t frame[8] = {0x00U, 0x00U, 0x00U, 0xF1U,
                                      0x42U, 0xB4U, 0x00U, 0x80U};
-    SuperCapStatus_s status = {0};
 
+    SuperCapSnapshot_s snapshot;
     daemon_reload_calls = 0U;
     fake_tick_ms = 1234U;
     DeliverFrame(frame, 8U);
 
-    ASSERT_TRUE(SuperCapGetStatus(&status));
-    ASSERT_TRUE(status.online);
-    ASSERT_TRUE(status.output_enabled);
-    ASSERT_EQ_U32(0U, status.error_code);
-    ASSERT_NEAR(120.5f, status.chassis_power_w, 0.001f);
-    ASSERT_EQ_U32(180U, status.available_power_limit_w);
-    SuperCapSnapshot_s snapshot;
+    ASSERT_TRUE(SuperCapGetSnapshot(fake_tick_ms, &snapshot));
+    ASSERT_TRUE(snapshot.status.online);
+    ASSERT_TRUE(snapshot.status.output_enabled);
+    ASSERT_EQ_U32(0U, snapshot.status.error_code);
+    ASSERT_NEAR(120.5f, snapshot.status.chassis_power_w, 0.001f);
+    ASSERT_EQ_U32(180U, snapshot.status.available_power_limit_w);
     ASSERT_TRUE(SuperCapGetSnapshot(fake_tick_ms, &snapshot));
     ASSERT_EQ_U32(1U, snapshot.received_frame_count);
     ASSERT_EQ_U32(1234U, snapshot.status.last_rx_tick_ms);
     ASSERT_EQ_U32(1U, daemon_reload_calls);
-    ASSERT_FALSE(SuperCapGetStatus(NULL));
+    ASSERT_FALSE(SuperCapGetSnapshot(fake_tick_ms, NULL));
 
     fake_daemon_instance.temp_count = 0U;
     captured_daemon_config.callback(captured_daemon_config.owner_id);
-    ASSERT_TRUE(SuperCapGetStatus(&status));
-    ASSERT_FALSE(status.online);
-    ASSERT_NEAR(120.5f, status.chassis_power_w, 0.001f);
+    ASSERT_TRUE(SuperCapGetSnapshot(fake_tick_ms, &snapshot));
+    ASSERT_FALSE(snapshot.status.online);
+    ASSERT_NEAR(120.5f, snapshot.status.chassis_power_w, 0.001f);
 }
 
 static void TestInputFeedbackFreshnessIsIndependent(void)
 {
     const uint8_t status_frame[8] = {0, 0, 0, 0, 0, 180, 0, 128};
     const uint8_t input_frame[8] = {0, 0, 0xDC, 0x42, 110, 0, 1, 1};
-    SuperCapInputPower_s power = {0};
+    SuperCapSnapshot_s snapshot;
     input_feedback_enabled = true;
     TestUninitializedOperationsFailAndInitRegistersDependencies();
-    ASSERT_TRUE(SuperCapGetInputPower(&power));
-    ASSERT_FALSE(power.online);
+    ASSERT_TRUE(SuperCapGetSnapshot(fake_tick_ms, &snapshot));
+    ASSERT_FALSE(snapshot.input_power.online);
     fake_tick_ms = 100;
     DeliverFrame(status_frame, 8);
     memcpy(fake_input_can_instance.rx_buff, input_frame, 8);
     fake_input_can_instance.rx_len = 8;
     fake_input_can_instance.can_module_callback(&fake_input_can_instance);
-    ASSERT_TRUE(SuperCapGetInputPower(&power));
-    ASSERT_TRUE(power.online);
-    ASSERT_TRUE(power.input_control_active);
-    ASSERT_NEAR(110, power.input_power_w, 0.001f);
-    ASSERT_EQ_U32(100, power.last_rx_tick_ms);
+    ASSERT_TRUE(SuperCapGetSnapshot(fake_tick_ms, &snapshot));
+    ASSERT_TRUE(snapshot.input_power.online);
+    ASSERT_TRUE(snapshot.input_power.input_control_active);
+    ASSERT_NEAR(110, snapshot.input_power.input_power_w, 0.001f);
+    ASSERT_EQ_U32(100, snapshot.input_power.last_rx_tick_ms);
     fake_tick_ms = 121;
-    ASSERT_TRUE(SuperCapGetInputPower(&power));
-    ASSERT_FALSE(power.online);
-    SuperCapSnapshot_s snapshot;
+    ASSERT_TRUE(SuperCapGetSnapshot(fake_tick_ms, &snapshot));
+    ASSERT_FALSE(snapshot.input_power.online);
     ASSERT_TRUE(SuperCapGetSnapshot(120, &snapshot));
     ASSERT_TRUE(snapshot.input_power.online);
     ASSERT_EQ_U32(120, snapshot.snapshot_tick_ms);
@@ -290,15 +284,14 @@ static void TestInputFeedbackFreshnessIsIndependent(void)
     ASSERT_EQ_U32(1, snapshot.input_received_frame_count);
     fake_daemon_instance.temp_count = 0;
     fake_input_can_instance.can_module_callback(&fake_input_can_instance);
-    SuperCapStatus_s status;
-    ASSERT_TRUE(SuperCapGetStatus(&status));
-    ASSERT_FALSE(status.online);
+    ASSERT_TRUE(SuperCapGetSnapshot(fake_tick_ms, &snapshot));
+    ASSERT_FALSE(snapshot.status.online);
     fake_input_can_instance.rx_buff[6] = 2;
     fake_tick_ms = 150;
     fake_input_can_instance.can_module_callback(&fake_input_can_instance);
-    ASSERT_TRUE(SuperCapGetInputPower(&power));
-    ASSERT_EQ_U32(121, power.last_rx_tick_ms);
-    ASSERT_FALSE(power.online);
+    ASSERT_TRUE(SuperCapGetSnapshot(fake_tick_ms, &snapshot));
+    ASSERT_EQ_U32(121, snapshot.input_power.last_rx_tick_ms);
+    ASSERT_FALSE(snapshot.input_power.online);
     ASSERT_TRUE(SuperCapGetSnapshot(150, &snapshot));
     ASSERT_EQ_U32(1, snapshot.input_rejected_frame_count);
     ASSERT_EQ_U32(2, snapshot.input_received_frame_count);

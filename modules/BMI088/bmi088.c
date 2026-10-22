@@ -1,5 +1,6 @@
 #include "bmi088_regNdef.h"
 #include "bmi088.h"
+#include "bsp_dwt.h"
 #include "user_lib.h"
 #include "daemon.h"
 
