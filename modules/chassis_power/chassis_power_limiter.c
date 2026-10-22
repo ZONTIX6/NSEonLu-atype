@@ -87,7 +87,9 @@ bool ChassisPowerLimit(const ChassisPowerCycleInput_s *i, ChassisPowerCycleOutpu
 
 bool ChassisPowerRecordFinal(const ChassisPowerFinalInput_s *i)
 {
-    if(chassis_power==NULL || i==NULL || i->control_version!=chassis_power->control.version) return false;
+    if(chassis_power==NULL || i==NULL || !chassis_power->working_state.registered ||
+        chassis_power->working_state.final_valid ||
+        i->control_version!=chassis_power->control.version) return false;
     ChassisPowerInstance_s *p=chassis_power;
     ChassisPowerSnapshot_s *state=&p->working_state;
     float current[4];bool enabled[4];

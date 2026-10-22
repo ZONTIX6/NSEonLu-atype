@@ -93,6 +93,11 @@ include_sub_directories_recursively(${CMAKE_SOURCE_DIR}/modules)
 include_sub_directories_recursively(${CMAKE_SOURCE_DIR}/application)
 include_sub_directories_recursively(${CMAKE_SOURCE_DIR}/Inc)
 
+# Match Make's CMSIS-DSP headers; recursive traversal also discovers legacy Inc/.
+include_directories(BEFORE
+    "${CMAKE_SOURCE_DIR}/Middlewares/ST/ARM/DSP/Include/dsp"
+    "${CMAKE_SOURCE_DIR}/Middlewares/ST/ARM/DSP/Include")
+
 # add source, only surfix .c
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
     "Drivers/*.c"

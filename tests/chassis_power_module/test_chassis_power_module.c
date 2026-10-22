@@ -60,6 +60,8 @@ int main(int argc,char **argv)
     assert(!ChassisPowerInit(&config));
     config=Config();assert(ChassisPowerInit(&config));
     assert(!ChassisPowerInit(&config));
+    ChassisPowerFinalInput_s premature_final={0};
+    assert(!ChassisPowerRecordFinal(&premature_final));
     ChassisPowerPolicyInput_s policy_input={.now_ms=100,.dt_s=.005f,
         .bench_enabled=true,.bench_limit_w=20};
     ChassisPowerPolicyOutput_s policy_output;
@@ -80,6 +82,7 @@ int main(int argc,char **argv)
     /* Safety after limiting must replace all final diagnostics with actual zeros. */
     ChassisPowerFinalInput_s final={.now_ms=100,.control_version=42,.can_submitted=true};
     assert(ChassisPowerRecordFinal(&final));
+    assert(!ChassisPowerRecordFinal(&final)); /* A cycle publishes only once. */
     ChassisPowerSnapshot_s snapshot;
     assert(ChassisPowerGetSnapshot(&snapshot));
     assert(snapshot.final_valid && snapshot.can_submitted);
