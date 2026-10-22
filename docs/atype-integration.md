@@ -20,7 +20,7 @@
 
 每个目录 `build/<配置>/` 都生成 `basic_framework.elf/.hex/.bin` 和 map。Make 是主要入口；CMake 使用 `-DATYPE_PROFILE=atype-vehicle/atype-bench/atype-direct`，每次使用独立二进制目录。改动编译覆盖时 Make 的配置戳会触发对象重编译。
 
-构建输出统一放在根目录的 `build/` 内。VS Code 的 CMake 输出为 `build/cmake-atype-vehicle/`，与代码补全的编译数据库一致；遥测/视觉专项构建使用 `build/usb-telemetry/`、`build/usb-vision/`。旧根目录 `build_*` 已归档到 `build/legacy/<去掉 build_ 前缀的名称>/`，保留历史固件；这些旧缓存不作为当前增量构建入口，重新编译使用上述脚本和配置目录。
+构建输出统一放在根目录的 `build/` 内。VS Code 的 CMake 输出为 `build/cmake-atype-vehicle/`，与代码补全的编译数据库一致；遥测/视觉专项构建使用 `build/usb-telemetry/`、`build/usb-vision/`。此前归档到 `build/legacy/` 的旧构建产物已移至回收站，当前构建和验证配置的结果保留；重新编译使用上述脚本和配置目录。
 
 | 配置 | 电源 | 台架回退 | 非底盘执行机构 | 调试 |
 | --- | --- | --- | --- | --- |
