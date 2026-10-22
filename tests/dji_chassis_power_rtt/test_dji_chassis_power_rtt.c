@@ -3,12 +3,57 @@
 #include <string.h>
 #include "../../modules/power_meter/power_meter.h"
 
+#include "chassis_power_internal.h"
+#include "../../modules/chassis_power/chassis_power.c"
+#include "chassis_power_config.h"
 #include "../../modules/motor/DJImotor/dji_motor.c"
+#include "../../modules/motor/DJImotor/dji_power_adapter.c"
+
+static void SyncTestControl(void)
+{
+    if(adapter_group.control.version!=adapter_control.version ||
+       adapter_group.control.tick_ms!=adapter_control.tick_ms ||
+       adapter_group.control.control_enabled!=adapter_control.control_enabled ||
+       adapter_group.control.autotune_permitted!=adapter_control.autotune_permitted ||
+       adapter_group.control.zero_force!=adapter_control.zero_force ||
+       memcmp(adapter_group.control.target_rpm,adapter_control.target_rpm,sizeof adapter_control.target_rpm)!=0)
+        (void)DJIPowerAdapterPublish(&adapter_control);
+}
+static void TestReadMotorCycle(void)
+{
+    SyncTestControl();
+    ReadMotorCycle();
+}
+static void TestMotorControl(void)
+{
+    SyncTestControl();
+    DJIMotorControl();
+}
+#define ReadMotorCycle TestReadMotorCycle
+#define DJIMotorControl TestMotorControl
+
+static void ApplyChassisPowerGroup(void)
+{
+    ReadMotorCycle();
+    const DJIMotorCycle_s cycle={.count=idx,.motors=dji_motor_instance,.measure=cycle_measure,
+        .current=motor_output,.actual_aps=speed_feedback_aps,.target_aps=speed_reference_aps,
+        .stop=cycle_stop,.online=cycle_online};
+    AdapterLimit(NULL,&cycle);
+    int16_t commands[DJI_MOTOR_CNT]={0};bool enabled[DJI_MOTOR_CNT]={false};
+    for(unsigned i=0;i<idx;++i) {
+        commands[i]=(int16_t)motor_output[i];
+        enabled[i]=cycle_stop[i]!=MOTOR_STOP && cycle_online[i] && adapter_cycle_control.control_enabled;
+    }
+    AdapterRecordFinal(NULL,&cycle,commands,enabled,0x3f,0x3f);
+}
 
 static int failures;
 static char captured_data[RTT_TELEMETRY_CHASSIS_POWER_CSV_MAX_LENGTH];
 static PowerMeterStatus_s test_meter;
 static bool publish_stop_during_pid;
+static bool stop_during_meter_read, fail_can_transmit;
+static bool arm_tick_in_meter, packing_tick_race;
+static unsigned packing_tick_calls;
 static uint32_t test_tick=123;
 static float test_delta_s=.001f;
 static bool safety_drive=true, safety_bench=true;
@@ -23,15 +68,17 @@ static void SetMeter(float power, bool online, uint32_t tick)
 static void PublishTelemetry(const ChassisPowerControlTelemetry_s *telemetry)
 {
     if (telemetry == NULL) return;
-    DJIChassisPowerControlSnapshot_s control = chassis_power->control;
+    ChassisPowerControlSnapshot_s control = adapter_control;
     control.legacy_budget_w = chassis_power->input.referee_power_limit_w;
     control.telemetry = *telemetry;
-    DJIChassisPowerPublishControl(&control);
+    DJIPowerAdapterPublish(&control);
 }
 
 bool PowerMeterGetStatus(PowerMeterStatus_s *status)
 {
     *status = test_meter;
+    if(stop_during_meter_read) {stop_during_meter_read=false;safety_drive=false;}
+    if(arm_tick_in_meter) {arm_tick_in_meter=false;packing_tick_race=true;packing_tick_calls=0;}
     return true;
 }
 
@@ -75,11 +122,12 @@ uint8_t CANTransmit(CANInstance *instance, float timeout)
 {
     (void)instance;
     (void)timeout;
-    return 1U;
+    return fail_can_transmit ? 0U : 1U;
 }
 
 uint32_t HAL_GetTick(void)
 {
+    if(packing_tick_race && ++packing_tick_calls>=3) return test_tick+21;
     return test_tick;
 }
 
@@ -95,9 +143,9 @@ float PIDCalculate(PIDInstance *pid, float measure, float ref)
     (void)measure;
     if (publish_stop_during_pid) {
         publish_stop_during_pid = false;
-        DJIChassisPowerControlSnapshot_s next = chassis_power->control;
+        ChassisPowerControlSnapshot_s next = adapter_control;
         ++next.version; next.control_enabled = false;
-        DJIChassisPowerPublishControl(&next);
+        DJIPowerAdapterPublish(&next);
     }
     return ref;
 }
@@ -140,7 +188,7 @@ unsigned BSPLogWriteString(const char *text)
 
 static void PreparePowerGroup(void)
 {
-    static DJIChassisPowerInstance_s power_group;
+    static ChassisPowerInstance_s power_group;
     static DJIMotorInstance motors[POWER_MODEL_MOTOR_COUNT];
     static DaemonInstance daemons[POWER_MODEL_MOTOR_COUNT];
     static CANInstance can[POWER_MODEL_MOTOR_COUNT];
@@ -157,13 +205,21 @@ static void PreparePowerGroup(void)
     safety_drive=safety_bench=true;
     idx = 4;
 
-    power_group.registered = true;
+    power_group.state.registered = true;
+    power_group.config.stage=CHASSIS_POWER_CONTROL_STAGE;
+    power_group.config.meter_enabled=POWER_METER_ENABLE!=0;
+    power_group.config.transient=ChassisPowerTransientDefaultConfig();
+    adapter_group=(DJIMotorOutputGroup_s){.registered=true,.max_current_command=15000};
+    output_group=&adapter_group;
+    output_hooks=(DJIMotorOutputHooks_s){.read_control=AdapterReadControl,
+        .limit=AdapterLimit,.record_final=AdapterRecordFinal};
     power_group.input.referee_power_limit_w = 100.0f;
-    power_group.control = (DJIChassisPowerControlSnapshot_s){
+    adapter_control = (ChassisPowerControlSnapshot_s){
+        .tick_ms=test_tick,
         .nominal_budget_w = 100, .target_power_w = 95,
         .legacy_budget_w = 100, .control_enabled = true};
     power_group.input.attenuation = 1.0f;
-    power_group.algorithm = (ChassisPowerAlgorithmConfig_s){
+    power_group.config.algorithm = (ChassisPowerAlgorithmConfig_s){
         .safety_factor = 1.0f,
         .small_error_threshold_rpm = 0.0f,
         .reserved_power_threshold_w = 4.0f,
@@ -173,8 +229,8 @@ static void PreparePowerGroup(void)
 
     for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
     {
-        power_group.motor_indices[i] = (uint8_t)i;
-        power_group.models[i].current_conversion = 1.0f;
+        adapter_group.motor_indices[i] = (uint8_t)i;
+        power_group.config.models[i].current_conversion = 1.0f;
         daemons[i].online = 1U;
         motors[i].daemon = &daemons[i];
         motors[i].measure.rx_sequence=1;
@@ -184,12 +240,14 @@ static void PreparePowerGroup(void)
         motors[i].stop_flag = MOTOR_ENALBED;
         motors[i].sender_group = 1;
         motors[i].message_num = (uint8_t)i;
-        dji_motor_instance[i] = &motors[i];
+        dji_motor_instance[i] = adapter_motors[i] = &motors[i];
+        motors[i].motor_type=M3508;
         motor_output[i] = (float)(i + 1U);
     }
 
-    chassis_power = &power_group;
-    chassis_power_rtt_count = 0U;
+    power_instance = &power_group;
+    chassis_power->telemetry_count = 0U;
+    (void)DJIPowerAdapterPublish(&adapter_control);
 }
 
 static void EmitOneRow(void)
@@ -201,16 +259,16 @@ static void EmitOneRow(void)
 static void TestAtomicPublicationAndFinalIntegerCommands(void)
 {
     PreparePowerGroup();
-    const DJIChassisPowerControlSnapshot_s control = {
+    const ChassisPowerControlSnapshot_s control = {
         .version = 42, .tick_ms = 120, .nominal_budget_w = 20,
         .target_power_w = 19, .legacy_budget_w = 20, .control_enabled = true,
         .target_rpm = {1000, -1000, 500, -500},
     };
-    DJIChassisPowerPublishControl(&control);
+    DJIPowerAdapterPublish(&control);
     motor_output[0] = 3.9f;
     ApplyChassisPowerGroup();
-    DJIChassisPowerState_s state;
-    ASSERT_TRUE(DJIChassisPowerGetSnapshot(&state));
+    ChassisPowerSnapshot_s state;
+    ASSERT_TRUE(ChassisPowerGetSnapshot(&state));
     ASSERT_TRUE(state.control_version == 42);
     ASSERT_TRUE(state.raw_current[0] == 3.9f);
     ASSERT_TRUE(state.power.limited_current[0] == 3);
@@ -224,7 +282,7 @@ static void TestZeroDemandIsNotActualBaseLimiting(void)
 {
     PreparePowerGroup();
     for (unsigned w = 0; w < 4; ++w) {
-        chassis_power->models[w].k0 = 30;
+        chassis_power->config.models[w].k0 = 30;
         motor_output[w] = 0;
     }
     ApplyChassisPowerGroup();
@@ -250,14 +308,14 @@ static void TestTargetSnapshotDoesNotDependOnFeedbackRounding(void)
 static void TestStopPublicationDoesNotMixCanAndDiagnostics(void)
 {
     PreparePowerGroup(); idx = 4;
-    DJIChassisPowerControlSnapshot_s control = chassis_power->control;
+    ChassisPowerControlSnapshot_s control = adapter_control;
     control.version = 10;
     for (unsigned i = 0; i < 4; ++i) {
         control.target_rpm[i] = 1000;
         dji_motor_instance[i]->motor_settings.close_loop_type = SPEED_LOOP;
         dji_motor_instance[i]->motor_settings.outer_loop_type = SPEED_LOOP;
     }
-    DJIChassisPowerPublishControl(&control);
+    DJIPowerAdapterPublish(&control);
     publish_stop_during_pid = true;
     DJIMotorControl();
     ASSERT_TRUE(chassis_power->state.control_version == 10);
@@ -275,12 +333,12 @@ static void TestStopPublicationDoesNotMixCanAndDiagnostics(void)
 static void TestFastProtectionObservesOrAppliesByStage(void)
 {
     PreparePowerGroup();
-    DJIChassisPowerControlSnapshot_s control = chassis_power->control;
+    ChassisPowerControlSnapshot_s control = adapter_control;
     control.nominal_budget_w = control.legacy_budget_w = 20;
     control.target_power_w = 19; control.slow_correction_w = 3;
-    DJIChassisPowerPublishControl(&control);
+    DJIPowerAdapterPublish(&control);
     for (unsigned i = 0; i < 4; ++i) {
-        chassis_power->models[i].k4 = .01f;
+        chassis_power->config.models[i].k4 = .01f;
         motor_output[i] = 40;
     }
     SetMeter(36.1f, true, 123);
@@ -294,6 +352,65 @@ static void TestFastProtectionObservesOrAppliesByStage(void)
 #else
     ASSERT_TRUE(chassis_power->state.power.limited_current[0] <= 16);
 #endif
+}
+
+static void TestFinalGateAndCanResultAreRecorded(void)
+{
+    PreparePowerGroup();
+    sender_enable_flag[1]=1;
+    for(unsigned w=0;w<4;++w) {
+        adapter_control.target_rpm[w]=1000;
+        dji_motor_instance[w]->motor_settings.close_loop_type=SPEED_LOOP;
+        dji_motor_instance[w]->motor_settings.outer_loop_type=SPEED_LOOP;
+    }
+#if POWER_METER_ENABLE
+    stop_during_meter_read=true;
+    DJIMotorControl();
+    ASSERT_TRUE(chassis_power->state.raw_current[0]>0);
+    ASSERT_TRUE(chassis_power->state.final_valid);
+    for(unsigned w=0;w<4;++w) {
+        ASSERT_TRUE(chassis_power->state.final_current[w]==0);
+        ASSERT_TRUE(chassis_power->state.telemetry.current_command[w]==0);
+        ASSERT_TRUE(sender_assignment[1].tx_buff[2*w]==0 && sender_assignment[1].tx_buff[2*w+1]==0);
+    }
+#endif
+    safety_drive=true;fail_can_transmit=true;
+    DJIMotorControl();
+    ASSERT_TRUE(!chassis_power->state.can_submitted);
+    fail_can_transmit=false;
+    DJIMotorControl();
+    ASSERT_TRUE(chassis_power->state.can_submitted);
+#if POWER_METER_ENABLE
+    arm_tick_in_meter=true;
+    DJIMotorControl();
+    for(unsigned w=0;w<4;++w) {
+        unsigned index=adapter_group.motor_indices[w];
+        unsigned slot=dji_motor_instance[index]->message_num;
+        int16_t packed=(int16_t)((uint16_t)sender_assignment[1].tx_buff[2*slot]<<8 |
+                                 sender_assignment[1].tx_buff[2*slot+1]);
+        ASSERT_TRUE(chassis_power->state.final_current[w]==packed);
+    }
+    packing_tick_race=false;
+#endif
+}
+
+static void TestAdapterRejectsInvalidMembership(void)
+{
+    PreparePowerGroup();
+    output_group=NULL;adapter_group.registered=false;
+    DJIPowerAdapterConfig_s config={.count=4,.max_current_command=100};
+    for(unsigned w=0;w<4;++w) config.motors[w]=dji_motor_instance[w];
+    ASSERT_TRUE(!DJIPowerAdapterInit(NULL));
+    config.count=5;ASSERT_TRUE(!DJIPowerAdapterInit(&config));config.count=4;
+    config.motors[3]=config.motors[0];ASSERT_TRUE(!DJIPowerAdapterInit(&config));
+    config.motors[3]=dji_motor_instance[3];
+    config.motors[0]->motor_type=M2006;ASSERT_TRUE(!DJIPowerAdapterInit(&config));
+    config.motors[0]->motor_type=M3508;
+    DJIMotorInstance unregistered={.motor_type=M3508};
+    config.motors[0]=&unregistered;ASSERT_TRUE(!DJIPowerAdapterInit(&config));
+    config.motors[0]=NULL;ASSERT_TRUE(!DJIPowerAdapterInit(&config));
+    config.motors[0]=dji_motor_instance[0];ASSERT_TRUE(DJIPowerAdapterInit(&config));
+    ASSERT_TRUE(!DJIPowerAdapterInit(&config));
 }
 
 static void TestControlAndMeasurementSnapshotsReachOneRttRow(void)
@@ -407,12 +524,12 @@ static void TestCalibrationPrintsLimitedCurrentsInsteadOfPidDemand(void)
     const float feedback_aps[] = {600.0f, -1200.0f, 1800.0f, -2400.0f};
     for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
     {
-        chassis_power->models[i].k4 = 1.0f;
+        chassis_power->config.models[i].k4 = 1.0f;
         motor_output[i] = demands[i];
         speed_feedback_aps[i] = feedback_aps[i];
     }
 
-    chassis_power_rtt_count = CHASSIS_POWER_RTT_DIVIDER - 1U;
+    chassis_power->telemetry_count = CHASSIS_POWER_RTT_DIVIDER - 1U;
     ApplyChassisPowerGroup();
     const char expected[] =
         "123,400,400,400,400,5400,400,390,390,10,0,200,15,2,1,6,15"
@@ -479,7 +596,7 @@ static void TestNineMotorPowerAndStopIsolation(void)
     PreparePowerGroup();AddVehicleMotors();
     DJIMotorInstance *original[9];memcpy(original,dji_motor_instance,sizeof original);
     for(unsigned i=0;i<5;++i) dji_motor_instance[i]=original[i+4];
-    for(unsigned i=0;i<4;++i) {dji_motor_instance[i+5]=original[i];chassis_power->motor_indices[i]=i+5;}
+    for(unsigned i=0;i<4;++i) {dji_motor_instance[i+5]=original[i];adapter_group.motor_indices[i]=i+5;}
     ReadMotorCycle();
     for(unsigned i=0;i<9;++i) motor_output[i]=100+i;
     ApplyChassisPowerGroup();
@@ -493,8 +610,8 @@ static void TestAutotuneIsolationAndExplicitZeroForceRearm(void)
     AutotuneCancel();
     PIDAutotuneFeedback f={.now_ms=123,.permitted=true,.feedback_ok=true,.can_ok=true};
     AutotuneDrive unused;AutotuneMotorStep(&f,&unused);
-    chassis_power->control.tick_ms=123;
-    chassis_power->control.autotune_permitted=true;
+    adapter_control.tick_ms=123;
+    adapter_control.autotune_permitted=true;
     for(unsigned w=0;w<4;++w) {
         dji_motor_instance[w]->measure.rx_tick_ms=123;
         PIDInstance *pid=&dji_motor_instance[w]->motor_controller.speed_PID;
@@ -514,37 +631,37 @@ static void TestAutotuneIsolationAndExplicitZeroForceRearm(void)
     AutotuneCancel();ReadMotorCycle();ApplyAutotuneCycle();
     ASSERT_TRUE(!autotune_owned && autotune_inhibit);
     ASSERT_TRUE(dji_motor_instance[2]->motor_controller.speed_PID.Kp==.75f);
-    chassis_power->control.control_enabled=false;
+    adapter_control.control_enabled=false;
     ReadMotorCycle();ApplyAutotuneCycle();ASSERT_TRUE(autotune_inhibit);
-    chassis_power->control.control_enabled=true;
+    adapter_control.control_enabled=true;
     ReadMotorCycle();ApplyAutotuneCycle();
     for(unsigned w=0;w<4;++w) ASSERT_TRUE(cycle_stop[w]==MOTOR_STOP);
-    chassis_power->control.zero_force=true;chassis_power->control.control_enabled=false;
+    adapter_control.zero_force=true;adapter_control.control_enabled=false;
     ReadMotorCycle();ApplyAutotuneCycle();ASSERT_TRUE(!autotune_inhibit);
-    chassis_power->control.zero_force=false;chassis_power->control.control_enabled=true;
+    adapter_control.zero_force=false;adapter_control.control_enabled=true;
     AutotuneSubmit("@A1,3,BEGIN,1");DJIMotorControl();
     ASSERT_TRUE(AutotuneReply(reply,sizeof reply)>0);AutotuneReplySent();
-    chassis_power->control.autotune_permitted=false;
+    adapter_control.autotune_permitted=false;
     DJIMotorControl();DJIMotorControl();
     AutotuneSubmit("@A1,4,STATUS,2");DJIMotorControl();
     ASSERT_TRUE(AutotuneReply(reply,sizeof reply)>0);
     ASSERT_TRUE(strstr(reply,"OK,2,aborted,0,0,guard")!=NULL);
     AutotuneReplySent();
-    chassis_power->control.zero_force=true;chassis_power->control.control_enabled=false;
+    adapter_control.zero_force=true;adapter_control.control_enabled=false;
     DJIMotorControl();
-    chassis_power->control.zero_force=false;chassis_power->control.control_enabled=true;
-    chassis_power->control.autotune_permitted=true;
+    adapter_control.zero_force=false;adapter_control.control_enabled=true;
+    adapter_control.autotune_permitted=true;
     AutotuneSubmit("@A1,5,BEGIN,1");DJIMotorControl();AutotuneReply(reply,sizeof reply);AutotuneReplySent();
     AutotuneSubmit("@A1,6,TRIAL,3,0,500,500,3000,3f800000,00000000,00000000");
     DJIMotorControl();AutotuneReply(reply,sizeof reply);AutotuneReplySent();
-    test_tick=1124;chassis_power->control.tick_ms=test_tick;
+    test_tick=1124;adapter_control.tick_ms=test_tick;
     for(unsigned w=0;w<4;++w)dji_motor_instance[w]->measure.rx_tick_ms=test_tick;
     AutotuneSubmit("@A1,7,BEGIN,1");DJIMotorControl();
     ASSERT_TRUE(!autotune_owned && autotune_inhibit);
     ASSERT_TRUE(dji_motor_instance[0]->motor_controller.speed_PID.MaxOut==2000);
     ASSERT_TRUE(AutotuneReply(reply,sizeof reply)>0 && strstr(reply,"ERR,guard"));AutotuneReplySent();
-    test_tick=123;chassis_power->control.tick_ms=test_tick;
-    chassis_power->control.zero_force=true;chassis_power->control.control_enabled=false;DJIMotorControl();
+    test_tick=123;adapter_control.tick_ms=test_tick;
+    adapter_control.zero_force=true;adapter_control.control_enabled=false;DJIMotorControl();
 }
 
 static void TestBaselineScenarioStream(bool record)
@@ -564,7 +681,7 @@ static void TestBaselineScenarioStream(bool record)
     if ((CHASSIS_POWER_CONTROL_STAGE != 0 && CHASSIS_POWER_CONTROL_STAGE != 3) || !POWER_METER_ENABLE) return;
     PreparePowerGroup();
     test_delta_s = .002f;
-    chassis_power->algorithm.max_current_command = 15000;
+    chassis_power->config.algorithm.max_current_command = 15000;
     char filename[64];
     snprintf(filename, sizeof filename, "baseline-stage%d.csv", CHASSIS_POWER_CONTROL_STAGE);
     FILE *fixture = fopen(filename, record ? "wb" : "rb");
@@ -574,16 +691,16 @@ static void TestBaselineScenarioStream(bool record)
     for (unsigned n = 0; n < sizeof cases / sizeof cases[0]; ++n) {
       for (unsigned cycle = 0; cycle < cases[n].cycles; ++cycle) {
         test_tick += 2;
-        DJIChassisPowerControlSnapshot_s control = chassis_power->control;
+        ChassisPowerControlSnapshot_s control = adapter_control;
         control.version = n + 1; control.tick_ms = test_tick;
         control.nominal_budget_w = control.legacy_budget_w = 20;
         control.target_power_w = 19;
         control.control_enabled = cases[n].enabled;
         for (unsigned w = 0; w < 4; ++w) control.target_rpm[w] = cases[n].target;
-        DJIChassisPowerPublishControl(&control);
+        DJIPowerAdapterPublish(&control);
         SetMeter(cases[n].power, cases[n].online, test_tick);
         for (unsigned w = 0; w < 4; ++w) {
-            chassis_power->models[w].k4 = .000001f;
+            chassis_power->config.models[w].k4 = .000001f;
             dji_motor_instance[w]->measure.speed_aps = cases[n].rpm * 6;
             dji_motor_instance[w]->measure.rx_tick_ms = test_tick;
             ++dji_motor_instance[w]->measure.rx_sequence;
@@ -593,7 +710,7 @@ static void TestBaselineScenarioStream(bool record)
         }
         ReadMotorCycle(); ApplyChassisPowerGroup();
       }
-        const DJIChassisPowerState_s *state = &chassis_power->state;
+        const ChassisPowerSnapshot_s *state = &chassis_power->state;
         if (n == 1) ASSERT_TRUE(state->transient.mode == CHASSIS_POWER_TRANSIENT_STARTUP);
         if (n == 4) {
             ASSERT_TRUE(state->transient.negative_learning_allowed);
@@ -607,7 +724,9 @@ static void TestBaselineScenarioStream(bool record)
             (int)state->power.limited_current[2], (int)state->power.limited_current[3],
             state->transient.fault, state->transient.mode, state->transient.meter_fresh);
         if (record) fputs(row, fixture);
-        else { ASSERT_TRUE(fgets(expected, sizeof expected, fixture) != NULL); ASSERT_STREQ(expected, row); }
+        else { ASSERT_TRUE(fgets(expected, sizeof expected, fixture) != NULL);
+            if(strcmp(expected,row)!=0) printf("expected %sactual %s",expected,row);
+            ASSERT_STREQ(expected, row); }
     }
     if (!record) ASSERT_TRUE(fgetc(fixture) == EOF);
     fclose(fixture);
@@ -648,7 +767,7 @@ int main(int argc, char **argv)
     ASSERT_TRUE(!tuning_stop_seen); /* Per-motor feedback age is independent of task age. */
     /* Live PID writes apply in the motor cycle and reject a bad whole group. */
     PreparePowerGroup();
-    chassis_power->algorithm.max_current_command = 15000;
+    chassis_power->config.algorithm.max_current_command = 15000;
     RegisterPIDTuning();
     char tuning_set[512] = "@T1,1,SET,pid,1";
     const float wheel[] = {1.25f, .1f, 0, 12000, 2000, 1};
@@ -675,21 +794,23 @@ int main(int argc, char **argv)
     ASSERT_TRUE(dji_motor_instance[0]->motor_controller.speed_PID.MaxOut == 12000);
     RuntimeTuningCancel();
     PreparePowerGroup();
-    chassis_power->algorithm.max_current_command = 15000;
-    chassis_power->control.power_ceiling_w = 4;
+    chassis_power->config.algorithm.max_current_command = 15000;
+    adapter_control.power_ceiling_w = 4;
     SetMeter(0, true, 123);
     for (unsigned w = 0; w < 4; ++w) {
-        chassis_power->models[w].k4 = 0.0001f;
+        chassis_power->config.models[w].k4 = 0.0001f;
         motor_output[w] = 1000;
         speed_reference_aps[w] = speed_feedback_aps[w] = 6000;
     }
     ApplyChassisPowerGroup();
     float ceiling_power = 0;
     for (unsigned w = 0; w < 4; ++w)
-        ceiling_power += PowerModelPredict(&chassis_power->models[w],
+        ceiling_power += PowerModelPredict(&chassis_power->config.models[w],
             chassis_power->state.power.limited_current[w], 1000);
     ASSERT_TRUE(ceiling_power <= 4.0001f);
     TestZeroDemandIsNotActualBaseLimiting();
+    TestFinalGateAndCanResultAreRecorded();
+    TestAdapterRejectsInvalidMembership();
     TestTargetSnapshotDoesNotDependOnFeedbackRounding();
     TestFastProtectionObservesOrAppliesByStage();
     TestStopPublicationDoesNotMixCanAndDiagnostics();

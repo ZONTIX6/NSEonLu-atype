@@ -1,4 +1,4 @@
-#include "chassis_power_link.h"
+#include "chassis_power_policy.h"
 
 #include <math.h>
 #include <stddef.h>
@@ -48,7 +48,7 @@ static int failures;
 
 static void TestValidRefereeSnapshotDrivesCommandAndBudget(void)
 {
-    const ChassisPowerLinkInput_s input = {
+    const ChassisPowerCommandInput_s input = {
         .referee = {
             .valid = true,
             .chassis_output_enabled = true,
@@ -59,9 +59,9 @@ static void TestValidRefereeSnapshotDrivesCommandAndBudget(void)
         .bench_limit_w = 0.0f,
         .chassis_zero_force = false,
     };
-    ChassisPowerLinkOutput_s output;
+    ChassisPowerCommandOutput_s output;
 
-    ASSERT_TRUE(ChassisPowerLinkBuild(&input, &output));
+    ASSERT_TRUE(ChassisPowerBuildCommand(&input, &output));
     ASSERT_TRUE(output.command.enable_dcdc);
     ASSERT_EQ_U32(120U, output.command.referee_power_limit_w);
     ASSERT_EQ_U32(55U, output.command.referee_buffer_energy_j);
@@ -70,13 +70,13 @@ static void TestValidRefereeSnapshotDrivesCommandAndBudget(void)
 
 static void TestInvalidSnapshotFailsSafeInProduction(void)
 {
-    const ChassisPowerLinkInput_s input = {
+    const ChassisPowerCommandInput_s input = {
         .bench_enabled = false,
         .bench_limit_w = 60.0f,
     };
-    ChassisPowerLinkOutput_s output;
+    ChassisPowerCommandOutput_s output;
 
-    ASSERT_TRUE(ChassisPowerLinkBuild(&input, &output));
+    ASSERT_TRUE(ChassisPowerBuildCommand(&input, &output));
     ASSERT_FALSE(output.command.enable_dcdc);
     ASSERT_EQ_U32(0U, output.command.referee_power_limit_w);
     ASSERT_EQ_U32(0U, output.command.referee_buffer_energy_j);
@@ -85,7 +85,7 @@ static void TestInvalidSnapshotFailsSafeInProduction(void)
 
 static void TestRefereeOutputPermissionAndZeroForceDisableDcdc(void)
 {
-    ChassisPowerLinkInput_s input = {
+    ChassisPowerCommandInput_s input = {
         .referee = {
             .valid = true,
             .chassis_output_enabled = false,
@@ -93,9 +93,9 @@ static void TestRefereeOutputPermissionAndZeroForceDisableDcdc(void)
             .buffer_energy_j = 40U,
         },
     };
-    ChassisPowerLinkOutput_s output;
+    ChassisPowerCommandOutput_s output;
 
-    ASSERT_TRUE(ChassisPowerLinkBuild(&input, &output));
+    ASSERT_TRUE(ChassisPowerBuildCommand(&input, &output));
     ASSERT_FALSE(output.command.enable_dcdc);
     ASSERT_EQ_U32(100U, output.command.referee_power_limit_w);
     ASSERT_EQ_U32(40U, output.command.referee_buffer_energy_j);
@@ -103,7 +103,7 @@ static void TestRefereeOutputPermissionAndZeroForceDisableDcdc(void)
 
     input.referee.chassis_output_enabled = true;
     input.chassis_zero_force = true;
-    ASSERT_TRUE(ChassisPowerLinkBuild(&input, &output));
+    ASSERT_TRUE(ChassisPowerBuildCommand(&input, &output));
     ASSERT_FALSE(output.command.enable_dcdc);
     ASSERT_EQ_U32(100U, output.command.referee_power_limit_w);
     ASSERT_EQ_U32(40U, output.command.referee_buffer_energy_j);
@@ -112,7 +112,7 @@ static void TestRefereeOutputPermissionAndZeroForceDisableDcdc(void)
 
 static void TestZeroRefereeLimitDisablesDcdcButPreservesSnapshot(void)
 {
-    const ChassisPowerLinkInput_s input = {
+    const ChassisPowerCommandInput_s input = {
         .referee = {
             .valid = true,
             .chassis_output_enabled = true,
@@ -122,9 +122,9 @@ static void TestZeroRefereeLimitDisablesDcdcButPreservesSnapshot(void)
         .bench_enabled = true,
         .bench_limit_w = 60.0f,
     };
-    ChassisPowerLinkOutput_s output;
+    ChassisPowerCommandOutput_s output;
 
-    ASSERT_TRUE(ChassisPowerLinkBuild(&input, &output));
+    ASSERT_TRUE(ChassisPowerBuildCommand(&input, &output));
     ASSERT_FALSE(output.command.enable_dcdc);
     ASSERT_EQ_U32(0U, output.command.referee_power_limit_w);
     ASSERT_EQ_U32(35U, output.command.referee_buffer_energy_j);
@@ -133,14 +133,14 @@ static void TestZeroRefereeLimitDisablesDcdcButPreservesSnapshot(void)
 
 static void TestExplicitBenchModeUsesLimitButZeroBuffer(void)
 {
-    const ChassisPowerLinkInput_s input = {
+    const ChassisPowerCommandInput_s input = {
         .bench_enabled = true,
         .bench_limit_w = 60.0f,
         .chassis_zero_force = false,
     };
-    ChassisPowerLinkOutput_s output;
+    ChassisPowerCommandOutput_s output;
 
-    ASSERT_TRUE(ChassisPowerLinkBuild(&input, &output));
+    ASSERT_TRUE(ChassisPowerBuildCommand(&input, &output));
     ASSERT_TRUE(output.command.enable_dcdc);
     ASSERT_EQ_U32(60U, output.command.referee_power_limit_w);
     ASSERT_EQ_U32(0U, output.command.referee_buffer_energy_j);
@@ -149,7 +149,7 @@ static void TestExplicitBenchModeUsesLimitButZeroBuffer(void)
 
 static void TestValidRefereeSnapshotTakesPriorityOverBenchLimit(void)
 {
-    const ChassisPowerLinkInput_s input = {
+    const ChassisPowerCommandInput_s input = {
         .referee = {
             .valid = true,
             .chassis_output_enabled = true,
@@ -159,9 +159,9 @@ static void TestValidRefereeSnapshotTakesPriorityOverBenchLimit(void)
         .bench_enabled = true,
         .bench_limit_w = 200.0f,
     };
-    ChassisPowerLinkOutput_s output;
+    ChassisPowerCommandOutput_s output;
 
-    ASSERT_TRUE(ChassisPowerLinkBuild(&input, &output));
+    ASSERT_TRUE(ChassisPowerBuildCommand(&input, &output));
     ASSERT_TRUE(output.command.enable_dcdc);
     ASSERT_EQ_U32(90U, output.command.referee_power_limit_w);
     ASSERT_EQ_U32(25U, output.command.referee_buffer_energy_j);
@@ -170,18 +170,18 @@ static void TestValidRefereeSnapshotTakesPriorityOverBenchLimit(void)
 
 static void TestBenchLimitRoundsAndSaturatesForCommand(void)
 {
-    ChassisPowerLinkInput_s input = {
+    ChassisPowerCommandInput_s input = {
         .bench_enabled = true,
         .bench_limit_w = 60.5f,
     };
-    ChassisPowerLinkOutput_s output;
+    ChassisPowerCommandOutput_s output;
 
-    ASSERT_TRUE(ChassisPowerLinkBuild(&input, &output));
+    ASSERT_TRUE(ChassisPowerBuildCommand(&input, &output));
     ASSERT_EQ_U32(61U, output.command.referee_power_limit_w);
     ASSERT_NEAR(60.5f, output.base_power_limit_w);
 
     input.bench_limit_w = 70000.0f;
-    ASSERT_TRUE(ChassisPowerLinkBuild(&input, &output));
+    ASSERT_TRUE(ChassisPowerBuildCommand(&input, &output));
     ASSERT_EQ_U32(UINT16_MAX, output.command.referee_power_limit_w);
     ASSERT_NEAR(70000.0f, output.base_power_limit_w);
 }
@@ -192,13 +192,13 @@ static void TestInvalidBenchLimitsDoNotEnableFallback(void)
 
     for (size_t i = 0U; i < sizeof(invalid_limits) / sizeof(invalid_limits[0]); ++i)
     {
-        const ChassisPowerLinkInput_s input = {
+        const ChassisPowerCommandInput_s input = {
             .bench_enabled = true,
             .bench_limit_w = invalid_limits[i],
         };
-        ChassisPowerLinkOutput_s output;
+        ChassisPowerCommandOutput_s output;
 
-        ASSERT_TRUE(ChassisPowerLinkBuild(&input, &output));
+        ASSERT_TRUE(ChassisPowerBuildCommand(&input, &output));
         ASSERT_FALSE(output.command.enable_dcdc);
         ASSERT_EQ_U32(0U, output.command.referee_power_limit_w);
         ASSERT_EQ_U32(0U, output.command.referee_buffer_energy_j);
@@ -208,14 +208,14 @@ static void TestInvalidBenchLimitsDoNotEnableFallback(void)
 
 static void TestZeroForceDisablesBenchDcdc(void)
 {
-    const ChassisPowerLinkInput_s input = {
+    const ChassisPowerCommandInput_s input = {
         .bench_enabled = true,
         .bench_limit_w = 60.0f,
         .chassis_zero_force = true,
     };
-    ChassisPowerLinkOutput_s output;
+    ChassisPowerCommandOutput_s output;
 
-    ASSERT_TRUE(ChassisPowerLinkBuild(&input, &output));
+    ASSERT_TRUE(ChassisPowerBuildCommand(&input, &output));
     ASSERT_FALSE(output.command.enable_dcdc);
     ASSERT_EQ_U32(60U, output.command.referee_power_limit_w);
     ASSERT_NEAR(60.0f, output.base_power_limit_w);
@@ -223,7 +223,7 @@ static void TestZeroForceDisablesBenchDcdc(void)
 
 static void TestValidSnapshotEncodesExistingCanLayout(void)
 {
-    const ChassisPowerLinkInput_s input = {
+    const ChassisPowerCommandInput_s input = {
         .referee = {
             .valid = true,
             .chassis_output_enabled = true,
@@ -235,9 +235,9 @@ static void TestValidSnapshotEncodesExistingCanLayout(void)
         0x01U, 0x64U, 0x00U, 0x32U, 0x00U, 0x00U, 0x00U, 0x00U,
     };
     uint8_t actual[8] = {0};
-    ChassisPowerLinkOutput_s output;
+    ChassisPowerCommandOutput_s output;
 
-    ASSERT_TRUE(ChassisPowerLinkBuild(&input, &output));
+    ASSERT_TRUE(ChassisPowerBuildCommand(&input, &output));
     ASSERT_TRUE(SuperCapProtocolEncodeCommand(&output.command, actual));
     for (size_t i = 0U; i < sizeof(expected); ++i)
         ASSERT_EQ_U32(expected[i], actual[i]);
@@ -245,22 +245,22 @@ static void TestValidSnapshotEncodesExistingCanLayout(void)
 
 static void TestRejectsNullPointers(void)
 {
-    const ChassisPowerLinkInput_s input = {0};
-    ChassisPowerLinkOutput_s output;
+    const ChassisPowerCommandInput_s input = {0};
+    ChassisPowerCommandOutput_s output;
 
-    ASSERT_FALSE(ChassisPowerLinkBuild(NULL, &output));
-    ASSERT_FALSE(ChassisPowerLinkBuild(&input, NULL));
+    ASSERT_FALSE(ChassisPowerBuildCommand(NULL, &output));
+    ASSERT_FALSE(ChassisPowerBuildCommand(&input, NULL));
 }
 
 int main(void)
 {
-    const ChassisPowerLinkInput_s disabled_partial = {
+    const ChassisPowerCommandInput_s disabled_partial = {
         .bench_enabled = true, .bench_limit_w = 50,
         .referee = {.valid = false, .chassis_output_valid = true,
                     .chassis_output_enabled = false},
     };
-    ChassisPowerLinkOutput_s disabled_output;
-    ASSERT_TRUE(ChassisPowerLinkBuild(&disabled_partial, &disabled_output));
+    ChassisPowerCommandOutput_s disabled_output;
+    ASSERT_TRUE(ChassisPowerBuildCommand(&disabled_partial, &disabled_output));
     ASSERT_FALSE(disabled_output.command.enable_dcdc);
     TestValidRefereeSnapshotDrivesCommandAndBudget();
     TestInvalidSnapshotFailsSafeInProduction();

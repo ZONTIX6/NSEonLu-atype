@@ -1,4 +1,4 @@
-#include "chassis_power_link.h"
+#include "chassis_power_policy.h"
 #include "crc_ref.h"
 #include "rm_referee.h"
 #include "super_cap_protocol.h"
@@ -126,15 +126,15 @@ static void TestSplitAndCoalescedFramesDriveCompleteCommand(void)
     ASSERT_EQ_U32(0U, TestPlatformTickCallsOutsideCritical());
     ASSERT_EQ_U32(0U, TestPlatformCriticalDepth());
 
-    const ChassisPowerLinkInput_s input = {
+    const ChassisPowerCommandInput_s input = {
         .referee = snapshot,
         .bench_enabled = false,
         .bench_limit_w = 0.0f,
         .chassis_zero_force = false,
     };
-    ChassisPowerLinkOutput_s output = {0};
+    ChassisPowerCommandOutput_s output = {0};
     uint8_t actual_can_frame[8] = {0};
-    ASSERT_TRUE(ChassisPowerLinkBuild(&input, &output));
+    ASSERT_TRUE(ChassisPowerBuildCommand(&input, &output));
     ASSERT_TRUE(SuperCapProtocolEncodeCommand(&output.command,
                                               actual_can_frame));
     AssertFrameEquals(expected_can_frame, actual_can_frame);
@@ -316,15 +316,15 @@ static void Test16BytePowerFrameUpdatesRawDataAndCommand(void)
     ASSERT_TRUE(RefereeGetLinkDiagnostics(&diagnostics));
     ASSERT_EQ_U32(0U, diagnostics.payload_length_error_count);
 
-    const ChassisPowerLinkInput_s input = {
+    const ChassisPowerCommandInput_s input = {
         .referee = snapshot,
         .bench_enabled = false,
         .bench_limit_w = 0.0f,
         .chassis_zero_force = false,
     };
-    ChassisPowerLinkOutput_s output = {0};
+    ChassisPowerCommandOutput_s output = {0};
     uint8_t actual[8] = {0};
-    ASSERT_TRUE(ChassisPowerLinkBuild(&input, &output));
+    ASSERT_TRUE(ChassisPowerBuildCommand(&input, &output));
     ASSERT_TRUE(SuperCapProtocolEncodeCommand(&output.command, actual));
     AssertFrameEquals(expected_can_frame, actual);
 
@@ -460,15 +460,15 @@ static void TestFreshnessBoundaryFailsSafeAndRecovers(void)
     ASSERT_TRUE(RefereeGetPowerSnapshot(&snapshot));
     ASSERT_FALSE(snapshot.valid);
 
-    ChassisPowerLinkInput_s input = {
+    ChassisPowerCommandInput_s input = {
         .referee = snapshot,
         .bench_enabled = false,
         .bench_limit_w = 0.0f,
         .chassis_zero_force = false,
     };
-    ChassisPowerLinkOutput_s output = {0};
+    ChassisPowerCommandOutput_s output = {0};
     uint8_t actual[8] = {0};
-    ASSERT_TRUE(ChassisPowerLinkBuild(&input, &output));
+    ASSERT_TRUE(ChassisPowerBuildCommand(&input, &output));
     ASSERT_TRUE(SuperCapProtocolEncodeCommand(&output.command, actual));
     AssertFrameEquals(expected_zero, actual);
 
@@ -478,7 +478,7 @@ static void TestFreshnessBoundaryFailsSafeAndRecovers(void)
     ASSERT_TRUE(RefereeGetPowerSnapshot(&snapshot));
     ASSERT_TRUE(snapshot.valid);
     input.referee = snapshot;
-    ASSERT_TRUE(ChassisPowerLinkBuild(&input, &output));
+    ASSERT_TRUE(ChassisPowerBuildCommand(&input, &output));
     ASSERT_TRUE(SuperCapProtocolEncodeCommand(&output.command, actual));
     AssertFrameEquals(expected_recovered, actual);
 }

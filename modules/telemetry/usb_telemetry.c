@@ -5,7 +5,7 @@
 #include "usbd_cdc_if.h"
 #include "chassis.h"
 #include "remote_control.h"
-#include "dji_motor.h"
+#include "chassis_power.h"
 #include "power_meter.h"
 #include "rm_referee.h"
 #include "super_cap.h"
@@ -16,7 +16,7 @@
 
 /* Only the low-priority telemetry task owns this scratch storage. */
 static USBTelemetrySample_s sample;
-static DJIChassisPowerState_s model;
+static ChassisPowerSnapshot_s model;
 static ChassisTelemetrySnapshot_s chassis;
 static RemoteControlSnapshot_s remote;
 
@@ -66,7 +66,7 @@ static void Collect(uint32_t now_ms)
         sample.mouse_right = remote.control.mouse.press_r != 0;
         sample.keys = remote.control.key[KEY_PRESS].keys;
     }
-    if (DJIChassisPowerGetSnapshot(&model) && model.registered) {
+    if (ChassisPowerGetSnapshot(&model) && model.registered) {
         now_ms = HAL_GetTick();
         sample.model_tick_ms = model.tick_ms;
         sample.motor_online_mask = model.online_mask & 15U;

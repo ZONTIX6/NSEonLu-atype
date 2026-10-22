@@ -16,7 +16,9 @@
 #include "chassis_power_budget.h"
 #include "chassis_energy_config.h"
 #include "chassis_power_outer_loop.h"
-#include "chassis_power_link.h"
+#include "chassis_power.h"
+#include "dji_power_adapter.h"
+#include "chassis_power_config.h"
 #include "chassis_spin_config.h"
 #include "chassis_spin.h"
 #include "runtime_tuning.h"
@@ -68,13 +70,11 @@ static Referee_Interactive_info_t ui_data; // UI数据，将底盘中的数据�
  DJIMotorInstance *motor_lf, *motor_rf, *motor_lb, *motor_rb; // left right forward back
 static bool chassis_power_ready;
 static bool chassis_power_feedback_ready;
-static ChassisPowerBudgetState_s chassis_budget_state;// 底盘功率预算状态
 static ChassisPowerBudgetOutput_s chassis_budget_output;// 底盘功率预算输出
-static ChassisPowerOuterLoopState_s chassis_outer_loop_state;
-static ChassisPowerOuterLoopOutput_s chassis_outer_loop_output;
 static uint32_t chassis_budget_dwt_count;
-static DJIChassisPowerControlSnapshot_s pending_power_control;
-static uint32_t power_control_version;
+static ChassisPowerControlSnapshot_s pending_power_control;
+static ChassisPower_Init_Config_s power_module_config;
+static uint32_t power_config_version;
 static ChassisTelemetrySnapshot_s chassis_telemetry;
 static Publisher_t *heat_pub;
 static uint32_t heat_publish_tick;
@@ -216,9 +216,14 @@ static bool ApplyPowerTuning(const float *v)
     if (!ChassisPowerOuterLoopConfigIsValid(&outer) ||
         !ChassisPowerBudgetConfigIsValid(&budget) ||
         !ChassisBufferBudgetConfigIsValid(&budget.buffer)) return false;
+    if (chassis_power_ready) {
+        ChassisPower_Init_Config_s next=power_module_config;
+        next.outer=outer;next.budget=budget;
+        if (!ChassisPowerRequestConfig(&next,power_config_version+1)) return false;
+        ++power_config_version;power_module_config=next;
+    }
     chassis_outer_loop_config = outer;
     chassis_budget_config = budget;
-    ChassisPowerOuterLoopReset(&chassis_outer_loop_state);
     return true;
 }
 static bool ApplySpinTuning(const float *v)
@@ -291,8 +296,11 @@ void ChassisInit()
     chassis_motor_config.controller_setting_init_config.motor_reverse_flag = MOTOR_DIRECTION_NORMAL;
     motor_rb = DJIMotorInit(&chassis_motor_config);
 
-    DJIChassisPowerConfig_s power_config = {
-        .motors = {motor_lf, motor_rf, motor_lb, motor_rb},
+    ChassisPower_Init_Config_s power_config = {
+        .budget=chassis_budget_config,.outer=chassis_outer_loop_config,
+        .transient=ChassisPowerTransientDefaultConfig(),.stage=CHASSIS_POWER_CONTROL_STAGE,
+        .use_supercap=CHASSIS_POWER_SOURCE_MODE==CHASSIS_POWER_SOURCE_SUPERCAP,
+        .meter_enabled=POWER_METER_ENABLE!=0,.buffer_enabled=CHASSIS_BUFFER_POWER_ENABLE!=0,
         .algorithm = {
             .safety_factor = CHASSIS_POWER_SAFETY_FACTOR,
             .small_error_threshold_rpm = 500.0f,
@@ -304,9 +312,11 @@ void ChassisInit()
     for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
         power_config.models[i] = m3508_power_model;
 
-    chassis_power_ready = DJIChassisPowerRegister(&power_config);
+    power_module_config=power_config;
+    const DJIPowerAdapterConfig_s adapter_config={.motors={motor_lf,motor_rf,motor_lb,motor_rb},
+        .count=4,.max_current_command=power_config.algorithm.max_current_command};
+    chassis_power_ready = ChassisPowerInit(&power_config) && DJIPowerAdapterInit(&adapter_config);
     chassis_power_feedback_ready = ChassisPowerFeedbackInit();
-    DJIChassisPowerSetAttenuation(1.0f);
     if (!chassis_power_ready)
     {
         DJIMotorStop(motor_lf);
@@ -352,8 +362,6 @@ void ChassisInit()
     };
     (void)PowerMeterInit(&power_meter_config);
 #endif
-    ChassisPowerBudgetReset(&chassis_budget_state, 0.0f);
-    ChassisPowerOuterLoopReset(&chassis_outer_loop_state);
     DWT_GetDeltaT(&chassis_budget_dwt_count);
 
     // 发布订阅初始化,如果为双板,则需要can comm来传递消息
@@ -431,9 +439,8 @@ static void LimitChassisOutput()
     pending_power_control.target_rpm[1] = vt_rf / 6.0f;
     pending_power_control.target_rpm[2] = vt_lb / 6.0f;
     pending_power_control.target_rpm[3] = vt_rb / 6.0f;
-    pending_power_control.version = ++power_control_version;
     pending_power_control.tick_ms = HAL_GetTick();
-    DJIChassisPowerPublishControl(&pending_power_control);
+    DJIPowerAdapterPublish(&pending_power_control);
 }
 
 /**
@@ -450,222 +457,40 @@ static void EstimateSpeed()
 
 static void UpdateChassisPowerBudget(void)
 {
-    bool control_config_valid = true;
-#if CHASSIS_SPIN_DYNAMIC_ENABLED
-    chassis_spin_input = (ChassisSpinInput_s){
-        .spin_enabled = chassis_cmd_recv.chassis_mode == CHASSIS_ROTATE,
-    };
-#endif
-    RefereePowerSnapshot_s referee_snapshot = {0};
-    (void)RefereeGetPowerSnapshot(&referee_snapshot);
-
-    const ChassisPowerLinkInput_s link_input = {
-        .referee = referee_snapshot,
-#if CHASSIS_POWER_BENCH_TEST
-        .bench_enabled = true,
-#else
-        .bench_enabled = false,
-#endif
-        .bench_limit_w = CHASSIS_POWER_BENCH_LIMIT_W,
-        .chassis_zero_force =
-            chassis_cmd_recv.chassis_mode == CHASSIS_ZERO_FORCE,
-    };
-    ChassisPowerLinkOutput_s link_output = {0};
-    (void)ChassisPowerLinkBuild(&link_input, &link_output);
-
-    const uint32_t energy_now_ms = HAL_GetTick();
-    SuperCapStatus_s cap_status = {0};
-    SuperCapInputPower_s cap_input_power = {0};
+    ChassisPowerPolicyInput_s input={.now_ms=HAL_GetTick(),
+        .dt_s=DWT_GetDeltaT(&chassis_budget_dwt_count),
+        .zero_force=chassis_cmd_recv.chassis_mode==CHASSIS_ZERO_FORCE,
+        .bench_enabled=CHASSIS_POWER_BENCH_TEST!=0,.bench_limit_w=CHASSIS_POWER_BENCH_LIMIT_W};
+    (void)RefereeGetPowerSnapshot(&input.referee);
 #if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP
-    (void)SuperCapGetStatus(&cap_status);
-    (void)SuperCapGetInputPower(&cap_input_power);
-#if CHASSIS_BUFFER_POWER_ENABLE
-    cap_status.online = cap_status.online &&
-        (uint32_t)(HAL_GetTick() - cap_status.last_rx_tick_ms) <= 20U;
+    (void)SuperCapGetSnapshot(input.now_ms,&input.cap);
 #endif
-#endif
-    bool input_power_valid = false;
-    bool load_power_valid = false;
-    float measured_input_power_w = 0;
 #if POWER_METER_ENABLE
-    PowerMeterStatus_s input_meter = {0};
-    if (PowerMeterGetStatus(&input_meter))
-        load_power_valid = input_meter.online &&
-            (uint32_t)(HAL_GetTick() - input_meter.last_rx_tick_ms) <= 20U;
+    (void)PowerMeterGetStatus(&input.meter);
 #endif
-#if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP
-    input_power_valid = cap_input_power.online;
-    measured_input_power_w = cap_input_power.input_power_w;
-#elif POWER_METER_ENABLE
-    input_power_valid = load_power_valid;
-    measured_input_power_w = input_meter.power_w;
-#endif
-
-    DJIChassisPowerState_s power_state = {0};
-    const bool power_state_valid = DJIChassisPowerGetSnapshot(&power_state);
-    const uint32_t demand_now_ms = HAL_GetTick();
-    bool demand_valid = power_state_valid && power_state.registered &&
-        power_state.power.status == POWER_MODEL_STATUS_OK && !power_state.numeric_error &&
-        !power_state.transient.fault && power_state.online_mask == 0x0f &&
-        power_state.telemetry.motor_enabled_mask == 0x0f &&
-        power_state.transient.drive_mask != 0 && power_state.transient.brake_mask == 0 &&
-        (uint32_t)(demand_now_ms - power_state.tick_ms) <= 5 &&
-        chassis_cmd_recv.chassis_mode != CHASSIS_ZERO_FORCE;
-    float requested_load_power_w = 0;
-    for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
-    {
-        const float predicted_w = power_state.power.predicted_unlimited_power_w[i];
-        demand_valid &= isfinite(predicted_w) &&
-            (uint32_t)(demand_now_ms - power_state.feedback_tick_ms[i]) <= 5;
-        requested_load_power_w += predicted_w;
-    }
-#if POWER_METER_ENABLE
-    if (load_power_valid && isfinite(input_meter.power_w))
-        requested_load_power_w = fmaxf(requested_load_power_w, input_meter.power_w);
-#endif
-
-    const ChassisPowerBudgetInput_s input = {
-        .referee_limit_w = link_output.base_power_limit_w,
-        .cap_online = cap_status.online,
-        .cap_output_enabled = cap_status.output_enabled,
-        .cap_error_code = cap_status.error_code,
-        .cap_energy_ratio = cap_status.energy_ratio,
-        .cap_reported_limit_w = (float)cap_status.available_power_limit_w,
-        .buffer_control_enabled = CHASSIS_BUFFER_POWER_ENABLE != 0,
-        .use_supercap = CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP,
-        .buffer_data_valid = referee_snapshot.valid &&
-            referee_snapshot.chassis_output_enabled,
-        .buffer_energy_j = (float)referee_snapshot.buffer_energy_j,
-        .buffer_tick_ms = referee_snapshot.buffer_tick_ms,
-        .buffer_age_s = (float)(uint32_t)(energy_now_ms -
-            referee_snapshot.buffer_tick_ms) * 0.001f,
-        .input_power_valid = input_power_valid,
-        .measured_input_power_w = measured_input_power_w,
-        .cap_input_control_ready = cap_input_power.online &&
-            cap_input_power.input_control_active,
-        .load_power_valid = load_power_valid,
-        .demand_valid = demand_valid,
-        .requested_load_power_w = requested_load_power_w,
-        .confirmed_input_target_w = (float)cap_input_power.input_power_target_w,
-    };
-    const float dt_s = DWT_GetDeltaT(&chassis_budget_dwt_count);
-    if (!ChassisPowerBudgetUpdate(&chassis_budget_config,
-                                  &input,
-                                  dt_s,
-                                  &chassis_budget_state,
-                                  &chassis_budget_output))
-    {
-        chassis_budget_output.applied_budget_w = 0.0f;
-        control_config_valid = false;
-    }
-
-    if (referee_snapshot.chassis_output_valid && !referee_snapshot.chassis_output_enabled)
-        control_config_valid = false;
-#if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP
-    link_output.command.input_control_enabled = CHASSIS_BUFFER_POWER_ENABLE &&
-        referee_snapshot.valid && link_output.command.enable_dcdc;
-    link_output.command.input_power_target_w = (uint16_t)fminf(65535,
-        fmaxf(0, chassis_budget_output.input_target_w));
-    (void)SuperCapSendCommand(&link_output.command);
-#endif
-
-#if POWER_METER_ENABLE
-    PowerMeterStatus_s meter_status = {0};
-    bool meter_valid = false;
-    if (PowerMeterGetStatus(&meter_status))
-        meter_valid = meter_status.online;
-
-    float predicted_unlimited_power_w = 0.0f;
-#if CHASSIS_POWER_CONTROL_STAGE == 0
-    float motoring_indicator = 0.0f;
-#endif
-    if (power_state_valid && power_state.registered &&
-        power_state.power.status == POWER_MODEL_STATUS_OK)
-    {
-        for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
-        {
-            predicted_unlimited_power_w +=
-                power_state.power.predicted_unlimited_power_w[i];
-#if CHASSIS_POWER_CONTROL_STAGE == 0
-            motoring_indicator +=
-                power_state.telemetry.current_command[i] *
-                power_state.telemetry.actual_speed_rpm[i];
-#endif
-        }
-    }
-
-#if CHASSIS_POWER_CONTROL_STAGE >= 1
-    meter_status.power_w = power_state.measured_power_w;
-    meter_status.last_rx_tick_ms = power_state.meter_tick_ms;
-    meter_valid = power_state_valid && power_state.meter_online &&
-        (uint32_t)(HAL_GetTick() - meter_status.last_rx_tick_ms) <= 20;
-#endif
-    const ChassisPowerOuterLoopInput_s outer_input = {
-        .nominal_budget_w = chassis_budget_output.applied_budget_w,
-        .target_power_w = chassis_budget_output.applied_budget_w *
-                          CHASSIS_POWER_SAFETY_FACTOR,
-        .measured_power_w = meter_status.power_w,
-        .predicted_unlimited_power_w = predicted_unlimited_power_w,
-        .meter_online = meter_valid,
-        .allow_positive_correction =
-#if CHASSIS_POWER_CONTROL_STAGE == 0
-            meter_valid && meter_status.power_w >= 0.0f &&
-            motoring_indicator >= 0.0f,
-#else
-            meter_valid && power_state.transient.positive_allowed &&
-            meter_status.power_w <= chassis_budget_output.applied_budget_w,
-#endif
+    input.previous_valid=ChassisPowerGetSnapshot(&input.previous);
+    input.now_ms=HAL_GetTick(); /* Evaluate ages after acquiring all asynchronous snapshots. */
 #if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
-        .hold_positive_learning = chassis_cmd_recv.chassis_mode == CHASSIS_ROTATE &&
-            !power_state.base_limited,
+    input.hold_positive_learning=chassis_cmd_recv.chassis_mode==CHASSIS_ROTATE;
 #endif
-        .learning_allowed = meter_valid && power_state.transient.learning_allowed &&
-            meter_status.power_w <= chassis_budget_output.applied_budget_w &&
-            (uint32_t)(HAL_GetTick() - power_state.tick_ms) <= 5,
-        .negative_learning_allowed = CHASSIS_POWER_CONTROL_STAGE == 3 && meter_valid &&
-            power_state.transient.negative_learning_allowed &&
-            power_state.transient.negative_learning_threshold_w >=
-                chassis_budget_output.applied_budget_w * CHASSIS_POWER_SAFETY_FACTOR +
-                    chassis_outer_loop_config.error_deadband_w &&
-            (uint32_t)(HAL_GetTick() - power_state.tick_ms) <= 5,
-        .complete_slow_control = CHASSIS_POWER_CONTROL_STAGE == 3,
-        .base_limited = power_state.base_limited,
-        .demand_sufficient = power_state.transient.drive_mask != 0 && predicted_unlimited_power_w >=
-            chassis_budget_output.applied_budget_w * CHASSIS_POWER_SAFETY_FACTOR -
-            chassis_outer_loop_config.activation_margin_w,
-        .braking = power_state.transient.brake_mask != 0,
-        .meter_tick_ms = meter_status.last_rx_tick_ms,
-        .control_enabled =
-            chassis_power_ready &&
-            chassis_cmd_recv.chassis_mode != CHASSIS_ZERO_FORCE,
-    };
-
-#if CHASSIS_POWER_CONTROL_STAGE == 0
-    if (!ChassisPowerOuterLoopUpdate(&chassis_outer_loop_config,
-#else
-    if (!ChassisPowerOuterLoopUpdateIsolated(&chassis_outer_loop_config,
+    ChassisPowerPolicyOutput_s output;
+    (void)ChassisPowerUpdatePolicy(&input,&output);
+    chassis_budget_output=output.budget;
+    pending_power_control=output.control;
+    pending_power_control.control_enabled &= chassis_power_ready;
+    if(output.cap_command_valid) (void)SuperCapSendCommand(&output.cap_command);
+#if CHASSIS_SPIN_DYNAMIC_ENABLED && POWER_METER_ENABLE
+    const ChassisPowerSnapshot_s power_state=input.previous;
+    const bool power_state_valid=input.previous_valid;
+    PowerMeterStatus_s meter_status=input.meter;
+    bool meter_valid=meter_status.online;
+#if CHASSIS_POWER_CONTROL_STAGE >= 1
+    meter_status.power_w=power_state.measured_power_w;
+    meter_status.last_rx_tick_ms=power_state.meter_tick_ms;
+    meter_valid=power_state_valid && power_state.meter_online &&
+        (uint32_t)(input.now_ms-meter_status.last_rx_tick_ms)<=20;
 #endif
-                                     &outer_input,
-                                     dt_s,
-                                     &chassis_outer_loop_state,
-                                     &chassis_outer_loop_output))
-    {
-        chassis_outer_loop_output.corrected_budget_w = 0.0f;
-        control_config_valid = false;
-    }
-
-    const ChassisPowerControlTelemetry_s control_telemetry = {
-        .nominal_budget_w = chassis_budget_output.applied_budget_w,
-        .target_power_w = outer_input.target_power_w,
-        .corrected_budget_w = chassis_outer_loop_output.corrected_budget_w,
-        .filtered_power_w = chassis_outer_loop_output.filtered_power_w,
-        .error_w = chassis_outer_loop_output.error_w,
-        .correction_w = chassis_outer_loop_output.correction_w,
-        .outer_mode = (uint8_t)chassis_outer_loop_output.mode,
-    };
-    pending_power_control.telemetry = control_telemetry;
-    pending_power_control.legacy_budget_w = chassis_outer_loop_output.corrected_budget_w;
-    pending_power_control.slow_correction_w = chassis_outer_loop_output.correction_w;
+    chassis_spin_input=(ChassisSpinInput_s){.spin_enabled=chassis_cmd_recv.chassis_mode==CHASSIS_ROTATE};
 #if CHASSIS_SPIN_DYNAMIC_ENABLED
     const uint32_t spin_now_ms = HAL_GetTick();
     bool feedback_valid = power_state_valid && power_state.registered &&
@@ -699,31 +524,7 @@ static void UpdateChassisPowerBudget(void)
     chassis_spin_input.increase_allowed = tracking && !current_limited &&
         ChassisSpinTransientAllowsIncrease(&power_state.transient);
 #endif
-#else
-    const ChassisPowerControlTelemetry_s control_telemetry = {
-        .nominal_budget_w = chassis_budget_output.applied_budget_w,
-        .target_power_w = chassis_budget_output.applied_budget_w *
-                          CHASSIS_POWER_SAFETY_FACTOR,
-        .corrected_budget_w = chassis_budget_output.applied_budget_w,
-        .outer_mode = (uint8_t)CHASSIS_POWER_OUTER_OFFLINE,
-    };
-    pending_power_control.telemetry = control_telemetry;
-    pending_power_control.legacy_budget_w = chassis_budget_output.applied_budget_w;
-    pending_power_control.slow_correction_w = 0;
 #endif
-    pending_power_control.nominal_budget_w = chassis_budget_output.applied_budget_w;
-    pending_power_control.target_power_w = chassis_budget_output.applied_budget_w * CHASSIS_POWER_SAFETY_FACTOR;
-    pending_power_control.power_deadband_w = chassis_outer_loop_config.error_deadband_w;
-    pending_power_control.power_ceiling_w = CHASSIS_BUFFER_POWER_ENABLE ?
-        chassis_budget_output.applied_budget_w : 0;
-#if CHASSIS_BUFFER_POWER_ENABLE && CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP
-    if (cap_status.online && cap_status.output_enabled && cap_status.error_code == 0)
-        pending_power_control.power_ceiling_w = fminf(pending_power_control.power_ceiling_w,
-            (float)cap_status.available_power_limit_w);
-#endif
-    pending_power_control.control_enabled = control_config_valid && chassis_power_ready &&
-        chassis_cmd_recv.chassis_mode != CHASSIS_ZERO_FORCE;
-    pending_power_control.zero_force=chassis_cmd_recv.chassis_mode==CHASSIS_ZERO_FORCE;
 #ifdef CHASSIS_BOARD
     pending_power_control.autotune_permitted=ATYPE_BENCH_MODE &&
         VehicleSafetyAllowsAutotune(HAL_GetTick()) && VehicleSafetyAuxStopped(HAL_GetTick()) &&
@@ -837,8 +638,8 @@ void ChassisTask()
     // chassis_feedback_data.bullet_speed = referee_data->GameRobotState.shooter_id1_17mm_speed_limit;
     // chassis_feedback_data.rest_heat = referee_data->PowerHeatData.shooter_heat0;
 
-    DJIChassisPowerState_s power_state = {0};
-    const bool power_state_valid = DJIChassisPowerGetSnapshot(&power_state);
+    ChassisPowerSnapshot_s power_state = {0};
+    const bool power_state_valid = ChassisPowerGetSnapshot(&power_state);
     ChassisPowerFeedbackUpdate(power_state_valid && power_state.registered,
                                power_state_valid ? &power_state.power : NULL);
     (void)ChassisPowerFeedbackGet(&chassis_feedback_data.power_control);
@@ -851,7 +652,7 @@ void ChassisTask()
         .nominal_budget_w = pending_power_control.nominal_budget_w,
         .target_power_w = pending_power_control.target_power_w,
         .buffer_control_enabled = CHASSIS_BUFFER_POWER_ENABLE != 0,
-        .buffer_estimate_valid = chassis_budget_state.buffer_estimate_valid,
+        .buffer_estimate_valid = power_state.policy.buffer_estimate_valid,
         .buffer_recovering = chassis_budget_output.recovering,
         .buffer_lower_j = chassis_budget_output.buffer_lower_j,
         .buffer_predicted_j = chassis_budget_output.buffer_predicted_j,

@@ -7,10 +7,10 @@ SOURCE := test_referee_integration.c \
           ../../modules/referee/rm_referee.c \
           ../../modules/referee/referee_stream_parser.c \
           ../../modules/referee/referee_power.c \
-          ../../modules/super_cap/chassis_power_link.c \
+          ../../modules/chassis_power/chassis_power_command.c \
           ../../modules/super_cap/super_cap_protocol.c \
           ../../modules/referee/crc_ref.c
-INCLUDES := -Istubs -I../../modules/referee -I../../modules/super_cap
+INCLUDES := -I../../modules/chassis_power  -Istubs -I../../modules/referee -I../../modules/super_cap
 HEADERS := $(wildcard stubs/*.h ../../modules/referee/*.h ../../modules/super_cap/*.h)
 
 .PHONY: all test clean

@@ -37,3 +37,6 @@ test: $(TARGET)
 
 clean:
 	-if exist $(TARGET) del /Q $(TARGET)
+
+SOURCE += $(filter-out ../../modules/chassis_power/chassis_power.c,$(wildcard ../../modules/chassis_power/*.c)) ../../modules/algorithm/chassis_power_budget.c ../../modules/algorithm/chassis_power_outer_loop.c
+INCLUDES += -I../../modules/chassis_power -I../../modules/super_cap -I../../modules/referee

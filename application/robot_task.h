@@ -19,6 +19,7 @@
 #include "bsp_log.h"
 #include "board_config.h"
 #include "dji_motor.h"
+#include "chassis_power.h"
 #include "usb_telemetry.h"
 
 osThreadId insTaskHandle;
@@ -49,7 +50,7 @@ void StartPowerCaptureTask(void const *argument)
     (void)argument;
     uint32_t stack_sample_tick = 0;
     for (;;) {
-        DJIChassisPowerCaptureDrain();
+        ChassisPowerCaptureDrain();
         if ((uint32_t)(HAL_GetTick() - stack_sample_tick) >= 200) {
             stack_sample_tick = HAL_GetTick();
             chassis_power_motor_stack_free_words = uxTaskGetStackHighWaterMark(motorTaskHandle);

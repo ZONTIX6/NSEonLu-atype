@@ -164,7 +164,6 @@ modules/referee/referee_task.c \
 modules/remote/remote_control.c \
 modules/super_cap/super_cap_protocol.c \
 modules/super_cap/super_cap.c \
-modules/super_cap/chassis_power_link.c \
 modules/power_meter/power_meter_protocol.c \
 modules/power_meter/power_meter.c \
 modules/can_comm/can_comm.c \
@@ -177,6 +176,7 @@ application/shoot/shoot.c \
 application/cmd/robot_cmd.c \
 application/robot.c
 
+C_SOURCES += $(wildcard modules/chassis_power/*.c) modules/motor/DJImotor/dji_power_adapter.c
 C_SOURCES += modules/imu/ins_math.c application/vehicle_safety.c application/board_optional.c Src/syscalls.c Src/sysmem.c modules/oled/oled_spi.c
 C_SOURCES += $(wildcard modules/TFminiPlus/*.c modules/key/*.c modules/jam_detector/*.c)
 
@@ -295,6 +295,7 @@ C_INCLUDES =  \
 -Imodules/oled \
 -Imodules/referee \
 -Imodules/remote \
+-Imodules/chassis_power \
 -Imodules/super_cap \
 -Imodules/power_meter \
 -Imodules/can_comm \
