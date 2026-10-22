@@ -698,8 +698,31 @@ static void TestNullInputsAreRejectedWithoutChangingState(void)
     ASSERT_EQ_U16(0x0167U, RefereeClientId(103U));
 }
 
+static void TestExtendedVehicleHeat(void)
+{
+    TestContext context;
+    ResetContext(&context);
+    RefereeConfig config=MakeConfig(&context);
+    Referee referee;
+    ASSERT_TRUE(RefereeInit(&referee,&config));
+    uint8_t status[17]={1,1,0,0,0,0,20,0,200,0,80,0,0,0,0,0,2};
+    uint8_t heat[16]={0,0,0,0,0,0,0,0,60,0,11,0,22,0,33,0};
+    context.now_ms=100;
+    FeedFrame(&referee,REFEREE_CMD_ROBOT_STATE,status,17,1);
+    FeedFrame(&referee,REFEREE_CMD_POWER_HEAT,heat,16,2);
+    RefereeHeat snapshot;
+    ASSERT_TRUE(RefereeGetHeat(&referee,&snapshot) && snapshot.valid);
+    ASSERT_EQ_U16(22,snapshot.current_heat);
+    ASSERT_EQ_U16(200,snapshot.heat_limit);
+    RefereePower power;
+    ASSERT_TRUE(RefereeGetPower(&referee,&power) && power.chassis_output_enabled);
+    context.now_ms=401;
+    ASSERT_TRUE(RefereeGetHeat(&referee,&snapshot) && !snapshot.valid);
+}
+
 int main(void)
 {
+    TestExtendedVehicleHeat();
     TestCrcKnownVectorsAndNullHandling();
     TestInitRejectsMissingCallbacksAndMismatchedCriticalPair();
     TestSplitAndCoalescedFramesDecodeWithoutLosingBytes();

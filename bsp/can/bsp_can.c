@@ -28,9 +28,14 @@ static uint8_t idx; // 全局CAN实例索引,每次有新的模块注册会自�
  */
 static void CANAddFilter(CANInstance *_instance)
 {
-    CAN_FilterTypeDef can_filter_conf;
+    CAN_FilterTypeDef can_filter_conf = {0};
     static uint8_t can1_filter_idx = 0, can2_filter_idx = 14; // 0-13给can1用,14-27给can2用
 
+    if ((_instance->can_handle==&hcan1 && can1_filter_idx>=14) ||
+        (_instance->can_handle==&hcan2 && can2_filter_idx>=28)) Error_Handler();
+    can_filter_conf.FilterIdHigh=_instance->rx_id<<5;
+    can_filter_conf.FilterMaskIdHigh=_instance->rx_id<<5;
+    can_filter_conf.FilterMaskIdLow=_instance->rx_id<<5;
     can_filter_conf.FilterMode = CAN_FILTERMODE_IDLIST;                                                       // 使用id list模式,即只有将rxid添加到过滤器中才会接收到,其他报文会被过滤
     can_filter_conf.FilterScale = CAN_FILTERSCALE_16BIT;                                                      // 使用16位id模式,即只有低16位有效
     can_filter_conf.FilterFIFOAssignment = (_instance->tx_id & 1) ? CAN_RX_FIFO0 : CAN_RX_FIFO1;              // 奇数id的模块会被分配到FIFO0,偶数id的模块会被分配到FIFO1
@@ -39,7 +44,7 @@ static void CANAddFilter(CANInstance *_instance)
     can_filter_conf.FilterBank = _instance->can_handle == &hcan1 ? (can1_filter_idx++) : (can2_filter_idx++); // 根据can_handle判断是CAN1还是CAN2,然后自增
     can_filter_conf.FilterActivation = CAN_FILTER_ENABLE;                                                     // 启用过滤器
 
-    HAL_CAN_ConfigFilter(_instance->can_handle, &can_filter_conf);
+    if (HAL_CAN_ConfigFilter(_instance->can_handle, &can_filter_conf)!=HAL_OK) Error_Handler();
 }
 
 /**

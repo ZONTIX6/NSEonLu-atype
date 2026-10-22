@@ -10,6 +10,10 @@ static char captured_data[RTT_TELEMETRY_CHASSIS_POWER_CSV_MAX_LENGTH];
 static PowerMeterStatus_s test_meter;
 static bool publish_stop_during_pid;
 static uint32_t test_tick=123;
+static bool safety_drive=true, safety_bench=true;
+bool VehicleSafetyAllowsDrive(uint32_t now) {(void)now;return safety_drive;}
+bool VehicleSafetyAllowsAutotune(uint32_t now) {(void)now;return safety_bench;}
+
 
 static void SetMeter(float power, bool online, uint32_t tick)
 {
@@ -138,6 +142,7 @@ static void PreparePowerGroup(void)
     static DJIChassisPowerInstance_s power_group;
     static DJIMotorInstance motors[POWER_MODEL_MOTOR_COUNT];
     static DaemonInstance daemons[POWER_MODEL_MOTOR_COUNT];
+    static CANInstance can[POWER_MODEL_MOTOR_COUNT];
 
     memset(&power_group, 0, sizeof(power_group));
     memset(motors, 0, sizeof(motors));
@@ -148,6 +153,7 @@ static void PreparePowerGroup(void)
     memset(speed_feedback_aps, 0, sizeof(speed_feedback_aps));
     memset(captured_data, 0, sizeof(captured_data));
     memset(&test_meter, 0, sizeof(test_meter));
+    safety_drive=safety_bench=true;
     idx = 4;
 
     power_group.registered = true;
@@ -170,6 +176,10 @@ static void PreparePowerGroup(void)
         power_group.models[i].current_conversion = 1.0f;
         daemons[i].online = 1U;
         motors[i].daemon = &daemons[i];
+        motors[i].measure.rx_sequence=1;
+        motors[i].measure.rx_tick_ms=test_tick;
+        can[i].can_handle=&hcan1;can[i].rx_id=0x201U+i;
+        motors[i].motor_can_instance=&can[i];
         motors[i].stop_flag = MOTOR_ENALBED;
         motors[i].sender_group = 1;
         motors[i].message_num = (uint8_t)i;
@@ -412,9 +422,73 @@ static void TestCalibrationPrintsLimitedCurrentsInsteadOfPidDemand(void)
     ASSERT_STREQ(expected, captured_data);
 }
 
+static void AddVehicleMotors(void)
+{
+    static DJIMotorInstance extra[5];
+    static DaemonInstance daemons[5];
+    static CANInstance can[5];
+    const uint8_t ids[5]={1,2,3,4,7};
+    memset(extra,0,sizeof extra);memset(can,0,sizeof can);
+    for(unsigned j=0;j<5;++j) {
+        extra[j].motor_type=j<2?GM6020:(j==4?M2006:M3508);
+        CAN_Init_Config_s config={.can_handle=&hcan2,.tx_id=ids[j]};
+        MotorSenderGrouping(&extra[j],&config);
+        can[j].can_handle=&hcan2;can[j].rx_id=config.rx_id;
+        extra[j].motor_can_instance=&can[j];
+        daemons[j].online=true;extra[j].daemon=&daemons[j];
+        extra[j].measure.rx_tick_ms=test_tick;
+        extra[j].measure.rx_sequence=1;
+        extra[j].motor_controller.pid_ref=100+j;
+        extra[j].stop_flag=MOTOR_STOP;
+        dji_motor_instance[idx++]=&extra[j];
+    }
+    const unsigned groups[5]={3,3,4,4,3},slots[5]={0,1,2,3,2};
+    for(unsigned j=0;j<5;++j) {
+        ASSERT_TRUE(extra[j].sender_group==groups[j]);
+        ASSERT_TRUE(extra[j].message_num==slots[j]);
+    }
+}
+
+static void TestNineMotorPowerAndStopIsolation(void)
+{
+    PreparePowerGroup();AddVehicleMotors();
+    for(unsigned i=4;i<9;++i) motor_output[i]=100+i;
+    ApplyChassisPowerGroup();
+    for(unsigned i=4;i<9;++i) ASSERT_TRUE(motor_output[i]==100+i);
+    safety_drive=false;DJIMotorControl();
+    for(unsigned group=0;group<6;++group)
+        for(unsigned byte=0;byte<8;++byte) ASSERT_TRUE(sender_assignment[group].tx_buff[byte]==0);
+    safety_drive=true;
+    dji_motor_instance[8]->stop_flag=MOTOR_ENALBED;
+    dji_motor_instance[8]->measure.rx_tick_ms=test_tick-21;
+    DJIMotorControl();
+    ASSERT_TRUE(sender_assignment[3].tx_buff[4]==0 && sender_assignment[3].tx_buff[5]==0);
+    /* One moving non-chassis motor blocks a full-vehicle Flash save. */
+    for(unsigned t=1000;t<=1100;t+=2) {
+        for(unsigned i=0;i<9;++i) {
+            cycle_stop[i]=MOTOR_STOP;cycle_online[i]=true;
+            cycle_measure[i].rx_tick_ms=t;cycle_measure[i].speed_aps=0;
+            dji_motor_instance[i]->stop_flag=MOTOR_STOP;
+        }
+        UpdateTuningStopState(t,true);
+    }
+    ASSERT_TRUE(DJIMotorCanSaveParameters(1100));
+    cycle_measure[8].speed_aps=301;UpdateTuningStopState(1100,true);
+    ASSERT_TRUE(!DJIMotorCanSaveParameters(1100));
+    PreparePowerGroup();AddVehicleMotors();
+    DJIMotorInstance *original[9];memcpy(original,dji_motor_instance,sizeof original);
+    for(unsigned i=0;i<5;++i) dji_motor_instance[i]=original[i+4];
+    for(unsigned i=0;i<4;++i) {dji_motor_instance[i+5]=original[i];chassis_power->motor_indices[i]=i+5;}
+    ReadMotorCycle();
+    for(unsigned i=0;i<9;++i) motor_output[i]=100+i;
+    ApplyChassisPowerGroup();
+    for(unsigned i=0;i<5;++i) ASSERT_TRUE(motor_output[i]==100+i);
+}
+
 static void TestAutotuneIsolationAndExplicitZeroForceRearm(void)
 {
     PreparePowerGroup();
+    AddVehicleMotors();
     AutotuneCancel();
     PIDAutotuneFeedback f={.now_ms=123,.permitted=true,.feedback_ok=true,.can_ok=true};
     AutotuneDrive unused;AutotuneMotorStep(&f,&unused);
@@ -435,6 +509,7 @@ static void TestAutotuneIsolationAndExplicitZeroForceRearm(void)
     ASSERT_TRUE(dji_motor_instance[2]->motor_controller.speed_PID.MaxOut==2000);
     ASSERT_TRUE(dji_motor_instance[2]->motor_controller.speed_PID.DWT_CNT==1234);
     for(unsigned w=0;w<4;++w) ASSERT_TRUE(cycle_stop[w]==(w==2?MOTOR_ENALBED:MOTOR_STOP));
+    for(unsigned i=4;i<9;++i) ASSERT_TRUE(cycle_stop[i]==MOTOR_STOP && cycle_reference[i]==0);
     AutotuneCancel();ReadMotorCycle();ApplyAutotuneCycle();
     ASSERT_TRUE(!autotune_owned && autotune_inhibit);
     ASSERT_TRUE(dji_motor_instance[2]->motor_controller.speed_PID.Kp==.75f);
@@ -549,6 +624,7 @@ int main(void)
     TestStopPublicationDoesNotMixCanAndDiagnostics();
     TestAtomicPublicationAndFinalIntegerCommands();
     TestAutotuneIsolationAndExplicitZeroForceRearm();
+    TestNineMotorPowerAndStopIsolation();
     if (CHASSIS_POWER_CONTROL_STAGE == 0 && POWER_METER_ENABLE) {
         TestControlAndMeasurementSnapshotsReachOneRttRow();
         TestOfflineMeasurementKeepsValueAndTick();

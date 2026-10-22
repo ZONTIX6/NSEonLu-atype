@@ -26,6 +26,10 @@ int main(void)
     const uint8_t frame[18] = {255,3,32,0,1,120,236,255,30,0,0,0,1,0,1,128,0,4};
     memcpy(uart.recv_buff, frame, sizeof frame);
     tick = 123;
+    uart.recv_data_len=6;
+    uart.module_callback();
+    assert(RemoteControlGetSnapshot(&s) && !s.has_sample && !s.online);
+    uart.recv_data_len=18;
     uart.module_callback();
     assert(RemoteControlGetSnapshot(&s));
     assert(s.has_sample && s.online && s.last_rx_tick_ms == 123);
@@ -38,6 +42,10 @@ int main(void)
     tick = 224;
     assert(RemoteControlGetSnapshot(&s) && !s.online); /* No daemon tick needed. */
     tick = 230;
+    uart.recv_buff[5]&=0x0fU; /* Missing both switch bits cannot refresh liveness. */
+    uart.module_callback();
+    assert(RemoteControlGetSnapshot(&s) && !s.online && s.last_rx_tick_ms==123);
+    memcpy(uart.recv_buff,frame,sizeof frame);
     uart.module_callback();
     assert(RemoteControlGetSnapshot(&s) && s.online);
     for (unsigned i = 0; i < 11; ++i) DaemonTask();

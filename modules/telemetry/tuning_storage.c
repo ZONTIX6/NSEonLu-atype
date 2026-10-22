@@ -1,7 +1,7 @@
 #include "tuning_storage.h"
 #include <string.h>
 #define MAGIC 0x54554e45U
-#define SCHEMA 1U
+#define SCHEMA 2U /* A-board vehicle; intentionally rejects C-board records. */
 #define COMMIT 0x434f4d4dU
 #define CRC_WORD (TUNING_RECORD_WORDS - 2U)
 #define COMMIT_WORD (TUNING_RECORD_WORDS - 1U)

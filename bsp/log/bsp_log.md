@@ -4,29 +4,24 @@
 
 ## 使用说明
 
-bsp_log支持SEGGER RTT和C板USART1两种日志出口，具体由`Inc/board_config.h`中的`UART1_USE`选择。
+A 板日志出口由 `Inc/board_config.h` 的 `LOG_OUTPUT` 选择，默认 1。
 
-## C板USART1 + DAPLink Serial Monitor
+| LOG_OUTPUT | 出口 |
+| --- | --- |
+| 0 | 关闭 |
+| 1 | RTT 通道 0 |
+| 2 | USART2 TX/PD5，115200 8N1 |
+| 3 | RTT 与 USART2 |
 
-`UART1_USE`有三个模式：
+USART1 固定用于 DBUS；裁判系统独立使用 USART6。旧 `UART1_USE` 已废止，显式传入会报错。
 
-- `UART1_USE_REFEREE`（`0`）：USART1给裁判系统，日志只走RTT；串口保持`115200 8N1`。
-- `UART1_USE_LOG`（`1`）：USART1给日志，日志通过TX DMA发送到DAPLink；裁判/UI不初始化，串口为`115200 8N1`。
-- `UART1_USE_LOG_RTT`（`2`）：日志同时发送到USART1和RTT。
-
-默认值是`UART1_USE_LOG`。也可以在GNU Make中覆盖：
-
-```text
-mingw32-make UART1_USE=1
+```powershell
+make -j8 BUILD_DIR=build/atype-uart-log LOG_OUTPUT=2
 ```
 
-硬件连接：C板`USART1_TX`（MCU `PA9`）接DAPLink UART RX，并连接GND；单向观察日志不需要连接USART1_RX。VSCode **Serial Monitor**选择DAPLink枚举出的串口，设置为`115200 baud`、`8 data bits`、`no parity`、`1 stop bit`、`no flow control`。
+USART2 TX/PD5 接串口适配器 RX 并共地；发送使用非阻塞中断队列，不占 TX DMA。队列空间不足时整条消息丢弃。辅助设备不能同时占用 USART2，板级配置会检查冲突。格式化日志移除 ANSI 颜色码，原始 `BSPLogWrite*` 保持字节内容。
 
-日志发送使用固定大小的非阻塞DMA队列，队列空间不足时整条消息丢弃，不会阻塞电机控制任务。UART日志会移除格式化日志中的ANSI颜色控制序列；原始`BSPLogWrite*`数据保持字节不变。
-
-当前根`Makefile`保留了`DISABLE_LOG_SYSTEM`定义，因此`LOGINFO`、`LOGWARNING`和`LOGERROR`宏默认关闭；`PrintLog`、`BSPLogWrite*`以及结构化底盘功率CSV仍会按上述出口发送。需要分级日志时请移除该构建定义。
-
-切回实车裁判模式时，将`UART1_USE`改为`UART1_USE_REFEREE`（或构建时传`UART1_USE=0`），重新下载固件并恢复裁判系统接线；日志会继续通过RTT输出。
+`DISABLE_LOG_SYSTEM` 默认 0，可构建覆盖为 1 来关闭分级日志宏；`PrintLog`、`BSPLogWrite*` 仍按 `LOG_OUTPUT` 选择出口。J-Scope 二进制使用 RTT 通道 1，不与文本混流。功控高速采样配置要求 `LOG_OUTPUT=2/3`，使用 USART2 独立传输。
 
 推荐使用`bsp_log.h`中提供了三级日志：
 

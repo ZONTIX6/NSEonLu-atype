@@ -1,30 +1,53 @@
 #include "tfminiplus.h"
-#include "stdlib.h"
-#include "bsp_dwt.h"
+#include "daemon.h"
 
-static TFMiniInstance *tfmini;
+static TFminiPlus_Recv_s tfminiplus_data;
+static USARTInstance *tfminiplus_usart_instance;
+static DaemonInstance *openmv_daemon_instance;
 
-TFMiniInstance *TFMiniRegister(I2C_HandleTypeDef *hi2c)
+static void DecodeTFminiPlus()
 {
-	tfmini = (TFMiniInstance *)malloc(sizeof(TFMiniInstance));
-	IIC_Init_Config_s conf = {
-		.handle = hi2c,
-		.dev_address = 0x10,
-		.id = tfmini,
-		.work_mode = IIC_BLOCK_MODE,
-	};
-	tfmini->iic = IICRegister(&conf);
-	DWT_Delay(0.5);
-	return tfmini;
+    if(tfminiplus_usart_instance->recv_data_len!=TFMINIPLUS_RECV_SIZE) return;
+    uint8_t check_sum = 0;
+    if( tfminiplus_usart_instance->recv_buff[0] == TFMINIPLUS_FRAME_HEAD_1 &&
+        tfminiplus_usart_instance->recv_buff[1] == TFMINIPLUS_FRAME_HEAD_2)
+    {
+        for (uint8_t i = 0; i < TFMINIPLUS_RECV_SIZE-1; i++)
+        {
+            check_sum += tfminiplus_usart_instance->recv_buff[i];
+        }
+        if(check_sum != tfminiplus_usart_instance->recv_buff[TFMINIPLUS_RECV_SIZE-1])
+            return;
+        DaemonReload(openmv_daemon_instance);
+        tfminiplus_data.distance = (tfminiplus_usart_instance->recv_buff[2] |(uint16_t)tfminiplus_usart_instance->recv_buff[3]<<8);
+        tfminiplus_data.strength = (tfminiplus_usart_instance->recv_buff[4] |(uint16_t)tfminiplus_usart_instance->recv_buff[5]<<8);
+        tfminiplus_data.temperature = (tfminiplus_usart_instance->recv_buff[6] |(uint16_t)tfminiplus_usart_instance->recv_buff[7]<<8)/8.0f-256.0f;
+    }
+    else
+    {
+        return;
+    }
 }
 
-float GetDistance(TFMiniInstance *tfmini)
+static void TFminiPlusOffineCallback()
 {
-	uint8_t cmd_buf[5] = {0x5A, 0x05, 0x00, 0x06, 0x65}; 
-	IICTransmit(tfmini->iic, cmd_buf, 5, IIC_SEQ_RELEASE);
-	IICReceive(tfmini->iic, tfmini->buf, 11, IIC_SEQ_RELEASE);
-	tfmini->Mode = tfmini->buf[6];
-	tfmini->Dist = (uint16_t)tfmini->buf[2] + (((uint16_t)tfmini->buf[3]) << 8);
-	tfmini->Strength = tfmini->buf[4] | (tfmini->buf[5] << 8);
-	return tfmini->Dist;
+    USARTServiceInit(tfminiplus_usart_instance);
+}
+
+TFminiPlus_Recv_s *TFminiPlusInit(UART_HandleTypeDef *_handle)
+{
+    USART_Init_Config_s conf;
+    conf.module_callback = DecodeTFminiPlus;
+    conf.recv_buff_size = TFMINIPLUS_RECV_SIZE;
+    conf.usart_handle = _handle;
+    tfminiplus_usart_instance = USARTRegister(&conf);
+
+    Daemon_Init_Config_s daemon_conf = {
+        .callback = TFminiPlusOffineCallback,
+        .owner_id = tfminiplus_usart_instance,
+        .reload_count = 10,
+    };
+    openmv_daemon_instance = DaemonRegister(&daemon_conf);
+
+    return &tfminiplus_data;
 }

@@ -25,6 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "board_optional.h"
 
 /* USER CODE END Includes */
 
@@ -124,6 +125,7 @@ void StartDefaultTask(void const * argument)
 {
   /* init code for USB_DEVICE */
   MX_USB_DEVICE_Init();
+  BoardOptionalInit();
   /* USER CODE BEGIN StartDefaultTask */
   osThreadTerminate(NULL); // 避免空置和切换占用cpu
   /* USER CODE END StartDefaultTask */

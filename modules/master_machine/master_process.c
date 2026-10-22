@@ -1,3 +1,4 @@
+#include "board_config.h"
 /**
  * @file master_process.c
  * @author neozng
@@ -13,13 +14,15 @@
 #include "daemon.h"
 #include "bsp_log.h"
 #include "robot_def.h"
-#include "board_config.h"
 #include "usb_telemetry_config.h"
 
 static Vision_Recv_s recv_data;
 static Vision_Send_s send_data;
 #if defined(VISION_USE_UART) || (defined(VISION_USE_VCP) && !USB_TELEMETRY_ENABLE)
 static DaemonInstance *vision_daemon_instance;
+#ifdef VISION_USE_UART
+static USARTInstance *vision_usart_instance;
+#endif
 #endif
 
 void VisionSetFlag(Enemy_Color_e enemy_color, Work_Mode_e work_mode, Bullet_Speed_e bullet_speed)
@@ -57,7 +60,7 @@ static void VisionOfflineCallback(void *id)
 
 #include "bsp_usart.h"
 
-static USARTInstance *vision_usart_instance;
+
 
 /**
  * @brief 接收解包回调函数,将在bsp_usart.c中被usart rx callback调用
@@ -99,6 +102,7 @@ Vision_Recv_s *VisionInit(UART_HandleTypeDef *_handle)
  */
 void VisionSend()
 {
+    if (vision_usart_instance==NULL || !USARTIsReady(vision_usart_instance)) return;
     // buff和txlen必须为static,才能保证在函数退出后不被释放,使得DMA正确完成发送
     // 析构后的陷阱需要特别注意!
     static uint16_t flag_register;

@@ -120,6 +120,8 @@ static void HandleValidFrame(void *context,
 			if (extended_power_heat)
 			{
 				/* In 16-byte frames, offset 12 is 17 mm heat; 42 mm is at 14. */
+				memcpy(&referee_info.PowerHeatData.shooter_17mm_barrel_heat,
+					   &payload[12], sizeof(uint16_t));
 				memcpy(&referee_info.PowerHeatData.shooter_42mm_barrel_heat,
 					   &payload[14],
 					   sizeof(referee_info.PowerHeatData.shooter_42mm_barrel_heat));
@@ -244,6 +246,16 @@ bool RefereeGetPowerSnapshot(RefereePowerSnapshot_s *snapshot)
 	taskEXIT_CRITICAL();
 
 	return RefereePowerBuildSnapshot(&state, now_ms, snapshot);
+}
+
+bool RefereeGetHeatSnapshot(RefereeHeatSnapshot_s *snapshot)
+{
+	RefereePowerState_s state;
+	taskENTER_CRITICAL();
+	state = referee_power_state;
+	uint32_t now_ms = HAL_GetTick();
+	taskEXIT_CRITICAL();
+	return RefereeHeatBuildSnapshot(&state, now_ms, snapshot);
 }
 
 bool RefereeGetLinkDiagnostics(RefereeLinkDiagnostics_s *diagnostics)

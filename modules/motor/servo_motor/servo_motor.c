@@ -13,6 +13,7 @@ static void DecodeServo();
 // 通过此函数注册一个舵机
 ServoInstance *ServoInit(Servo_Init_Config_s *Servo_Init_Config)
 {
+    if(servo_idx>=SERVO_MOTOR_CNT || Servo_Init_Config==NULL) return NULL;
     ServoInstance *servo = (ServoInstance *)malloc(sizeof(ServoInstance));
     memset(servo, 0, sizeof(ServoInstance));
     USART_Init_Config_s config;
@@ -33,8 +34,7 @@ ServoInstance *ServoInit(Servo_Init_Config_s *Servo_Init_Config)
         break;
     }
     servo->servo_id = Servo_Init_Config->servo_id;
-    servo_idx++;
-    servo_motor_instance[servo->servo_id] = servo;
+    servo_motor_instance[servo_idx++] = servo;
 
     return servo;
 }
@@ -47,8 +47,8 @@ void ServoSetAngle(ServoInstance *servo, float angle)
     case Bus_Servo:
         servo_angle_write[8] = (uint16_t)angle&0xff;
         servo_angle_write[9] = (uint16_t)angle>>8;
-        USARTSend(servo->usart_instance, servo_angle_write, 16, USART_TRANSFER_DMA);
-       // USARTSend(servo->usart_instance, servo_angle_read, 6, USART_TRANSFER_DMA);
+        USARTSend(servo->usart_instance, servo_angle_write, 16, USART_TRANSFER_IT);
+       // USARTSend(servo->usart_instance, servo_angle_read, 6, USART_TRANSFER_IT);
         break;
     case PWM_Servo:
         servo->angle = angle;

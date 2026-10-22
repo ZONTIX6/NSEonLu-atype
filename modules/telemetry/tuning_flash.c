@@ -3,6 +3,7 @@
 #include "runtime_tuning.h"
 #include "chassis.h"
 #include "dji_motor.h"
+#include "vehicle_safety.h"
 #include "main.h"
 #include "FreeRTOS.h"
 #include "task.h"
@@ -36,7 +37,7 @@ static bool Erase(void *context,unsigned bank)
     (void)context;
     if (bank>1) return false;
     FLASH_EraseInitTypeDef erase={.TypeErase=FLASH_TYPEERASE_SECTORS,
-        .Sector=bank ? FLASH_SECTOR_11 : FLASH_SECTOR_10,
+        .Sector=bank ? FLASH_SECTOR_23 : FLASH_SECTOR_22,
         .NbSectors=1,.VoltageRange=FLASH_VOLTAGE_RANGE_3};
     uint32_t error=UINT32_MAX;
     HAL_StatusTypeDef result=HAL_FLASHEx_Erase(&erase,&error);
@@ -58,8 +59,11 @@ void TuningFlashPoll(void)
     vTaskSuspendAll();
     ChassisTelemetrySnapshot_s chassis={0};
     uint32_t now=HAL_GetTick();
-    bool safe=!RuntimeTuningTrialActive() && ChassisGetTelemetrySnapshot(&chassis) && chassis.mode==0 &&
+    bool safe=VehicleSafetyIsStopped(now) && !RuntimeTuningTrialActive() && ChassisGetTelemetrySnapshot(&chassis) && chassis.mode==0 &&
         (uint32_t)(now-chassis.tick_ms)<=5 && DJIMotorCanSaveParameters(now);
+#if defined(CHASSIS_BOARD)
+    safe &= VehicleSafetyAuxStopped(now);
+#endif
     if (!safe) {(void)xTaskResumeAll(); return;}
     bool success=false;
     if (HAL_FLASH_Unlock()==HAL_OK) {

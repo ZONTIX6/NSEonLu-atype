@@ -19,11 +19,13 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 project(basic_framework C ASM) 
 
 # 选择构建类型
-set(CMAKE_BUILD_TYPE Debug) # Debug Release RelWithDebInfo MinSizeRel
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type")
+endif()
 
 # board specific settings, arch/fpu/instruction
 set(MCU_FLAGS -mcpu=cortex-m4 -mthumb -mthumb-interwork -mfloat-abi=hard -mfpu=fpv4-sp-d16)
-set(LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/STM32F407IGHx_FLASH.ld") # 指定链接脚本
+set(LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/STM32F427IIHx_FLASH.ld") # 指定链接脚本
 set(DSP_NAME "libCMSISDSP.a") # 指定DSP库名称
 link_directories(${CMAKE_SOURCE_DIR}/Middlewares/ST/ARM/DSP/Lib)
 
@@ -32,7 +34,6 @@ add_compile_options(-pipe ${MCU_FLAGS} -Wall -Werror -fmessage-length=0 # basic 
                     -ffunction-sections -fdata-sections -fno-common -fstack-usage # optimize options
                     )
 add_link_options(-pipe ${MCU_FLAGS} -T${LINKER_SCRIPT} -Wl,--no-warn-rwx-segments # close RWX warning
-                 -lm -lc -lnosys # lib options
                  -Wl,--gc-sections -flto -specs=nano.specs -specs=nosys.specs # optimize options
                  -Wl,-Map=${PROJECT_BINARY_DIR}/${PROJECT_NAME}.map -Wl,--cref -Wl,--print-memory-usage # map options
                  ) # if your executable is too large , try option '-s' to strip symbols
@@ -41,31 +42,34 @@ add_link_options(-pipe ${MCU_FLAGS} -T${LINKER_SCRIPT} -Wl,--no-warn-rwx-segment
 # while add_definitions() works for both compile and link stage
 add_definitions(
     -DUSE_HAL_DRIVER 
-    -DSTM32F407xx 
+    -DSTM32F427xx
     -DARM_MATH_CM4 
     ) # need -D<macro> to define macro
 
+set(ATYPE_PROFILE "atype-vehicle" CACHE STRING "A-board profile")
+if(NOT ATYPE_PROFILE MATCHES "^atype-(vehicle|bench|direct)$")
+    message(FATAL_ERROR "Invalid ATYPE_PROFILE")
+endif()
 if(DEFINED UART1_USE)
-    add_compile_definitions(UART1_USE=${UART1_USE})
+    message(FATAL_ERROR "UART1_USE is retired: USART1 is DBUS; use REFEREE_ENABLE and LOG_OUTPUT")
 endif()
-
-if(DEFINED USB_TELEMETRY_ENABLE)
-    add_compile_definitions(USB_TELEMETRY_ENABLE=${USB_TELEMETRY_ENABLE})
+if(ATYPE_PROFILE STREQUAL "atype-bench")
+    if(NOT DEFINED ATYPE_BENCH_MODE)
+        set(ATYPE_BENCH_MODE 1)
+    endif()
+    if(NOT DEFINED CHASSIS_POWER_BENCH_TEST)
+        set(CHASSIS_POWER_BENCH_TEST 1)
+    endif()
 endif()
-
-if(DEFINED REFEREE_LEGACY_POWER_FIELDS_ENABLED)
-    add_compile_definitions(REFEREE_LEGACY_POWER_FIELDS_ENABLED=${REFEREE_LEGACY_POWER_FIELDS_ENABLED})
+if(NOT ATYPE_PROFILE STREQUAL "atype-vehicle" AND NOT DEFINED CHASSIS_POWER_SOURCE_MODE)
+    set(CHASSIS_POWER_SOURCE_MODE 0)
 endif()
-
-foreach(POWER_OPTION POWER_METER_ENABLE CHASSIS_POWER_CONTROL_STAGE CHASSIS_POWER_CAPTURE_ENABLE CHASSIS_SPIN_ADAPTIVE_ENABLE CHASSIS_SPIN_MODE CHASSIS_BUFFER_POWER_ENABLE CHASSIS_POWER_SOURCE_MODE)
-    if(DEFINED ${POWER_OPTION})
-        add_compile_definitions(${POWER_OPTION}=${${POWER_OPTION}})
+file(STRINGS "${CMAKE_SOURCE_DIR}/config/atype-options.txt" ATYPE_OPTIONS)
+foreach(OPTION IN LISTS ATYPE_OPTIONS)
+    if(DEFINED ${OPTION})
+        add_compile_definitions(${OPTION}=${${OPTION}})
     endif()
 endforeach()
-
-if(DEFINED CHASSIS_POWER_CALIBRATION_ENABLE)
-    add_compile_definitions(CHASSIS_POWER_CALIBRATION_ENABLE=${CHASSIS_POWER_CALIBRATION_ENABLE})
-endif()
 
 # add inc
 # 递归包含头文件的函数
@@ -90,7 +94,7 @@ include_sub_directories_recursively(${CMAKE_SOURCE_DIR}/application)
 include_sub_directories_recursively(${CMAKE_SOURCE_DIR}/Inc)
 
 # add source, only surfix .c
-file(GLOB_RECURSE SOURCES
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
     "Drivers/*.c"
     "Src/*.c"
     "Middlewares/*.c"
@@ -99,10 +103,12 @@ file(GLOB_RECURSE SOURCES
     "application/*.c"
 )
 
+list(FILTER SOURCES EXCLUDE REGEX "/modules/imu/(ins_task|BMI088driver|BMI088Middleware)\\.c$")
+
 # 汇编文件路径
 # ENABLE_LANGUAGE(ASM)
 set(ASM_SOURCES
-    startup_stm32f407xx.s
+    startup_stm32f427xx.s
     Middlewares/Third_Party/SEGGER/RTT/SEGGER_RTT_ASM_ARMv7M.s
     )
 set_source_files_properties(${ASM_SOURCES} PROPERTIES COMPILE_FLAGS "-x assembler-with-cpp")
@@ -125,7 +131,13 @@ endif ()
 
 # build binary and hex file
 add_executable(${PROJECT_NAME}.elf  ${SOURCES} ${ASM_SOURCES} ${LINKER_SCRIPT})
-target_link_libraries(${PROJECT_NAME}.elf ${DSP_NAME} m) # link DSP lib and math lib
+target_link_libraries(${PROJECT_NAME}.elf ${DSP_NAME} m c nosys)
+if(ATYPE_LINK_MODULES)
+    file(STRINGS "${CMAKE_SOURCE_DIR}/config/atype-link-symbols.txt" ATYPE_LINK_SYMBOLS)
+    foreach(SYMBOL IN LISTS ATYPE_LINK_SYMBOLS)
+        target_link_options(${PROJECT_NAME}.elf PRIVATE "-Wl,--undefined=${SYMBOL}")
+    endforeach()
+endif()
 
 add_custom_command(
     TARGET ${PROJECT_NAME}.elf POST_BUILD

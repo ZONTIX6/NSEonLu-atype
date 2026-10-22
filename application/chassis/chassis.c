@@ -23,6 +23,9 @@
 #include "remote_control.h"
 #include "robot_def.h"
 #include "board_config.h"
+#include "user_lib.h"
+#include "heat_control.h"
+#include "vehicle_safety.h"
 #if POWER_METER_ENABLE
 #include "power_meter.h"
 #endif
@@ -43,7 +46,7 @@
 #define HALF_WHEEL_BASE (WHEEL_BASE / 2.0f)     // 半轴距
 #define HALF_TRACK_WIDTH (TRACK_WIDTH / 2.0f)   // 半轮距
 #define PERIMETER_WHEEL (RADIUS_WHEEL * 2 * PI) // 轮子周长
-#define CHASSIS_POWER_SAFETY_FACTOR 0.95f   // 功率预算安全系数,用于降低功率预算,避免功率计和底盘功率模型的误差导致底盘超功率
+#define CHASSIS_POWER_SAFETY_FACTOR 0.98f   // 功率预算安全系数,用于降低功率预算,避免功率计和底盘功率模型的误差导致底盘超功率
 
 /* 底盘应用包含的模块和信息存储,底盘是单例模式,因此不需要为底盘建立单独的结构体 */
 #ifdef CHASSIS_BOARD // 如果是底盘板,使用板载IMU获取底盘转动角速度
@@ -73,6 +76,8 @@ static uint32_t chassis_budget_dwt_count;
 static DJIChassisPowerControlSnapshot_s pending_power_control;
 static uint32_t power_control_version;
 static ChassisTelemetrySnapshot_s chassis_telemetry;
+static Publisher_t *heat_pub;
+static uint32_t heat_publish_tick;
 
 bool ChassisGetTelemetrySnapshot(ChassisTelemetrySnapshot_s *snapshot)
 {
@@ -141,13 +146,13 @@ static ChassisPowerBudgetConfig_s chassis_budget_config = {
 
 /* 功率外环:用功率计实测功率对比模型预测值,在"基准预算"上叠加一个有界的修正量 */
 static ChassisPowerOuterLoopConfig_s chassis_outer_loop_config = {
-    .kp = 0.5f, // 比例增益,误差 = 目标功率 - 实测功率(W),输出为预算修正量(W)
-    .ki = 1.0f, // 积分增益,积分限幅为[-基准预算, max_positive_correction_w]
+    .kp = 1.0f, // 比例增益,误差 = 目标功率 - 实测功率(W),输出为预算修正量(W)
+    .ki = 1.5f, // 积分增益,积分限幅为[-基准预算, max_positive_correction_w]
     .measurement_lpf_tau_s = 0.030f, // 功率计读数一阶低通时间常数(s),抑制采样噪声
     .activation_margin_w = 5.0f, // 介入阈值(W):需求或实测功率距目标不到此值时才进入ACTIVE
     .error_deadband_w = 0.3f, // 误差死区(W):|误差|不超过此值时按0处理,停止积分
     .max_positive_correction_w = 8.0f, // 修正量上限(W):最多只上调8W;下限为-基准预算,即最狠可压到0
-    .positive_slew_rate_w_per_s = 20.0f, // 修正量上升/回零速率(W/s);下调不限速,立即生效
+    .positive_slew_rate_w_per_s = 60.0f, // 修正量上升/回零速率(W/s);下调不限速,立即生效
     .budget_drop_reset_w = 1.0f, // 基准预算单周期跌落超过此值(W)时,清零正向积分与修正量
     .antiwindup_gain_per_s = 10,
     .low_demand_delay_s = .5f,
@@ -243,6 +248,7 @@ static bool ApplySpinTuning(const float *v)
 
 void ChassisInit()
 {
+    heat_pub = PubRegister(HEAT_CONTROL_DATA_TOPIC, sizeof(HeatControlData_s));
     RegisterChassisTuning();
     RuntimeTuningRestore(TUNING_POWER, ApplyPowerTuning);
     RuntimeTuningRestore(TUNING_SPIN, ApplySpinTuning);
@@ -251,7 +257,7 @@ void ChassisInit()
         .can_init_config.can_handle = &hcan1,
         .controller_param_init_config = {
             .speed_PID = {
-                .Kp = 0.75f, // 目标和反馈由 rpm 换为度/秒，保持原 4.5 的等效增益，因为kp乘的是误差，误差单位变为原来的6倍，kp要乘六分之一
+                .Kp = 4.5f, // A-board vehicle baseline, error in degrees/s
                 .Ki = 0,   // 0
                 .Kd = 0,   // 0
                 .IntegralLimit = 3000,
@@ -273,11 +279,11 @@ void ChassisInit()
     chassis_motor_config.controller_setting_init_config.motor_reverse_flag = MOTOR_DIRECTION_NORMAL;
     motor_lf = DJIMotorInit(&chassis_motor_config);
 
-    chassis_motor_config.can_init_config.tx_id = 2;
+    chassis_motor_config.can_init_config.tx_id = 4;
     chassis_motor_config.controller_setting_init_config.motor_reverse_flag = MOTOR_DIRECTION_NORMAL;
     motor_rf = DJIMotorInit(&chassis_motor_config);
 
-    chassis_motor_config.can_init_config.tx_id = 4;
+    chassis_motor_config.can_init_config.tx_id = 2;
     chassis_motor_config.controller_setting_init_config.motor_reverse_flag = MOTOR_DIRECTION_NORMAL;
     motor_lb = DJIMotorInit(&chassis_motor_config);
 
@@ -309,8 +315,8 @@ void ChassisInit()
         DJIMotorStop(motor_rb);
     }
 
-#if UART1_REFEREE_ENABLED
-    (void)UITaskInit(&huart1, &ui_data); // 裁判系统初始化,会同时初始化UI
+#if REFEREE_ENABLE
+    (void)UITaskInit(BOARD_REFEREE_UART, &ui_data); // 裁判系统初始化,会同时初始化UI
 #endif
 
 /* Buffer环暂未测试，逻辑是计算期望buffer与实际buffer的差值，转换为冗余的功率，todo：输入给功率控制部分，待完善 */
@@ -326,7 +332,7 @@ void ChassisInit()
 #if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP
     SuperCap_Init_Config_s cap_conf = {
         .can_config = {
-            .can_handle = &hcan1,
+            .can_handle = BOARD_SUPERCAP_CAN,
             .tx_id = SUPERCAP_COMMAND_CAN_ID,
             .rx_id = SUPERCAP_STATUS_CAN_ID,
         },
@@ -338,7 +344,7 @@ void ChassisInit()
 #if POWER_METER_ENABLE
     const PowerMeter_Init_Config_s power_meter_config = {
         .can_config = {
-            .can_handle = &hcan1,
+            .can_handle = BOARD_POWER_METER_CAN,
             .tx_id = POWER_METER_STATUS_CAN_ID,
             .rx_id = POWER_METER_STATUS_CAN_ID,
         },
@@ -363,6 +369,7 @@ void ChassisInit()
         .recv_data_len = sizeof(Chassis_Ctrl_Cmd_s),
         .send_data_len = sizeof(Chassis_Upload_Data_s),
     };
+    comm_conf.daemon_count=10;
     chasiss_can_comm = CANCommInit(&comm_conf); // can comm初始化
 #endif                                          // CHASSIS_BOARD
 
@@ -407,10 +414,10 @@ static void CalculateWheelSpeed(void)
     (void)ChassisMecanumCalculate(&input, &output);
 #endif
 
-    vt_lf = output.rpm[CHASSIS_WHEEL_LEFT_FRONT];
-    vt_rf = output.rpm[CHASSIS_WHEEL_RIGHT_FRONT];
-    vt_lb = output.rpm[CHASSIS_WHEEL_LEFT_BACK];
-    vt_rb = output.rpm[CHASSIS_WHEEL_RIGHT_BACK];
+    vt_lf = output.speed_aps[CHASSIS_WHEEL_LEFT_FRONT];
+    vt_rf = output.speed_aps[CHASSIS_WHEEL_RIGHT_FRONT];
+    vt_lb = output.speed_aps[CHASSIS_WHEEL_LEFT_BACK];
+    vt_rb = output.speed_aps[CHASSIS_WHEEL_RIGHT_BACK];
 }
 
 /**
@@ -420,10 +427,10 @@ static void CalculateWheelSpeed(void)
 static void LimitChassisOutput()
 {
     // 底盘解算输出沿用 rpm；统一 DJI 驱动的速度环使用度/秒。
-    pending_power_control.target_rpm[0] = vt_lf;
-    pending_power_control.target_rpm[1] = vt_rf;
-    pending_power_control.target_rpm[2] = vt_lb;
-    pending_power_control.target_rpm[3] = vt_rb;
+    pending_power_control.target_rpm[0] = vt_lf / 6.0f;
+    pending_power_control.target_rpm[1] = vt_rf / 6.0f;
+    pending_power_control.target_rpm[2] = vt_lb / 6.0f;
+    pending_power_control.target_rpm[3] = vt_rb / 6.0f;
     pending_power_control.version = ++power_control_version;
     pending_power_control.tick_ms = HAL_GetTick();
     DJIChassisPowerPublishControl(&pending_power_control);
@@ -716,17 +723,23 @@ static void UpdateChassisPowerBudget(void)
 #endif
     pending_power_control.control_enabled = control_config_valid && chassis_power_ready &&
         chassis_cmd_recv.chassis_mode != CHASSIS_ZERO_FORCE;
-    RemoteControlSnapshot_s bench_remote={0};
     pending_power_control.zero_force=chassis_cmd_recv.chassis_mode==CHASSIS_ZERO_FORCE;
-    pending_power_control.autotune_permitted = pending_power_control.control_enabled &&
+#ifdef CHASSIS_BOARD
+    pending_power_control.autotune_permitted=ATYPE_BENCH_MODE &&
+        VehicleSafetyAllowsAutotune(HAL_GetTick()) && VehicleSafetyAuxStopped(HAL_GetTick()) &&
+        pending_power_control.control_enabled && chassis_cmd_recv.chassis_mode==CHASSIS_NO_FOLLOW;
+#else
+    RemoteControlSnapshot_s bench_remote={0};
+    pending_power_control.autotune_permitted = ATYPE_BENCH_MODE && VehicleSafetyAllowsAutotune(HAL_GetTick()) && pending_power_control.control_enabled &&
         chassis_cmd_recv.chassis_mode==CHASSIS_NO_FOLLOW && RemoteControlGetSnapshot(&bench_remote) &&
         bench_remote.online && bench_remote.has_sample &&
         (uint32_t)(HAL_GetTick()-bench_remote.last_rx_tick_ms)<=100 &&
-        bench_remote.control.rc.switch_left==2 && bench_remote.control.rc.switch_right==3 &&
+        bench_remote.control.rc.switch_left==2 && bench_remote.control.rc.switch_right==1 &&
         abs(bench_remote.control.rc.rocker_l_)<=30 && abs(bench_remote.control.rc.rocker_l1)<=30 &&
         abs(bench_remote.control.rc.rocker_r_)<=30 && abs(bench_remote.control.rc.rocker_r1)<=30 &&
         abs(bench_remote.control.rc.dial)<=30 && !bench_remote.control.key[KEY_PRESS].keys &&
         !bench_remote.control.mouse.press_l && !bench_remote.control.mouse.press_r;
+#endif
 #if CHASSIS_SPIN_DYNAMIC_ENABLED
     chassis_spin_input.target_power_w = pending_power_control.target_power_w;
     chassis_spin_input.control_enabled = pending_power_control.control_enabled;
@@ -737,6 +750,18 @@ static void UpdateChassisPowerBudget(void)
 /* 机器人底盘控制核心任务 */
 void ChassisTask()
 {
+    const uint32_t now = HAL_GetTick();
+    if ((uint32_t)(now-heat_publish_tick)>=100U) {
+        RefereeHeatSnapshot_s heat = {0};
+        (void)RefereeGetHeatSnapshot(&heat);
+        chassis_feedback_data.heat=heat;
+        HeatControlData_s data = {.current_heat=heat.current_heat,
+            .heat_limit=heat.heat_limit, .cooling_rate=heat.cooling_rate,
+            .valid=heat.valid, .robot_state_tick_ms=heat.robot_state_tick_ms,
+            .power_heat_tick_ms=heat.power_heat_tick_ms};
+        PubPushMessage(heat_pub, &data);
+        heat_publish_tick=now;
+    }
     RuntimeTuningProcess(TUNING_POWER, ApplyPowerTuning);
     RuntimeTuningProcess(TUNING_SPIN, ApplySpinTuning);
     // 后续增加没收到消息的处理(双板的情况)
@@ -745,7 +770,19 @@ void ChassisTask()
     SubGetMessage(chassis_sub, &chassis_cmd_recv);
 #endif
 #ifdef CHASSIS_BOARD
-    chassis_cmd_recv = *(Chassis_Ctrl_Cmd_s *)CANCommGet(chasiss_can_comm);
+    uint32_t command_rx_tick=0;
+    const bool command_fresh=CANCommCopyFreshAt(chasiss_can_comm,&chassis_cmd_recv,sizeof chassis_cmd_recv,&command_rx_tick,10U);
+    if(!command_fresh) chassis_cmd_recv=(Chassis_Ctrl_Cmd_s){.chassis_mode=CHASSIS_ZERO_FORCE};
+    const uint32_t command_age=HAL_GetTick()-command_rx_tick;
+    const bool aux_proof=command_fresh && chassis_cmd_recv.aux_stopped &&
+        chassis_cmd_recv.aux_feedback_age_ms<=20U && command_age<=10U &&
+        command_age+chassis_cmd_recv.aux_feedback_age_ms<=20U;
+    VehicleSafetyInput_s safety={.input_online=command_fresh && chassis_cmd_recv.input_permitted,
+        .emergency=!chassis_cmd_recv.input_permitted,
+        .reset=command_fresh && chassis_cmd_recv.safety_reset,
+        .bench=ATYPE_BENCH_MODE && chassis_cmd_recv.bench_permitted && aux_proof,
+        .aux_stopped=aux_proof};
+    VehicleSafetyPublish(&safety,HAL_GetTick());
 #endif // CHASSIS_BOARD
 
     UpdateChassisPowerBudget();
@@ -763,7 +800,7 @@ void ChassisTask()
         chassis_cmd_recv.wz = 0;
         break;
     case CHASSIS_FOLLOW_GIMBAL_YAW: // 跟随云台,不单独设置pid,以误差角度平方为速度输出
-        chassis_cmd_recv.wz = -1.5f * chassis_cmd_recv.offset_angle * abs(chassis_cmd_recv.offset_angle);
+        chassis_cmd_recv.wz = fmaxf(-4500.0f, fminf(4500.0f, -50.0f * theta_format(chassis_cmd_recv.offset_angle)));
         break;
     case CHASSIS_ROTATE: // 自旋并保持全向机动;模式选择固定、功率自适应或同向正弦
 #if CHASSIS_SPIN_DYNAMIC_ENABLED
@@ -828,6 +865,9 @@ void ChassisTask()
     PubPushMessage(chassis_pub, (void *)&chassis_feedback_data);
 #endif
 #ifdef CHASSIS_BOARD
+    (void)RefereeGetHeatSnapshot(&chassis_feedback_data.heat);
+    chassis_feedback_data.heat_robot_age_ms=HAL_GetTick()-chassis_feedback_data.heat.robot_state_tick_ms;
+    chassis_feedback_data.heat_power_age_ms=HAL_GetTick()-chassis_feedback_data.heat.power_heat_tick_ms;
     CANCommSend(chasiss_can_comm, (void *)&chassis_feedback_data);
 #endif // CHASSIS_BOARD
 }

@@ -8,6 +8,8 @@
 #include "runtime_tuning.h"
 #include "autotune_protocol.h"
 #include "power_meter.h"
+#include "vehicle_safety.h"
+#include "board_config.h"
 #if CHASSIS_POWER_CAPTURE_ENABLE
 #include "bsp_uart_log.h"
 #include "board_config.h"
@@ -19,7 +21,7 @@
 
 _Static_assert(POWER_MODEL_MOTOR_COUNT == 4U, "DJI chassis power group must contain four motors");
 
-#define CHASSIS_POWER_RTT_DIVIDER 10U
+#define CHASSIS_POWER_RTT_DIVIDER 20U /* 40 ms at the A-board 2 ms motor period. */
 
 static uint8_t idx = 0; // register idx,是该文件的全局电机索引,在注册时使用
 /* DJI电机的实例,此处仅保存指针,内存的分配将通过电机实例初始化时通过malloc()进行 */
@@ -84,7 +86,7 @@ static void ApplyAutotuneCycle(void)
     if (!chassis_power) return;
     const uint32_t now=HAL_GetTick();
     PIDAutotuneFeedback f={.now_ms=now,.can_ok=true,.feedback_ok=true,
-        .permitted=cycle_control.autotune_permitted && cycle_control.control_enabled &&
+        .permitted=VehicleSafetyAllowsAutotune(now) && cycle_control.autotune_permitted && cycle_control.control_enabled &&
             (uint32_t)(now-cycle_control.tick_ms)<=10 && !autotune_inhibit};
     for(unsigned w=0;w<4;++w) {
         unsigned i=chassis_power->motor_indices[w];
@@ -102,6 +104,13 @@ static void ApplyAutotuneCycle(void)
                 ((uint32_t)settings->motor_reverse_flag<<16) | ((uint32_t)settings->feedback_reverse_flag<<20) |
                 ((uint32_t)settings->speed_feedback_source<<24) | ((uint32_t)settings->feedforward_flag<<28)};
         AutotuneSetConfiguration(w,&config);
+    }
+    for (unsigned i=0;i<idx;++i) {
+        bool chassis=false;
+        for(unsigned w=0;w<4;++w) chassis |= i==chassis_power->motor_indices[w];
+        if (!chassis) f.permitted &= cycle_stop[i]==MOTOR_STOP && cycle_online[i] &&
+            (uint32_t)(now-cycle_measure[i].rx_tick_ms)<=20 &&
+            isfinite(cycle_measure[i].speed_aps) && fabsf(cycle_measure[i].speed_aps)<=300;
     }
     AutotuneMotorStep(&f,&autotune_drive);
     if(autotune_drive.owned && !autotune_owned) {
@@ -133,6 +142,13 @@ static void ApplyAutotuneCycle(void)
         cycle_stop[i]=selected ? MOTOR_ENALBED : MOTOR_STOP;
         cycle_reference[i]=selected ? autotune_drive.target_rpm*6 : 0;
     }
+    if (autotune_owned || autotune_inhibit || ATYPE_BENCH_MODE) {
+        for(unsigned i=0;i<idx;++i) {
+            bool chassis=false;
+            for(unsigned w=0;w<4;++w) chassis |= i==chassis_power->motor_indices[w];
+            if (!chassis) {cycle_stop[i]=MOTOR_STOP;cycle_reference[i]=0;}
+        }
+    }
     if(autotune_inhibit && cycle_control.zero_force && (uint32_t)(now-cycle_control.tick_ms)<=10) autotune_inhibit=false;
 }
 static void UpdateTuningStopState(uint32_t now,bool transmitted)
@@ -161,6 +177,22 @@ bool DJIMotorCanSaveParameters(uint32_t now)
     taskEXIT_CRITICAL();
     return safe;
 }
+bool DJIMotorGetStopProof(uint32_t now, uint32_t *oldest_feedback_age_ms)
+{
+    if(oldest_feedback_age_ms==NULL) return false;
+    taskENTER_CRITICAL();
+    bool safe=DJIMotorCanSaveParameters(now);
+    uint32_t age=0;
+    for(unsigned i=0;i<idx;++i) {
+        uint32_t motor_age=now-dji_motor_instance[i]->measure.rx_tick_ms;
+        if(motor_age>age) age=motor_age;
+        safe &= dji_motor_instance[i]->measure.rx_sequence!=0;
+    }
+    *oldest_feedback_age_ms=age;
+    taskEXIT_CRITICAL();
+    return safe && age<=20U;
+}
+
 static void RegisterPIDTuning(void)
 {
     float values[24];
@@ -714,6 +746,16 @@ void DJIMotorControl()
         speed_reference_aps[i] = 0.0f;
         speed_feedback_aps[i] = 0.0f;
 
+        if(cycle_stop[i]==MOTOR_STOP || !cycle_online[i] ||
+            cycle_measure[i].rx_sequence==0 ||
+            (uint32_t)(HAL_GetTick()-cycle_measure[i].rx_tick_ms)>20U) {
+            motor_output[i]=0;
+            ResetTrialPID(&motor_controller->speed_PID,measure->speed_aps);
+            ResetTrialPID(&motor_controller->angle_PID,measure->total_angle);
+            ResetTrialPID(&motor_controller->current_PID,measure->real_current);
+            continue;
+        }
+
         if (motor_setting->motor_reverse_flag == MOTOR_DIRECTION_REVERSE)
             pid_ref *= -1;
 
@@ -752,19 +794,30 @@ void DJIMotorControl()
         motor_output[i] = pid_ref;
     }
 
+    /* Apply late stop requests before publishing the power diagnostic snapshot. */
+    for(unsigned i=0;i<idx;++i) {
+        if(dji_motor_instance[i]->stop_flag==MOTOR_STOP || !VehicleSafetyAllowsDrive(HAL_GetTick())) {
+            cycle_stop[i]=MOTOR_STOP;motor_output[i]=0;
+        }
+    }
     // 第二阶段：只修改已注册的四个底盘电机输出。
     ApplyChassisPowerGroup();
 
     /* A new stop/control message can arrive while PID/power calculations run. */
     if(chassis_power && (autotune_owned || autotune_inhibit)) {
         taskENTER_CRITICAL();
-        bool permitted=chassis_power->control.autotune_permitted && chassis_power->control.control_enabled &&
+        bool permitted=VehicleSafetyAllowsAutotune(HAL_GetTick()) && chassis_power->control.autotune_permitted && chassis_power->control.control_enabled &&
             (uint32_t)(HAL_GetTick()-chassis_power->control.tick_ms)<=10;
         taskEXIT_CRITICAL();
         if(!permitted) {
             if(autotune_owned) AutotuneCancel();
             for(unsigned w=0;w<4;++w) {unsigned i=chassis_power->motor_indices[w];cycle_stop[i]=MOTOR_STOP;motor_output[i]=0;}
         }
+    }
+
+    if (!VehicleSafetyAllowsDrive(HAL_GetTick())) {
+        if(autotune_owned) AutotuneCancel();
+        for(unsigned i=0;i<idx;++i) {cycle_stop[i]=MOTOR_STOP;motor_output[i]=0;}
     }
 
     // 第三阶段：所有 DJI 电机共用同一套 CAN 打包和发送路径。
@@ -777,7 +830,8 @@ void DJIMotorControl()
         sender_assignment[group].tx_buff[2 * num] = (uint8_t)(set >> 8);         // 低八位
         sender_assignment[group].tx_buff[2 * num + 1] = (uint8_t)(set & 0x00ff); // 高八位
 
-        if (cycle_stop[i] == MOTOR_STOP)
+        if (cycle_stop[i] == MOTOR_STOP || motor->stop_flag==MOTOR_STOP || !cycle_online[i] ||
+            cycle_measure[i].rx_sequence==0 || (uint32_t)(HAL_GetTick()-cycle_measure[i].rx_tick_ms)>20U)
             memset(sender_assignment[group].tx_buff + 2 * num, 0, sizeof(uint16_t));
     }
 
@@ -799,7 +853,7 @@ void DJIMotorControl()
 
 void DJIChassisPowerCaptureDrain(void)
 {
-#if CHASSIS_POWER_CAPTURE_ENABLE && UART1_LOG_ENABLED
+#if CHASSIS_POWER_CAPTURE_ENABLE && BOARD_LOG_UART_ENABLED
     BSPUARTLogPoll();
     uint8_t frame[CHASSIS_POWER_CAPTURE_FRAME_BYTES];
     const uint32_t now = HAL_GetTick();

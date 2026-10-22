@@ -32,7 +32,7 @@ typedef struct {
 #define UART_OVERSAMPLING_16 16U
 
 HAL_StatusTypeDef HAL_UART_Init(UART_HandleTypeDef *huart);
-HAL_StatusTypeDef HAL_UART_Transmit_DMA(UART_HandleTypeDef *huart,
+HAL_StatusTypeDef HAL_UART_Transmit_IT(UART_HandleTypeDef *huart,
                                         const uint8_t *data,
                                         uint16_t length);
 uint32_t __get_PRIMASK(void);

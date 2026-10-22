@@ -1,27 +1,29 @@
 #include "gimbal.h"
 #include "robot_def.h"
 #include "dji_motor.h"
-#include "ins_task.h"
+#include "mpu6500.h"
 #include "message_center.h"
 #include "general_def.h"
-#include "bmi088.h"
+#include "jscope.h"
 
-static attitude_t *gimba_IMU_data; // 云台IMU数据
+
+static attitude_t *gimbal_IMU_data; // 云台IMU数据
 static DJIMotorInstance *yaw_motor, *pitch_motor;
+volatile int jscope_result;
 
 static Publisher_t *gimbal_pub;                   // 云台应用消息发布者(云台反馈给cmd)
 static Subscriber_t *gimbal_sub;                  // cmd控制消息订阅者
 static Gimbal_Upload_Data_s gimbal_feedback_data; // 回传给cmd的云台状态信息
 static Gimbal_Ctrl_Cmd_s gimbal_cmd_recv;         // 来自cmd的控制信息
 
-// static BMI088Instance *bmi088; // 云台IMU
+
 void GimbalInit()
 {   
-    gimba_IMU_data = INS_Init(); // IMU先初始化,获取姿态数据指针赋给yaw电机的其他数据来源
+    gimbal_IMU_data = INS_Init(); // IMU先初始化,获取姿态数据指针赋给yaw电机的其他数据来源
     // YAW
     Motor_Init_Config_s yaw_config = {
         .can_init_config = {
-            .can_handle = &hcan1,
+            .can_handle = &hcan2,
             .tx_id = 1,
         },
         .controller_param_init_config = {
@@ -43,9 +45,9 @@ void GimbalInit()
                 .IntegralLimit = 3000,
                 .MaxOut = 20000,
             },
-            .other_angle_feedback_ptr = &gimba_IMU_data->YawTotalAngle,
+            .other_angle_feedback_ptr = &gimbal_IMU_data->YawTotalAngle,
             // 还需要增加角速度额外反馈指针,注意方向,ins_task.md中有c板的bodyframe坐标系说明
-            .other_speed_feedback_ptr = &gimba_IMU_data->Gyro[2],
+            .other_speed_feedback_ptr = &gimbal_IMU_data->Gyro[2],
         },
         .controller_setting_init_config = {
             .angle_feedback_source = OTHER_FEED,
@@ -78,9 +80,9 @@ void GimbalInit()
                 .IntegralLimit = 2500,
                 .MaxOut = 20000,
             },
-            .other_angle_feedback_ptr = &gimba_IMU_data->Pitch,
+            .other_angle_feedback_ptr = &gimbal_IMU_data->Pitch,
             // 还需要增加角速度额外反馈指针,注意方向,ins_task.md中有c板的bodyframe坐标系说明
-            .other_speed_feedback_ptr = (&gimba_IMU_data->Gyro[0]),
+            .other_speed_feedback_ptr = (&gimbal_IMU_data->Gyro[1]),
         },
         .controller_setting_init_config = {
             .angle_feedback_source = OTHER_FEED,
@@ -88,10 +90,13 @@ void GimbalInit()
             .outer_loop_type = ANGLE_LOOP,
             .close_loop_type = SPEED_LOOP | ANGLE_LOOP,
             .motor_reverse_flag = MOTOR_DIRECTION_NORMAL,
+            .feedback_reverse_flag = FEEDBACK_DIRECTION_REVERSE,
         },
         .motor_type = GM6020,
     };
+
     // 电机对total_angle闭环,上电时为零,会保持静止,收到遥控器数据再动
+
     yaw_motor = DJIMotorInit(&yaw_config);
     pitch_motor = DJIMotorInit(&pitch_config);
 
@@ -140,13 +145,14 @@ void GimbalTask()
     default:
         break;
     }
+    //SEGGER_RTT_printf(0,"0:%d,1:%d,2:%d\n",(int16_t)gimbal_IMU_data->Gyro[0], (int16_t)gimbal_IMU_data->Gyro[1],(int16_t)gimbal_IMU_data->Gyro[2]);
 
     // 在合适的地方添加pitch重力补偿前馈力矩
     // 根据IMU姿态/pitch电机角度反馈计算出当前配重下的重力矩
     // ...
 
     // 设置反馈数据,主要是imu和yaw的ecd
-    gimbal_feedback_data.gimbal_imu_data = *gimba_IMU_data;
+    gimbal_feedback_data.gimbal_imu_data = *gimbal_IMU_data;
     gimbal_feedback_data.yaw_motor_single_round_angle = yaw_motor->measure.angle_single_round;
 
     // 推送消息

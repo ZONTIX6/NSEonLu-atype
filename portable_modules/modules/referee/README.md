@@ -336,3 +336,9 @@ make -C portable_modules/modules/referee/tests test
 - 功率 `valid` 为假：确认 `0x0201` 与 `0x0202` 都在超时窗口内更新。
 - UI 没显示：确认本机 robot ID、客户端 ID、图形操作、图层、协议年份和发送频率。
 - 发送接口返回假：检查 UART busy、发送回调返回值和 `transmit_failure_count`。
+
+## A 板融合接口同步（2026-10-22）
+
+新增 `RefereeGetHeat(instance, &heat)`，返回 current_heat/heat_limit/cooling_rate、两来源时间戳及独立时效判定。接受 13/17 字节状态与 14/16 字节功率热量；输出位来自 12/16，17 mm 热量来自 10/12，42 mm 来自 12/14。16 字节的映射遵循主工程已确认方案，不用长度推断旧功率字段。原 `RefereeGetPower`、CRC、分片与 UI 接口保持。
+
+此副本使用显式 context 回调，未作为第二套解析器链接入固件。主工程接口名为 `RefereeGetHeatSnapshot()`，不要将两种初始化 API 混用。

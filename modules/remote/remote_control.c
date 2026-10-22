@@ -97,7 +97,16 @@ static void sbus_to_rc(const uint8_t *sbus_buf)
  */
 static void RemoteControlRxCallback()
 {
-    DaemonReload(rc_daemon_instance);         // 先喂狗
+    if (rc_usart_instance->recv_data_len!=REMOTE_CONTROL_FRAME_SIZE) return;
+    const uint8_t *b=rc_usart_instance->recv_buff;
+    const unsigned right=(b[5]>>4)&3U, left=(b[5]>>6)&3U;
+    const unsigned channels[5]={
+        (b[0]|(b[1]<<8))&0x7ffU, ((b[1]>>3)|(b[2]<<5))&0x7ffU,
+        ((b[2]>>6)|(b[3]<<2)|(b[4]<<10))&0x7ffU,
+        ((b[4]>>1)|(b[5]<<7))&0x7ffU, (b[16]|(b[17]<<8))&0x7ffU};
+    if (right==0 || left==0 || b[12]>1 || b[13]>1) return;
+    for(unsigned i=0;i<5;++i) if(channels[i]<364 || channels[i]>1684) return;
+    DaemonReload(rc_daemon_instance);
     sbus_to_rc(rc_usart_instance->recv_buff); // 进行协议解析
     rc_last_rx_tick_ms = HAL_GetTick();
     rc_has_sample = 1;

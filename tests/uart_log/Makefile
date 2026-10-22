@@ -9,7 +9,7 @@ INCLUDES := -Istubs -I../../Inc -I../../bsp/log
 all: $(TARGET)
 
 $(TARGET): $(SOURCE)
-	$(CC) $(CFLAGS) -DUART1_USE=1 $(INCLUDES) $(SOURCE) -o $(TARGET)
+	$(CC) $(CFLAGS) -DLOG_OUTPUT=2 $(INCLUDES) $(SOURCE) -o $(TARGET)
 
 test: $(TARGET)
 	./$(TARGET)

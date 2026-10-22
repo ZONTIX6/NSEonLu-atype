@@ -16,9 +16,13 @@ $(TARGET): $(SOURCE) $(HEADERS)
 $(LEGACY_TARGET): $(SOURCE) $(HEADERS)
 	$(CC) $(CFLAGS) -DREFEREE_LEGACY_POWER_FIELDS_ENABLED=1 $(INCLUDES) $(SOURCE) -o $(LEGACY_TARGET)
 
-test: $(TARGET) $(LEGACY_TARGET)
+test_referee_heat.exe: test_referee_heat.c ../../modules/referee/referee_power.c ../../modules/referee/referee_power.h
+	$(CC) $(CFLAGS) $(INCLUDES) test_referee_heat.c ../../modules/referee/referee_power.c -o $@
+
+test: $(TARGET) $(LEGACY_TARGET) test_referee_heat.exe
 	./$(TARGET)
 	./$(LEGACY_TARGET)
+	./test_referee_heat.exe
 
 clean:
 	-if exist $(TARGET) del /Q $(TARGET)

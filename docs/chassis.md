@@ -66,7 +66,7 @@ CMake 支持 `-DCHASSIS_SPIN_ADAPTIVE_ENABLE=0` 或 `1`。功率计关闭或反�
 
 ```powershell
 New-Item -ItemType Directory -Force build/sine-fix-usb | Out-Null
-make -j4 BUILD_DIR=build/sine-fix-usb CHASSIS_SPIN_MODE=2 USB_TELEMETRY_ENABLE=1 UART1_USE=0 CHASSIS_POWER_CONTROL_STAGE=3
+make -j4 BUILD_DIR=build/sine-fix-usb CHASSIS_SPIN_MODE=2 USB_TELEMETRY_ENABLE=1 REFEREE_ENABLE=1 CHASSIS_POWER_CONTROL_STAGE=3
 ```
 
 上板后在 USB 仪表盘同时查看四轮**目标和实际 rpm**，等待起步完成，观察至少三个 4 s 周期。先检查目标是否产生正弦，再比较实际转速的跟随程度；如目标有波动而实际没有，结合功率计、输出电流及反馈在线状态判断限流或跟随能力。主机测试包含基础功率模型、最终预测保护和独立惯性负载；它不等同于实机验证。

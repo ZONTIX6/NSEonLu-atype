@@ -3,6 +3,7 @@
 #include "robot_def.h"
 #include "robot_task.h"
 #include "tuning_flash.h"
+#include "jscope.h"
 
 // 编译warning,提醒开发者修改机器人参数
 #ifndef ROBOT_DEF_PARAM_WARNING
@@ -30,11 +31,12 @@ void RobotInit()
     
     BSPInit();
     TuningFlashInit();
+    JScopeInit();
 
 #if defined(ONE_BOARD) || defined(GIMBAL_BOARD)
     RobotCMDInit();
-    // GimbalInit();
-    // ShootInit();
+    GimbalInit();
+    ShootInit();
 #endif
 
 #if defined(ONE_BOARD) || defined(CHASSIS_BOARD)
@@ -51,8 +53,8 @@ void RobotTask()
 {
 #if defined(ONE_BOARD) || defined(GIMBAL_BOARD)
     RobotCMDTask();
-    // GimbalTask();
-    // ShootTask();
+    GimbalTask();
+    ShootTask();
 #endif
 
 #if defined(ONE_BOARD) || defined(CHASSIS_BOARD)

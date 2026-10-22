@@ -335,6 +335,18 @@ static void HandleValidFrame(Referee *instance,
         ++instance->diagnostics.unsupported_command_count;
         return;
     }
+    uint8_t normalized[REFEREE_POWER_HEAT_LENGTH];
+    if((command_id==REFEREE_CMD_ROBOT_STATE && payload_length==17U) ||
+       (command_id==REFEREE_CMD_POWER_HEAT && payload_length==16U)) {
+        memcpy(normalized,payload,expected_length);
+        if(command_id==REFEREE_CMD_ROBOT_STATE) normalized[12]=payload[16];
+        else {
+            memcpy(&normalized[10],&payload[12],2);
+            memcpy(&normalized[12],&payload[14],2);
+        }
+        payload=normalized;
+        payload_length=expected_length;
+    }
     if (payload_length != expected_length)
     {
         ++instance->diagnostics.payload_length_error_count;
@@ -603,4 +615,22 @@ bool RefereeSendInteraction(Referee *instance, uint16_t sender_id,
         ExitCritical(instance);
     }
     return sent;
+}
+
+bool RefereeGetHeat(Referee *instance, RefereeHeat *heat)
+{
+    if(instance==NULL || !instance->initialized || heat==NULL) return false;
+    EnterCritical(instance);
+    RefereeHeat snapshot={.current_heat=instance->data.power_heat.shooter_17mm_barrel_heat,
+        .heat_limit=instance->data.robot_state.shooter_barrel_heat_limit,
+        .cooling_rate=instance->data.robot_state.shooter_barrel_cooling_value,
+        .robot_state_tick_ms=instance->robot_state_tick_ms,
+        .power_heat_tick_ms=instance->power_heat_tick_ms};
+    const uint32_t now=instance->config.now_ms(instance->config.context);
+    snapshot.valid=instance->data.has_robot_state && instance->data.has_power_heat && snapshot.heat_limit>0 &&
+        (uint32_t)(now-snapshot.robot_state_tick_ms)<=instance->config.offline_timeout_ms &&
+        (uint32_t)(now-snapshot.power_heat_tick_ms)<=instance->config.offline_timeout_ms;
+    ExitCritical(instance);
+    *heat=snapshot;
+    return true;
 }

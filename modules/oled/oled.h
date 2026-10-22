@@ -1,3 +1,5 @@
+#include "board_config.h"
+#if OLED_USE_I2C
 /**
  * @file oled.h
  * @author your name (you@domain.com)
@@ -142,4 +144,8 @@ extern void OLED_refresh_gram(void);
  * @retval         none
  */
 extern void OLED_LOGO(void);
+#endif
+
+#else
+#include "oled_spi.h"
 #endif

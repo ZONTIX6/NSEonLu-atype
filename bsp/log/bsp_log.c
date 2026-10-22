@@ -13,7 +13,7 @@
 static char format_buffer[BSP_LOG_FORMAT_BUFFER_SIZE];
 static volatile unsigned char format_busy;
 
-#if UART1_LOG_ENABLED
+#if BOARD_LOG_UART_ENABLED
 static unsigned StripAnsiSequences(char *text, unsigned length)
 {
     unsigned read_index = 0U;
@@ -43,11 +43,11 @@ static unsigned RouteRaw(const void *data, unsigned length)
 {
     unsigned accepted = length;
 
-#if UART1_RTT_ENABLED
+#if BOARD_LOG_RTT_ENABLED
     if (SEGGER_RTT_Write(BUFFER_INDEX, data, length) != length)
         accepted = 0U;
 #endif
-#if UART1_LOG_ENABLED
+#if BOARD_LOG_UART_ENABLED
     if (BSPUARTLogWrite(data, length) != length)
         accepted = 0U;
 #endif
@@ -58,11 +58,11 @@ static int RouteFormatted(char *text, unsigned length)
 {
     int accepted = 1;
 
-#if UART1_RTT_ENABLED
+#if BOARD_LOG_RTT_ENABLED
     if (SEGGER_RTT_Write(BUFFER_INDEX, text, length) != length)
         accepted = 0;
 #endif
-#if UART1_LOG_ENABLED
+#if BOARD_LOG_UART_ENABLED
     const unsigned uart_length = StripAnsiSequences(text, length);
     if (BSPUARTLogWrite(text, uart_length) != uart_length)
         accepted = 0;
@@ -72,10 +72,10 @@ static int RouteFormatted(char *text, unsigned length)
 
 void BSPLogInit(void)
 {
-#if UART1_RTT_ENABLED
+#if BOARD_LOG_RTT_ENABLED
     SEGGER_RTT_Init();
 #endif
-#if UART1_LOG_ENABLED
+#if BOARD_LOG_UART_ENABLED
     BSPUARTLogInit();
 #endif
 }

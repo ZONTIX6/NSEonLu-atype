@@ -16,7 +16,7 @@
 
 #define MX_CAN_COMM_COUNT 4 // 注意均衡负载,一条总线上不要挂载过多的外设
 
-#define CAN_COMM_MAX_BUFFSIZE 60 // 最大发送/接收字节数,如果不够可以增加此数值
+#define CAN_COMM_MAX_BUFFSIZE 128 // 最大发送/接收字节数,如果不够可以增加此数值
 #define CAN_COMM_HEADER 's'      // 帧头
 #define CAN_COMM_TAIL 'e'        // 帧尾
 #define CAN_COMM_OFFSET_BYTES 4  // 's'+ datalen + 'e' + crc8
@@ -40,6 +40,8 @@ typedef struct
     uint8_t cur_recv_len; // 当前已经接收到的数据长度(包括帧头帧尾datalen和校验和)
     uint8_t update_flag;  // 数据更新标志位,当接收到新数据时,会将此标志位置1,调用CANCommGet()后会将此标志位置0
 
+    uint8_t has_sample;
+    uint32_t last_rx_tick_ms;
     DaemonInstance* comm_daemon;
 } CANCommInstance;
 #pragma pack()
@@ -88,5 +90,9 @@ void *CANCommGet(CANCommInstance *instance);
  * @return uint8_t 
  */
 uint8_t CANCommIsOnline(CANCommInstance *instance);
+uint8_t CANCommCopy(CANCommInstance *instance, void *data, uint8_t length);
+uint8_t CANCommCopyAt(CANCommInstance *instance, void *data, uint8_t length, uint32_t *rx_tick_ms);
+uint8_t CANCommCopyFreshAt(CANCommInstance *instance, void *data, uint8_t length,
+                         uint32_t *rx_tick_ms, uint32_t max_age_ms);
 
 #endif // !CAN_COMM_H

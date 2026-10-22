@@ -2,7 +2,7 @@
 
 ## 当前接收支持
 
-USART1 裁判模式（`UART1_USE=0`）支持两种 `0x0202` 数据段长度：
+USART6 裁判功能（`REFEREE_ENABLE=1`）支持两种 `0x0202` 数据段长度：
 
 | 协议 | 数据段长度 | 偏移 4 的 float | 偏移 8 的 uint16 | 42 mm 枪口热量 |
 |---|---|---|---|---|
@@ -59,10 +59,10 @@ if (RefereeGetPowerSnapshot(&power) && power.chassis_power_valid)
 ## 编译与上板核对
 
 ```powershell
-make -W Makefile -j8 UART1_USE=0
+make -W Makefile -j8 REFEREE_ENABLE=1
 ```
 
-烧录文件为 `build/basic_framework.hex`。固件也同时生成 ELF 和 BIN。修改编译选项后必须完整重编译，避免复用其他配置的旧目标文件。
+烧录文件为 `build/atype-vehicle/basic_framework.hex`。固件也同时生成 ELF 和 BIN。更改选项时使用独立配置目录；Make 配置戳会触发必要的对象重编译。
 
 现有 VS Code 调试配置使用 `build/basic_framework.elf`。停止当前调试会话，重新启动并下载程序后再观察新变量。若手动烧录其他目录中的 HEX，调试器应加载同目录的 ELF。
 

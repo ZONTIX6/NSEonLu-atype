@@ -10,8 +10,8 @@
 #error EXPECT_RTT is required
 #endif
 
-_Static_assert(UART1_REFEREE_ENABLED == EXPECT_REFEREE, "referee flag mismatch");
-_Static_assert(UART1_LOG_ENABLED == EXPECT_UART_LOG, "UART log flag mismatch");
-_Static_assert(UART1_RTT_ENABLED == EXPECT_RTT, "RTT flag mismatch");
+_Static_assert(REFEREE_ENABLE == EXPECT_REFEREE, "referee flag mismatch");
+_Static_assert(BOARD_LOG_UART_ENABLED == EXPECT_UART_LOG, "UART log flag mismatch");
+_Static_assert(BOARD_LOG_RTT_ENABLED == EXPECT_RTT, "RTT flag mismatch");
 
 int main(void) { return 0; }

@@ -10,13 +10,13 @@ bool ChassisMecanumCalculate(const ChassisKinematicsInput_s *input,
     if (input == NULL || output == NULL)
         return false;
 
-    output->rpm[CHASSIS_WHEEL_LEFT_FRONT] =
+    output->speed_aps[CHASSIS_WHEEL_LEFT_FRONT] =
         -input->vx - input->vy - input->wz * input->rotation_lever_sum[CHASSIS_WHEEL_LEFT_FRONT];
-    output->rpm[CHASSIS_WHEEL_RIGHT_FRONT] =
+    output->speed_aps[CHASSIS_WHEEL_RIGHT_FRONT] =
         -input->vx + input->vy - input->wz * input->rotation_lever_sum[CHASSIS_WHEEL_RIGHT_FRONT];
-    output->rpm[CHASSIS_WHEEL_LEFT_BACK] =
+    output->speed_aps[CHASSIS_WHEEL_LEFT_BACK] =
         input->vx - input->vy - input->wz * input->rotation_lever_sum[CHASSIS_WHEEL_LEFT_BACK];
-    output->rpm[CHASSIS_WHEEL_RIGHT_BACK] =
+    output->speed_aps[CHASSIS_WHEEL_RIGHT_BACK] =
         input->vx + input->vy - input->wz * input->rotation_lever_sum[CHASSIS_WHEEL_RIGHT_BACK];
     return true;
 }
@@ -28,25 +28,21 @@ bool ChassisOmniXCalculate(const ChassisKinematicsInput_s *input,
     if (input == NULL || wheel_direction == NULL || output == NULL)
         return false;
 
-    output->rpm[CHASSIS_WHEEL_LEFT_FRONT] =
-        (-input->vx - input->vy -
+    output->speed_aps[CHASSIS_WHEEL_LEFT_FRONT] =
+        (-input->vx * OMNI_X_PROJECTION + input->vy * OMNI_X_PROJECTION +
          input->wz * input->rotation_lever_sum[CHASSIS_WHEEL_LEFT_FRONT]) *
-        OMNI_X_PROJECTION *
         wheel_direction[CHASSIS_WHEEL_LEFT_FRONT];
-    output->rpm[CHASSIS_WHEEL_RIGHT_FRONT] =
-        (-input->vx + input->vy -
+    output->speed_aps[CHASSIS_WHEEL_RIGHT_FRONT] =
+        (input->vx * OMNI_X_PROJECTION + input->vy * OMNI_X_PROJECTION +
          input->wz * input->rotation_lever_sum[CHASSIS_WHEEL_RIGHT_FRONT]) *
-        OMNI_X_PROJECTION *
         wheel_direction[CHASSIS_WHEEL_RIGHT_FRONT];
-    output->rpm[CHASSIS_WHEEL_LEFT_BACK] =
-        (input->vx - input->vy -
+    output->speed_aps[CHASSIS_WHEEL_LEFT_BACK] =
+        (-input->vx * OMNI_X_PROJECTION - input->vy * OMNI_X_PROJECTION +
          input->wz * input->rotation_lever_sum[CHASSIS_WHEEL_LEFT_BACK]) *
-        OMNI_X_PROJECTION *
         wheel_direction[CHASSIS_WHEEL_LEFT_BACK];
-    output->rpm[CHASSIS_WHEEL_RIGHT_BACK] =
-        (input->vx + input->vy -
+    output->speed_aps[CHASSIS_WHEEL_RIGHT_BACK] =
+        (input->vx * OMNI_X_PROJECTION - input->vy * OMNI_X_PROJECTION +
          input->wz * input->rotation_lever_sum[CHASSIS_WHEEL_RIGHT_BACK]) *
-        OMNI_X_PROJECTION *
         wheel_direction[CHASSIS_WHEEL_RIGHT_BACK];
     return true;
 }

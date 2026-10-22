@@ -30,7 +30,8 @@ OPT = -Og
 # paths
 #######################################
 # Build path
-BUILD_DIR = build
+BUILD_DIR ?= build/$(PROFILE)
+.DEFAULT_GOAL := all
 
 ######################################
 # source
@@ -127,9 +128,6 @@ modules/algorithm/crc16.c \
 modules/algorithm/user_lib.c \
 modules/bluetooth/HC05.c \
 modules/BMI088/bmi088.c \
-modules/imu/BMI088driver.c \
-modules/imu/BMI088Middleware.c \
-modules/imu/ins_task.c \
 modules/ist8310/ist8310.c \
 modules/master_machine/master_process.c \
 modules/master_machine/seasky_protocol.c \
@@ -179,9 +177,14 @@ application/shoot/shoot.c \
 application/cmd/robot_cmd.c \
 application/robot.c
 
+C_SOURCES += modules/imu/ins_math.c application/vehicle_safety.c application/board_optional.c Src/syscalls.c Src/sysmem.c modules/oled/oled_spi.c
+C_SOURCES += $(wildcard modules/TFminiPlus/*.c modules/key/*.c modules/jam_detector/*.c)
+
+C_SOURCES += modules/mpu6500/mpu6500_math.c modules/mpu6500/imu_temperature.c modules/mpu6500/mpu6500.c modules/mpu6500/mpu6500driver.c modules/heat_control/heat_control.c modules/vtx/vt02_control.c modules/jscope/jscope.c
+
 # ASM sources
 ASM_SOURCES =  \
-startup_stm32f407xx.s \
+startup_stm32f427xx.s \
 Middlewares/Third_Party/SEGGER/RTT/SEGGER_RTT_ASM_ARMv7M.s 
 
 
@@ -192,10 +195,10 @@ PREFIX = arm-none-eabi-
 # The gcc compiler bin path can be either defined in make command via GCC_PATH variable (> make GCC_PATH=xxx)
 # either it can be added to the PATH environment variable.
 ifdef GCC_PATH
-CC = $(GCC_PATH)/$(PREFIX)gcc
-AS = $(GCC_PATH)/$(PREFIX)gcc -x assembler-with-cpp
-CP = $(GCC_PATH)/$(PREFIX)objcopy
-SZ = $(GCC_PATH)/$(PREFIX)size
+CC = "$(GCC_PATH)/$(PREFIX)gcc"
+AS = "$(GCC_PATH)/$(PREFIX)gcc" -x assembler-with-cpp
+CP = "$(GCC_PATH)/$(PREFIX)objcopy"
+SZ = "$(GCC_PATH)/$(PREFIX)size"
 else
 CC = $(PREFIX)gcc
 AS = $(PREFIX)gcc -x assembler-with-cpp
@@ -227,50 +230,10 @@ AS_DEFS =
 # C defines
 C_DEFS =  \
 -DUSE_HAL_DRIVER \
--DSTM32F407xx \
--DARM_MATH_CM4 \
--DDISABLE_LOG_SYSTEM 
+-DSTM32F427xx \
+-DARM_MATH_CM4
 
-ifneq ($(strip $(POWER_METER_ENABLE)),)
-C_DEFS += -DPOWER_METER_ENABLE=$(POWER_METER_ENABLE)
-endif
-
-ifneq ($(strip $(CHASSIS_POWER_CONTROL_STAGE)),)
-C_DEFS += -DCHASSIS_POWER_CONTROL_STAGE=$(CHASSIS_POWER_CONTROL_STAGE)
-endif
-ifneq ($(strip $(CHASSIS_POWER_CAPTURE_ENABLE)),)
-C_DEFS += -DCHASSIS_POWER_CAPTURE_ENABLE=$(CHASSIS_POWER_CAPTURE_ENABLE)
-endif
-
-ifneq ($(strip $(CHASSIS_SPIN_ADAPTIVE_ENABLE)),)
-C_DEFS += -DCHASSIS_SPIN_ADAPTIVE_ENABLE=$(CHASSIS_SPIN_ADAPTIVE_ENABLE)
-endif
-ifneq ($(strip $(CHASSIS_SPIN_MODE)),)
-C_DEFS += -DCHASSIS_SPIN_MODE=$(CHASSIS_SPIN_MODE)
-endif
-
-ifneq ($(strip $(CHASSIS_BUFFER_POWER_ENABLE)),)
-C_DEFS += -DCHASSIS_BUFFER_POWER_ENABLE=$(CHASSIS_BUFFER_POWER_ENABLE)
-endif
-ifneq ($(strip $(CHASSIS_POWER_SOURCE_MODE)),)
-C_DEFS += -DCHASSIS_POWER_SOURCE_MODE=$(CHASSIS_POWER_SOURCE_MODE)
-endif
-
-ifneq ($(strip $(UART1_USE)),)
-C_DEFS += -DUART1_USE=$(UART1_USE)
-endif
-
-ifneq ($(strip $(USB_TELEMETRY_ENABLE)),)
-C_DEFS += -DUSB_TELEMETRY_ENABLE=$(USB_TELEMETRY_ENABLE)
-endif
-
-ifneq ($(strip $(REFEREE_LEGACY_POWER_FIELDS_ENABLED)),)
-C_DEFS += -DREFEREE_LEGACY_POWER_FIELDS_ENABLED=$(REFEREE_LEGACY_POWER_FIELDS_ENABLED)
-endif
-
-ifneq ($(strip $(CHASSIS_POWER_CALIBRATION_ENABLE)),)
-C_DEFS += -DCHASSIS_POWER_CALIBRATION_ENABLE=$(CHASSIS_POWER_CALIBRATION_ENABLE)
-endif
+include config/atype.mk
 
 # AS includes
 AS_INCLUDES =  \
@@ -311,6 +274,13 @@ C_INCLUDES =  \
 -Imodules/algorithm \
 -Imodules/bluetooth \
 -Imodules/BMI088 \
+-Imodules/TFminiPlus \
+-Imodules/key \
+-Imodules/jam_detector \
+-Imodules/mpu6500 \
+-Imodules/heat_control \
+-Imodules/vtx \
+-Imodules/jscope \
 -Imodules/imu \
 -Imodules/ist8310 \
 -Imodules/master_machine \
@@ -353,7 +323,7 @@ CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 # LDFLAGS
 #######################################
 # link script
-LDSCRIPT = STM32F407IGHx_FLASH.ld
+LDSCRIPT = STM32F427IIHx_FLASH.ld
 
 # libraries
 LIBS = -lc -lm -lnosys  \
@@ -364,6 +334,8 @@ LDFLAGS = $(MCU) -specs=nano.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BU
 
 # default action: build all
 all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin
+
+LDFLAGS += $(ATYPE_MODULE_LDFLAGS)
 
 
 #######################################
@@ -376,10 +348,10 @@ vpath %.c $(sort $(dir $(C_SOURCES)))
 OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES:.s=.o)))
 vpath %.s $(sort $(dir $(ASM_SOURCES)))
 
-$(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR) 
+$(BUILD_DIR)/%.o: %.c Makefile $(BUILD_DIR)/configuration.txt | $(BUILD_DIR)
 	@$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
 
-$(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
+$(BUILD_DIR)/%.o: %.s Makefile $(BUILD_DIR)/configuration.txt | $(BUILD_DIR)
 	@$(AS) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile
@@ -393,14 +365,19 @@ $(BUILD_DIR)/%.bin: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
 	$(BIN) $< $@	
 	
 $(BUILD_DIR):
-	@mkdir $@		
+	@powershell -NoProfile -Command "New-Item -ItemType Directory -Force -Path '$@' | Out-Null"
+
+.PHONY: FORCE
+FORCE:
+$(BUILD_DIR)/configuration.txt: FORCE | $(BUILD_DIR)
+	@powershell -NoProfile -File scripts/write-build-config.ps1 -Path "$@" -Value "$(C_DEFS) $(OPT) $(MCU) $(ATYPE_MODULE_LDFLAGS)"
 
 
 #######################################
 # clean up
 #######################################
 clean:
-	rd $(BUILD_DIR) /s/q
+	powershell -NoProfile -File scripts/clean-atype.ps1 -BuildDir "$(BUILD_DIR)"
 
 
 #######################################
@@ -418,3 +395,7 @@ download_jlink:
 	JFlash -openprj'stm32.jflash' -open'$(BUILD_DIR)/$(TARGET).hex',0x8000000 -auto -startapp -exit
 
 # *** EOF ***
+
+.PHONY: atype-vehicle atype-bench atype-direct
+atype-vehicle atype-bench atype-direct:
+	$(MAKE) PROFILE=$@ all

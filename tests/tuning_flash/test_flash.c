@@ -9,6 +9,7 @@ uint32_t __tuning_bank0_start__[32768],__tuning_bank1_start__[32768];
 FlashRegisters test_flash_registers={.ACR=1};
 static unsigned suspended,writes;
 static bool stopped,unlock_failed;
+bool VehicleSafetyIsStopped(uint32_t now) {(void)now;return stopped;}
 static uint32_t tick=1000;
 static ChassisTelemetrySnapshot_s telemetry={.valid=true,.tick_ms=1000,.mode=1};
 void vTaskSuspendAll(void) {assert(suspended==0); ++suspended;}
@@ -33,8 +34,8 @@ HAL_StatusTypeDef HAL_FLASH_Program(uint32_t type,uint32_t address,uint64_t valu
 }
 HAL_StatusTypeDef HAL_FLASHEx_Erase(FLASH_EraseInitTypeDef *e,uint32_t *error)
 {
-    assert(suspended && e->NbSectors==1 && (e->Sector==10 || e->Sector==11));
-    memset(e->Sector==10 ? __tuning_bank0_start__ : __tuning_bank1_start__,0xff,sizeof __tuning_bank0_start__);
+    assert(suspended && e->NbSectors==1 && (e->Sector==22 || e->Sector==23));
+    memset(e->Sector==22 ? __tuning_bank0_start__ : __tuning_bank1_start__,0xff,sizeof __tuning_bank0_start__);
     *error=UINT32_MAX; return HAL_OK;
 }
 static float restored;

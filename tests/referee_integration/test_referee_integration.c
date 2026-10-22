@@ -308,7 +308,7 @@ static void Test16BytePowerFrameUpdatesRawDataAndCommand(void)
     ASSERT_TRUE(info->PowerHeatData.reserved_power == 12.5f);
     ASSERT_EQ_U32(25000U, info->PowerHeatData.reserved_voltage);
     ASSERT_EQ_U32(500U, info->PowerHeatData.reserved_current);
-    ASSERT_EQ_U32(10U, info->PowerHeatData.shooter_17mm_barrel_heat);
+    ASSERT_EQ_U32(20U, info->PowerHeatData.shooter_17mm_barrel_heat);
     ASSERT_EQ_U32(30U, info->PowerHeatData.shooter_42mm_barrel_heat);
     ASSERT_TRUE(info->GameRobotPos.x == 123.0f);
 

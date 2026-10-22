@@ -15,14 +15,26 @@
 #include "ins_task.h"
 #include "master_process.h"
 #include "power_model.h"
+#include "referee_power.h"
 #include "stdint.h"
 
 /* 开发板类型定义,烧录时注意不要弄错对应功能;修改定义后需要重新编译,只能存在一个定义! */
+#if !defined(ONE_BOARD) && !defined(CHASSIS_BOARD) && !defined(GIMBAL_BOARD)
 #define ONE_BOARD // 单板控制整车
+#endif
 // #define CHASSIS_BOARD //底盘板
 // #define GIMBAL_BOARD  //云台板
 
-#define VISION_USE_VCP  // 使用虚拟串口发送视觉数据
+#if !defined(VISION_USE_VCP) && !defined(VISION_USE_UART)
+#define VISION_USE_UART
+#endif
+#if defined(VISION_USE_VCP) && defined(VISION_USE_UART)
+#error Select one vision transport.
+#endif
+#include "usb_telemetry_config.h"
+#if defined(VISION_USE_VCP) && USB_TELEMETRY_ENABLE
+#error USB vision and USB telemetry are mutually exclusive.
+#endif
 // #define VISION_USE_UART // 使用串口发送视觉数据
 
 /*
@@ -30,10 +42,10 @@
  * 启用后，只有裁判功率快照无效时才使用 CHASSIS_POWER_BENCH_LIMIT_W。
  */
 #ifndef CHASSIS_POWER_BENCH_TEST
-#define CHASSIS_POWER_BENCH_TEST 1
+#define CHASSIS_POWER_BENCH_TEST 0
 #endif
 #ifndef CHASSIS_POWER_BENCH_LIMIT_W
-#define CHASSIS_POWER_BENCH_LIMIT_W 20.0f // 底盘功率回退限制，单位 W
+#define CHASSIS_POWER_BENCH_LIMIT_W 50.0f // 底盘功率回退限制，单位 W
 #endif
 
 #if CHASSIS_POWER_BENCH_TEST != 0 && CHASSIS_POWER_BENCH_TEST != 1
@@ -41,9 +53,7 @@
 #endif
 
 /* 功率计 CAN1 状态接收；设为 0 时不创建实例或注册 CAN 过滤器。 */
-#ifndef POWER_METER_ENABLE
-#define POWER_METER_ENABLE 1
-#endif
+
 
 #include "chassis_power_config.h"
 
@@ -62,11 +72,11 @@
 #undef POWER_METER_ENABLE_IS_VALID_0
 
 /* 机器人重要参数定义,注意根据不同机器人进行修改,浮点数需要以.0或f结尾,无符号以u结尾 */
-// 底盘类型：默认保持现有麦克纳姆轮，改为 CHASSIS_DRIVE_OMNI_X 可启用四轮 X 型全向轮
+// 底盘类型：A 板默认四轮 X 型全向轮，麦克纳姆轮作为可选配置保留。
 #define CHASSIS_DRIVE_MECANUM 0
 #define CHASSIS_DRIVE_OMNI_X 1
 #ifndef CHASSIS_DRIVE_TYPE
-#define CHASSIS_DRIVE_TYPE CHASSIS_DRIVE_MECANUM
+#define CHASSIS_DRIVE_TYPE CHASSIS_DRIVE_OMNI_X
 #endif
 
 #if CHASSIS_DRIVE_TYPE != CHASSIS_DRIVE_MECANUM && \
@@ -75,22 +85,50 @@
 #endif
 
 // 云台参数
-#define YAW_CHASSIS_ALIGN_ECD 3734// 云台和底盘对齐指向相同方向时的电机编码器值,若对云台有机械改动需要修改
+#ifndef YAW_CHASSIS_ALIGN_ECD
+#define YAW_CHASSIS_ALIGN_ECD 350// 云台和底盘对齐指向相同方向时的电机编码器值,若对云台有机械改动需要修改
+#endif
+#ifndef YAW_ECD_GREATER_THAN_4096
 #define YAW_ECD_GREATER_THAN_4096 0 // ALIGN_ECD值是否大于4096,是为1,否为0;用于计算云台偏转角度
+#endif
+#ifndef PITCH_HORIZON_ECD
 #define PITCH_HORIZON_ECD 3412      // 云台处于水平位置时编码器值,若对云台有机械改动需要修改
-#define PITCH_MAX_ANGLE 0           // 云台竖直方向最大角度 (注意反馈如果是陀螺仪，则填写陀螺仪的角度)
-#define PITCH_MIN_ANGLE 0           // 云台竖直方向最小角度 (注意反馈如果是陀螺仪，则填写陀螺仪的角度)
+#endif
+#ifndef PITCH_MAX_ANGLE
+#define PITCH_MAX_ANGLE 30           // 云台竖直方向最大角度 (注意反馈如果是陀螺仪，则填写陀螺仪的角度)
+#endif
+#ifndef PITCH_MIN_ANGLE
+#define PITCH_MIN_ANGLE -30           // 云台竖直方向最小角度 (注意反馈如果是陀螺仪，则填写陀螺仪的角度)
+#endif
 // 发射参数
-#define ONE_BULLET_DELTA_ANGLE 36    // 发射一发弹丸拨盘转动的距离,由机械设计图纸给出
+#ifndef ONE_BULLET_DELTA_ANGLE
+#define ONE_BULLET_DELTA_ANGLE 45    // 发射一发弹丸拨盘转动的距离,由机械设计图纸给出
+#endif
+#ifndef REDUCTION_RATIO_LOADER
 #define REDUCTION_RATIO_LOADER 36.0f // 2006拨盘电机的减速比,英雄需要修改为3508的19.0f
-#define NUM_PER_CIRCLE 10            // 拨盘一圈的装载量
+#endif
+#ifndef NUM_PER_CIRCLE
+#define NUM_PER_CIRCLE 8            // 拨盘一圈的装载量
+#endif
 // 机器人底盘修改的参数,单位为mm(毫米)
+#ifndef WHEEL_BASE
 #define WHEEL_BASE 350              // 纵向轴距(前进后退方向)
+#endif
+#ifndef TRACK_WIDTH
 #define TRACK_WIDTH 300             // 横向轮距(左右平移方向)
+#endif
+#ifndef CENTER_GIMBAL_OFFSET_X
 #define CENTER_GIMBAL_OFFSET_X 0    // 云台旋转中心距底盘几何中心的距离,前后方向,云台位于正中心时默认设为0
+#endif
+#ifndef CENTER_GIMBAL_OFFSET_Y
 #define CENTER_GIMBAL_OFFSET_Y 0    // 云台旋转中心距底盘几何中心的距离,左右方向,云台位于正中心时默认设为0
+#endif
+#ifndef RADIUS_WHEEL
 #define RADIUS_WHEEL 60             // 轮子半径
+#endif
+#ifndef REDUCTION_RATIO_WHEEL
 #define REDUCTION_RATIO_WHEEL 19.0f // 电机减速比,因为编码器量测的是转子的速度而不是输出轴的速度故需进行转换
+#endif
 
 // X 型全向轮方向校正：架空测试时若某一轮方向相反，只将对应值改为 -1.0f
 #ifndef OMNI_X_LF_DIRECTION
@@ -106,9 +144,15 @@
 #define OMNI_X_RB_DIRECTION 1.0f
 #endif
 
+#ifndef GYRO2GIMBAL_DIR_YAW
 #define GYRO2GIMBAL_DIR_YAW 1   // 陀螺仪数据相较于云台的yaw的方向,1为相同,-1为相反
+#endif
+#ifndef GYRO2GIMBAL_DIR_PITCH
 #define GYRO2GIMBAL_DIR_PITCH 1 // 陀螺仪数据相较于云台的pitch的方向,1为相同,-1为相反
+#endif
+#ifndef GYRO2GIMBAL_DIR_ROLL
 #define GYRO2GIMBAL_DIR_ROLL 1  // 陀螺仪数据相较于云台的roll的方向,1为相同,-1为相反
+#endif
 
 // 检查是否出现主控板定义冲突,只允许一个开发板定义存在,否则编译会自动报错
 #if (defined(ONE_BOARD) && defined(CHASSIS_BOARD)) || \
@@ -207,6 +251,11 @@ typedef struct
     float offset_angle; // 底盘和归中位置的夹角
     chassis_mode_e chassis_mode;
     int chassis_speed_buff;
+    uint8_t input_permitted;
+    uint8_t safety_reset;
+    uint8_t bench_permitted;
+    uint8_t aux_stopped;
+    uint32_t aux_feedback_age_ms;
     // UI部分
     //  ...
 
@@ -243,6 +292,8 @@ typedef struct
 typedef struct
 {
     Chassis_Power_Control_Data_s power_control;
+    RefereeHeatSnapshot_s heat;
+    uint32_t heat_robot_age_ms, heat_power_age_ms;
 #if defined(CHASSIS_BOARD) || defined(GIMBAL_BOARD) // 非单板的时候底盘还将imu数据回传(若有必要)
     // attitude_t chassis_imu_data;
 #endif

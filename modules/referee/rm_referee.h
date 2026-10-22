@@ -102,6 +102,7 @@ referee_info_t *RefereeInit(UART_HandleTypeDef *referee_usart_handle);
  * @brief 原子复制裁判功率状态并在同一临界区内采样当前时间
  */
 bool RefereeGetPowerSnapshot(RefereePowerSnapshot_s *snapshot);
+bool RefereeGetHeatSnapshot(RefereeHeatSnapshot_s *snapshot);
 
 /**
  * @brief 获取裁判链路诊断；transport.valid_frame_count仅表示CRC通过，不代表业务载荷长度有效

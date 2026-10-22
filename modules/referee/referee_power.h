@@ -26,6 +26,7 @@ typedef struct
 {
     uint16_t chassis_power_limit_w;
     uint16_t buffer_energy_j;
+    uint16_t current_heat, heat_limit, cooling_rate;
     float chassis_power_w; /* Available only with explicitly enabled legacy power fields. */
     uint32_t robot_state_tick_ms;
     uint32_t power_heat_tick_ms;
@@ -46,6 +47,15 @@ typedef struct
     float chassis_power_w;
     bool chassis_power_valid;
 } RefereePowerSnapshot_s;
+
+typedef struct {
+    uint16_t current_heat, heat_limit, cooling_rate;
+    uint32_t robot_state_tick_ms, power_heat_tick_ms;
+    bool valid;
+} RefereeHeatSnapshot_s;
+
+bool RefereeHeatBuildSnapshot(const RefereePowerState_s *state, uint32_t now_ms,
+                              RefereeHeatSnapshot_s *snapshot);
 
 void RefereePowerStateReset(RefereePowerState_s *state);
 bool RefereePowerStateAcceptFrame(RefereePowerState_s *state,

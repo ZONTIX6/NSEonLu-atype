@@ -86,5 +86,11 @@ int main(void)
     s=open_store(); assert(s.sequence==UINT32_MAX);
     assert(TuningStorageSave(&s,&b) && s.sequence==0);
     s=open_store(); assert(s.sequence==0 && s.image.values[0][0]==2);
+    /* A CRC-correct C-board record must never restore old gains. */
+    memset(flash,0xff,sizeof flash); s=open_store();
+    assert(TuningStorageSave(&s,&a));
+    flash[0][1]=1;
+    flash[0][TUNING_RECORD_WORDS-2]=record_crc(flash[0]);
+    s=open_store(); assert(!s.valid);
     puts("Power-loss journal tests passed");
 }

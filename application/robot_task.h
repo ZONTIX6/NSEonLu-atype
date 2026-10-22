@@ -14,6 +14,7 @@
 #include "daemon.h"
 #include "HT04.h"
 #include "buzzer.h"
+#include "key.h"
 
 #include "bsp_log.h"
 #include "board_config.h"
@@ -38,7 +39,7 @@ void StartUSBTelemetryTask(void const *argument)
     }
 }
 #endif
-#if CHASSIS_POWER_CAPTURE_ENABLE && UART1_LOG_ENABLED
+#if CHASSIS_POWER_CAPTURE_ENABLE && BOARD_LOG_UART_ENABLED
 osThreadId powerCaptureTaskHandle;
 /* Debugger-readable on-board validation; stack values are FreeRTOS words. */
 volatile float chassis_power_motor_max_dt_ms;
@@ -90,12 +91,12 @@ void OSTaskInit()
     usbTelemetryTaskHandle = osThreadCreate(osThread(usbtelemetry), NULL);
 #endif
 
-#if CHASSIS_POWER_CAPTURE_ENABLE && UART1_LOG_ENABLED
+#if CHASSIS_POWER_CAPTURE_ENABLE && BOARD_LOG_UART_ENABLED
     osThreadDef(powercapture, StartPowerCaptureTask, osPriorityBelowNormal, 0, 256);
     powerCaptureTaskHandle = osThreadCreate(osThread(powercapture), NULL);
 #endif
 
-#if UART1_REFEREE_ENABLED
+#if REFEREE_ENABLE && (defined(ONE_BOARD) || defined(CHASSIS_BOARD))
     osThreadDef(uitask, StartUITASK, osPriorityNormal, 0, 512);
     uiTaskHandle = osThreadCreate(osThread(uitask), NULL);
 #endif
@@ -117,7 +118,10 @@ __attribute__((noreturn)) void StartINSTASK(void const *argument)
         ins_dt = DWT_GetTimeline_ms() - ins_start;
         if (ins_dt > 1)
             LOGERROR("[freeRTOS] INS Task is being DELAY! dt = [%f]", &ins_dt);
-        VisionSend(); // 解算完成后发送视觉数据,但是当前的实现不太优雅,后续若添加硬件触发需要重新考虑结构的组织
+#if defined(ONE_BOARD) || defined(GIMBAL_BOARD)
+        VisionSend();
+#endif
+        // // 解算完成后发送视觉数据,但是当前的实现不太优雅,后续若添加硬件触发需要重新考虑结构的组织
         osDelay(1);
     }
 }
@@ -132,12 +136,12 @@ __attribute__((noreturn)) void StartMOTORTASK(void const *argument)
         motor_start = DWT_GetTimeline_ms();
         MotorControlTask();
         motor_dt = DWT_GetTimeline_ms() - motor_start;
-#if CHASSIS_POWER_CAPTURE_ENABLE && UART1_LOG_ENABLED
+#if CHASSIS_POWER_CAPTURE_ENABLE && BOARD_LOG_UART_ENABLED
         if (motor_dt > chassis_power_motor_max_dt_ms) chassis_power_motor_max_dt_ms = motor_dt;
 #endif
-        if (motor_dt > 1)
+        if (motor_dt > 2)
             LOGERROR("[freeRTOS] MOTOR Task is being DELAY! dt = [%f]", &motor_dt);
-        osDelay(1);
+        osDelay(2);
     }
 }
 
@@ -153,6 +157,7 @@ __attribute__((noreturn)) void StartDAEMONTASK(void const *argument)
         daemon_start = DWT_GetTimeline_ms();
         DaemonTask();
         BuzzerTask();
+        KeyDetectTask();
         daemon_dt = DWT_GetTimeline_ms() - daemon_start;
         if (daemon_dt > 10)
             LOGERROR("[freeRTOS] Daemon Task is being DELAY! dt = [%f]", &daemon_dt);

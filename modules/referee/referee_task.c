@@ -61,8 +61,11 @@ static uint32_t shoot_line_location[10] = {540, 960, 490, 515, 565};
 
 void MyUIInit()
 {
-    if (!referee_recv_info->init_flag)
-        vTaskDelete(NULL); // 如果没有初始化裁判系统则直接删除ui任务
+    if (referee_recv_info == NULL || !referee_recv_info->init_flag)
+    {
+        vTaskDelete(NULL);
+        return;
+    }
     while (referee_recv_info->GameRobotState.robot_id == 0)
         osDelay(100); // 若还未收到裁判系统数据,等待一段时间后再检查
 

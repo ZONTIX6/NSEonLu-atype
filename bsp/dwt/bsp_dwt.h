@@ -98,4 +98,6 @@ void DWT_Delay(float Delay);
  */
 void DWT_SysTimeUpdate(void);
 
+static inline void DWT_Delay_ms(float ms) { DWT_Delay(ms * 0.001f); }
+
 #endif /* BSP_DWT_H_ */

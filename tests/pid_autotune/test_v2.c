@@ -19,6 +19,24 @@ static PIDAutotune begin(uint32_t start)
     assert(PIDAutotuneBeginV2(&a,1,&f));assert(PIDAutotuneStart(&a,&trial,&f));
     return a;
 }
+static void test_two_millisecond_sampling(void)
+{
+    for(unsigned jitter=0;jitter<2;++jitter) {
+        PIDAutotune a=begin(0);
+        for(unsigned t=0;t<=300;t+=2) tick(&a,t,0,1000,false);
+        unsigned n=0;
+        for(unsigned t=302;t<800;t+=jitter ? (n++%2 ? 3 : 2) : 2)
+            tick(&a,t,500,1000,false);
+        for(unsigned t=800;t<=1102;t+=2) tick(&a,t,0,1000,false);
+        assert(a.state==PID_AUTO_DONE && a.reason==PID_AUTO_NONE);
+        assert(a.coverage_ms==500 && a.window_ms==500);
+        /* Only the first 2 ms have error 500; both schedules integrate
+           the same 500 ms window rather than counting samples. */
+        assert(fabsf(a.rmse-sqrtf(1000))<.01f);
+        assert(a.jitter==0 && a.limited_pm==0 && a.steady==0);
+        assert(a.max_stat_ms==(jitter ? 3u : 2u));
+    }
+}
 int main(void)
 {
     PIDAutotune a=begin(0);
@@ -71,5 +89,6 @@ int main(void)
         assert(a.state==PID_AUTO_DONE);
     }
     assert(a.trial==50 && !PIDAutotuneStart(&a,&trial,&f));
+    test_two_millisecond_sampling();
     puts("A2 standstill/time-weighted metrics/quality/wraparound tests passed");
 }

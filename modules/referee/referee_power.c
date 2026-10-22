@@ -53,6 +53,8 @@ bool RefereePowerStateAcceptFrame(RefereePowerState_s *state,
                 ? 16U
                 : 12U;
         state->chassis_power_limit_w = ReadU16LE(&payload[10]);
+        state->cooling_rate = ReadU16LE(&payload[6]);
+        state->heat_limit = ReadU16LE(&payload[8]);
         state->chassis_output_enabled =
             (payload[output_flags_offset] & 0x02U) != 0U;
         state->robot_state_tick_ms = now_ms;
@@ -74,12 +76,31 @@ bool RefereePowerStateAcceptFrame(RefereePowerState_s *state,
         state->has_chassis_power = has_power_fields && isfinite(chassis_power_w);
         state->chassis_power_w = state->has_chassis_power ? chassis_power_w : 0.0f;
         state->buffer_energy_j = ReadU16LE(&payload[8]);
+        state->current_heat = ReadU16LE(&payload[
+            payload_length == REFEREE_POWER_HEAT_PAYLOAD_LENGTH ? 10U : 12U]);
         state->power_heat_tick_ms = now_ms;
         state->has_power_heat = true;
         return true;
     }
 
     return false;
+}
+
+bool RefereeHeatBuildSnapshot(const RefereePowerState_s *state, uint32_t now_ms,
+                              RefereeHeatSnapshot_s *snapshot)
+{
+    if (snapshot == NULL) return false;
+    memset(snapshot, 0, sizeof(*snapshot));
+    if (state == NULL) return false;
+    snapshot->current_heat = state->current_heat;
+    snapshot->heat_limit = state->heat_limit;
+    snapshot->cooling_rate = state->cooling_rate;
+    snapshot->robot_state_tick_ms = state->robot_state_tick_ms;
+    snapshot->power_heat_tick_ms = state->power_heat_tick_ms;
+    snapshot->valid = state->has_robot_state && state->has_power_heat && state->heat_limit > 0 &&
+        (uint32_t)(now_ms-state->robot_state_tick_ms) <= REFEREE_POWER_DATA_TIMEOUT_MS &&
+        (uint32_t)(now_ms-state->power_heat_tick_ms) <= REFEREE_POWER_DATA_TIMEOUT_MS;
+    return true;
 }
 
 bool RefereePowerBuildSnapshot(const RefereePowerState_s *state,

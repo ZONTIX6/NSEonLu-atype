@@ -16,7 +16,9 @@
 #define __INS_TASK_H
 
 #include "stdint.h"
-#include "BMI088driver.h"
+#include <stdbool.h>
+bool INSIsHealthy(uint32_t now_ms);
+
 #include "QuaternionEKF.h"
 
 #define X 0

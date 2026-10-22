@@ -7,7 +7,7 @@
  * Flash-saved values take precedence; source overrides apply only to matching modes. */
 #define TUNING_PID_OVERRIDE 0
 #define TUNING_PID_MODE 0
-#define TUNING_PID_VALUES {0}
+#define TUNING_PID_VALUES {0.75f, 0.0f, 0.0f, 15000.0f, 3000.0f, 0.0f, 0.75f, 0.0f, 0.0f, 15000.0f, 3000.0f, 0.0f, 0.75f, 0.0f, 0.0f, 15000.0f, 3000.0f, 0.0f, 0.75f, 0.0f, 0.0f, 15000.0f, 3000.0f, 0.0f}
 #define TUNING_POWER_OVERRIDE 0
 #define TUNING_POWER_MODE 3
 #define TUNING_POWER_VALUES {0}

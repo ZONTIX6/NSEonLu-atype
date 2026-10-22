@@ -44,13 +44,14 @@ HC05 *HC05Init(UART_HandleTypeDef *hc05_usart_handle)
 void HC05_SendData(uint8_t *data, uint8_t data_num)
 {
 
+    if(!hc05_init_flag || data==NULL || data_num==0 || data_num>HC05_DATASIZE) return;
     // 发送数据中加入帧头和帧尾
     hc05_msg.send_data[0] = FRAME_HEAD;
 
     for (int i = 0; i < data_num; i++)
         hc05_msg.send_data[i+1] = data[i];
     
-    hc05_msg.send_data[HC05_BUFFERSIZE - 1] = FRAME_END;
+    hc05_msg.send_data[data_num+1] = FRAME_END;
 
     // 发送数据
     USARTSend(hc05_usart_instance, hc05_msg.send_data, data_num+2, USART_TRANSFER_IT); 

@@ -12,6 +12,8 @@ extern FlashRegisters test_flash_registers;
 #define FLASH_VOLTAGE_RANGE_3 3U
 #define FLASH_SECTOR_10 10U
 #define FLASH_SECTOR_11 11U
+#define FLASH_SECTOR_22 22U
+#define FLASH_SECTOR_23 23U
 #define FLASH_FLAG_EOP 1U
 #define FLASH_FLAG_OPERR 2U
 #define FLASH_FLAG_WRPERR 4U

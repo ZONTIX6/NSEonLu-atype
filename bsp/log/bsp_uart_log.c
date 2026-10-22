@@ -1,3 +1,4 @@
+#include "board_config.h"
 /**
  * @file bsp_uart_log.c
  * @brief Non-blocking USART1 DMA transport for the BSP log module.
@@ -10,7 +11,7 @@
 
 #include <string.h>
 
-/* USART1 is owned by this module only when UART1_USE selects a log mode. */
+/* USART2 is reserved for logging only when LOG_OUTPUT selects UART transport. */
 #define BSP_UART_LOG_RING_SIZE 4096U
 
 static uint8_t tx_ring[BSP_UART_LOG_RING_SIZE];
@@ -37,7 +38,7 @@ static void StartNextDmaSegment(void)
     if (length > tx_queued)
         length = tx_queued;
 
-    status = HAL_UART_Transmit_DMA(&huart1, &tx_ring[tx_tail], length);
+    status = HAL_UART_Transmit_IT(BOARD_LOG_UART, &tx_ring[tx_tail], length);
     if (status != HAL_OK)
     {
         ++diagnostics.tx_errors;
@@ -55,14 +56,14 @@ void BSPUARTLogInit(void)
     diagnostics.dropped_messages = 0U;
     diagnostics.tx_errors = 0U;
 
-    huart1.Init.BaudRate = 250000U;
-    huart1.Init.WordLength = UART_WORDLENGTH_8B;
-    huart1.Init.StopBits = UART_STOPBITS_1;
-    huart1.Init.Parity = UART_PARITY_NONE;
-    huart1.Init.Mode = UART_MODE_TX_RX;
-    huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-    huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-    if (HAL_UART_Init(&huart1) != HAL_OK)
+    BOARD_LOG_UART->Init.BaudRate = 115200U;
+    BOARD_LOG_UART->Init.WordLength = UART_WORDLENGTH_8B;
+    BOARD_LOG_UART->Init.StopBits = UART_STOPBITS_1;
+    BOARD_LOG_UART->Init.Parity = UART_PARITY_NONE;
+    BOARD_LOG_UART->Init.Mode = UART_MODE_TX_RX;
+    BOARD_LOG_UART->Init.HwFlowCtl = UART_HWCONTROL_NONE;
+    BOARD_LOG_UART->Init.OverSampling = UART_OVERSAMPLING_16;
+    if (HAL_UART_Init(BOARD_LOG_UART) != HAL_OK)
         ++diagnostics.tx_errors;
 }
 
@@ -130,7 +131,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
     uint32_t primask;
 
-    if (huart != &huart1)
+    if (huart != BOARD_LOG_UART)
         return;
 
     primask = __get_PRIMASK();

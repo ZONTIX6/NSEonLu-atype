@@ -1,27 +1,70 @@
 #ifndef BOARD_CONFIG_H
 #define BOARD_CONFIG_H
 
-/* USART1 is exclusive: referee, UART log, or UART log plus RTT. */
-#define UART1_USE_REFEREE 0
-#define UART1_USE_LOG     1
-#define UART1_USE_LOG_RTT 2
+/* USART1 belongs exclusively to DBUS on the RoboMaster A board. */
+#ifdef UART1_USE
+#error UART1_USE is retired: USART1 is DBUS; use REFEREE_ENABLE and LOG_OUTPUT.
+#endif
+#ifndef REFEREE_ENABLE
+#define REFEREE_ENABLE 1
+#endif
+#ifndef LOG_OUTPUT
+#define LOG_OUTPUT 1 /* 0: off, 1: RTT, 2: USART2, 3: both */
+#endif
+#ifndef ATYPE_BENCH_MODE
+#define ATYPE_BENCH_MODE 0
+#endif
+#if REFEREE_ENABLE != 0 && REFEREE_ENABLE != 1
+#error REFEREE_ENABLE must be 0 or 1.
+#endif
+#if LOG_OUTPUT < 0 || LOG_OUTPUT > 3
+#error LOG_OUTPUT must be 0, 1, 2, or 3.
+#endif
+#if ATYPE_BENCH_MODE != 0 && ATYPE_BENCH_MODE != 1
+#error ATYPE_BENCH_MODE must be 0 or 1.
+#endif
+#define BOARD_LOG_UART_ENABLED (LOG_OUTPUT == 2 || LOG_OUTPUT == 3)
+#define BOARD_LOG_RTT_ENABLED (LOG_OUTPUT == 1 || LOG_OUTPUT == 3)
 
-#ifndef UART1_USE
-#define UART1_USE UART1_USE_LOG
+#define BOARD_REMOTE_UART (&huart1)
+#define BOARD_VISION_UART (&huart3)
+#define BOARD_VTX_UART (&huart8)
+#define BOARD_REFEREE_UART (&huart6)
+#define BOARD_LOG_UART (&huart2)
+#define BOARD_SUPERCAP_CAN (&hcan1)
+#define BOARD_POWER_METER_CAN (&hcan1)
+
+#ifndef OLED_USE_I2C
+#define OLED_USE_I2C 0 /* A-board SPI1 OLED; I2C2 backend remains optional. */
+#endif
+#if OLED_USE_I2C != 0 && OLED_USE_I2C != 1
+#error OLED_USE_I2C must be 0 or 1.
 #endif
 
-#if UART1_USE != UART1_USE_REFEREE && \
-    UART1_USE != UART1_USE_LOG && \
-    UART1_USE != UART1_USE_LOG_RTT
-#error UART1_USE must be UART1_USE_REFEREE, UART1_USE_LOG, or UART1_USE_LOG_RTT
+/* Optional devices register only when selected. One point-to-point device per UART. */
+#ifndef BOARD_AUX_UART2_DEVICE
+#define BOARD_AUX_UART2_DEVICE 0
 #endif
-
-#define UART1_REFEREE_ENABLED (UART1_USE == UART1_USE_REFEREE)
-#define UART1_LOG_ENABLED     (UART1_USE != UART1_USE_REFEREE)
-#define UART1_RTT_ENABLED     (UART1_USE != UART1_USE_LOG)
-
-#if UART1_LOG_ENABLED && defined(VISION_USE_UART)
-#error VISION_USE_UART cannot share USART1 with UART logging
+#ifndef BOARD_AUX_UART7_DEVICE
+#define BOARD_AUX_UART7_DEVICE 0
+#endif
+#ifndef BOARD_OLED_ENABLE
+#define BOARD_OLED_ENABLE 0
+#endif
+#ifndef BOARD_KEY_ENABLE
+#define BOARD_KEY_ENABLE 0
+#endif
+#if BOARD_AUX_UART2_DEVICE < 0 || BOARD_AUX_UART2_DEVICE > 3 || BOARD_AUX_UART7_DEVICE < 0 || BOARD_AUX_UART7_DEVICE > 3
+#error Auxiliary UART device must be 0 (none), 1 (TFmini), 2 (HC05), or 3 (bus servo).
+#endif
+#if BOARD_AUX_UART2_DEVICE && BOARD_LOG_UART_ENABLED
+#error USART2 cannot be shared by an auxiliary device and UART logging.
+#endif
+#if BOARD_AUX_UART2_DEVICE && BOARD_AUX_UART7_DEVICE && BOARD_AUX_UART2_DEVICE == BOARD_AUX_UART7_DEVICE
+#error TFmini, HC05 and bus servo each support one UART instance.
+#endif
+#if BOARD_OLED_ENABLE < 0 || BOARD_OLED_ENABLE > 1 || BOARD_KEY_ENABLE < 0 || BOARD_KEY_ENABLE > 1
+#error Optional OLED/key enables must be 0 or 1.
 #endif
 
 #endif

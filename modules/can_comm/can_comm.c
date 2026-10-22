@@ -4,6 +4,8 @@
 #include "crc8.h"
 #include "bsp_dwt.h"
 #include "bsp_log.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
 /**
  * @brief 重置CAN comm的接收状态和buffer
@@ -60,7 +62,9 @@ static void CANCommRxCallback(CANInstance *_instance)
                 if (comm->raw_recvbuf[comm->recv_buf_len - 2] == crc_8(comm->raw_recvbuf + 2, comm->recv_data_len))
                 { // 数据量大的话考虑使用DMA
                     memcpy(comm->unpacked_recv_data, comm->raw_recvbuf + 2, comm->recv_data_len);
-                    comm->update_flag = 1;           // 数据更新flag置为1
+                    comm->update_flag = 1;
+                    comm->has_sample=1;
+                    comm->last_rx_tick_ms=HAL_GetTick();           // 数据更新flag置为1
                     DaemonReload(comm->comm_daemon); // 重载daemon,避免数据更新后一直不被读取而导致数据更新不及时
                 }
             }
@@ -79,6 +83,9 @@ static void CANCommLostCallback(void *cancomm)
 
 CANCommInstance *CANCommInit(CANComm_Init_Config_s *comm_config)
 {
+    if (comm_config==NULL || comm_config->send_data_len==0 || comm_config->recv_data_len==0 ||
+        comm_config->send_data_len>CAN_COMM_MAX_BUFFSIZE || comm_config->recv_data_len>CAN_COMM_MAX_BUFFSIZE)
+        return NULL;
     CANCommInstance *ins = (CANCommInstance *)malloc(sizeof(CANCommInstance));
     memset(ins, 0, sizeof(CANCommInstance));
 
@@ -131,4 +138,33 @@ void *CANCommGet(CANCommInstance *instance)
 uint8_t CANCommIsOnline(CANCommInstance *instance)
 {
     return DaemonIsOnline(instance->comm_daemon);
+}
+
+uint8_t CANCommCopy(CANCommInstance *instance, void *data, uint8_t length)
+{
+    return CANCommCopyAt(instance,data,length,NULL);
+}
+
+uint8_t CANCommCopyAt(CANCommInstance *instance, void *data, uint8_t length, uint32_t *rx_tick_ms)
+{
+    if(instance==NULL || data==NULL || length!=instance->recv_data_len) return 0;
+    taskENTER_CRITICAL();
+    const uint8_t fresh=instance->has_sample && CANCommIsOnline(instance) &&
+        (uint32_t)(HAL_GetTick()-instance->last_rx_tick_ms)<=100U;
+    if(fresh) {
+        memcpy(data,instance->unpacked_recv_data,length);
+        if(rx_tick_ms) *rx_tick_ms=instance->last_rx_tick_ms;
+    }
+    taskEXIT_CRITICAL();
+    return fresh;
+}
+
+uint8_t CANCommCopyFreshAt(CANCommInstance *instance, void *data, uint8_t length,
+                         uint32_t *rx_tick_ms, uint32_t max_age_ms)
+{
+    uint32_t received=0;
+    if(!CANCommCopyAt(instance,data,length,&received) ||
+       (uint32_t)(HAL_GetTick()-received)>max_age_ms) return 0;
+    if(rx_tick_ms) *rx_tick_ms=received;
+    return 1;
 }

@@ -1,3 +1,5 @@
+#include "board_config.h"
+#if OLED_USE_I2C
 #include "oled.h" 
 #include "oledfont.h"
 #include "main.h"
@@ -376,3 +378,4 @@ void OLED_LOGO(void)
     }
     OLED_refresh_gram();
 }
+#endif

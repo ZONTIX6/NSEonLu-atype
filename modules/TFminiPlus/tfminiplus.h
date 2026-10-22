@@ -1,20 +1,20 @@
-#ifndef __TFMINIPLUS_H__
-#define __TFMINIPLUS_H__
+#ifndef TFMINIPLUS_H
+#define TFMINIPLUS_H
 
-#include "stdint.h"
-#include "bsp_iic.h"
+#include "bsp_usart.h"
+
+#define TFMINIPLUS_FRAME_HEAD_1 0x59
+#define TFMINIPLUS_FRAME_HEAD_2 0x59
+#define TFMINIPLUS_RECV_SIZE 9u
 
 typedef struct
 {
-	IICInstance *iic;
-	uint8_t Mode;	   //= buf[6];
-	uint16_t Dist;	   //= buf[2] | (buf[3] << 8);
-	uint32_t Strength; //= buf[4] | (buf[5] << 8);
-	uint8_t buf[9];	
-} TFMiniInstance;
+    uint16_t distance;
+    uint16_t strength;
+    float temperature;
+}TFminiPlus_Recv_s;
 
-TFMiniInstance *TFMiniRegister(I2C_HandleTypeDef *hi2c);
+TFminiPlus_Recv_s *TFminiPlusInit(UART_HandleTypeDef *_handle);
 
-float GetDistance(TFMiniInstance *tfmini);
 
-#endif
+#endif // !TFMINIPLUS_H

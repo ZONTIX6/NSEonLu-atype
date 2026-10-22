@@ -14,8 +14,8 @@ static BuzzzerInstance *buzzer_list[BUZZER_DEVICE_CNT] = {0};
 void BuzzerInit()
 {
     PWM_Init_Config_s buzzer_config = {
-        .htim = &htim4,
-        .channel = TIM_CHANNEL_3,
+        .htim = &htim12,
+        .channel = TIM_CHANNEL_1,
         .dutyratio = 0,
         .period = 0.001,
     };
@@ -50,7 +50,7 @@ void BuzzerTask()
     for (size_t i = 0; i < BUZZER_DEVICE_CNT; ++i)
     {
         buzz = buzzer_list[i];
-        if (buzz->alarm_level > ALARM_LEVEL_LOW)
+        if (buzz == NULL || buzz->alarm_level > ALARM_LEVEL_LOW)
         {
             continue;
         }

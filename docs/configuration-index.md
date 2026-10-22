@@ -1,4183 +1,4143 @@
 # 完整宏与初始化参数索引
 
-整理日期：2026-10-13。配套说明：[宏与参数设置总表](configuration-guide.md)。
+更新日期：2026-10-22。当前目标为 STM32F427 A 板。配套说明：[配置指南](configuration-guide.md)、[宏迁移表](atype-macro-migration.md)。
 
-2026-10-15：仅同步正弦配置的独立中心/起步宏、振幅/上升速率及应用初始化分支；其余内容仍为原工作区快照。
+由 `scripts/generate-configuration-index.py` 扫描 240 个项目 C/H 文件，记录 3221 条预处理、配置初始化和 HAL/NVIC 项。预处理条目包含互斥分支与保护宏，不能将所有条目同时理解为有效配置。可从构建命令覆盖的选项见 `config/atype-options.txt`；普通源码 PID/功率模型初值也列在所属文件下。
 
-扫描项目源码目录 application、bsp、modules、Inc、Src，以及 SEGGER RTT 配置文件，共 192 个 C/H 文件。收录 1078 条未被注释的宏定义（含本次新增的 2 条正弦参数）、56 条注释中的宏选项、32 个配置结构体初值、27 个配置结构体字段声明、481 条 HAL 设置赋值/中断优先级。
+`modules/imu/ins_task.c`、`BMI088driver.c`、`BMI088Middleware.c` 是未链接的旧 C 板实现；当前 INS 只链接 MPU6500 和公共数学接口。便携副本有独立 API，未加入固件链接。
 
-这里的“宏定义”是源码中的定义条目，包含头文件保护宏、函数式宏、协议常量、传感器寄存器常量和条件分支，**不代表每条都在当前编译中生效**。同名宏的不同条件分支分别列出，不合并默认值。条件路径的“→”表示同一 #if 链中经过 #elif/#else 到达该分支；#elif/#else 还隐含前面分支未命中。原行注释保留供核对，可能与代码不一致；实际替换文本以源码为准。
+## application/board_optional.c
 
-初始化列表包括配置类型变量和返回的配置复合字面量；字段声明收录类型名含 Config/Setting 或以 _Init_s 结尾的配置接口。不包括每次运行产生的 Input/Output/State 数据、全部函数形参或第三方库内部设置。函数内硬编码的输入增益、频率、超时等已在总表单列。Drivers 与其余 Middlewares 的内部宏、tests 和 portable_modules 不在此主工程索引范围内。
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [10](../application/board_optional.c#L10) | 预处理 | `#if BOARD_AUX_UART2_DEVICE &#124;&#124; BOARD_AUX_UART7_DEVICE` |
+| [17](../application/board_optional.c#L17) | 配置初值 | `Servo_Init_Config_s config={.servo_type=Bus_Servo,._handle=uart,.servo_id=1};` |
+| [23](../application/board_optional.c#L23) | 预处理 | `#endif` |
+| [27](../application/board_optional.c#L27) | 预处理 | `#if BOARD_AUX_UART2_DEVICE` |
+| [29](../application/board_optional.c#L29) | 预处理 | `#endif` |
+| [30](../application/board_optional.c#L30) | 预处理 | `#if BOARD_AUX_UART7_DEVICE` |
+| [32](../application/board_optional.c#L32) | 预处理 | `#endif` |
+| [33](../application/board_optional.c#L33) | 预处理 | `#if BOARD_OLED_ENABLE` |
+| [35](../application/board_optional.c#L35) | 预处理 | `#endif` |
+| [36](../application/board_optional.c#L36) | 预处理 | `#if BOARD_KEY_ENABLE` |
+| [37](../application/board_optional.c#L37) | 配置初值 | `Key_Config_s key={.key_gpio_config={.GPIOx=KEY_GPIO_Port,.GPIO_Pin=KEY_Pin,` |
+| [38](../application/board_optional.c#L38) | 配置初值 | `.exti_mode=GPIO_EXTI_MODE_RISING}};` |
+| [40](../application/board_optional.c#L40) | 预处理 | `#endif` |
 
-该文件是工作区快照，源码变更后行号和数值可能变化；点击文件后按宏名查找。
+## application/board_optional.h
 
-## 文件目录
-
-| 文件 | 宏定义 | 注释宏选项 | 配置初值 | 字段声明 | HAL 设置 |
-| --- | --- | --- | --- | --- | --- |
-| [application/chassis/chassis.c](../application/chassis/chassis.c) | 8 | 0 | 10 | 0 | 0 |
-| [application/chassis/chassis.h](../application/chassis/chassis.h) | 1 | 0 | 0 | 0 | 0 |
-| [application/cmd/robot_cmd.c](../application/cmd/robot_cmd.c) | 2 | 0 | 1 | 0 | 0 |
-| [application/cmd/robot_cmd.h](../application/cmd/robot_cmd.h) | 1 | 0 | 0 | 0 | 0 |
-| [application/gimbal/gimbal.c](../application/gimbal/gimbal.c) | 0 | 0 | 2 | 0 | 0 |
-| [application/gimbal/gimbal.h](../application/gimbal/gimbal.h) | 1 | 0 | 0 | 0 | 0 |
-| [application/robot_def.h](../application/robot_def.h) | 34 | 3 | 0 | 0 | 0 |
-| [application/robot.c](../application/robot.c) | 1 | 0 | 0 | 0 | 0 |
-| [application/robot.h](../application/robot.h) | 1 | 0 | 0 | 0 | 0 |
-| [application/shoot/shoot.c](../application/shoot/shoot.c) | 0 | 0 | 2 | 0 | 0 |
-| [application/shoot/shoot.h](../application/shoot/shoot.h) | 1 | 0 | 0 | 0 | 0 |
-| [bsp/bsp_init.h](../bsp/bsp_init.h) | 1 | 0 | 0 | 0 | 0 |
-| [bsp/bsp_tools.c](../bsp/bsp_tools.c) | 1 | 0 | 0 | 0 | 0 |
-| [bsp/can/bsp_can.h](../bsp/can/bsp_can.h) | 4 | 0 | 0 | 1 | 0 |
-| [bsp/dwt/bsp_dwt.h](../bsp/dwt/bsp_dwt.h) | 2 | 0 | 0 | 0 | 0 |
-| [bsp/flash/bsp_flash.h](../bsp/flash/bsp_flash.h) | 26 | 0 | 0 | 0 | 0 |
-| [bsp/gpio/bsp_gpio.h](../bsp/gpio/bsp_gpio.h) | 1 | 0 | 0 | 1 | 0 |
-| [bsp/iic/bsp_iic.h](../bsp/iic/bsp_iic.h) | 2 | 0 | 0 | 1 | 0 |
-| [bsp/log/bsp_log.c](../bsp/log/bsp_log.c) | 1 | 0 | 0 | 0 | 0 |
-| [bsp/log/bsp_log.h](../bsp/log/bsp_log.h) | 12 | 0 | 0 | 0 | 0 |
-| [bsp/log/bsp_uart_log.c](../bsp/log/bsp_uart_log.c) | 1 | 0 | 0 | 0 | 0 |
-| [bsp/log/bsp_uart_log.h](../bsp/log/bsp_uart_log.h) | 1 | 0 | 0 | 0 | 0 |
-| [bsp/pwm/bsp_pwm.h](../bsp/pwm/bsp_pwm.h) | 2 | 0 | 0 | 1 | 0 |
-| [bsp/spi/bsp_spi.h](../bsp/spi/bsp_spi.h) | 2 | 0 | 0 | 1 | 0 |
-| [bsp/usart/bsp_usart.h](../bsp/usart/bsp_usart.h) | 3 | 0 | 0 | 1 | 0 |
-| [bsp/usb/bsp_usb.h](../bsp/usb/bsp_usb.h) | 0 | 0 | 0 | 1 | 0 |
-| [Inc/adc.h](../Inc/adc.h) | 1 | 0 | 0 | 0 | 0 |
-| [Inc/board_config.h](../Inc/board_config.h) | 8 | 0 | 0 | 0 | 0 |
-| [Inc/can.h](../Inc/can.h) | 1 | 0 | 0 | 0 | 0 |
-| [Inc/crc.h](../Inc/crc.h) | 1 | 0 | 0 | 0 | 0 |
-| [Inc/dac.h](../Inc/dac.h) | 1 | 0 | 0 | 0 | 0 |
-| [Inc/dma.h](../Inc/dma.h) | 1 | 0 | 0 | 0 | 0 |
-| [Inc/FreeRTOSConfig.h](../Inc/FreeRTOSConfig.h) | 41 | 0 | 0 | 0 | 0 |
-| [Inc/gpio.h](../Inc/gpio.h) | 1 | 0 | 0 | 0 | 0 |
-| [Inc/i2c.h](../Inc/i2c.h) | 1 | 0 | 0 | 0 | 0 |
-| [Inc/main.h](../Inc/main.h) | 30 | 0 | 0 | 0 | 0 |
-| [Inc/rng.h](../Inc/rng.h) | 1 | 0 | 0 | 0 | 0 |
-| [Inc/rtc.h](../Inc/rtc.h) | 1 | 0 | 0 | 0 | 0 |
-| [Inc/spi.h](../Inc/spi.h) | 1 | 0 | 0 | 0 | 0 |
-| [Inc/stm32f4xx_hal_conf.h](../Inc/stm32f4xx_hal_conf.h) | 108 | 33 | 0 | 0 | 0 |
-| [Inc/stm32f4xx_it.h](../Inc/stm32f4xx_it.h) | 1 | 0 | 0 | 0 | 0 |
-| [Inc/tim.h](../Inc/tim.h) | 1 | 0 | 0 | 0 | 0 |
-| [Inc/usart.h](../Inc/usart.h) | 1 | 0 | 0 | 0 | 0 |
-| [Inc/usb_device.h](../Inc/usb_device.h) | 1 | 0 | 0 | 0 | 0 |
-| [Inc/usbd_cdc_if.h](../Inc/usbd_cdc_if.h) | 3 | 0 | 0 | 0 | 0 |
-| [Inc/usbd_conf.h](../Inc/usbd_conf.h) | 20 | 1 | 0 | 0 | 0 |
-| [Inc/usbd_desc.h](../Inc/usbd_desc.h) | 5 | 0 | 0 | 0 | 0 |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h) | 47 | 3 | 0 | 0 | 0 |
-| [modules/alarm/buzzer.c](../modules/alarm/buzzer.c) | 0 | 0 | 1 | 0 | 0 |
-| [modules/alarm/buzzer.h](../modules/alarm/buzzer.h) | 9 | 0 | 0 | 1 | 0 |
-| [modules/algorithm/chassis_energy_config.h](../modules/algorithm/chassis_energy_config.h) | 22 | 0 | 0 | 0 | 0 |
-| [modules/algorithm/chassis_kinematics.c](../modules/algorithm/chassis_kinematics.c) | 1 | 0 | 0 | 0 | 0 |
-| [modules/algorithm/chassis_kinematics.h](../modules/algorithm/chassis_kinematics.h) | 1 | 0 | 0 | 0 | 0 |
-| [modules/algorithm/chassis_power_budget.h](../modules/algorithm/chassis_power_budget.h) | 2 | 0 | 0 | 2 | 0 |
-| [modules/algorithm/chassis_power_config.h](../modules/algorithm/chassis_power_config.h) | 4 | 0 | 0 | 0 | 0 |
-| [modules/algorithm/chassis_power_outer_loop.h](../modules/algorithm/chassis_power_outer_loop.h) | 1 | 0 | 0 | 1 | 0 |
-| [modules/algorithm/chassis_power_transient.c](../modules/algorithm/chassis_power_transient.c) | 0 | 0 | 1 | 0 | 0 |
-| [modules/algorithm/chassis_power_transient.h](../modules/algorithm/chassis_power_transient.h) | 1 | 0 | 0 | 1 | 0 |
-| [modules/algorithm/chassis_spin_config.h](../modules/algorithm/chassis_spin_config.h) | 27 | 0 | 0 | 0 | 0 |
-| [modules/algorithm/chassis_spin.h](../modules/algorithm/chassis_spin.h) | 1 | 0 | 0 | 1 | 0 |
-| [modules/algorithm/controller.h](../modules/algorithm/controller.h) | 2 | 0 | 0 | 1 | 0 |
-| [modules/algorithm/crc16.h](../modules/algorithm/crc16.h) | 4 | 0 | 0 | 0 | 0 |
-| [modules/algorithm/crc8.h](../modules/algorithm/crc8.h) | 2 | 0 | 0 | 0 | 0 |
-| [modules/algorithm/kalman_filter.h](../modules/algorithm/kalman_filter.h) | 10 | 5 | 0 | 0 | 0 |
-| [modules/algorithm/power_model.h](../modules/algorithm/power_model.h) | 2 | 0 | 0 | 2 | 0 |
-| [modules/algorithm/QuaternionEKF.h](../modules/algorithm/QuaternionEKF.h) | 3 | 0 | 0 | 0 | 0 |
-| [modules/algorithm/user_lib.c](../modules/algorithm/user_lib.c) | 2 | 0 | 0 | 0 | 0 |
-| [modules/algorithm/user_lib.h](../modules/algorithm/user_lib.h) | 19 | 0 | 0 | 0 | 0 |
-| [modules/bluetooth/HC05.c](../modules/bluetooth/HC05.c) | 3 | 0 | 0 | 0 | 0 |
-| [modules/bluetooth/HC05.h](../modules/bluetooth/HC05.h) | 2 | 0 | 0 | 0 | 0 |
-| [modules/BMI088/bmi088_regNdef.h](../modules/BMI088/bmi088_regNdef.h) | 165 | 0 | 0 | 0 | 0 |
-| [modules/BMI088/bmi088.c](../modules/BMI088/bmi088.c) | 7 | 0 | 0 | 0 | 0 |
-| [modules/BMI088/bmi088.h](../modules/BMI088/bmi088.h) | 1 | 0 | 0 | 1 | 0 |
-| [modules/can_comm/can_comm.c](../modules/can_comm/can_comm.c) | 0 | 0 | 1 | 0 | 0 |
-| [modules/can_comm/can_comm.h](../modules/can_comm/can_comm.h) | 6 | 0 | 0 | 1 | 0 |
-| [modules/daemon/daemon.h](../modules/daemon/daemon.h) | 2 | 0 | 0 | 1 | 0 |
-| [modules/general_def.h](../modules/general_def.h) | 7 | 0 | 0 | 0 | 0 |
-| [modules/imu/BMI088driver.c](../modules/imu/BMI088driver.c) | 6 | 0 | 0 | 0 | 0 |
-| [modules/imu/BMI088driver.h](../modules/imu/BMI088driver.h) | 41 | 0 | 0 | 0 | 0 |
-| [modules/imu/BMI088Middleware.h](../modules/imu/BMI088Middleware.h) | 2 | 5 | 0 | 0 | 0 |
-| [modules/imu/BMI088reg.h](../modules/imu/BMI088reg.h) | 145 | 0 | 0 | 0 | 0 |
-| [modules/imu/ins_task.c](../modules/imu/ins_task.c) | 0 | 0 | 1 | 0 | 0 |
-| [modules/imu/ins_task.h](../modules/imu/ins_task.h) | 5 | 0 | 0 | 0 | 0 |
-| [modules/ist8310/ist8310.c](../modules/ist8310/ist8310.c) | 4 | 0 | 0 | 0 | 0 |
-| [modules/ist8310/ist8310.h](../modules/ist8310/ist8310.h) | 4 | 0 | 0 | 1 | 0 |
-| [modules/master_machine/master_process.c](../modules/master_machine/master_process.c) | 0 | 0 | 3 | 0 | 0 |
-| [modules/master_machine/master_process.h](../modules/master_machine/master_process.h) | 3 | 0 | 0 | 0 | 0 |
-| [modules/master_machine/seasky_protocol.h](../modules/master_machine/seasky_protocol.h) | 3 | 0 | 0 | 0 | 0 |
-| [modules/message_center/message_center.h](../modules/message_center/message_center.h) | 4 | 0 | 0 | 0 | 0 |
-| [modules/motor/DJImotor/dji_motor.c](../modules/motor/DJImotor/dji_motor.c) | 1 | 0 | 1 | 0 | 0 |
-| [modules/motor/DJImotor/dji_motor.h](../modules/motor/DJImotor/dji_motor.h) | 5 | 0 | 0 | 1 | 0 |
-| [modules/motor/DMmotor/dmmotor.c](../modules/motor/DMmotor/dmmotor.c) | 0 | 0 | 1 | 0 | 0 |
-| [modules/motor/DMmotor/dmmotor.h](../modules/motor/DMmotor/dmmotor.h) | 8 | 0 | 0 | 0 | 0 |
-| [modules/motor/HTmotor/HT04.c](../modules/motor/HTmotor/HT04.c) | 0 | 0 | 1 | 0 | 0 |
-| [modules/motor/HTmotor/HT04.h](../modules/motor/HTmotor/HT04.h) | 16 | 1 | 0 | 0 | 0 |
-| [modules/motor/LKmotor/LK9025.c](../modules/motor/LKmotor/LK9025.c) | 0 | 0 | 1 | 0 | 0 |
-| [modules/motor/LKmotor/LK9025.h](../modules/motor/LKmotor/LK9025.h) | 9 | 0 | 0 | 0 | 0 |
-| [modules/motor/motor_def.h](../modules/motor/motor_def.h) | 2 | 0 | 0 | 3 | 0 |
-| [modules/motor/motor_task.h](../modules/motor/motor_task.h) | 1 | 0 | 0 | 0 | 0 |
-| [modules/motor/power_control.c](../modules/motor/power_control.c) | 2 | 0 | 1 | 0 | 0 |
-| [modules/motor/power_control.h](../modules/motor/power_control.h) | 1 | 0 | 0 | 0 | 0 |
-| [modules/motor/servo_motor/servo_motor.h](../modules/motor/servo_motor/servo_motor.h) | 8 | 0 | 0 | 1 | 0 |
-| [modules/oled/oled.h](../modules/oled/oled.h) | 10 | 0 | 0 | 0 | 0 |
-| [modules/oled/oledfont.h](../modules/oled/oledfont.h) | 1 | 0 | 0 | 0 | 0 |
-| [modules/power_meter/power_meter_protocol.h](../modules/power_meter/power_meter_protocol.h) | 3 | 0 | 0 | 0 | 0 |
-| [modules/power_meter/power_meter.c](../modules/power_meter/power_meter.c) | 2 | 0 | 1 | 0 | 0 |
-| [modules/power_meter/power_meter.h](../modules/power_meter/power_meter.h) | 1 | 0 | 0 | 1 | 0 |
-| [modules/referee/crc_ref.h](../modules/referee/crc_ref.h) | 3 | 0 | 0 | 0 | 0 |
-| [modules/referee/referee_power.h](../modules/referee/referee_power.h) | 9 | 0 | 0 | 0 | 0 |
-| [modules/referee/referee_protocol.h](../modules/referee/referee_protocol.h) | 5 | 0 | 0 | 0 | 0 |
-| [modules/referee/referee_stream_parser.c](../modules/referee/referee_stream_parser.c) | 5 | 0 | 0 | 0 | 0 |
-| [modules/referee/referee_stream_parser.h](../modules/referee/referee_stream_parser.h) | 2 | 0 | 0 | 0 | 0 |
-| [modules/referee/referee_task.c](../modules/referee/referee_task.c) | 0 | 1 | 0 | 0 | 0 |
-| [modules/referee/referee_task.h](../modules/referee/referee_task.h) | 1 | 0 | 0 | 0 | 0 |
-| [modules/referee/referee_UI.h](../modules/referee/referee_UI.h) | 1 | 0 | 0 | 0 | 0 |
-| [modules/referee/rm_referee.c](../modules/referee/rm_referee.c) | 1 | 0 | 1 | 0 | 0 |
-| [modules/referee/rm_referee.h](../modules/referee/rm_referee.h) | 1 | 0 | 0 | 0 | 0 |
-| [modules/remote/remote_control.c](../modules/remote/remote_control.c) | 1 | 0 | 1 | 0 | 0 |
-| [modules/remote/remote_control.h](../modules/remote/remote_control.h) | 32 | 0 | 0 | 0 | 0 |
-| [modules/super_cap/chassis_power_link.h](../modules/super_cap/chassis_power_link.h) | 1 | 0 | 0 | 0 | 0 |
-| [modules/super_cap/super_cap_protocol.h](../modules/super_cap/super_cap_protocol.h) | 16 | 0 | 0 | 0 | 0 |
-| [modules/super_cap/super_cap.c](../modules/super_cap/super_cap.c) | 1 | 0 | 1 | 0 | 0 |
-| [modules/super_cap/super_cap.h](../modules/super_cap/super_cap.h) | 1 | 0 | 0 | 1 | 0 |
-| [modules/telemetry/chassis_power_capture.h](../modules/telemetry/chassis_power_capture.h) | 5 | 0 | 0 | 0 | 0 |
-| [modules/telemetry/rtt_telemetry.h](../modules/telemetry/rtt_telemetry.h) | 3 | 0 | 0 | 0 | 0 |
-| [modules/TFminiPlus/tfminiplus.c](../modules/TFminiPlus/tfminiplus.c) | 0 | 0 | 1 | 0 | 0 |
-| [modules/TFminiPlus/tfminiplus.h](../modules/TFminiPlus/tfminiplus.h) | 1 | 0 | 0 | 0 | 0 |
-| [Src/adc.c](../Src/adc.c) | 0 | 0 | 0 | 0 | 15 |
-| [Src/can.c](../Src/can.c) | 0 | 0 | 0 | 0 | 38 |
-| [Src/crc.c](../Src/crc.c) | 0 | 0 | 0 | 0 | 1 |
-| [Src/dac.c](../Src/dac.c) | 0 | 0 | 0 | 0 | 6 |
-| [Src/dma.c](../Src/dma.c) | 0 | 0 | 0 | 0 | 9 |
-| [Src/gpio.c](../Src/gpio.c) | 0 | 0 | 0 | 0 | 24 |
-| [Src/i2c.c](../Src/i2c.c) | 0 | 0 | 0 | 0 | 57 |
-| [Src/main.c](../Src/main.c) | 0 | 0 | 0 | 0 | 13 |
-| [Src/rng.c](../Src/rng.c) | 0 | 0 | 0 | 0 | 1 |
-| [Src/rtc.c](../Src/rtc.c) | 0 | 0 | 0 | 0 | 9 |
-| [Src/spi.c](../Src/spi.c) | 0 | 0 | 0 | 0 | 64 |
-| [Src/stm32f4xx_hal_msp.c](../Src/stm32f4xx_hal_msp.c) | 0 | 0 | 0 | 0 | 2 |
-| [Src/stm32f4xx_hal_timebase_tim.c](../Src/stm32f4xx_hal_timebase_tim.c) | 0 | 0 | 0 | 0 | 7 |
-| [Src/system_stm32f4xx.c](../Src/system_stm32f4xx.c) | 6 | 4 | 0 | 0 | 0 |
-| [Src/tim.c](../Src/tim.c) | 0 | 0 | 0 | 0 | 115 |
-| [Src/usart.c](../Src/usart.c) | 0 | 0 | 0 | 0 | 103 |
-| [Src/usbd_conf.c](../Src/usbd_conf.c) | 0 | 0 | 0 | 0 | 17 |
-| [Src/usbd_desc.c](../Src/usbd_desc.c) | 8 | 0 | 0 | 0 | 0 |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../application/board_optional.h#L1) | 预处理 | `#ifndef BOARD_OPTIONAL_H` |
+| [2](../application/board_optional.h#L2) | 预处理 | `#define BOARD_OPTIONAL_H` |
+| [4](../application/board_optional.h#L4) | 预处理 | `#endif` |
 
 ## application/chassis/chassis.c
 
-源文件：[打开 application/chassis/chassis.c](../application/chassis/chassis.c)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [application/chassis/chassis.c:41](../application/chassis/chassis.c#L41) | `HALF_WHEEL_BASE` | `(WHEEL_BASE / 2.0f)` | 无外层条件 | 半轴距 |
-| [application/chassis/chassis.c:42](../application/chassis/chassis.c#L42) | `HALF_TRACK_WIDTH` | `(TRACK_WIDTH / 2.0f)` | 无外层条件 | 半轮距 |
-| [application/chassis/chassis.c:43](../application/chassis/chassis.c#L43) | `PERIMETER_WHEEL` | `(RADIUS_WHEEL * 2 * PI)` | 无外层条件 | 轮子周长 |
-| [application/chassis/chassis.c:44](../application/chassis/chassis.c#L44) | `CHASSIS_POWER_SAFETY_FACTOR` | `0.98f` | 无外层条件 | 功率预算安全系数,用于降低功率预算,避免功率计和底盘功率模型的误差导致底盘超功率 |
-| [application/chassis/chassis.c:283](../application/chassis/chassis.c#L283) | `LF_ROTATION_LEVER_SUM` | `((HALF_TRACK_WIDTH + CENTER_GIMBAL_OFFSET_X + HALF_WHEEL_BASE - CENTER_GIMBAL_OFFSET_Y) * DEGREE_2_RAD)` | 无外层条件 |  |
-| [application/chassis/chassis.c:284](../application/chassis/chassis.c#L284) | `RF_ROTATION_LEVER_SUM` | `((HALF_TRACK_WIDTH - CENTER_GIMBAL_OFFSET_X + HALF_WHEEL_BASE - CENTER_GIMBAL_OFFSET_Y) * DEGREE_2_RAD)` | 无外层条件 |  |
-| [application/chassis/chassis.c:285](../application/chassis/chassis.c#L285) | `LB_ROTATION_LEVER_SUM` | `((HALF_TRACK_WIDTH + CENTER_GIMBAL_OFFSET_X + HALF_WHEEL_BASE + CENTER_GIMBAL_OFFSET_Y) * DEGREE_2_RAD)` | 无外层条件 |  |
-| [application/chassis/chassis.c:286](../application/chassis/chassis.c#L286) | `RB_ROTATION_LEVER_SUM` | `((HALF_TRACK_WIDTH - CENTER_GIMBAL_OFFSET_X + HALF_WHEEL_BASE + CENTER_GIMBAL_OFFSET_Y) * DEGREE_2_RAD)` | 无外层条件 |  |
-
-### 配置结构体初值
-
-以下记录原始定义，不自动推断运行路径或后续覆盖。未填字段为零；指针/回调表示绑定关系。
-
-[application/chassis/chassis.c:90](../application/chassis/chassis.c#L90)
-
-```c
-ChassisSpinConfig_s chassis_spin_config = {
-#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE
-    .fixed_wz = CHASSIS_SPIN_SINE_CENTER_WZ,
-    .min_wz = CHASSIS_SPIN_SINE_MIN_WZ,
-#else
-    .fixed_wz = CHASSIS_SPIN_FIXED_WZ,
-    .min_wz = CHASSIS_SPIN_MIN_WZ,
-#endif
-    .max_wz = CHASSIS_SPIN_MAX_WZ,
-    .gain_wz_per_w_s = CHASSIS_SPIN_POWER_GAIN,
-    .rise_wz_per_s = CHASSIS_SPIN_RISE_RATE,
-    .fall_wz_per_s = CHASSIS_SPIN_FALL_RATE,
-    .power_lpf_tau_s = CHASSIS_SPIN_POWER_LPF_TAU_S,
-    .power_deadband_w = CHASSIS_SPIN_POWER_DEADBAND_W,
-    .settle_time_s = CHASSIS_SPIN_SETTLE_TIME_S,
-    .budget_drop_reset_w = CHASSIS_SPIN_BUDGET_DROP_RESET_W,
-    .sine_amplitude_wz = CHASSIS_SPIN_SINE_AMPLITUDE_WZ,
-    .sine_period_s = CHASSIS_SPIN_SINE_PERIOD_S,
-    .sine_ramp_s = CHASSIS_SPIN_SINE_RAMP_S,
-    .sine_rise_wz_per_s = CHASSIS_SPIN_SINE_RISE_RATE,
-    .sine_fall_wz_per_s = CHASSIS_SPIN_SINE_FALL_RATE,
-    .sine_direction = CHASSIS_SPIN_SINE_DIRECTION,
-};
-```
-
-[application/chassis/chassis.c:98](../application/chassis/chassis.c#L98)
-
-```c
-ChassisPowerBudgetConfig_s chassis_budget_config = {
-    .empty_energy_ratio = 0.10f,
-    .full_energy_ratio = 0.30f,
-    .max_boost_w = 100.0f,
-    .rise_rate_w_per_s = 200.0f,
-    .demand_margin_w = CHASSIS_POWER_DEMAND_MARGIN_W,
-    .buffer = {
-        .max_energy_j = CHASSIS_BUFFER_MAX_ENERGY_J,
-        .recovery_enter_j = CHASSIS_BUFFER_RECOVERY_ENTER_J,
-        .recovery_exit_j = CHASSIS_BUFFER_RECOVERY_EXIT_J,
-        .hard_floor_j = CHASSIS_BUFFER_HARD_FLOOR_J,
-        .prediction_window_s = CHASSIS_BUFFER_PREDICTION_WINDOW_S,
-        .guard_window_s = CHASSIS_BUFFER_GUARD_WINDOW_S,
-        .settlement_delay_s = CHASSIS_BUFFER_SETTLEMENT_DELAY_S,
-        .energy_margin_j = CHASSIS_BUFFER_ENERGY_MARGIN_J,
-        .power_margin_w = CHASSIS_BUFFER_POWER_MARGIN_W,
-        .max_boost_w = CHASSIS_BUFFER_BOOST_MAX_W,
-        .recovery_power_w = CHASSIS_BUFFER_RECOVERY_POWER_W,
-        .recovery_target_time_s = CHASSIS_BUFFER_RECOVERY_TARGET_TIME_S,
-        .observer_max_step_s = CHASSIS_BUFFER_OBSERVER_MAX_STEP_S,
-        .recovery_hold_s = CHASSIS_BUFFER_RECOVERY_HOLD_S,
-        .rise_rate_w_per_s = CHASSIS_BUFFER_RISE_RATE_W_PER_S,
-        .safety_factor = CHASSIS_POWER_SAFETY_FACTOR,
-        .correction_rise_j_per_s = CHASSIS_BUFFER_CORRECTION_RISE_J_PER_S,
-    },
-};
-```
-
-[application/chassis/chassis.c:124](../application/chassis/chassis.c#L124)
-
-```c
-ChassisPowerOuterLoopConfig_s chassis_outer_loop_config = {
-    .kp = 1.0f, // 比例增益,误差 = 目标功率 - 实测功率(W),输出为预算修正量(W)
-    .ki = 1.5f, // 积分增益,积分限幅为[-基准预算, max_positive_correction_w]
-    .measurement_lpf_tau_s = 0.030f, // 功率计读数一阶低通时间常数(s),抑制采样噪声
-    .activation_margin_w = 5.0f, // 介入阈值(W):需求或实测功率距目标不到此值时才进入ACTIVE
-    .error_deadband_w = 0.3f, // 误差死区(W):|误差|不超过此值时按0处理,停止积分
-    .max_positive_correction_w = 8.0f, // 修正量上限(W):最多只上调8W;下限为-基准预算,即最狠可压到0
-    .positive_slew_rate_w_per_s = 60.0f, // 修正量上升/回零速率(W/s);下调不限速,立即生效
-    .budget_drop_reset_w = 1.0f, // 基准预算单周期跌落超过此值(W)时,清零正向积分与修正量
-    .antiwindup_gain_per_s = 10,
-    .low_demand_delay_s = .5f,
-    .low_demand_decay_w_per_s = 1,
-};
-```
-
-[application/chassis/chassis.c:138](../application/chassis/chassis.c#L138)
-
-```c
-MotorPowerModelConfig_s m3508_power_model = {
-    .k0 = 1.3123816,
-    .k1 = -0.25836727,
-    .k2 = 0.0007424524,
-    .k3 = 0.0024271158,
-    .k4 = 0.081198552,
-    .k5 = 3.890596e-08,
-    .current_conversion = 1000.0f,// 电流单位转换,功率模型使用A,电机模块使用mA
-};
-```
-
-[application/chassis/chassis.c:158](../application/chassis/chassis.c#L158)
-
-```c
-Motor_Init_Config_s chassis_motor_config = {
-        .can_init_config.can_handle = &hcan1,
-        .controller_param_init_config = {
-            .speed_PID = {
-                .Kp = 0.75f, // 目标和反馈由 rpm 换为度/秒，保持原 4.5 的等效增益，因为kp乘的是误差，误差单位变为原来的6倍，kp要乘六分之一
-                .Ki = 0,   // 0
-                .Kd = 0,   // 0
-                .IntegralLimit = 3000,
-                .Improve = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
-                .MaxOut = 15000,
-                .Output_LPF_RC = 0.3,
-            },
-        },
-        .controller_setting_init_config = {
-            .angle_feedback_source = MOTOR_FEED,
-            .speed_feedback_source = MOTOR_FEED,
-            .outer_loop_type = SPEED_LOOP,
-            .close_loop_type = SPEED_LOOP,
-        },
-        .motor_type = M3508,
-    };
-```
-
-[application/chassis/chassis.c:196](../application/chassis/chassis.c#L196)
-
-```c
-DJIChassisPowerConfig_s power_config = {
-        .motors = {motor_lf, motor_rf, motor_lb, motor_rb},
-        .algorithm = {
-            .safety_factor = CHASSIS_POWER_SAFETY_FACTOR,
-            .small_error_threshold_rpm = 500.0f,
-            .reserved_power_threshold_w = 54.0f,
-            .per_motor_reserved_power_w = 8.0f,
-            .max_current_command = 15000.0f,
-        },
-    };
-```
-
-[application/chassis/chassis.c:225](../application/chassis/chassis.c#L225)
-
-```c
-PID_Init_Config_s Buffer_pid_conf = {
-        .Kp = 0.1,
-        .Ki = 0,
-        .Kd = 0,
-        .IntegralLimit = 1000,
-        .Improve = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
-        .MaxOut = 1000,
-    };
-```
-
-[application/chassis/chassis.c:235](../application/chassis/chassis.c#L235)
-
-```c
-SuperCap_Init_Config_s cap_conf = {
-        .can_config = {
-            .can_handle = &hcan1,
-            .tx_id = SUPERCAP_COMMAND_CAN_ID,
-            .rx_id = SUPERCAP_STATUS_CAN_ID,
-        },
-        .offline_reload_count = 20U,
-        .input_power_feedback_enabled = CHASSIS_BUFFER_POWER_ENABLE != 0,
-    };
-```
-
-[application/chassis/chassis.c:247](../application/chassis/chassis.c#L247)
-
-```c
-PowerMeter_Init_Config_s power_meter_config = {
-        .can_config = {
-            .can_handle = &hcan1,
-            .tx_id = POWER_METER_STATUS_CAN_ID,
-            .rx_id = POWER_METER_STATUS_CAN_ID,
-        },
-        .offline_reload_count = 10U,
-    };
-```
-
-[application/chassis/chassis.c:265](../application/chassis/chassis.c#L265)
-
-```c
-CANComm_Init_Config_s comm_conf = {
-        .can_config = {
-            .can_handle = &hcan2,
-            .tx_id = 0x311,
-            .rx_id = 0x312,
-        },
-        .recv_data_len = sizeof(Chassis_Ctrl_Cmd_s),
-        .send_data_len = sizeof(Chassis_Upload_Data_s),
-    };
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [29](../application/chassis/chassis.c#L29) | 预处理 | `#if POWER_METER_ENABLE` |
+| [31](../application/chassis/chassis.c#L31) | 预处理 | `#endif` |
+| [46](../application/chassis/chassis.c#L46) | 预处理 | `#define HALF_WHEEL_BASE (WHEEL_BASE / 2.0f)     // 半轴距` |
+| [47](../application/chassis/chassis.c#L47) | 预处理 | `#define HALF_TRACK_WIDTH (TRACK_WIDTH / 2.0f)   // 半轮距` |
+| [48](../application/chassis/chassis.c#L48) | 预处理 | `#define PERIMETER_WHEEL (RADIUS_WHEEL * 2 * PI) // 轮子周长` |
+| [49](../application/chassis/chassis.c#L49) | 预处理 | `#define CHASSIS_POWER_SAFETY_FACTOR 0.98f   // 功率预算安全系数,用于降低功率预算,避免功率计和底盘功率模型的误差导致底盘超功率` |
+| [52](../application/chassis/chassis.c#L52) | 预处理 | `#ifdef CHASSIS_BOARD // 如果是底盘板,使用板载IMU获取底盘转动角速度` |
+| [57](../application/chassis/chassis.c#L57) | 预处理 | `#endif // CHASSIS_BOARD` |
+| [58](../application/chassis/chassis.c#L58) | 预处理 | `#ifdef ONE_BOARD` |
+| [61](../application/chassis/chassis.c#L61) | 预处理 | `#endif                                              // !ONE_BOARD` |
+| [91](../application/chassis/chassis.c#L91) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
+| [95](../application/chassis/chassis.c#L95) | 预处理 | `#endif` |
+| [96](../application/chassis/chassis.c#L96) | 配置初值 | `static ChassisSpinConfig_s chassis_spin_config = {` |
+| [97](../application/chassis/chassis.c#L97) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE` |
+| [97](../application/chassis/chassis.c#L97) | 配置初值 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE` |
+| [98](../application/chassis/chassis.c#L98) | 配置初值 | `.fixed_wz = CHASSIS_SPIN_SINE_CENTER_WZ,` |
+| [99](../application/chassis/chassis.c#L99) | 配置初值 | `.min_wz = CHASSIS_SPIN_SINE_MIN_WZ,` |
+| [100](../application/chassis/chassis.c#L100) | 预处理 | `#else` |
+| [100](../application/chassis/chassis.c#L100) | 配置初值 | `#else` |
+| [101](../application/chassis/chassis.c#L101) | 配置初值 | `.fixed_wz = CHASSIS_SPIN_FIXED_WZ,` |
+| [102](../application/chassis/chassis.c#L102) | 配置初值 | `.min_wz = CHASSIS_SPIN_MIN_WZ,` |
+| [103](../application/chassis/chassis.c#L103) | 预处理 | `#endif` |
+| [103](../application/chassis/chassis.c#L103) | 配置初值 | `#endif` |
+| [104](../application/chassis/chassis.c#L104) | 配置初值 | `.max_wz = CHASSIS_SPIN_MAX_WZ,` |
+| [105](../application/chassis/chassis.c#L105) | 配置初值 | `.gain_wz_per_w_s = CHASSIS_SPIN_POWER_GAIN,` |
+| [106](../application/chassis/chassis.c#L106) | 配置初值 | `.rise_wz_per_s = CHASSIS_SPIN_RISE_RATE,` |
+| [107](../application/chassis/chassis.c#L107) | 配置初值 | `.fall_wz_per_s = CHASSIS_SPIN_FALL_RATE,` |
+| [108](../application/chassis/chassis.c#L108) | 配置初值 | `.power_lpf_tau_s = CHASSIS_SPIN_POWER_LPF_TAU_S,` |
+| [109](../application/chassis/chassis.c#L109) | 配置初值 | `.power_deadband_w = CHASSIS_SPIN_POWER_DEADBAND_W,` |
+| [110](../application/chassis/chassis.c#L110) | 配置初值 | `.settle_time_s = CHASSIS_SPIN_SETTLE_TIME_S,` |
+| [111](../application/chassis/chassis.c#L111) | 配置初值 | `.budget_drop_reset_w = CHASSIS_SPIN_BUDGET_DROP_RESET_W,` |
+| [112](../application/chassis/chassis.c#L112) | 配置初值 | `.sine_amplitude_wz = CHASSIS_SPIN_SINE_AMPLITUDE_WZ,` |
+| [113](../application/chassis/chassis.c#L113) | 配置初值 | `.sine_period_s = CHASSIS_SPIN_SINE_PERIOD_S,` |
+| [114](../application/chassis/chassis.c#L114) | 配置初值 | `.sine_ramp_s = CHASSIS_SPIN_SINE_RAMP_S,` |
+| [115](../application/chassis/chassis.c#L115) | 配置初值 | `.sine_rise_wz_per_s = CHASSIS_SPIN_SINE_RISE_RATE,` |
+| [116](../application/chassis/chassis.c#L116) | 配置初值 | `.sine_fall_wz_per_s = CHASSIS_SPIN_SINE_FALL_RATE,` |
+| [117](../application/chassis/chassis.c#L117) | 配置初值 | `.sine_direction = CHASSIS_SPIN_SINE_DIRECTION,` |
+| [120](../application/chassis/chassis.c#L120) | 配置初值 | `static ChassisPowerBudgetConfig_s chassis_budget_config = {` |
+| [121](../application/chassis/chassis.c#L121) | 配置初值 | `.empty_energy_ratio = 0.10f,` |
+| [122](../application/chassis/chassis.c#L122) | 配置初值 | `.full_energy_ratio = 0.30f,` |
+| [123](../application/chassis/chassis.c#L123) | 配置初值 | `.max_boost_w = 100.0f,` |
+| [124](../application/chassis/chassis.c#L124) | 配置初值 | `.rise_rate_w_per_s = 200.0f,` |
+| [125](../application/chassis/chassis.c#L125) | 配置初值 | `.demand_margin_w = CHASSIS_POWER_DEMAND_MARGIN_W,` |
+| [126](../application/chassis/chassis.c#L126) | 配置初值 | `.buffer = {` |
+| [127](../application/chassis/chassis.c#L127) | 配置初值 | `.max_energy_j = CHASSIS_BUFFER_MAX_ENERGY_J,` |
+| [128](../application/chassis/chassis.c#L128) | 配置初值 | `.recovery_enter_j = CHASSIS_BUFFER_RECOVERY_ENTER_J,` |
+| [129](../application/chassis/chassis.c#L129) | 配置初值 | `.recovery_exit_j = CHASSIS_BUFFER_RECOVERY_EXIT_J,` |
+| [130](../application/chassis/chassis.c#L130) | 配置初值 | `.hard_floor_j = CHASSIS_BUFFER_HARD_FLOOR_J,` |
+| [131](../application/chassis/chassis.c#L131) | 配置初值 | `.prediction_window_s = CHASSIS_BUFFER_PREDICTION_WINDOW_S,` |
+| [132](../application/chassis/chassis.c#L132) | 配置初值 | `.guard_window_s = CHASSIS_BUFFER_GUARD_WINDOW_S,` |
+| [133](../application/chassis/chassis.c#L133) | 配置初值 | `.settlement_delay_s = CHASSIS_BUFFER_SETTLEMENT_DELAY_S,` |
+| [134](../application/chassis/chassis.c#L134) | 配置初值 | `.energy_margin_j = CHASSIS_BUFFER_ENERGY_MARGIN_J,` |
+| [135](../application/chassis/chassis.c#L135) | 配置初值 | `.power_margin_w = CHASSIS_BUFFER_POWER_MARGIN_W,` |
+| [136](../application/chassis/chassis.c#L136) | 配置初值 | `.max_boost_w = CHASSIS_BUFFER_BOOST_MAX_W,` |
+| [137](../application/chassis/chassis.c#L137) | 配置初值 | `.recovery_power_w = CHASSIS_BUFFER_RECOVERY_POWER_W,` |
+| [138](../application/chassis/chassis.c#L138) | 配置初值 | `.recovery_target_time_s = CHASSIS_BUFFER_RECOVERY_TARGET_TIME_S,` |
+| [139](../application/chassis/chassis.c#L139) | 配置初值 | `.observer_max_step_s = CHASSIS_BUFFER_OBSERVER_MAX_STEP_S,` |
+| [140](../application/chassis/chassis.c#L140) | 配置初值 | `.recovery_hold_s = CHASSIS_BUFFER_RECOVERY_HOLD_S,` |
+| [141](../application/chassis/chassis.c#L141) | 配置初值 | `.rise_rate_w_per_s = CHASSIS_BUFFER_RISE_RATE_W_PER_S,` |
+| [142](../application/chassis/chassis.c#L142) | 配置初值 | `.safety_factor = CHASSIS_POWER_SAFETY_FACTOR,` |
+| [143](../application/chassis/chassis.c#L143) | 配置初值 | `.correction_rise_j_per_s = CHASSIS_BUFFER_CORRECTION_RISE_J_PER_S,` |
+| [144](../application/chassis/chassis.c#L144) | 配置初值 | `},` |
+| [148](../application/chassis/chassis.c#L148) | 配置初值 | `static ChassisPowerOuterLoopConfig_s chassis_outer_loop_config = {` |
+| [149](../application/chassis/chassis.c#L149) | 配置初值 | `.kp = 1.0f, // 比例增益,误差 = 目标功率 - 实测功率(W),输出为预算修正量(W)` |
+| [150](../application/chassis/chassis.c#L150) | 配置初值 | `.ki = 1.5f, // 积分增益,积分限幅为[-基准预算, max_positive_correction_w]` |
+| [151](../application/chassis/chassis.c#L151) | 配置初值 | `.measurement_lpf_tau_s = 0.030f, // 功率计读数一阶低通时间常数(s),抑制采样噪声` |
+| [152](../application/chassis/chassis.c#L152) | 配置初值 | `.activation_margin_w = 5.0f, // 介入阈值(W):需求或实测功率距目标不到此值时才进入ACTIVE` |
+| [153](../application/chassis/chassis.c#L153) | 配置初值 | `.error_deadband_w = 0.3f, // 误差死区(W):&#124;误差&#124;不超过此值时按0处理,停止积分` |
+| [154](../application/chassis/chassis.c#L154) | 配置初值 | `.max_positive_correction_w = 8.0f, // 修正量上限(W):最多只上调8W;下限为-基准预算,即最狠可压到0` |
+| [155](../application/chassis/chassis.c#L155) | 配置初值 | `.positive_slew_rate_w_per_s = 60.0f, // 修正量上升/回零速率(W/s);下调不限速,立即生效` |
+| [156](../application/chassis/chassis.c#L156) | 配置初值 | `.budget_drop_reset_w = 1.0f, // 基准预算单周期跌落超过此值(W)时,清零正向积分与修正量` |
+| [157](../application/chassis/chassis.c#L157) | 配置初值 | `.antiwindup_gain_per_s = 10,` |
+| [158](../application/chassis/chassis.c#L158) | 配置初值 | `.low_demand_delay_s = .5f,` |
+| [159](../application/chassis/chassis.c#L159) | 配置初值 | `.low_demand_decay_w_per_s = 1,` |
+| [162](../application/chassis/chassis.c#L162) | 配置初值 | `static const MotorPowerModelConfig_s m3508_power_model = {` |
+| [163](../application/chassis/chassis.c#L163) | 配置初值 | `.k0 = 1.3123816,` |
+| [164](../application/chassis/chassis.c#L164) | 配置初值 | `.k1 = -0.25836727,` |
+| [165](../application/chassis/chassis.c#L165) | 配置初值 | `.k2 = 0.0007424524,` |
+| [166](../application/chassis/chassis.c#L166) | 配置初值 | `.k3 = 0.0024271158,` |
+| [167](../application/chassis/chassis.c#L167) | 配置初值 | `.k4 = 0.081198552,` |
+| [168](../application/chassis/chassis.c#L168) | 配置初值 | `.k5 = 3.890596e-08,` |
+| [169](../application/chassis/chassis.c#L169) | 配置初值 | `.current_conversion = 1000.0f,// 电流单位转换,功率模型使用A,电机模块使用mA` |
+| [205](../application/chassis/chassis.c#L205) | 配置初值 | `ChassisPowerOuterLoopConfig_s outer = {` |
+| [206](../application/chassis/chassis.c#L206) | 配置初值 | `.kp=v[0], .ki=v[1], .measurement_lpf_tau_s=v[2],` |
+| [207](../application/chassis/chassis.c#L207) | 配置初值 | `.activation_margin_w=v[3], .error_deadband_w=v[4],` |
+| [208](../application/chassis/chassis.c#L208) | 配置初值 | `.max_positive_correction_w=v[5], .positive_slew_rate_w_per_s=v[6],` |
+| [209](../application/chassis/chassis.c#L209) | 配置初值 | `.budget_drop_reset_w=v[7], .antiwindup_gain_per_s=v[8],` |
+| [210](../application/chassis/chassis.c#L210) | 配置初值 | `.low_demand_delay_s=v[9], .low_demand_decay_w_per_s=v[10]};` |
+| [231](../application/chassis/chassis.c#L231) | 配置初值 | `ChassisSpinConfig_s spin = {` |
+| [232](../application/chassis/chassis.c#L232) | 配置初值 | `.fixed_wz=v[0], .min_wz=v[1], .max_wz=v[2], .gain_wz_per_w_s=v[3],` |
+| [233](../application/chassis/chassis.c#L233) | 配置初值 | `.rise_wz_per_s=v[4], .fall_wz_per_s=v[5], .power_lpf_tau_s=v[6],` |
+| [234](../application/chassis/chassis.c#L234) | 配置初值 | `.power_deadband_w=v[7], .settle_time_s=v[8], .budget_drop_reset_w=v[9],` |
+| [235](../application/chassis/chassis.c#L235) | 配置初值 | `.sine_amplitude_wz=v[10], .sine_period_s=v[11], .sine_ramp_s=v[12],` |
+| [236](../application/chassis/chassis.c#L236) | 配置初值 | `.sine_rise_wz_per_s=v[13], .sine_fall_wz_per_s=v[14],` |
+| [237](../application/chassis/chassis.c#L237) | 配置初值 | `.sine_direction=(int8_t)v[15]};` |
+| [239](../application/chassis/chassis.c#L239) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
+| [244](../application/chassis/chassis.c#L244) | 预处理 | `#endif` |
+| [256](../application/chassis/chassis.c#L256) | 配置初值 | `Motor_Init_Config_s chassis_motor_config = {` |
+| [257](../application/chassis/chassis.c#L257) | 配置初值 | `.can_init_config.can_handle = &hcan1,` |
+| [258](../application/chassis/chassis.c#L258) | 配置初值 | `.controller_param_init_config = {` |
+| [259](../application/chassis/chassis.c#L259) | 配置初值 | `.speed_PID = {` |
+| [260](../application/chassis/chassis.c#L260) | 配置初值 | `.Kp = 4.5f, // A-board vehicle baseline, error in degrees/s` |
+| [261](../application/chassis/chassis.c#L261) | 配置初值 | `.Ki = 0,   // 0` |
+| [262](../application/chassis/chassis.c#L262) | 配置初值 | `.Kd = 0,   // 0` |
+| [263](../application/chassis/chassis.c#L263) | 配置初值 | `.IntegralLimit = 3000,` |
+| [264](../application/chassis/chassis.c#L264) | 配置初值 | `.Improve = PID_Trapezoid_Intergral &#124; PID_Integral_Limit &#124; PID_Derivative_On_Measurement,` |
+| [265](../application/chassis/chassis.c#L265) | 配置初值 | `.MaxOut = 15000,` |
+| [266](../application/chassis/chassis.c#L266) | 配置初值 | `.Output_LPF_RC = 0.3,` |
+| [267](../application/chassis/chassis.c#L267) | 配置初值 | `},` |
+| [268](../application/chassis/chassis.c#L268) | 配置初值 | `},` |
+| [269](../application/chassis/chassis.c#L269) | 配置初值 | `.controller_setting_init_config = {` |
+| [270](../application/chassis/chassis.c#L270) | 配置初值 | `.angle_feedback_source = MOTOR_FEED,` |
+| [271](../application/chassis/chassis.c#L271) | 配置初值 | `.speed_feedback_source = MOTOR_FEED,` |
+| [272](../application/chassis/chassis.c#L272) | 配置初值 | `.outer_loop_type = SPEED_LOOP,` |
+| [273](../application/chassis/chassis.c#L273) | 配置初值 | `.close_loop_type = SPEED_LOOP,` |
+| [274](../application/chassis/chassis.c#L274) | 配置初值 | `},` |
+| [275](../application/chassis/chassis.c#L275) | 配置初值 | `.motor_type = M3508,` |
+| [294](../application/chassis/chassis.c#L294) | 配置初值 | `DJIChassisPowerConfig_s power_config = {` |
+| [295](../application/chassis/chassis.c#L295) | 配置初值 | `.motors = {motor_lf, motor_rf, motor_lb, motor_rb},` |
+| [296](../application/chassis/chassis.c#L296) | 配置初值 | `.algorithm = {` |
+| [297](../application/chassis/chassis.c#L297) | 配置初值 | `.safety_factor = CHASSIS_POWER_SAFETY_FACTOR,` |
+| [298](../application/chassis/chassis.c#L298) | 配置初值 | `.small_error_threshold_rpm = 500.0f,` |
+| [299](../application/chassis/chassis.c#L299) | 配置初值 | `.reserved_power_threshold_w = 54.0f,` |
+| [300](../application/chassis/chassis.c#L300) | 配置初值 | `.per_motor_reserved_power_w = 8.0f,` |
+| [301](../application/chassis/chassis.c#L301) | 配置初值 | `.max_current_command = 15000.0f,` |
+| [302](../application/chassis/chassis.c#L302) | 配置初值 | `},` |
+| [318](../application/chassis/chassis.c#L318) | 预处理 | `#if REFEREE_ENABLE` |
+| [320](../application/chassis/chassis.c#L320) | 预处理 | `#endif` |
+| [323](../application/chassis/chassis.c#L323) | 配置初值 | `PID_Init_Config_s Buffer_pid_conf = {` |
+| [324](../application/chassis/chassis.c#L324) | 配置初值 | `.Kp = 0.1,` |
+| [325](../application/chassis/chassis.c#L325) | 配置初值 | `.Ki = 0,` |
+| [326](../application/chassis/chassis.c#L326) | 配置初值 | `.Kd = 0,` |
+| [327](../application/chassis/chassis.c#L327) | 配置初值 | `.IntegralLimit = 1000,` |
+| [328](../application/chassis/chassis.c#L328) | 配置初值 | `.Improve = PID_Trapezoid_Intergral &#124; PID_Integral_Limit &#124; PID_Derivative_On_Measurement,` |
+| [329](../application/chassis/chassis.c#L329) | 配置初值 | `.MaxOut = 1000,` |
+| [332](../application/chassis/chassis.c#L332) | 预处理 | `#if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP` |
+| [333](../application/chassis/chassis.c#L333) | 配置初值 | `SuperCap_Init_Config_s cap_conf = {` |
+| [334](../application/chassis/chassis.c#L334) | 配置初值 | `.can_config = {` |
+| [335](../application/chassis/chassis.c#L335) | 配置初值 | `.can_handle = BOARD_SUPERCAP_CAN,` |
+| [336](../application/chassis/chassis.c#L336) | 配置初值 | `.tx_id = SUPERCAP_COMMAND_CAN_ID,` |
+| [337](../application/chassis/chassis.c#L337) | 配置初值 | `.rx_id = SUPERCAP_STATUS_CAN_ID,` |
+| [338](../application/chassis/chassis.c#L338) | 配置初值 | `},` |
+| [339](../application/chassis/chassis.c#L339) | 配置初值 | `.offline_reload_count = 20U,` |
+| [340](../application/chassis/chassis.c#L340) | 配置初值 | `.input_power_feedback_enabled = CHASSIS_BUFFER_POWER_ENABLE != 0,` |
+| [343](../application/chassis/chassis.c#L343) | 预处理 | `#endif` |
+| [344](../application/chassis/chassis.c#L344) | 预处理 | `#if POWER_METER_ENABLE` |
+| [345](../application/chassis/chassis.c#L345) | 配置初值 | `const PowerMeter_Init_Config_s power_meter_config = {` |
+| [346](../application/chassis/chassis.c#L346) | 配置初值 | `.can_config = {` |
+| [347](../application/chassis/chassis.c#L347) | 配置初值 | `.can_handle = BOARD_POWER_METER_CAN,` |
+| [348](../application/chassis/chassis.c#L348) | 配置初值 | `.tx_id = POWER_METER_STATUS_CAN_ID,` |
+| [349](../application/chassis/chassis.c#L349) | 配置初值 | `.rx_id = POWER_METER_STATUS_CAN_ID,` |
+| [350](../application/chassis/chassis.c#L350) | 配置初值 | `},` |
+| [351](../application/chassis/chassis.c#L351) | 配置初值 | `.offline_reload_count = 10U,` |
+| [354](../application/chassis/chassis.c#L354) | 预处理 | `#endif` |
+| [360](../application/chassis/chassis.c#L360) | 预处理 | `#ifdef CHASSIS_BOARD` |
+| [363](../application/chassis/chassis.c#L363) | 配置初值 | `CANComm_Init_Config_s comm_conf = {` |
+| [364](../application/chassis/chassis.c#L364) | 配置初值 | `.can_config = {` |
+| [365](../application/chassis/chassis.c#L365) | 配置初值 | `.can_handle = &hcan2,` |
+| [366](../application/chassis/chassis.c#L366) | 配置初值 | `.tx_id = 0x311,` |
+| [367](../application/chassis/chassis.c#L367) | 配置初值 | `.rx_id = 0x312,` |
+| [368](../application/chassis/chassis.c#L368) | 配置初值 | `},` |
+| [369](../application/chassis/chassis.c#L369) | 配置初值 | `.recv_data_len = sizeof(Chassis_Ctrl_Cmd_s),` |
+| [370](../application/chassis/chassis.c#L370) | 配置初值 | `.send_data_len = sizeof(Chassis_Upload_Data_s),` |
+| [374](../application/chassis/chassis.c#L374) | 预处理 | `#endif                                          // CHASSIS_BOARD` |
+| [376](../application/chassis/chassis.c#L376) | 预处理 | `#ifdef ONE_BOARD // 单板控制整车,则通过pubsub来传递消息` |
+| [379](../application/chassis/chassis.c#L379) | 预处理 | `#endif // ONE_BOARD` |
+| [382](../application/chassis/chassis.c#L382) | 预处理 | `#define LF_ROTATION_LEVER_SUM ((HALF_TRACK_WIDTH + CENTER_GIMBAL_OFFSET_X + HALF_WHEEL_BASE - CENTER_GIMBAL_OFFSET_Y) * DEGREE_2_RAD)` |
+| [383](../application/chassis/chassis.c#L383) | 预处理 | `#define RF_ROTATION_LEVER_SUM ((HALF_TRACK_WIDTH - CENTER_GIMBAL_OFFSET_X + HALF_WHEEL_BASE - CENTER_GIMBAL_OFFSET_Y) * DEGREE_2_RAD)` |
+| [384](../application/chassis/chassis.c#L384) | 预处理 | `#define LB_ROTATION_LEVER_SUM ((HALF_TRACK_WIDTH + CENTER_GIMBAL_OFFSET_X + HALF_WHEEL_BASE + CENTER_GIMBAL_OFFSET_Y) * DEGREE_2_RAD)` |
+| [385](../application/chassis/chassis.c#L385) | 预处理 | `#define RB_ROTATION_LEVER_SUM ((HALF_TRACK_WIDTH - CENTER_GIMBAL_OFFSET_X + HALF_WHEEL_BASE + CENTER_GIMBAL_OFFSET_Y) * DEGREE_2_RAD)` |
+| [405](../application/chassis/chassis.c#L405) | 预处理 | `#if CHASSIS_DRIVE_TYPE == CHASSIS_DRIVE_OMNI_X` |
+| [413](../application/chassis/chassis.c#L413) | 预处理 | `#else` |
+| [415](../application/chassis/chassis.c#L415) | 预处理 | `#endif` |
+| [454](../application/chassis/chassis.c#L454) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
+| [458](../application/chassis/chassis.c#L458) | 预处理 | `#endif` |
+| [464](../application/chassis/chassis.c#L464) | 预处理 | `#if CHASSIS_POWER_BENCH_TEST` |
+| [466](../application/chassis/chassis.c#L466) | 预处理 | `#else` |
+| [468](../application/chassis/chassis.c#L468) | 预处理 | `#endif` |
+| [479](../application/chassis/chassis.c#L479) | 预处理 | `#if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP` |
+| [482](../application/chassis/chassis.c#L482) | 预处理 | `#if CHASSIS_BUFFER_POWER_ENABLE` |
+| [485](../application/chassis/chassis.c#L485) | 预处理 | `#endif` |
+| [486](../application/chassis/chassis.c#L486) | 预处理 | `#endif` |
+| [490](../application/chassis/chassis.c#L490) | 预处理 | `#if POWER_METER_ENABLE` |
+| [495](../application/chassis/chassis.c#L495) | 预处理 | `#endif` |
+| [496](../application/chassis/chassis.c#L496) | 预处理 | `#if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP` |
+| [499](../application/chassis/chassis.c#L499) | 预处理 | `#elif POWER_METER_ENABLE` |
+| [502](../application/chassis/chassis.c#L502) | 预处理 | `#endif` |
+| [522](../application/chassis/chassis.c#L522) | 预处理 | `#if POWER_METER_ENABLE` |
+| [525](../application/chassis/chassis.c#L525) | 预处理 | `#endif` |
+| [564](../application/chassis/chassis.c#L564) | 预处理 | `#if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP` |
+| [570](../application/chassis/chassis.c#L570) | 预处理 | `#endif` |
+| [572](../application/chassis/chassis.c#L572) | 预处理 | `#if POWER_METER_ENABLE` |
+| [579](../application/chassis/chassis.c#L579) | 预处理 | `#if CHASSIS_POWER_CONTROL_STAGE == 0` |
+| [581](../application/chassis/chassis.c#L581) | 预处理 | `#endif` |
+| [589](../application/chassis/chassis.c#L589) | 预处理 | `#if CHASSIS_POWER_CONTROL_STAGE == 0` |
+| [593](../application/chassis/chassis.c#L593) | 预处理 | `#endif` |
+| [597](../application/chassis/chassis.c#L597) | 预处理 | `#if CHASSIS_POWER_CONTROL_STAGE >= 1` |
+| [602](../application/chassis/chassis.c#L602) | 预处理 | `#endif` |
+| [611](../application/chassis/chassis.c#L611) | 预处理 | `#if CHASSIS_POWER_CONTROL_STAGE == 0` |
+| [614](../application/chassis/chassis.c#L614) | 预处理 | `#else` |
+| [617](../application/chassis/chassis.c#L617) | 预处理 | `#endif` |
+| [618](../application/chassis/chassis.c#L618) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |
+| [621](../application/chassis/chassis.c#L621) | 预处理 | `#endif` |
+| [643](../application/chassis/chassis.c#L643) | 预处理 | `#if CHASSIS_POWER_CONTROL_STAGE == 0` |
+| [645](../application/chassis/chassis.c#L645) | 预处理 | `#else` |
+| [647](../application/chassis/chassis.c#L647) | 预处理 | `#endif` |
+| [669](../application/chassis/chassis.c#L669) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
+| [678](../application/chassis/chassis.c#L678) | 预处理 | `#if CHASSIS_POWER_CONTROL_STAGE >= 2` |
+| [680](../application/chassis/chassis.c#L680) | 预处理 | `#endif` |
+| [701](../application/chassis/chassis.c#L701) | 预处理 | `#endif` |
+| [702](../application/chassis/chassis.c#L702) | 预处理 | `#else` |
+| [713](../application/chassis/chassis.c#L713) | 预处理 | `#endif` |
+| [719](../application/chassis/chassis.c#L719) | 预处理 | `#if CHASSIS_BUFFER_POWER_ENABLE && CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP` |
+| [723](../application/chassis/chassis.c#L723) | 预处理 | `#endif` |
+| [727](../application/chassis/chassis.c#L727) | 预处理 | `#ifdef CHASSIS_BOARD` |
+| [731](../application/chassis/chassis.c#L731) | 预处理 | `#else` |
+| [742](../application/chassis/chassis.c#L742) | 预处理 | `#endif` |
+| [743](../application/chassis/chassis.c#L743) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
+| [747](../application/chassis/chassis.c#L747) | 预处理 | `#endif` |
+| [769](../application/chassis/chassis.c#L769) | 预处理 | `#ifdef ONE_BOARD` |
+| [771](../application/chassis/chassis.c#L771) | 预处理 | `#endif` |
+| [772](../application/chassis/chassis.c#L772) | 预处理 | `#ifdef CHASSIS_BOARD` |
+| [786](../application/chassis/chassis.c#L786) | 预处理 | `#endif // CHASSIS_BOARD` |
+| [790](../application/chassis/chassis.c#L790) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
+| [794](../application/chassis/chassis.c#L794) | 预处理 | `#endif` |
+| [806](../application/chassis/chassis.c#L806) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
+| [808](../application/chassis/chassis.c#L808) | 预处理 | `#else` |
+| [810](../application/chassis/chassis.c#L810) | 预处理 | `#endif` |
+| [864](../application/chassis/chassis.c#L864) | 预处理 | `#ifdef ONE_BOARD` |
+| [866](../application/chassis/chassis.c#L866) | 预处理 | `#endif` |
+| [867](../application/chassis/chassis.c#L867) | 预处理 | `#ifdef CHASSIS_BOARD` |
+| [872](../application/chassis/chassis.c#L872) | 预处理 | `#endif // CHASSIS_BOARD` |
 
 ## application/chassis/chassis.h
 
-源文件：[打开 application/chassis/chassis.h](../application/chassis/chassis.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [application/chassis/chassis.h:2](../application/chassis/chassis.h#L2) | `CHASSIS_H` | 空定义 | `#ifndef CHASSIS_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../application/chassis/chassis.h#L1) | 预处理 | `#ifndef CHASSIS_H` |
+| [2](../application/chassis/chassis.h#L2) | 预处理 | `#define CHASSIS_H` |
+| [31](../application/chassis/chassis.h#L31) | 预处理 | `#endif // CHASSIS_H` |
 
 ## application/cmd/robot_cmd.c
 
-源文件：[打开 application/cmd/robot_cmd.c](../application/cmd/robot_cmd.c)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [application/cmd/robot_cmd.c:17](../application/cmd/robot_cmd.c#L17) | `YAW_ALIGN_ANGLE` | `(YAW_CHASSIS_ALIGN_ECD * ECD_ANGLE_COEF_DJI)` | 无外层条件 | 对齐时的角度,0-360 |
-| [application/cmd/robot_cmd.c:18](../application/cmd/robot_cmd.c#L18) | `PTICH_HORIZON_ANGLE` | `(PITCH_HORIZON_ECD * ECD_ANGLE_COEF_DJI)` | 无外层条件 | pitch水平时电机的角度,0-360 |
-
-### 配置结构体初值
-
-以下记录原始定义，不自动推断运行路径或后续覆盖。未填字段为零；指针/回调表示绑定关系。
-
-[application/cmd/robot_cmd.c:107](../application/cmd/robot_cmd.c#L107)
-
-```c
-CANComm_Init_Config_s comm_conf = {
-        .can_config = {
-            .can_handle = &hcan1,
-            .tx_id = 0x312,
-            .rx_id = 0x311,
-        },
-        .recv_data_len = sizeof(Chassis_Upload_Data_s),
-        .send_data_len = sizeof(Chassis_Ctrl_Cmd_s),
-    };
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [23](../application/cmd/robot_cmd.c#L23) | 预处理 | `#define YAW_ALIGN_ANGLE (YAW_CHASSIS_ALIGN_ECD * ECD_ANGLE_COEF_DJI) // 对齐时的角度,0-360` |
+| [24](../application/cmd/robot_cmd.c#L24) | 预处理 | `#define PTICH_HORIZON_ANGLE (PITCH_HORIZON_ECD * ECD_ANGLE_COEF_DJI) // pitch水平时电机的角度,0-360` |
+| [25](../application/cmd/robot_cmd.c#L25) | 预处理 | `#define YAW_MAX_TRACK_ERROR 60.0f` |
+| [28](../application/cmd/robot_cmd.c#L28) | 预处理 | `#ifdef GIMBAL_BOARD // 对双板的兼容,条件编译` |
+| [32](../application/cmd/robot_cmd.c#L32) | 预处理 | `#endif` |
+| [33](../application/cmd/robot_cmd.c#L33) | 预处理 | `#ifdef ONE_BOARD` |
+| [36](../application/cmd/robot_cmd.c#L36) | 预处理 | `#endif                                 // ONE_BOARD` |
+| [72](../application/cmd/robot_cmd.c#L72) | 配置初值 | `HeatControl_Init_Config_s heat_config = {` |
+| [73](../application/cmd/robot_cmd.c#L73) | 配置初值 | `.bullet_heat = HEAT_CONTROL_BULLET_HEAT,` |
+| [74](../application/cmd/robot_cmd.c#L74) | 配置初值 | `.max_shoot_rate = HEAT_CONTROL_DEFAULT_MAX_RATE,` |
+| [78](../application/cmd/robot_cmd.c#L78) | 预处理 | `#ifdef ONE_BOARD // 双板兼容` |
+| [81](../application/cmd/robot_cmd.c#L81) | 预处理 | `#endif // ONE_BOARD` |
+| [82](../application/cmd/robot_cmd.c#L82) | 预处理 | `#ifdef GIMBAL_BOARD` |
+| [83](../application/cmd/robot_cmd.c#L83) | 配置初值 | `CANComm_Init_Config_s comm_conf = {` |
+| [84](../application/cmd/robot_cmd.c#L84) | 配置初值 | `.can_config = {` |
+| [85](../application/cmd/robot_cmd.c#L85) | 配置初值 | `.can_handle = &hcan2,` |
+| [86](../application/cmd/robot_cmd.c#L86) | 配置初值 | `.tx_id = 0x312,` |
+| [87](../application/cmd/robot_cmd.c#L87) | 配置初值 | `.rx_id = 0x311,` |
+| [88](../application/cmd/robot_cmd.c#L88) | 配置初值 | `},` |
+| [89](../application/cmd/robot_cmd.c#L89) | 配置初值 | `.recv_data_len = sizeof(Chassis_Upload_Data_s),` |
+| [90](../application/cmd/robot_cmd.c#L90) | 配置初值 | `.send_data_len = sizeof(Chassis_Ctrl_Cmd_s),` |
+| [95](../application/cmd/robot_cmd.c#L95) | 预处理 | `#endif // GIMBAL_BOARD` |
+| [446](../application/cmd/robot_cmd.c#L446) | 预处理 | `#ifdef ONE_BOARD` |
+| [448](../application/cmd/robot_cmd.c#L448) | 预处理 | `#endif // ONE_BOARD` |
+| [449](../application/cmd/robot_cmd.c#L449) | 预处理 | `#ifdef GIMBAL_BOARD` |
+| [460](../application/cmd/robot_cmd.c#L460) | 预处理 | `#endif // GIMBAL_BOARD` |
+| [489](../application/cmd/robot_cmd.c#L489) | 预处理 | `#ifdef ONE_BOARD` |
+| [491](../application/cmd/robot_cmd.c#L491) | 预处理 | `#endif // ONE_BOARD` |
+| [492](../application/cmd/robot_cmd.c#L492) | 预处理 | `#ifdef GIMBAL_BOARD` |
+| [497](../application/cmd/robot_cmd.c#L497) | 预处理 | `#endif // GIMBAL_BOARD` |
 
 ## application/cmd/robot_cmd.h
 
-源文件：[打开 application/cmd/robot_cmd.h](../application/cmd/robot_cmd.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [application/cmd/robot_cmd.h:2](../application/cmd/robot_cmd.h#L2) | `ROBOT_CMD_H` | 空定义 | `#ifndef ROBOT_CMD_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../application/cmd/robot_cmd.h#L1) | 预处理 | `#ifndef ROBOT_CMD_H` |
+| [2](../application/cmd/robot_cmd.h#L2) | 预处理 | `#define ROBOT_CMD_H` |
+| [17](../application/cmd/robot_cmd.h#L17) | 预处理 | `#endif // !ROBOT_CMD_H` |
 
 ## application/gimbal/gimbal.c
 
-源文件：[打开 application/gimbal/gimbal.c](../application/gimbal/gimbal.c)。
-
-### 配置结构体初值
-
-以下记录原始定义，不自动推断运行路径或后续覆盖。未填字段为零；指针/回调表示绑定关系。
-
-[application/gimbal/gimbal.c:22](../application/gimbal/gimbal.c#L22)
-
-```c
-Motor_Init_Config_s yaw_config = {
-        .can_init_config = {
-            .can_handle = &hcan1,
-            .tx_id = 1,
-        },
-        .controller_param_init_config = {
-            .angle_PID = {
-                .Kp = 8, // 8
-                .Ki = 0,
-                .Kd = 0,
-                .DeadBand = 0.1,
-                .Improve = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
-                .IntegralLimit = 100,
-
-                .MaxOut = 500,
-            },
-            .speed_PID = {
-                .Kp = 50,  // 50
-                .Ki = 200, // 200
-                .Kd = 0,
-                .Improve = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
-                .IntegralLimit = 3000,
-                .MaxOut = 20000,
-            },
-            .other_angle_feedback_ptr = &gimba_IMU_data->YawTotalAngle,
-            // 还需要增加角速度额外反馈指针,注意方向,ins_task.md中有c板的bodyframe坐标系说明
-            .other_speed_feedback_ptr = &gimba_IMU_data->Gyro[2],
-        },
-        .controller_setting_init_config = {
-            .angle_feedback_source = OTHER_FEED,
-            .speed_feedback_source = OTHER_FEED,
-            .outer_loop_type = ANGLE_LOOP,
-            .close_loop_type = ANGLE_LOOP | SPEED_LOOP,
-            .motor_reverse_flag = MOTOR_DIRECTION_NORMAL,
-        },
-        .motor_type = GM6020};
-```
-
-[application/gimbal/gimbal.c:59](../application/gimbal/gimbal.c#L59)
-
-```c
-Motor_Init_Config_s pitch_config = {
-        .can_init_config = {
-            .can_handle = &hcan2,
-            .tx_id = 2,
-        },
-        .controller_param_init_config = {
-            .angle_PID = {
-                .Kp = 10, // 10
-                .Ki = 0,
-                .Kd = 0,
-                .Improve = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
-                .IntegralLimit = 100,
-                .MaxOut = 500,
-            },
-            .speed_PID = {
-                .Kp = 50,  // 50
-                .Ki = 350, // 350
-                .Kd = 0,   // 0
-                .Improve = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
-                .IntegralLimit = 2500,
-                .MaxOut = 20000,
-            },
-            .other_angle_feedback_ptr = &gimba_IMU_data->Pitch,
-            // 还需要增加角速度额外反馈指针,注意方向,ins_task.md中有c板的bodyframe坐标系说明
-            .other_speed_feedback_ptr = (&gimba_IMU_data->Gyro[0]),
-        },
-        .controller_setting_init_config = {
-            .angle_feedback_source = OTHER_FEED,
-            .speed_feedback_source = OTHER_FEED,
-            .outer_loop_type = ANGLE_LOOP,
-            .close_loop_type = SPEED_LOOP | ANGLE_LOOP,
-            .motor_reverse_flag = MOTOR_DIRECTION_NORMAL,
-        },
-        .motor_type = GM6020,
-    };
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [24](../application/gimbal/gimbal.c#L24) | 配置初值 | `Motor_Init_Config_s yaw_config = {` |
+| [25](../application/gimbal/gimbal.c#L25) | 配置初值 | `.can_init_config = {` |
+| [26](../application/gimbal/gimbal.c#L26) | 配置初值 | `.can_handle = &hcan2,` |
+| [27](../application/gimbal/gimbal.c#L27) | 配置初值 | `.tx_id = 1,` |
+| [28](../application/gimbal/gimbal.c#L28) | 配置初值 | `},` |
+| [29](../application/gimbal/gimbal.c#L29) | 配置初值 | `.controller_param_init_config = {` |
+| [30](../application/gimbal/gimbal.c#L30) | 配置初值 | `.angle_PID = {` |
+| [31](../application/gimbal/gimbal.c#L31) | 配置初值 | `.Kp = 8, // 8` |
+| [32](../application/gimbal/gimbal.c#L32) | 配置初值 | `.Ki = 0,` |
+| [33](../application/gimbal/gimbal.c#L33) | 配置初值 | `.Kd = 0,` |
+| [34](../application/gimbal/gimbal.c#L34) | 配置初值 | `.DeadBand = 0.1,` |
+| [35](../application/gimbal/gimbal.c#L35) | 配置初值 | `.Improve = PID_Trapezoid_Intergral &#124; PID_Integral_Limit &#124; PID_Derivative_On_Measurement,` |
+| [36](../application/gimbal/gimbal.c#L36) | 配置初值 | `.IntegralLimit = 100,` |
+| [38](../application/gimbal/gimbal.c#L38) | 配置初值 | `.MaxOut = 500,` |
+| [39](../application/gimbal/gimbal.c#L39) | 配置初值 | `},` |
+| [40](../application/gimbal/gimbal.c#L40) | 配置初值 | `.speed_PID = {` |
+| [41](../application/gimbal/gimbal.c#L41) | 配置初值 | `.Kp = 50,  // 50` |
+| [42](../application/gimbal/gimbal.c#L42) | 配置初值 | `.Ki = 200, // 200` |
+| [43](../application/gimbal/gimbal.c#L43) | 配置初值 | `.Kd = 0,` |
+| [44](../application/gimbal/gimbal.c#L44) | 配置初值 | `.Improve = PID_Trapezoid_Intergral &#124; PID_Integral_Limit &#124; PID_Derivative_On_Measurement,` |
+| [45](../application/gimbal/gimbal.c#L45) | 配置初值 | `.IntegralLimit = 3000,` |
+| [46](../application/gimbal/gimbal.c#L46) | 配置初值 | `.MaxOut = 20000,` |
+| [47](../application/gimbal/gimbal.c#L47) | 配置初值 | `},` |
+| [48](../application/gimbal/gimbal.c#L48) | 配置初值 | `.other_angle_feedback_ptr = &gimbal_IMU_data->YawTotalAngle,` |
+| [49](../application/gimbal/gimbal.c#L49) | 配置初值 | `// 还需要增加角速度额外反馈指针,注意方向,ins_task.md中有c板的bodyframe坐标系说明` |
+| [50](../application/gimbal/gimbal.c#L50) | 配置初值 | `.other_speed_feedback_ptr = &gimbal_IMU_data->Gyro[2],` |
+| [51](../application/gimbal/gimbal.c#L51) | 配置初值 | `},` |
+| [52](../application/gimbal/gimbal.c#L52) | 配置初值 | `.controller_setting_init_config = {` |
+| [53](../application/gimbal/gimbal.c#L53) | 配置初值 | `.angle_feedback_source = OTHER_FEED,` |
+| [54](../application/gimbal/gimbal.c#L54) | 配置初值 | `.speed_feedback_source = OTHER_FEED,` |
+| [55](../application/gimbal/gimbal.c#L55) | 配置初值 | `.outer_loop_type = ANGLE_LOOP,` |
+| [56](../application/gimbal/gimbal.c#L56) | 配置初值 | `.close_loop_type = ANGLE_LOOP &#124; SPEED_LOOP,` |
+| [57](../application/gimbal/gimbal.c#L57) | 配置初值 | `.motor_reverse_flag = MOTOR_DIRECTION_NORMAL,` |
+| [58](../application/gimbal/gimbal.c#L58) | 配置初值 | `},` |
+| [59](../application/gimbal/gimbal.c#L59) | 配置初值 | `.motor_type = GM6020};` |
+| [61](../application/gimbal/gimbal.c#L61) | 配置初值 | `Motor_Init_Config_s pitch_config = {` |
+| [62](../application/gimbal/gimbal.c#L62) | 配置初值 | `.can_init_config = {` |
+| [63](../application/gimbal/gimbal.c#L63) | 配置初值 | `.can_handle = &hcan2,` |
+| [64](../application/gimbal/gimbal.c#L64) | 配置初值 | `.tx_id = 2,` |
+| [65](../application/gimbal/gimbal.c#L65) | 配置初值 | `},` |
+| [66](../application/gimbal/gimbal.c#L66) | 配置初值 | `.controller_param_init_config = {` |
+| [67](../application/gimbal/gimbal.c#L67) | 配置初值 | `.angle_PID = {` |
+| [68](../application/gimbal/gimbal.c#L68) | 配置初值 | `.Kp = 10, // 10` |
+| [69](../application/gimbal/gimbal.c#L69) | 配置初值 | `.Ki = 0,` |
+| [70](../application/gimbal/gimbal.c#L70) | 配置初值 | `.Kd = 0,` |
+| [71](../application/gimbal/gimbal.c#L71) | 配置初值 | `.Improve = PID_Trapezoid_Intergral &#124; PID_Integral_Limit &#124; PID_Derivative_On_Measurement,` |
+| [72](../application/gimbal/gimbal.c#L72) | 配置初值 | `.IntegralLimit = 100,` |
+| [73](../application/gimbal/gimbal.c#L73) | 配置初值 | `.MaxOut = 500,` |
+| [74](../application/gimbal/gimbal.c#L74) | 配置初值 | `},` |
+| [75](../application/gimbal/gimbal.c#L75) | 配置初值 | `.speed_PID = {` |
+| [76](../application/gimbal/gimbal.c#L76) | 配置初值 | `.Kp = 50,  // 50` |
+| [77](../application/gimbal/gimbal.c#L77) | 配置初值 | `.Ki = 350, // 350` |
+| [78](../application/gimbal/gimbal.c#L78) | 配置初值 | `.Kd = 0,   // 0` |
+| [79](../application/gimbal/gimbal.c#L79) | 配置初值 | `.Improve = PID_Trapezoid_Intergral &#124; PID_Integral_Limit &#124; PID_Derivative_On_Measurement,` |
+| [80](../application/gimbal/gimbal.c#L80) | 配置初值 | `.IntegralLimit = 2500,` |
+| [81](../application/gimbal/gimbal.c#L81) | 配置初值 | `.MaxOut = 20000,` |
+| [82](../application/gimbal/gimbal.c#L82) | 配置初值 | `},` |
+| [83](../application/gimbal/gimbal.c#L83) | 配置初值 | `.other_angle_feedback_ptr = &gimbal_IMU_data->Pitch,` |
+| [84](../application/gimbal/gimbal.c#L84) | 配置初值 | `// 还需要增加角速度额外反馈指针,注意方向,ins_task.md中有c板的bodyframe坐标系说明` |
+| [85](../application/gimbal/gimbal.c#L85) | 配置初值 | `.other_speed_feedback_ptr = (&gimbal_IMU_data->Gyro[1]),` |
+| [86](../application/gimbal/gimbal.c#L86) | 配置初值 | `},` |
+| [87](../application/gimbal/gimbal.c#L87) | 配置初值 | `.controller_setting_init_config = {` |
+| [88](../application/gimbal/gimbal.c#L88) | 配置初值 | `.angle_feedback_source = OTHER_FEED,` |
+| [89](../application/gimbal/gimbal.c#L89) | 配置初值 | `.speed_feedback_source = OTHER_FEED,` |
+| [90](../application/gimbal/gimbal.c#L90) | 配置初值 | `.outer_loop_type = ANGLE_LOOP,` |
+| [91](../application/gimbal/gimbal.c#L91) | 配置初值 | `.close_loop_type = SPEED_LOOP &#124; ANGLE_LOOP,` |
+| [92](../application/gimbal/gimbal.c#L92) | 配置初值 | `.motor_reverse_flag = MOTOR_DIRECTION_NORMAL,` |
+| [93](../application/gimbal/gimbal.c#L93) | 配置初值 | `.feedback_reverse_flag = FEEDBACK_DIRECTION_REVERSE,` |
+| [94](../application/gimbal/gimbal.c#L94) | 配置初值 | `},` |
+| [95](../application/gimbal/gimbal.c#L95) | 配置初值 | `.motor_type = GM6020,` |
 
 ## application/gimbal/gimbal.h
 
-源文件：[打开 application/gimbal/gimbal.h](../application/gimbal/gimbal.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [application/gimbal/gimbal.h:2](../application/gimbal/gimbal.h#L2) | `GIMBAL_H` | 空定义 | `#ifndef GIMBAL_H` |  |
-
-## application/robot_def.h
-
-源文件：[打开 application/robot_def.h](../application/robot_def.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [application/robot_def.h:13](../application/robot_def.h#L13) | `ROBOT_DEF_H` | 空定义 | `#ifndef ROBOT_DEF_H` |  |
-| [application/robot_def.h:21](../application/robot_def.h#L21) | `ONE_BOARD` | 空定义 | `#ifndef ROBOT_DEF_H` | 单板控制整车 |
-| [application/robot_def.h:25](../application/robot_def.h#L25) | `VISION_USE_VCP` | 空定义 | `#ifndef ROBOT_DEF_H` | 使用虚拟串口发送视觉数据 |
-| [application/robot_def.h:33](../application/robot_def.h#L33) | `CHASSIS_POWER_BENCH_TEST` | `1` | `#ifndef ROBOT_DEF_H；#ifndef CHASSIS_POWER_BENCH_TEST` |  |
-| [application/robot_def.h:36](../application/robot_def.h#L36) | `CHASSIS_POWER_BENCH_LIMIT_W` | `50.0f` | `#ifndef ROBOT_DEF_H；#ifndef CHASSIS_POWER_BENCH_LIMIT_W` | 底盘功率回退限制，单位 W |
-| [application/robot_def.h:45](../application/robot_def.h#L45) | `POWER_METER_ENABLE` | `1` | `#ifndef ROBOT_DEF_H；#ifndef POWER_METER_ENABLE` |  |
-| [application/robot_def.h:50](../application/robot_def.h#L50) | `POWER_METER_ENABLE_IS_VALID_0` | `1` | `#ifndef ROBOT_DEF_H` | 0 表示不启用功率计 |
-| [application/robot_def.h:51](../application/robot_def.h#L51) | `POWER_METER_ENABLE_IS_VALID_1` | `1` | `#ifndef ROBOT_DEF_H` | 1 表示启用功率计 |
-| [application/robot_def.h:52](../application/robot_def.h#L52) | `POWER_METER_ENABLE_IS_VALID_IMPL(value)` | `POWER_METER_ENABLE_IS_VALID_##value` | `#ifndef ROBOT_DEF_H` |  |
-| [application/robot_def.h:53](../application/robot_def.h#L53) | `POWER_METER_ENABLE_IS_VALID(value)` | `POWER_METER_ENABLE_IS_VALID_IMPL(value)` | `#ifndef ROBOT_DEF_H` |  |
-| [application/robot_def.h:66](../application/robot_def.h#L66) | `CHASSIS_DRIVE_MECANUM` | `0` | `#ifndef ROBOT_DEF_H` |  |
-| [application/robot_def.h:67](../application/robot_def.h#L67) | `CHASSIS_DRIVE_OMNI_X` | `1` | `#ifndef ROBOT_DEF_H` |  |
-| [application/robot_def.h:69](../application/robot_def.h#L69) | `CHASSIS_DRIVE_TYPE` | `CHASSIS_DRIVE_MECANUM` | `#ifndef ROBOT_DEF_H；#ifndef CHASSIS_DRIVE_TYPE` |  |
-| [application/robot_def.h:78](../application/robot_def.h#L78) | `YAW_CHASSIS_ALIGN_ECD` | `3734` | `#ifndef ROBOT_DEF_H` | 云台和底盘对齐指向相同方向时的电机编码器值,若对云台有机械改动需要修改 |
-| [application/robot_def.h:79](../application/robot_def.h#L79) | `YAW_ECD_GREATER_THAN_4096` | `0` | `#ifndef ROBOT_DEF_H` | ALIGN_ECD值是否大于4096,是为1,否为0;用于计算云台偏转角度 |
-| [application/robot_def.h:80](../application/robot_def.h#L80) | `PITCH_HORIZON_ECD` | `3412` | `#ifndef ROBOT_DEF_H` | 云台处于水平位置时编码器值,若对云台有机械改动需要修改 |
-| [application/robot_def.h:81](../application/robot_def.h#L81) | `PITCH_MAX_ANGLE` | `0` | `#ifndef ROBOT_DEF_H` | 云台竖直方向最大角度 (注意反馈如果是陀螺仪，则填写陀螺仪的角度) |
-| [application/robot_def.h:82](../application/robot_def.h#L82) | `PITCH_MIN_ANGLE` | `0` | `#ifndef ROBOT_DEF_H` | 云台竖直方向最小角度 (注意反馈如果是陀螺仪，则填写陀螺仪的角度) |
-| [application/robot_def.h:84](../application/robot_def.h#L84) | `ONE_BULLET_DELTA_ANGLE` | `36` | `#ifndef ROBOT_DEF_H` | 发射一发弹丸拨盘转动的距离,由机械设计图纸给出 |
-| [application/robot_def.h:85](../application/robot_def.h#L85) | `REDUCTION_RATIO_LOADER` | `36.0f` | `#ifndef ROBOT_DEF_H` | 2006拨盘电机的减速比,英雄需要修改为3508的19.0f |
-| [application/robot_def.h:86](../application/robot_def.h#L86) | `NUM_PER_CIRCLE` | `10` | `#ifndef ROBOT_DEF_H` | 拨盘一圈的装载量 |
-| [application/robot_def.h:88](../application/robot_def.h#L88) | `WHEEL_BASE` | `350` | `#ifndef ROBOT_DEF_H` | 纵向轴距(前进后退方向) |
-| [application/robot_def.h:89](../application/robot_def.h#L89) | `TRACK_WIDTH` | `300` | `#ifndef ROBOT_DEF_H` | 横向轮距(左右平移方向) |
-| [application/robot_def.h:90](../application/robot_def.h#L90) | `CENTER_GIMBAL_OFFSET_X` | `0` | `#ifndef ROBOT_DEF_H` | 云台旋转中心距底盘几何中心的距离,前后方向,云台位于正中心时默认设为0 |
-| [application/robot_def.h:91](../application/robot_def.h#L91) | `CENTER_GIMBAL_OFFSET_Y` | `0` | `#ifndef ROBOT_DEF_H` | 云台旋转中心距底盘几何中心的距离,左右方向,云台位于正中心时默认设为0 |
-| [application/robot_def.h:92](../application/robot_def.h#L92) | `RADIUS_WHEEL` | `60` | `#ifndef ROBOT_DEF_H` | 轮子半径 |
-| [application/robot_def.h:93](../application/robot_def.h#L93) | `REDUCTION_RATIO_WHEEL` | `19.0f` | `#ifndef ROBOT_DEF_H` | 电机减速比,因为编码器量测的是转子的速度而不是输出轴的速度故需进行转换 |
-| [application/robot_def.h:97](../application/robot_def.h#L97) | `OMNI_X_LF_DIRECTION` | `1.0f` | `#ifndef ROBOT_DEF_H；#ifndef OMNI_X_LF_DIRECTION` |  |
-| [application/robot_def.h:100](../application/robot_def.h#L100) | `OMNI_X_RF_DIRECTION` | `1.0f` | `#ifndef ROBOT_DEF_H；#ifndef OMNI_X_RF_DIRECTION` |  |
-| [application/robot_def.h:103](../application/robot_def.h#L103) | `OMNI_X_LB_DIRECTION` | `1.0f` | `#ifndef ROBOT_DEF_H；#ifndef OMNI_X_LB_DIRECTION` |  |
-| [application/robot_def.h:106](../application/robot_def.h#L106) | `OMNI_X_RB_DIRECTION` | `1.0f` | `#ifndef ROBOT_DEF_H；#ifndef OMNI_X_RB_DIRECTION` |  |
-| [application/robot_def.h:109](../application/robot_def.h#L109) | `GYRO2GIMBAL_DIR_YAW` | `1` | `#ifndef ROBOT_DEF_H` | 陀螺仪数据相较于云台的yaw的方向,1为相同,-1为相反 |
-| [application/robot_def.h:110](../application/robot_def.h#L110) | `GYRO2GIMBAL_DIR_PITCH` | `1` | `#ifndef ROBOT_DEF_H` | 陀螺仪数据相较于云台的pitch的方向,1为相同,-1为相反 |
-| [application/robot_def.h:111](../application/robot_def.h#L111) | `GYRO2GIMBAL_DIR_ROLL` | `1` | `#ifndef ROBOT_DEF_H` | 陀螺仪数据相较于云台的roll的方向,1为相同,-1为相反 |
-
-### 已注释的宏选项（当前不定义）
-
-| 行 | 原选项 |
-| --- | --- |
-| [application/robot_def.h:22](../application/robot_def.h#L22) | `#define CHASSIS_BOARD //底盘板` |
-| [application/robot_def.h:23](../application/robot_def.h#L23) | `#define GIMBAL_BOARD //云台板` |
-| [application/robot_def.h:26](../application/robot_def.h#L26) | `#define VISION_USE_UART // 使用串口发送视觉数据` |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../application/gimbal/gimbal.h#L1) | 预处理 | `#ifndef GIMBAL_H` |
+| [2](../application/gimbal/gimbal.h#L2) | 预处理 | `#define GIMBAL_H` |
+| [16](../application/gimbal/gimbal.h#L16) | 预处理 | `#endif // GIMBAL_H` |
 
 ## application/robot.c
 
-源文件：[打开 application/robot.c](../application/robot.c)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [application/robot.c:8](../application/robot.c#L8) | `ROBOT_DEF_PARAM_WARNING` | 空定义 | `#ifndef ROBOT_DEF_PARAM_WARNING` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [9](../application/robot.c#L9) | 预处理 | `#ifndef ROBOT_DEF_PARAM_WARNING` |
+| [10](../application/robot.c#L10) | 预处理 | `#define ROBOT_DEF_PARAM_WARNING` |
+| [12](../application/robot.c#L12) | 预处理 | `#endif // !ROBOT_DEF_PARAM_WARNING` |
+| [14](../application/robot.c#L14) | 预处理 | `#if defined(ONE_BOARD) &#124;&#124; defined(CHASSIS_BOARD)` |
+| [16](../application/robot.c#L16) | 预处理 | `#endif` |
+| [18](../application/robot.c#L18) | 预处理 | `#if defined(ONE_BOARD) &#124;&#124; defined(GIMBAL_BOARD)` |
+| [22](../application/robot.c#L22) | 预处理 | `#endif` |
+| [36](../application/robot.c#L36) | 预处理 | `#if defined(ONE_BOARD) &#124;&#124; defined(GIMBAL_BOARD)` |
+| [40](../application/robot.c#L40) | 预处理 | `#endif` |
+| [42](../application/robot.c#L42) | 预处理 | `#if defined(ONE_BOARD) &#124;&#124; defined(CHASSIS_BOARD)` |
+| [44](../application/robot.c#L44) | 预处理 | `#endif` |
+| [54](../application/robot.c#L54) | 预处理 | `#if defined(ONE_BOARD) &#124;&#124; defined(GIMBAL_BOARD)` |
+| [58](../application/robot.c#L58) | 预处理 | `#endif` |
+| [60](../application/robot.c#L60) | 预处理 | `#if defined(ONE_BOARD) &#124;&#124; defined(CHASSIS_BOARD)` |
+| [62](../application/robot.c#L62) | 预处理 | `#endif` |
 
 ## application/robot.h
 
-源文件：[打开 application/robot.h](../application/robot.h)。
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../application/robot.h#L1) | 预处理 | `#ifndef ROBOT_H` |
+| [2](../application/robot.h#L2) | 预处理 | `#define ROBOT_H` |
+| [18](../application/robot.h#L18) | 预处理 | `#endif` |
 
-### 宏定义
+## application/robot_def.h
 
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [application/robot.h:2](../application/robot.h#L2) | `ROBOT_H` | 空定义 | `#ifndef ROBOT_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [12](../application/robot_def.h#L12) | 预处理 | `#ifndef ROBOT_DEF_H` |
+| [13](../application/robot_def.h#L13) | 预处理 | `#define ROBOT_DEF_H` |
+| [22](../application/robot_def.h#L22) | 预处理 | `#if !defined(ONE_BOARD) && !defined(CHASSIS_BOARD) && !defined(GIMBAL_BOARD)` |
+| [23](../application/robot_def.h#L23) | 预处理 | `#define ONE_BOARD // 单板控制整车` |
+| [24](../application/robot_def.h#L24) | 预处理 | `#endif` |
+| [28](../application/robot_def.h#L28) | 预处理 | `#if !defined(VISION_USE_VCP) && !defined(VISION_USE_UART)` |
+| [29](../application/robot_def.h#L29) | 预处理 | `#define VISION_USE_UART` |
+| [30](../application/robot_def.h#L30) | 预处理 | `#endif` |
+| [31](../application/robot_def.h#L31) | 预处理 | `#if defined(VISION_USE_VCP) && defined(VISION_USE_UART)` |
+| [33](../application/robot_def.h#L33) | 预处理 | `#endif` |
+| [35](../application/robot_def.h#L35) | 预处理 | `#if defined(VISION_USE_VCP) && USB_TELEMETRY_ENABLE` |
+| [37](../application/robot_def.h#L37) | 预处理 | `#endif` |
+| [44](../application/robot_def.h#L44) | 预处理 | `#ifndef CHASSIS_POWER_BENCH_TEST` |
+| [45](../application/robot_def.h#L45) | 预处理 | `#define CHASSIS_POWER_BENCH_TEST 0` |
+| [46](../application/robot_def.h#L46) | 预处理 | `#endif` |
+| [47](../application/robot_def.h#L47) | 预处理 | `#ifndef CHASSIS_POWER_BENCH_LIMIT_W` |
+| [48](../application/robot_def.h#L48) | 预处理 | `#define CHASSIS_POWER_BENCH_LIMIT_W 50.0f // 底盘功率回退限制，单位 W` |
+| [49](../application/robot_def.h#L49) | 预处理 | `#endif` |
+| [51](../application/robot_def.h#L51) | 预处理 | `#if CHASSIS_POWER_BENCH_TEST != 0 && CHASSIS_POWER_BENCH_TEST != 1` |
+| [53](../application/robot_def.h#L53) | 预处理 | `#endif` |
+| [60](../application/robot_def.h#L60) | 预处理 | `#define POWER_METER_ENABLE_IS_VALID_0 1// 0 表示不启用功率计` |
+| [61](../application/robot_def.h#L61) | 预处理 | `#define POWER_METER_ENABLE_IS_VALID_1 1// 1 表示启用功率计` |
+| [62](../application/robot_def.h#L62) | 预处理 | `#define POWER_METER_ENABLE_IS_VALID_IMPL(value) POWER_METER_ENABLE_IS_VALID_##value` |
+| [63](../application/robot_def.h#L63) | 预处理 | `#define POWER_METER_ENABLE_IS_VALID(value) POWER_METER_ENABLE_IS_VALID_IMPL(value)` |
+| [65](../application/robot_def.h#L65) | 预处理 | `#if !POWER_METER_ENABLE_IS_VALID(POWER_METER_ENABLE)` |
+| [67](../application/robot_def.h#L67) | 预处理 | `#endif` |
+| [76](../application/robot_def.h#L76) | 预处理 | `#define CHASSIS_DRIVE_MECANUM 0` |
+| [77](../application/robot_def.h#L77) | 预处理 | `#define CHASSIS_DRIVE_OMNI_X 1` |
+| [78](../application/robot_def.h#L78) | 预处理 | `#ifndef CHASSIS_DRIVE_TYPE` |
+| [79](../application/robot_def.h#L79) | 预处理 | `#define CHASSIS_DRIVE_TYPE CHASSIS_DRIVE_OMNI_X` |
+| [80](../application/robot_def.h#L80) | 预处理 | `#endif` |
+| [82](../application/robot_def.h#L82) | 预处理 | `#if CHASSIS_DRIVE_TYPE != CHASSIS_DRIVE_MECANUM && \` |
+| [85](../application/robot_def.h#L85) | 预处理 | `#endif` |
+| [88](../application/robot_def.h#L88) | 预处理 | `#ifndef YAW_CHASSIS_ALIGN_ECD` |
+| [89](../application/robot_def.h#L89) | 预处理 | `#define YAW_CHASSIS_ALIGN_ECD 350// 云台和底盘对齐指向相同方向时的电机编码器值,若对云台有机械改动需要修改` |
+| [90](../application/robot_def.h#L90) | 预处理 | `#endif` |
+| [91](../application/robot_def.h#L91) | 预处理 | `#ifndef YAW_ECD_GREATER_THAN_4096` |
+| [92](../application/robot_def.h#L92) | 预处理 | `#define YAW_ECD_GREATER_THAN_4096 0 // ALIGN_ECD值是否大于4096,是为1,否为0;用于计算云台偏转角度` |
+| [93](../application/robot_def.h#L93) | 预处理 | `#endif` |
+| [94](../application/robot_def.h#L94) | 预处理 | `#ifndef PITCH_HORIZON_ECD` |
+| [95](../application/robot_def.h#L95) | 预处理 | `#define PITCH_HORIZON_ECD 3412      // 云台处于水平位置时编码器值,若对云台有机械改动需要修改` |
+| [96](../application/robot_def.h#L96) | 预处理 | `#endif` |
+| [97](../application/robot_def.h#L97) | 预处理 | `#ifndef PITCH_MAX_ANGLE` |
+| [98](../application/robot_def.h#L98) | 预处理 | `#define PITCH_MAX_ANGLE 30           // 云台竖直方向最大角度 (注意反馈如果是陀螺仪，则填写陀螺仪的角度)` |
+| [99](../application/robot_def.h#L99) | 预处理 | `#endif` |
+| [100](../application/robot_def.h#L100) | 预处理 | `#ifndef PITCH_MIN_ANGLE` |
+| [101](../application/robot_def.h#L101) | 预处理 | `#define PITCH_MIN_ANGLE -30           // 云台竖直方向最小角度 (注意反馈如果是陀螺仪，则填写陀螺仪的角度)` |
+| [102](../application/robot_def.h#L102) | 预处理 | `#endif` |
+| [104](../application/robot_def.h#L104) | 预处理 | `#ifndef ONE_BULLET_DELTA_ANGLE` |
+| [105](../application/robot_def.h#L105) | 预处理 | `#define ONE_BULLET_DELTA_ANGLE 45    // 发射一发弹丸拨盘转动的距离,由机械设计图纸给出` |
+| [106](../application/robot_def.h#L106) | 预处理 | `#endif` |
+| [107](../application/robot_def.h#L107) | 预处理 | `#ifndef REDUCTION_RATIO_LOADER` |
+| [108](../application/robot_def.h#L108) | 预处理 | `#define REDUCTION_RATIO_LOADER 36.0f // 2006拨盘电机的减速比,英雄需要修改为3508的19.0f` |
+| [109](../application/robot_def.h#L109) | 预处理 | `#endif` |
+| [110](../application/robot_def.h#L110) | 预处理 | `#ifndef NUM_PER_CIRCLE` |
+| [111](../application/robot_def.h#L111) | 预处理 | `#define NUM_PER_CIRCLE 8            // 拨盘一圈的装载量` |
+| [112](../application/robot_def.h#L112) | 预处理 | `#endif` |
+| [114](../application/robot_def.h#L114) | 预处理 | `#ifndef WHEEL_BASE` |
+| [115](../application/robot_def.h#L115) | 预处理 | `#define WHEEL_BASE 350              // 纵向轴距(前进后退方向)` |
+| [116](../application/robot_def.h#L116) | 预处理 | `#endif` |
+| [117](../application/robot_def.h#L117) | 预处理 | `#ifndef TRACK_WIDTH` |
+| [118](../application/robot_def.h#L118) | 预处理 | `#define TRACK_WIDTH 300             // 横向轮距(左右平移方向)` |
+| [119](../application/robot_def.h#L119) | 预处理 | `#endif` |
+| [120](../application/robot_def.h#L120) | 预处理 | `#ifndef CENTER_GIMBAL_OFFSET_X` |
+| [121](../application/robot_def.h#L121) | 预处理 | `#define CENTER_GIMBAL_OFFSET_X 0    // 云台旋转中心距底盘几何中心的距离,前后方向,云台位于正中心时默认设为0` |
+| [122](../application/robot_def.h#L122) | 预处理 | `#endif` |
+| [123](../application/robot_def.h#L123) | 预处理 | `#ifndef CENTER_GIMBAL_OFFSET_Y` |
+| [124](../application/robot_def.h#L124) | 预处理 | `#define CENTER_GIMBAL_OFFSET_Y 0    // 云台旋转中心距底盘几何中心的距离,左右方向,云台位于正中心时默认设为0` |
+| [125](../application/robot_def.h#L125) | 预处理 | `#endif` |
+| [126](../application/robot_def.h#L126) | 预处理 | `#ifndef RADIUS_WHEEL` |
+| [127](../application/robot_def.h#L127) | 预处理 | `#define RADIUS_WHEEL 60             // 轮子半径` |
+| [128](../application/robot_def.h#L128) | 预处理 | `#endif` |
+| [129](../application/robot_def.h#L129) | 预处理 | `#ifndef REDUCTION_RATIO_WHEEL` |
+| [130](../application/robot_def.h#L130) | 预处理 | `#define REDUCTION_RATIO_WHEEL 19.0f // 电机减速比,因为编码器量测的是转子的速度而不是输出轴的速度故需进行转换` |
+| [131](../application/robot_def.h#L131) | 预处理 | `#endif` |
+| [134](../application/robot_def.h#L134) | 预处理 | `#ifndef OMNI_X_LF_DIRECTION` |
+| [135](../application/robot_def.h#L135) | 预处理 | `#define OMNI_X_LF_DIRECTION 1.0f` |
+| [136](../application/robot_def.h#L136) | 预处理 | `#endif` |
+| [137](../application/robot_def.h#L137) | 预处理 | `#ifndef OMNI_X_RF_DIRECTION` |
+| [138](../application/robot_def.h#L138) | 预处理 | `#define OMNI_X_RF_DIRECTION 1.0f` |
+| [139](../application/robot_def.h#L139) | 预处理 | `#endif` |
+| [140](../application/robot_def.h#L140) | 预处理 | `#ifndef OMNI_X_LB_DIRECTION` |
+| [141](../application/robot_def.h#L141) | 预处理 | `#define OMNI_X_LB_DIRECTION 1.0f` |
+| [142](../application/robot_def.h#L142) | 预处理 | `#endif` |
+| [143](../application/robot_def.h#L143) | 预处理 | `#ifndef OMNI_X_RB_DIRECTION` |
+| [144](../application/robot_def.h#L144) | 预处理 | `#define OMNI_X_RB_DIRECTION 1.0f` |
+| [145](../application/robot_def.h#L145) | 预处理 | `#endif` |
+| [147](../application/robot_def.h#L147) | 预处理 | `#ifndef GYRO2GIMBAL_DIR_YAW` |
+| [148](../application/robot_def.h#L148) | 预处理 | `#define GYRO2GIMBAL_DIR_YAW 1   // 陀螺仪数据相较于云台的yaw的方向,1为相同,-1为相反` |
+| [149](../application/robot_def.h#L149) | 预处理 | `#endif` |
+| [150](../application/robot_def.h#L150) | 预处理 | `#ifndef GYRO2GIMBAL_DIR_PITCH` |
+| [151](../application/robot_def.h#L151) | 预处理 | `#define GYRO2GIMBAL_DIR_PITCH 1 // 陀螺仪数据相较于云台的pitch的方向,1为相同,-1为相反` |
+| [152](../application/robot_def.h#L152) | 预处理 | `#endif` |
+| [153](../application/robot_def.h#L153) | 预处理 | `#ifndef GYRO2GIMBAL_DIR_ROLL` |
+| [154](../application/robot_def.h#L154) | 预处理 | `#define GYRO2GIMBAL_DIR_ROLL 1  // 陀螺仪数据相较于云台的roll的方向,1为相同,-1为相反` |
+| [155](../application/robot_def.h#L155) | 预处理 | `#endif` |
+| [158](../application/robot_def.h#L158) | 预处理 | `#if (defined(ONE_BOARD) && defined(CHASSIS_BOARD)) &#124;&#124; \` |
+| [162](../application/robot_def.h#L162) | 预处理 | `#endif` |
+| [297](../application/robot_def.h#L297) | 预处理 | `#if defined(CHASSIS_BOARD) &#124;&#124; defined(GIMBAL_BOARD) // 非单板的时候底盘还将imu数据回传(若有必要)` |
+| [299](../application/robot_def.h#L299) | 预处理 | `#endif` |
+| [326](../application/robot_def.h#L326) | 预处理 | `#endif // !ROBOT_DEF_H` |
+
+## application/robot_task.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [29](../application/robot_task.h#L29) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
+| [41](../application/robot_task.h#L41) | 预处理 | `#endif` |
+| [42](../application/robot_task.h#L42) | 预处理 | `#if CHASSIS_POWER_CAPTURE_ENABLE && BOARD_LOG_UART_ENABLED` |
+| [60](../application/robot_task.h#L60) | 预处理 | `#endif` |
+| [88](../application/robot_task.h#L88) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
+| [92](../application/robot_task.h#L92) | 预处理 | `#endif` |
+| [94](../application/robot_task.h#L94) | 预处理 | `#if CHASSIS_POWER_CAPTURE_ENABLE && BOARD_LOG_UART_ENABLED` |
+| [97](../application/robot_task.h#L97) | 预处理 | `#endif` |
+| [99](../application/robot_task.h#L99) | 预处理 | `#if REFEREE_ENABLE && (defined(ONE_BOARD) &#124;&#124; defined(CHASSIS_BOARD))` |
+| [102](../application/robot_task.h#L102) | 预处理 | `#endif` |
+| [121](../application/robot_task.h#L121) | 预处理 | `#if defined(ONE_BOARD) &#124;&#124; defined(GIMBAL_BOARD)` |
+| [123](../application/robot_task.h#L123) | 预处理 | `#endif` |
+| [139](../application/robot_task.h#L139) | 预处理 | `#if CHASSIS_POWER_CAPTURE_ENABLE && BOARD_LOG_UART_ENABLED` |
+| [141](../application/robot_task.h#L141) | 预处理 | `#endif` |
 
 ## application/shoot/shoot.c
 
-源文件：[打开 application/shoot/shoot.c](../application/shoot/shoot.c)。
-
-### 配置结构体初值
-
-以下记录原始定义，不自动推断运行路径或后续覆盖。未填字段为零；指针/回调表示绑定关系。
-
-[application/shoot/shoot.c:24](../application/shoot/shoot.c#L24)
-
-```c
-Motor_Init_Config_s friction_config = {
-        .can_init_config = {
-            .can_handle = &hcan2,
-        },
-        .controller_param_init_config = {
-            .speed_PID = {
-                .Kp = 0, // 20
-                .Ki = 0, // 1
-                .Kd = 0,
-                .Improve = PID_Integral_Limit,
-                .IntegralLimit = 10000,
-                .MaxOut = 15000,
-            },
-            .current_PID = {
-                .Kp = 0, // 0.7
-                .Ki = 0, // 0.1
-                .Kd = 0,
-                .Improve = PID_Integral_Limit,
-                .IntegralLimit = 10000,
-                .MaxOut = 15000,
-            },
-        },
-        .controller_setting_init_config = {
-            .angle_feedback_source = MOTOR_FEED,
-            .speed_feedback_source = MOTOR_FEED,
-
-            .outer_loop_type = SPEED_LOOP,
-            .close_loop_type = SPEED_LOOP | CURRENT_LOOP,
-            .motor_reverse_flag = MOTOR_DIRECTION_NORMAL,
-        },
-        .motor_type = M3508};
-```
-
-[application/shoot/shoot.c:63](../application/shoot/shoot.c#L63)
-
-```c
-Motor_Init_Config_s loader_config = {
-        .can_init_config = {
-            .can_handle = &hcan2,
-            .tx_id = 3,
-        },
-        .controller_param_init_config = {
-            .angle_PID = {
-                // 如果启用位置环来控制发弹,需要较大的I值保证输出力矩的线性度否则出现接近拨出的力矩大幅下降
-                .Kp = 0, // 10
-                .Ki = 0,
-                .Kd = 0,
-                .MaxOut = 200,
-            },
-            .speed_PID = {
-                .Kp = 0, // 10
-                .Ki = 0, // 1
-                .Kd = 0,
-                .Improve = PID_Integral_Limit,
-                .IntegralLimit = 5000,
-                .MaxOut = 5000,
-            },
-            .current_PID = {
-                .Kp = 0, // 0.7
-                .Ki = 0, // 0.1
-                .Kd = 0,
-                .Improve = PID_Integral_Limit,
-                .IntegralLimit = 5000,
-                .MaxOut = 5000,
-            },
-        },
-        .controller_setting_init_config = {
-            .angle_feedback_source = MOTOR_FEED, .speed_feedback_source = MOTOR_FEED,
-            .outer_loop_type = SPEED_LOOP, // 初始化成SPEED_LOOP,让拨盘停在原地,防止拨盘上电时乱转
-            .close_loop_type = CURRENT_LOOP | SPEED_LOOP,
-            .motor_reverse_flag = MOTOR_DIRECTION_NORMAL, // 注意方向设置为拨盘的拨出的击发方向
-        },
-        .motor_type = M2006 // 英雄使用m3508
-    };
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [22](../application/shoot/shoot.c#L22) | 预处理 | `#define LOADER_ONE_BULLET_MOTOR_ANGLE (ONE_BULLET_DELTA_ANGLE * REDUCTION_RATIO_LOADER)` |
+| [23](../application/shoot/shoot.c#L23) | 预处理 | `#define LOADER_ANGLE_TOLERANCE 5.0f` |
+| [28](../application/shoot/shoot.c#L28) | 配置初值 | `Motor_Init_Config_s friction_config = {` |
+| [29](../application/shoot/shoot.c#L29) | 配置初值 | `.can_init_config = {` |
+| [30](../application/shoot/shoot.c#L30) | 配置初值 | `.can_handle = &hcan2,` |
+| [31](../application/shoot/shoot.c#L31) | 配置初值 | `},` |
+| [32](../application/shoot/shoot.c#L32) | 配置初值 | `.controller_param_init_config = {` |
+| [33](../application/shoot/shoot.c#L33) | 配置初值 | `.speed_PID = {` |
+| [34](../application/shoot/shoot.c#L34) | 配置初值 | `.Kp = 20, // 20` |
+| [35](../application/shoot/shoot.c#L35) | 配置初值 | `.Ki = 1, // 1` |
+| [36](../application/shoot/shoot.c#L36) | 配置初值 | `.Kd = 0,` |
+| [37](../application/shoot/shoot.c#L37) | 配置初值 | `.Improve = PID_Integral_Limit,` |
+| [38](../application/shoot/shoot.c#L38) | 配置初值 | `.IntegralLimit = 10000,` |
+| [39](../application/shoot/shoot.c#L39) | 配置初值 | `.MaxOut = 15000,` |
+| [40](../application/shoot/shoot.c#L40) | 配置初值 | `},` |
+| [41](../application/shoot/shoot.c#L41) | 配置初值 | `.current_PID = {` |
+| [42](../application/shoot/shoot.c#L42) | 配置初值 | `.Kp = 0.7, // 0.7` |
+| [43](../application/shoot/shoot.c#L43) | 配置初值 | `.Ki = 0.1, // 0.1` |
+| [44](../application/shoot/shoot.c#L44) | 配置初值 | `.Kd = 0,` |
+| [45](../application/shoot/shoot.c#L45) | 配置初值 | `.Improve = PID_Integral_Limit,` |
+| [46](../application/shoot/shoot.c#L46) | 配置初值 | `.IntegralLimit = 10000,` |
+| [47](../application/shoot/shoot.c#L47) | 配置初值 | `.MaxOut = 15000,` |
+| [48](../application/shoot/shoot.c#L48) | 配置初值 | `},` |
+| [49](../application/shoot/shoot.c#L49) | 配置初值 | `},` |
+| [50](../application/shoot/shoot.c#L50) | 配置初值 | `.controller_setting_init_config = {` |
+| [51](../application/shoot/shoot.c#L51) | 配置初值 | `.angle_feedback_source = MOTOR_FEED,` |
+| [52](../application/shoot/shoot.c#L52) | 配置初值 | `.speed_feedback_source = MOTOR_FEED,` |
+| [53](../application/shoot/shoot.c#L53) | 配置初值 | `.outer_loop_type = SPEED_LOOP,` |
+| [54](../application/shoot/shoot.c#L54) | 配置初值 | `.close_loop_type = SPEED_LOOP &#124; CURRENT_LOOP,` |
+| [55](../application/shoot/shoot.c#L55) | 配置初值 | `.motor_reverse_flag = MOTOR_DIRECTION_REVERSE,` |
+| [56](../application/shoot/shoot.c#L56) | 配置初值 | `},` |
+| [57](../application/shoot/shoot.c#L57) | 配置初值 | `.motor_type = M3508};` |
+| [66](../application/shoot/shoot.c#L66) | 配置初值 | `Motor_Init_Config_s loader_config = {` |
+| [67](../application/shoot/shoot.c#L67) | 配置初值 | `.can_init_config = {` |
+| [68](../application/shoot/shoot.c#L68) | 配置初值 | `.can_handle = &hcan2,` |
+| [69](../application/shoot/shoot.c#L69) | 配置初值 | `.tx_id = 7,` |
+| [70](../application/shoot/shoot.c#L70) | 配置初值 | `},` |
+| [71](../application/shoot/shoot.c#L71) | 配置初值 | `.controller_param_init_config = {` |
+| [72](../application/shoot/shoot.c#L72) | 配置初值 | `.angle_PID = {` |
+| [73](../application/shoot/shoot.c#L73) | 配置初值 | `// 如果启用位置环来控制发弹,需要较大的I值保证输出力矩的线性度否则出现接近拨出的力矩大幅下降` |
+| [74](../application/shoot/shoot.c#L74) | 配置初值 | `.Kp = 10, // 10` |
+| [75](../application/shoot/shoot.c#L75) | 配置初值 | `.Ki = 0,` |
+| [76](../application/shoot/shoot.c#L76) | 配置初值 | `.Kd = 0,` |
+| [77](../application/shoot/shoot.c#L77) | 配置初值 | `.MaxOut = 5000,` |
+| [78](../application/shoot/shoot.c#L78) | 配置初值 | `},` |
+| [79](../application/shoot/shoot.c#L79) | 配置初值 | `.speed_PID = {` |
+| [80](../application/shoot/shoot.c#L80) | 配置初值 | `.Kp = 10, // 10` |
+| [81](../application/shoot/shoot.c#L81) | 配置初值 | `.Ki = 1, // 1` |
+| [82](../application/shoot/shoot.c#L82) | 配置初值 | `.Kd = 0,` |
+| [83](../application/shoot/shoot.c#L83) | 配置初值 | `.Improve = PID_Integral_Limit,` |
+| [84](../application/shoot/shoot.c#L84) | 配置初值 | `.IntegralLimit = 5000,` |
+| [85](../application/shoot/shoot.c#L85) | 配置初值 | `.MaxOut = 5000,` |
+| [86](../application/shoot/shoot.c#L86) | 配置初值 | `},` |
+| [87](../application/shoot/shoot.c#L87) | 配置初值 | `.current_PID = {` |
+| [88](../application/shoot/shoot.c#L88) | 配置初值 | `.Kp = 0.7, // 0.7` |
+| [89](../application/shoot/shoot.c#L89) | 配置初值 | `.Ki = 0.1, // 0.1` |
+| [90](../application/shoot/shoot.c#L90) | 配置初值 | `.Kd = 0,` |
+| [91](../application/shoot/shoot.c#L91) | 配置初值 | `.Improve = PID_Integral_Limit,` |
+| [92](../application/shoot/shoot.c#L92) | 配置初值 | `.IntegralLimit = 5000,` |
+| [93](../application/shoot/shoot.c#L93) | 配置初值 | `.MaxOut = 5000,` |
+| [94](../application/shoot/shoot.c#L94) | 配置初值 | `},` |
+| [95](../application/shoot/shoot.c#L95) | 配置初值 | `},` |
+| [96](../application/shoot/shoot.c#L96) | 配置初值 | `.controller_setting_init_config = {` |
+| [97](../application/shoot/shoot.c#L97) | 配置初值 | `.angle_feedback_source = MOTOR_FEED,` |
+| [98](../application/shoot/shoot.c#L98) | 配置初值 | `.speed_feedback_source = MOTOR_FEED,` |
+| [99](../application/shoot/shoot.c#L99) | 配置初值 | `.outer_loop_type = SPEED_LOOP, // 初始化成SPEED_LOOP,让拨盘停在原地,防止拨盘上电时乱转` |
+| [100](../application/shoot/shoot.c#L100) | 配置初值 | `.close_loop_type = CURRENT_LOOP &#124; SPEED_LOOP &#124; ANGLE_LOOP,` |
+| [101](../application/shoot/shoot.c#L101) | 配置初值 | `.motor_reverse_flag = MOTOR_DIRECTION_NORMAL, // 注意方向设置为拨盘的拨出的击发方向` |
+| [102](../application/shoot/shoot.c#L102) | 配置初值 | `},` |
+| [103](../application/shoot/shoot.c#L103) | 配置初值 | `.motor_type = M2006 // 英雄使用m3508` |
 
 ## application/shoot/shoot.h
 
-源文件：[打开 application/shoot/shoot.h](../application/shoot/shoot.h)。
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../application/shoot/shoot.h#L1) | 预处理 | `#ifndef SHOOT_H` |
+| [2](../application/shoot/shoot.h#L2) | 预处理 | `#define SHOOT_H` |
+| [16](../application/shoot/shoot.h#L16) | 预处理 | `#endif // SHOOT_H` |
 
-### 宏定义
+## application/vehicle_safety.c
 
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [application/shoot/shoot.h:2](../application/shoot/shoot.h#L2) | `SHOOT_H` | 空定义 | `#ifndef SHOOT_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [3](../application/vehicle_safety.c#L3) | 预处理 | `#ifdef STM32F427xx` |
+| [6](../application/vehicle_safety.c#L6) | 预处理 | `#define LOCK() taskENTER_CRITICAL()` |
+| [7](../application/vehicle_safety.c#L7) | 预处理 | `#define UNLOCK() taskEXIT_CRITICAL()` |
+| [8](../application/vehicle_safety.c#L8) | 预处理 | `#else` |
+| [9](../application/vehicle_safety.c#L9) | 预处理 | `#define LOCK() ((void)0)` |
+| [10](../application/vehicle_safety.c#L10) | 预处理 | `#define UNLOCK() ((void)0)` |
+| [11](../application/vehicle_safety.c#L11) | 预处理 | `#endif` |
+
+## application/vehicle_safety.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../application/vehicle_safety.h#L1) | 预处理 | `#ifndef VEHICLE_SAFETY_H` |
+| [2](../application/vehicle_safety.h#L2) | 预处理 | `#define VEHICLE_SAFETY_H` |
+| [19](../application/vehicle_safety.h#L19) | 预处理 | `#endif` |
 
 ## bsp/bsp_init.h
 
-源文件：[打开 bsp/bsp_init.h](../bsp/bsp_init.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [bsp/bsp_init.h:2](../bsp/bsp_init.h#L2) | `BSP_INIT_h` | 空定义 | `#ifndef BSP_INIT_h` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../bsp/bsp_init.h#L1) | 预处理 | `#ifndef BSP_INIT_h` |
+| [2](../bsp/bsp_init.h#L2) | 预处理 | `#define BSP_INIT_h` |
+| [23](../bsp/bsp_init.h#L23) | 预处理 | `#endif // !BSP_INIT_h` |
 
 ## bsp/bsp_tools.c
 
-源文件：[打开 bsp/bsp_tools.c](../bsp/bsp_tools.c)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [bsp/bsp_tools.c:7](../bsp/bsp_tools.c#L7) | `MX_SIG_LIST_SIZE` | `32` | 无外层条件 | 不可修改,最大信号量数量 |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [7](../bsp/bsp_tools.c#L7) | 预处理 | `#define MX_SIG_LIST_SIZE 32 // 不可修改,最大信号量数量` |
 
 ## bsp/can/bsp_can.h
 
-源文件：[打开 bsp/can/bsp_can.h](../bsp/can/bsp_can.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [bsp/can/bsp_can.h:2](../bsp/can/bsp_can.h#L2) | `BSP_CAN_H` | 空定义 | `#ifndef BSP_CAN_H` |  |
-| [bsp/can/bsp_can.h:8](../bsp/can/bsp_can.h#L8) | `CAN_MX_REGISTER_CNT` | `16` | `#ifndef BSP_CAN_H` | 这个数量取决于CAN总线的负载 |
-| [bsp/can/bsp_can.h:9](../bsp/can/bsp_can.h#L9) | `MX_CAN_FILTER_CNT` | `(2 * 14)` | `#ifndef BSP_CAN_H` | 最多可以使用的CAN过滤器数量,目前远不会用到这么多 |
-| [bsp/can/bsp_can.h:10](../bsp/can/bsp_can.h#L10) | `DEVICE_CAN_CNT` | `2` | `#ifndef BSP_CAN_H` | 根据板子设定,F407IG有CAN1,CAN2,因此为2;F334只有一个,则设为1 |
-
-### 可设置的结构体字段
-
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
-
-[bsp/can/bsp_can.h:32](../bsp/can/bsp_can.h#L32)
-
-```c
-typedef struct
-{
-    CAN_HandleTypeDef *can_handle;              // can句柄
-    uint32_t tx_id;                             // 发送id
-    uint32_t rx_id;                             // 接收id
-    void (*can_module_callback)(CANInstance *); // 处理接收数据的回调函数
-    void *id;                                   // 拥有can实例的模块地址,用于区分不同的模块(如果有需要的话),如果不需要可以不传入
-} CAN_Init_Config_s;
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../bsp/can/bsp_can.h#L1) | 预处理 | `#ifndef BSP_CAN_H` |
+| [2](../bsp/can/bsp_can.h#L2) | 预处理 | `#define BSP_CAN_H` |
+| [8](../bsp/can/bsp_can.h#L8) | 预处理 | `#define CAN_MX_REGISTER_CNT 16     // 这个数量取决于CAN总线的负载` |
+| [9](../bsp/can/bsp_can.h#L9) | 预处理 | `#define MX_CAN_FILTER_CNT (2 * 14) // 最多可以使用的CAN过滤器数量,目前远不会用到这么多` |
+| [10](../bsp/can/bsp_can.h#L10) | 预处理 | `#define DEVICE_CAN_CNT 2           // 根据板子设定,F407IG有CAN1,CAN2,因此为2;F334只有一个,则设为1` |
+| [68](../bsp/can/bsp_can.h#L68) | 预处理 | `#endif` |
 
 ## bsp/dwt/bsp_dwt.h
 
-源文件：[打开 bsp/dwt/bsp_dwt.h](../bsp/dwt/bsp_dwt.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [bsp/dwt/bsp_dwt.h:15](../bsp/dwt/bsp_dwt.h#L15) | `_BSP_DWT_H` | 空定义 | `#ifndef _BSP_DWT_H` |  |
-| [bsp/dwt/bsp_dwt.h:33](../bsp/dwt/bsp_dwt.h#L33) | `TIME_ELAPSE(dt, code)` | `do { float tstart = DWT_GetTimeline_s(); code; dt = DWT_GetTimeline_s() - tstart; LOGINFO("[DWT] " #dt " = %f s\r\n", dt); } while (0)` | `#ifndef _BSP_DWT_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [14](../bsp/dwt/bsp_dwt.h#L14) | 预处理 | `#ifndef _BSP_DWT_H` |
+| [15](../bsp/dwt/bsp_dwt.h#L15) | 预处理 | `#define _BSP_DWT_H` |
+| [33](../bsp/dwt/bsp_dwt.h#L33) | 预处理 | `#define TIME_ELAPSE(dt, code)                    \` |
+| [103](../bsp/dwt/bsp_dwt.h#L103) | 预处理 | `#endif /* BSP_DWT_H_ */` |
 
 ## bsp/flash/bsp_flash.h
 
-源文件：[打开 bsp/flash/bsp_flash.h](../bsp/flash/bsp_flash.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [bsp/flash/bsp_flash.h:2](../bsp/flash/bsp_flash.h#L2) | `_BSP_FLASH_H` | 空定义 | `#ifndef _BSP_FLASH_H` |  |
-| [bsp/flash/bsp_flash.h:6](../bsp/flash/bsp_flash.h#L6) | `ADDR_FLASH_SECTOR_0` | `((uint32_t)0x08000000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 0, 16 Kbytes |
-| [bsp/flash/bsp_flash.h:7](../bsp/flash/bsp_flash.h#L7) | `ADDR_FLASH_SECTOR_1` | `((uint32_t)0x08004000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 1, 16 Kbytes |
-| [bsp/flash/bsp_flash.h:8](../bsp/flash/bsp_flash.h#L8) | `ADDR_FLASH_SECTOR_2` | `((uint32_t)0x08008000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 2, 16 Kbytes |
-| [bsp/flash/bsp_flash.h:9](../bsp/flash/bsp_flash.h#L9) | `ADDR_FLASH_SECTOR_3` | `((uint32_t)0x0800C000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 3, 16 Kbytes |
-| [bsp/flash/bsp_flash.h:10](../bsp/flash/bsp_flash.h#L10) | `ADDR_FLASH_SECTOR_4` | `((uint32_t)0x08010000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 4, 64 Kbytes |
-| [bsp/flash/bsp_flash.h:11](../bsp/flash/bsp_flash.h#L11) | `ADDR_FLASH_SECTOR_5` | `((uint32_t)0x08020000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 5, 128 Kbytes |
-| [bsp/flash/bsp_flash.h:12](../bsp/flash/bsp_flash.h#L12) | `ADDR_FLASH_SECTOR_6` | `((uint32_t)0x08040000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 6, 128 Kbytes |
-| [bsp/flash/bsp_flash.h:13](../bsp/flash/bsp_flash.h#L13) | `ADDR_FLASH_SECTOR_7` | `((uint32_t)0x08060000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 7, 128 Kbytes |
-| [bsp/flash/bsp_flash.h:14](../bsp/flash/bsp_flash.h#L14) | `ADDR_FLASH_SECTOR_8` | `((uint32_t)0x08080000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 8, 128 Kbytes |
-| [bsp/flash/bsp_flash.h:15](../bsp/flash/bsp_flash.h#L15) | `ADDR_FLASH_SECTOR_9` | `((uint32_t)0x080A0000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 9, 128 Kbytes |
-| [bsp/flash/bsp_flash.h:16](../bsp/flash/bsp_flash.h#L16) | `ADDR_FLASH_SECTOR_10` | `((uint32_t)0x080C0000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 10, 128 Kbytes |
-| [bsp/flash/bsp_flash.h:17](../bsp/flash/bsp_flash.h#L17) | `ADDR_FLASH_SECTOR_11` | `((uint32_t)0x080E0000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 11, 128 Kbytes |
-| [bsp/flash/bsp_flash.h:19](../bsp/flash/bsp_flash.h#L19) | `FLASH_END_ADDR` | `((uint32_t)0x08100000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 23, 128 Kbytes |
-| [bsp/flash/bsp_flash.h:22](../bsp/flash/bsp_flash.h#L22) | `ADDR_FLASH_SECTOR_12` | `((uint32_t)0x08100000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 12, 16 Kbytes |
-| [bsp/flash/bsp_flash.h:23](../bsp/flash/bsp_flash.h#L23) | `ADDR_FLASH_SECTOR_13` | `((uint32_t)0x08104000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 13, 16 Kbytes |
-| [bsp/flash/bsp_flash.h:24](../bsp/flash/bsp_flash.h#L24) | `ADDR_FLASH_SECTOR_14` | `((uint32_t)0x08108000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 14, 16 Kbytes |
-| [bsp/flash/bsp_flash.h:25](../bsp/flash/bsp_flash.h#L25) | `ADDR_FLASH_SECTOR_15` | `((uint32_t)0x0810C000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 15, 16 Kbytes |
-| [bsp/flash/bsp_flash.h:26](../bsp/flash/bsp_flash.h#L26) | `ADDR_FLASH_SECTOR_16` | `((uint32_t)0x08110000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 16, 64 Kbytes |
-| [bsp/flash/bsp_flash.h:27](../bsp/flash/bsp_flash.h#L27) | `ADDR_FLASH_SECTOR_17` | `((uint32_t)0x08120000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 17, 128 Kbytes |
-| [bsp/flash/bsp_flash.h:28](../bsp/flash/bsp_flash.h#L28) | `ADDR_FLASH_SECTOR_18` | `((uint32_t)0x08140000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 18, 128 Kbytes |
-| [bsp/flash/bsp_flash.h:29](../bsp/flash/bsp_flash.h#L29) | `ADDR_FLASH_SECTOR_19` | `((uint32_t)0x08160000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 19, 128 Kbytes |
-| [bsp/flash/bsp_flash.h:30](../bsp/flash/bsp_flash.h#L30) | `ADDR_FLASH_SECTOR_20` | `((uint32_t)0x08180000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 20, 128 Kbytes |
-| [bsp/flash/bsp_flash.h:31](../bsp/flash/bsp_flash.h#L31) | `ADDR_FLASH_SECTOR_21` | `((uint32_t)0x081A0000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 21, 128 Kbytes |
-| [bsp/flash/bsp_flash.h:32](../bsp/flash/bsp_flash.h#L32) | `ADDR_FLASH_SECTOR_22` | `((uint32_t)0x081C0000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 22, 128 Kbytes |
-| [bsp/flash/bsp_flash.h:33](../bsp/flash/bsp_flash.h#L33) | `ADDR_FLASH_SECTOR_23` | `((uint32_t)0x081E0000)` | `#ifndef _BSP_FLASH_H` | Base address of Sector 23, 128 Kbytes |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../bsp/flash/bsp_flash.h#L1) | 预处理 | `#ifndef _BSP_FLASH_H` |
+| [2](../bsp/flash/bsp_flash.h#L2) | 预处理 | `#define _BSP_FLASH_H` |
+| [6](../bsp/flash/bsp_flash.h#L6) | 预处理 | `#define ADDR_FLASH_SECTOR_0 ((uint32_t)0x08000000)  /* Base address of Sector 0, 16 Kbytes   */` |
+| [7](../bsp/flash/bsp_flash.h#L7) | 预处理 | `#define ADDR_FLASH_SECTOR_1 ((uint32_t)0x08004000)  /* Base address of Sector 1, 16 Kbytes   */` |
+| [8](../bsp/flash/bsp_flash.h#L8) | 预处理 | `#define ADDR_FLASH_SECTOR_2 ((uint32_t)0x08008000)  /* Base address of Sector 2, 16 Kbytes   */` |
+| [9](../bsp/flash/bsp_flash.h#L9) | 预处理 | `#define ADDR_FLASH_SECTOR_3 ((uint32_t)0x0800C000)  /* Base address of Sector 3, 16 Kbytes   */` |
+| [10](../bsp/flash/bsp_flash.h#L10) | 预处理 | `#define ADDR_FLASH_SECTOR_4 ((uint32_t)0x08010000)  /* Base address of Sector 4, 64 Kbytes   */` |
+| [11](../bsp/flash/bsp_flash.h#L11) | 预处理 | `#define ADDR_FLASH_SECTOR_5 ((uint32_t)0x08020000)  /* Base address of Sector 5, 128 Kbytes  */` |
+| [12](../bsp/flash/bsp_flash.h#L12) | 预处理 | `#define ADDR_FLASH_SECTOR_6 ((uint32_t)0x08040000)  /* Base address of Sector 6, 128 Kbytes  */` |
+| [13](../bsp/flash/bsp_flash.h#L13) | 预处理 | `#define ADDR_FLASH_SECTOR_7 ((uint32_t)0x08060000)  /* Base address of Sector 7, 128 Kbytes  */` |
+| [14](../bsp/flash/bsp_flash.h#L14) | 预处理 | `#define ADDR_FLASH_SECTOR_8 ((uint32_t)0x08080000)  /* Base address of Sector 8, 128 Kbytes  */` |
+| [15](../bsp/flash/bsp_flash.h#L15) | 预处理 | `#define ADDR_FLASH_SECTOR_9 ((uint32_t)0x080A0000)  /* Base address of Sector 9, 128 Kbytes  */` |
+| [16](../bsp/flash/bsp_flash.h#L16) | 预处理 | `#define ADDR_FLASH_SECTOR_10 ((uint32_t)0x080C0000) /* Base address of Sector 10, 128 Kbytes */` |
+| [17](../bsp/flash/bsp_flash.h#L17) | 预处理 | `#define ADDR_FLASH_SECTOR_11 ((uint32_t)0x080E0000) /* Base address of Sector 11, 128 Kbytes */` |
+| [19](../bsp/flash/bsp_flash.h#L19) | 预处理 | `#define FLASH_END_ADDR ((uint32_t)0x08200000)       /* Base address of Sector 23, 128 Kbytes */` |
+| [22](../bsp/flash/bsp_flash.h#L22) | 预处理 | `#define ADDR_FLASH_SECTOR_12 ((uint32_t)0x08100000) /* Base address of Sector 12, 16 Kbytes  */` |
+| [23](../bsp/flash/bsp_flash.h#L23) | 预处理 | `#define ADDR_FLASH_SECTOR_13 ((uint32_t)0x08104000) /* Base address of Sector 13, 16 Kbytes  */` |
+| [24](../bsp/flash/bsp_flash.h#L24) | 预处理 | `#define ADDR_FLASH_SECTOR_14 ((uint32_t)0x08108000) /* Base address of Sector 14, 16 Kbytes  */` |
+| [25](../bsp/flash/bsp_flash.h#L25) | 预处理 | `#define ADDR_FLASH_SECTOR_15 ((uint32_t)0x0810C000) /* Base address of Sector 15, 16 Kbytes  */` |
+| [26](../bsp/flash/bsp_flash.h#L26) | 预处理 | `#define ADDR_FLASH_SECTOR_16 ((uint32_t)0x08110000) /* Base address of Sector 16, 64 Kbytes  */` |
+| [27](../bsp/flash/bsp_flash.h#L27) | 预处理 | `#define ADDR_FLASH_SECTOR_17 ((uint32_t)0x08120000) /* Base address of Sector 17, 128 Kbytes */` |
+| [28](../bsp/flash/bsp_flash.h#L28) | 预处理 | `#define ADDR_FLASH_SECTOR_18 ((uint32_t)0x08140000) /* Base address of Sector 18, 128 Kbytes */` |
+| [29](../bsp/flash/bsp_flash.h#L29) | 预处理 | `#define ADDR_FLASH_SECTOR_19 ((uint32_t)0x08160000) /* Base address of Sector 19, 128 Kbytes */` |
+| [30](../bsp/flash/bsp_flash.h#L30) | 预处理 | `#define ADDR_FLASH_SECTOR_20 ((uint32_t)0x08180000) /* Base address of Sector 20, 128 Kbytes */` |
+| [31](../bsp/flash/bsp_flash.h#L31) | 预处理 | `#define ADDR_FLASH_SECTOR_21 ((uint32_t)0x081A0000) /* Base address of Sector 21, 128 Kbytes */` |
+| [32](../bsp/flash/bsp_flash.h#L32) | 预处理 | `#define ADDR_FLASH_SECTOR_22 ((uint32_t)0x081C0000) /* Base address of Sector 22, 128 Kbytes */` |
+| [33](../bsp/flash/bsp_flash.h#L33) | 预处理 | `#define ADDR_FLASH_SECTOR_23 ((uint32_t)0x081E0000) /* Base address of Sector 23, 128 Kbytes */` |
+| [80](../bsp/flash/bsp_flash.h#L80) | 预处理 | `#endif` |
 
 ## bsp/gpio/bsp_gpio.h
 
-源文件：[打开 bsp/gpio/bsp_gpio.h](../bsp/gpio/bsp_gpio.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [bsp/gpio/bsp_gpio.h:4](../bsp/gpio/bsp_gpio.h#L4) | `GPIO_MX_DEVICE_NUM` | `10` | 无外层条件 |  |
-
-### 可设置的结构体字段
-
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
-
-[bsp/gpio/bsp_gpio.h:39](../bsp/gpio/bsp_gpio.h#L39)
-
-```c
-typedef struct
-{
-    GPIO_TypeDef *GPIOx;        // GPIOA,GPIOB,GPIOC...
-    GPIO_PinState pin_state;    // 引脚状态,Set,Reset not frequently used
-    GPIO_EXTI_MODE_e exti_mode; // 外部中断模式 not frequently used
-    uint16_t GPIO_Pin;          // 引脚号,@note 这里的引脚号是GPIO_PIN_0,GPIO_PIN_1...
-    // 这些引脚是stm32f4xx_hal_gpio.h中定义的宏!!! 一定要注意
-
-    void (*gpio_model_callback)(GPIOInstance *); // exti中断回调函数
-    void *id;                                    // 区分不同的GPIO实例
-
-} GPIO_Init_Config_s;
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [4](../bsp/gpio/bsp_gpio.h#L4) | 预处理 | `#define GPIO_MX_DEVICE_NUM 10` |
 
 ## bsp/iic/bsp_iic.h
 
-源文件：[打开 bsp/iic/bsp_iic.h](../bsp/iic/bsp_iic.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [bsp/iic/bsp_iic.h:4](../bsp/iic/bsp_iic.h#L4) | `IIC_DEVICE_CNT` | `2` | 无外层条件 | C板引出了I2C2和I2C3 |
-| [bsp/iic/bsp_iic.h:5](../bsp/iic/bsp_iic.h#L5) | `MX_IIC_SLAVE_CNT` | `8` | 无外层条件 | 最大从机数目,根据需要修改 |
-
-### 可设置的结构体字段
-
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
-
-[bsp/iic/bsp_iic.h:47](../bsp/iic/bsp_iic.h#L47)
-
-```c
-typedef struct
-{
-    I2C_HandleTypeDef *handle;       // i2c handle
-    uint8_t dev_address;             // 暂时只支持7位地址(还有一位是读写位),注意不需要左移
-    IIC_Work_Mode_e work_mode;       // 工作模式
-    void (*callback)(IICInstance *); // 接收完成后的回调函数
-    void *id;                        // 用于标识i2c instance
-} IIC_Init_Config_s;
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [4](../bsp/iic/bsp_iic.h#L4) | 预处理 | `#define IIC_DEVICE_CNT 2   // C板引出了I2C2和I2C3` |
+| [5](../bsp/iic/bsp_iic.h#L5) | 预处理 | `#define MX_IIC_SLAVE_CNT 8 // 最大从机数目,根据需要修改` |
 
 ## bsp/log/bsp_log.c
 
-源文件：[打开 bsp/log/bsp_log.c](../bsp/log/bsp_log.c)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [bsp/log/bsp_log.c:11](../bsp/log/bsp_log.c#L11) | `BSP_LOG_FORMAT_BUFFER_SIZE` | `384U` | 无外层条件 | 384字节的格式化缓冲区,足够打印一行日志,超过则截断 |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [11](../bsp/log/bsp_log.c#L11) | 预处理 | `#define BSP_LOG_FORMAT_BUFFER_SIZE 384U // 384字节的格式化缓冲区,足够打印一行日志,超过则截断` |
+| [16](../bsp/log/bsp_log.c#L16) | 预处理 | `#if BOARD_LOG_UART_ENABLED` |
+| [40](../bsp/log/bsp_log.c#L40) | 预处理 | `#endif` |
+| [46](../bsp/log/bsp_log.c#L46) | 预处理 | `#if BOARD_LOG_RTT_ENABLED` |
+| [49](../bsp/log/bsp_log.c#L49) | 预处理 | `#endif` |
+| [50](../bsp/log/bsp_log.c#L50) | 预处理 | `#if BOARD_LOG_UART_ENABLED` |
+| [53](../bsp/log/bsp_log.c#L53) | 预处理 | `#endif` |
+| [61](../bsp/log/bsp_log.c#L61) | 预处理 | `#if BOARD_LOG_RTT_ENABLED` |
+| [64](../bsp/log/bsp_log.c#L64) | 预处理 | `#endif` |
+| [65](../bsp/log/bsp_log.c#L65) | 预处理 | `#if BOARD_LOG_UART_ENABLED` |
+| [69](../bsp/log/bsp_log.c#L69) | 预处理 | `#endif` |
+| [75](../bsp/log/bsp_log.c#L75) | 预处理 | `#if BOARD_LOG_RTT_ENABLED` |
+| [77](../bsp/log/bsp_log.c#L77) | 预处理 | `#endif` |
+| [78](../bsp/log/bsp_log.c#L78) | 预处理 | `#if BOARD_LOG_UART_ENABLED` |
+| [80](../bsp/log/bsp_log.c#L80) | 预处理 | `#endif` |
 
 ## bsp/log/bsp_log.h
 
-源文件：[打开 bsp/log/bsp_log.h](../bsp/log/bsp_log.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [bsp/log/bsp_log.h:2](../bsp/log/bsp_log.h#L2) | `_BSP_LOG_H` | 空定义 | `#ifndef _BSP_LOG_H` |  |
-| [bsp/log/bsp_log.h:9](../bsp/log/bsp_log.h#L9) | `DISABLE_LOG_SYSTEM` | `0` | `#ifndef _BSP_LOG_H；#ifndef DISABLE_LOG_SYSTEM` |  |
-| [bsp/log/bsp_log.h:12](../bsp/log/bsp_log.h#L12) | `BUFFER_INDEX` | `0` | `#ifndef _BSP_LOG_H` |  |
-| [bsp/log/bsp_log.h:33](../bsp/log/bsp_log.h#L33) | `LOG_PROTO(type, color, format, ...)` | `PrintLog(" %s%s" format "\r\n%s", color, type, ##__VA_ARGS__, RTT_CTRL_RESET)` | `#ifndef _BSP_LOG_H` |  |
-| [bsp/log/bsp_log.h:40](../bsp/log/bsp_log.h#L40) | `LOG_CLEAR()` | `BSPLogClear()` | `#ifndef _BSP_LOG_H` |  |
-| [bsp/log/bsp_log.h:43](../bsp/log/bsp_log.h#L43) | `LOG(format, ...)` | `LOG_PROTO("", "", format, ##__VA_ARGS__)` | `#ifndef _BSP_LOG_H` |  |
-| [bsp/log/bsp_log.h:51](../bsp/log/bsp_log.h#L51) | `LOGINFO(format, ...)` | 空定义 | `#ifndef _BSP_LOG_H；#if DISABLE_LOG_SYSTEM` |  |
-| [bsp/log/bsp_log.h:52](../bsp/log/bsp_log.h#L52) | `LOGWARNING(format, ...)` | 空定义 | `#ifndef _BSP_LOG_H；#if DISABLE_LOG_SYSTEM` |  |
-| [bsp/log/bsp_log.h:53](../bsp/log/bsp_log.h#L53) | `LOGERROR(format, ...)` | 空定义 | `#ifndef _BSP_LOG_H；#if DISABLE_LOG_SYSTEM` |  |
-| [bsp/log/bsp_log.h:56](../bsp/log/bsp_log.h#L56) | `LOGINFO(format, ...)` | `LOG_PROTO("I:", RTT_CTRL_TEXT_BRIGHT_GREEN, format, ##__VA_ARGS__)` | `#ifndef _BSP_LOG_H；#if DISABLE_LOG_SYSTEM → #else` |  |
-| [bsp/log/bsp_log.h:58](../bsp/log/bsp_log.h#L58) | `LOGWARNING(format, ...)` | `LOG_PROTO("W:", RTT_CTRL_TEXT_BRIGHT_YELLOW, format, ##__VA_ARGS__)` | `#ifndef _BSP_LOG_H；#if DISABLE_LOG_SYSTEM → #else` |  |
-| [bsp/log/bsp_log.h:60](../bsp/log/bsp_log.h#L60) | `LOGERROR(format, ...)` | `LOG_PROTO("E:", RTT_CTRL_TEXT_BRIGHT_RED, format, ##__VA_ARGS__)` | `#ifndef _BSP_LOG_H；#if DISABLE_LOG_SYSTEM → #else` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../bsp/log/bsp_log.h#L1) | 预处理 | `#ifndef _BSP_LOG_H` |
+| [2](../bsp/log/bsp_log.h#L2) | 预处理 | `#define _BSP_LOG_H` |
+| [8](../bsp/log/bsp_log.h#L8) | 预处理 | `#ifndef DISABLE_LOG_SYSTEM` |
+| [9](../bsp/log/bsp_log.h#L9) | 预处理 | `#define DISABLE_LOG_SYSTEM 0` |
+| [10](../bsp/log/bsp_log.h#L10) | 预处理 | `#endif` |
+| [12](../bsp/log/bsp_log.h#L12) | 预处理 | `#define BUFFER_INDEX 0` |
+| [33](../bsp/log/bsp_log.h#L33) | 预处理 | `#define LOG_PROTO(type, color, format, ...)              \` |
+| [40](../bsp/log/bsp_log.h#L40) | 预处理 | `#define LOG_CLEAR() BSPLogClear()` |
+| [43](../bsp/log/bsp_log.h#L43) | 预处理 | `#define LOG(format, ...) LOG_PROTO("", "", format, ##__VA_ARGS__)` |
+| [50](../bsp/log/bsp_log.h#L50) | 预处理 | `#if DISABLE_LOG_SYSTEM` |
+| [51](../bsp/log/bsp_log.h#L51) | 预处理 | `#define LOGINFO(format, ...)` |
+| [52](../bsp/log/bsp_log.h#L52) | 预处理 | `#define LOGWARNING(format, ...)` |
+| [53](../bsp/log/bsp_log.h#L53) | 预处理 | `#define LOGERROR(format, ...)` |
+| [54](../bsp/log/bsp_log.h#L54) | 预处理 | `#else` |
+| [56](../bsp/log/bsp_log.h#L56) | 预处理 | `#define LOGINFO(format, ...) LOG_PROTO("I:", RTT_CTRL_TEXT_BRIGHT_GREEN, format, ##__VA_ARGS__)` |
+| [58](../bsp/log/bsp_log.h#L58) | 预处理 | `#define LOGWARNING(format, ...) LOG_PROTO("W:", RTT_CTRL_TEXT_BRIGHT_YELLOW, format, ##__VA_ARGS__)` |
+| [60](../bsp/log/bsp_log.h#L60) | 预处理 | `#define LOGERROR(format, ...) LOG_PROTO("E:", RTT_CTRL_TEXT_BRIGHT_RED, format, ##__VA_ARGS__)` |
+| [61](../bsp/log/bsp_log.h#L61) | 预处理 | `#endif //  DISABLE_LOG_SYSTEM` |
+| [82](../bsp/log/bsp_log.h#L82) | 预处理 | `#endif` |
 
 ## bsp/log/bsp_uart_log.c
 
-源文件：[打开 bsp/log/bsp_uart_log.c](../bsp/log/bsp_uart_log.c)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [bsp/log/bsp_uart_log.c:14](../bsp/log/bsp_uart_log.c#L14) | `BSP_UART_LOG_RING_SIZE` | `4096U` | 无外层条件 |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [15](../bsp/log/bsp_uart_log.c#L15) | 预处理 | `#define BSP_UART_LOG_RING_SIZE 4096U` |
 
 ## bsp/log/bsp_uart_log.h
 
-源文件：[打开 bsp/log/bsp_uart_log.h](../bsp/log/bsp_uart_log.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [bsp/log/bsp_uart_log.h:2](../bsp/log/bsp_uart_log.h#L2) | `BSP_UART_LOG_H` | 空定义 | `#ifndef BSP_UART_LOG_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../bsp/log/bsp_uart_log.h#L1) | 预处理 | `#ifndef BSP_UART_LOG_H` |
+| [2](../bsp/log/bsp_uart_log.h#L2) | 预处理 | `#define BSP_UART_LOG_H` |
+| [33](../bsp/log/bsp_uart_log.h#L33) | 预处理 | `#endif` |
 
 ## bsp/pwm/bsp_pwm.h
 
-源文件：[打开 bsp/pwm/bsp_pwm.h](../bsp/pwm/bsp_pwm.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [bsp/pwm/bsp_pwm.h:13](../bsp/pwm/bsp_pwm.h#L13) | `BSP_PWM_H` | 空定义 | `#ifndef BSP_PWM_H` |  |
-| [bsp/pwm/bsp_pwm.h:19](../bsp/pwm/bsp_pwm.h#L19) | `PWM_DEVICE_CNT` | `16` | `#ifndef BSP_PWM_H` | 最大支持的PWM实例数量 |
-
-### 可设置的结构体字段
-
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
-
-[bsp/pwm/bsp_pwm.h:33](../bsp/pwm/bsp_pwm.h#L33)
-
-```c
-typedef struct
-{
-    TIM_HandleTypeDef *htim;                 // TIM句柄
-    uint32_t channel;                        // 通道
-    float period;                         // 周期
-    float dutyratio;                      // 占空比
-    void (*callback)(PWMInstance*); // DMA传输完成回调函数
-    void *id;                                // 实例ID
-} PWM_Init_Config_s;
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [12](../bsp/pwm/bsp_pwm.h#L12) | 预处理 | `#ifndef BSP_PWM_H` |
+| [13](../bsp/pwm/bsp_pwm.h#L13) | 预处理 | `#define BSP_PWM_H` |
+| [19](../bsp/pwm/bsp_pwm.h#L19) | 预处理 | `#define PWM_DEVICE_CNT 16 // 最大支持的PWM实例数量` |
+| [91](../bsp/pwm/bsp_pwm.h#L91) | 预处理 | `#endif // BSP_PWM_H` |
 
 ## bsp/spi/bsp_spi.h
 
-源文件：[打开 bsp/spi/bsp_spi.h](../bsp/spi/bsp_spi.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [bsp/spi/bsp_spi.h:6](../bsp/spi/bsp_spi.h#L6) | `SPI_DEVICE_CNT` | `2` | 无外层条件 | C型开发板引出两路spi,分别连接BMI088/作为扩展IO在8pin牛角座引出 |
-| [bsp/spi/bsp_spi.h:7](../bsp/spi/bsp_spi.h#L7) | `MX_SPI_BUS_SLAVE_CNT` | `4` | 无外层条件 | 单个spi总线上挂载的从机数目 |
-
-### 可设置的结构体字段
-
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
-
-[bsp/spi/bsp_spi.h:38](../bsp/spi/bsp_spi.h#L38)
-
-```c
-typedef struct
-{
-    SPI_HandleTypeDef *spi_handle; // SPI外设handle
-    GPIO_TypeDef *GPIOx;           // 片选信号对应的GPIO,如GPIOA,GPIOB等等
-    uint16_t cs_pin;               // 片选信号对应的引脚号,GPIO_PIN_1,GPIO_PIN_2等等
-
-    SPI_TXRX_MODE_e spi_work_mode; // 传输工作模式
-
-    spi_rx_callback callback; // 接收回调函数
-    void *id;                 // 模块指针
-} SPI_Init_Config_s;
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [6](../bsp/spi/bsp_spi.h#L6) | 预处理 | `#define SPI_DEVICE_CNT 2       // C型开发板引出两路spi,分别连接BMI088/作为扩展IO在8pin牛角座引出` |
+| [7](../bsp/spi/bsp_spi.h#L7) | 预处理 | `#define MX_SPI_BUS_SLAVE_CNT 4 // 单个spi总线上挂载的从机数目` |
 
 ## bsp/usart/bsp_usart.h
 
-源文件：[打开 bsp/usart/bsp_usart.h](../bsp/usart/bsp_usart.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [bsp/usart/bsp_usart.h:2](../bsp/usart/bsp_usart.h#L2) | `BSP_RC_H` | 空定义 | `#ifndef BSP_RC_H` |  |
-| [bsp/usart/bsp_usart.h:7](../bsp/usart/bsp_usart.h#L7) | `DEVICE_USART_CNT` | `3` | `#ifndef BSP_RC_H` | C板至多分配3个串口 |
-| [bsp/usart/bsp_usart.h:8](../bsp/usart/bsp_usart.h#L8) | `USART_RXBUFF_LIMIT` | `256` | `#ifndef BSP_RC_H` | 如果协议需要更大的buff,请修改这里 |
-
-### 可设置的结构体字段
-
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
-
-[bsp/usart/bsp_usart.h:34](../bsp/usart/bsp_usart.h#L34)
-
-```c
-typedef struct
-{
-    uint8_t recv_buff_size;                // 模块接收一包数据的大小
-    UART_HandleTypeDef *usart_handle;      // 实例对应的usart_handle
-    usart_module_callback module_callback; // 解析收到的数据的回调函数
-} USART_Init_Config_s;
-```
-
-## bsp/usb/bsp_usb.h
-
-源文件：[打开 bsp/usb/bsp_usb.h](../bsp/usb/bsp_usb.h)。
-
-### 可设置的结构体字段
-
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
-
-[bsp/usb/bsp_usb.h:19](../bsp/usb/bsp_usb.h#L19)
-
-```c
-typedef struct
-{
-    USBCallback tx_cbk;
-    USBCallback rx_cbk;
-} USB_Init_Config_s;
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../bsp/usart/bsp_usart.h#L1) | 预处理 | `#ifndef BSP_RC_H` |
+| [2](../bsp/usart/bsp_usart.h#L2) | 预处理 | `#define BSP_RC_H` |
+| [7](../bsp/usart/bsp_usart.h#L7) | 预处理 | `#define DEVICE_USART_CNT 6     // C板至多分配3个串口` |
+| [8](../bsp/usart/bsp_usart.h#L8) | 预处理 | `#define USART_RXBUFF_LIMIT 256 // 如果协议需要更大的buff,请修改这里` |
+| [76](../bsp/usart/bsp_usart.h#L76) | 预处理 | `#endif` |
 
 ## Inc/adc.h
 
-源文件：[打开 Inc/adc.h](../Inc/adc.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Inc/adc.h:22](../Inc/adc.h#L22) | `__ADC_H__` | 空定义 | `#ifndef __ADC_H__` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [21](../Inc/adc.h#L21) | 预处理 | `#ifndef __ADC_H__` |
+| [22](../Inc/adc.h#L22) | 预处理 | `#define __ADC_H__` |
+| [24](../Inc/adc.h#L24) | 预处理 | `#ifdef __cplusplus` |
+| [26](../Inc/adc.h#L26) | 预处理 | `#endif` |
+| [47](../Inc/adc.h#L47) | 预处理 | `#ifdef __cplusplus` |
+| [49](../Inc/adc.h#L49) | 预处理 | `#endif` |
+| [51](../Inc/adc.h#L51) | 预处理 | `#endif /* __ADC_H__ */` |
 
 ## Inc/board_config.h
 
-源文件：[打开 Inc/board_config.h](../Inc/board_config.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Inc/board_config.h:2](../Inc/board_config.h#L2) | `BOARD_CONFIG_H` | 空定义 | `#ifndef BOARD_CONFIG_H` |  |
-| [Inc/board_config.h:5](../Inc/board_config.h#L5) | `UART1_USE_REFEREE` | `0` | `#ifndef BOARD_CONFIG_H` |  |
-| [Inc/board_config.h:6](../Inc/board_config.h#L6) | `UART1_USE_LOG` | `1` | `#ifndef BOARD_CONFIG_H` |  |
-| [Inc/board_config.h:7](../Inc/board_config.h#L7) | `UART1_USE_LOG_RTT` | `2` | `#ifndef BOARD_CONFIG_H` |  |
-| [Inc/board_config.h:10](../Inc/board_config.h#L10) | `UART1_USEUART1_USE_REFEREE` | 空定义 | `#ifndef BOARD_CONFIG_H；#ifndef UART1_USE` |  |
-| [Inc/board_config.h:20](../Inc/board_config.h#L20) | `UART1_REFEREE_ENABLED` | `(UART1_USE == UART1_USE_REFEREE)` | 无外层条件 |  |
-| [Inc/board_config.h:21](../Inc/board_config.h#L21) | `UART1_LOG_ENABLED` | `(UART1_USE != UART1_USE_REFEREE)` | 无外层条件 |  |
-| [Inc/board_config.h:22](../Inc/board_config.h#L22) | `UART1_RTT_ENABLED` | `(UART1_USE != UART1_USE_LOG)` | 无外层条件 |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../Inc/board_config.h#L1) | 预处理 | `#ifndef BOARD_CONFIG_H` |
+| [2](../Inc/board_config.h#L2) | 预处理 | `#define BOARD_CONFIG_H` |
+| [5](../Inc/board_config.h#L5) | 预处理 | `#ifdef UART1_USE` |
+| [7](../Inc/board_config.h#L7) | 预处理 | `#endif` |
+| [8](../Inc/board_config.h#L8) | 预处理 | `#ifndef REFEREE_ENABLE` |
+| [9](../Inc/board_config.h#L9) | 预处理 | `#define REFEREE_ENABLE 1` |
+| [10](../Inc/board_config.h#L10) | 预处理 | `#endif` |
+| [11](../Inc/board_config.h#L11) | 预处理 | `#ifndef LOG_OUTPUT` |
+| [12](../Inc/board_config.h#L12) | 预处理 | `#define LOG_OUTPUT 1 /* 0: off, 1: RTT, 2: USART2, 3: both */` |
+| [13](../Inc/board_config.h#L13) | 预处理 | `#endif` |
+| [14](../Inc/board_config.h#L14) | 预处理 | `#ifndef ATYPE_BENCH_MODE` |
+| [15](../Inc/board_config.h#L15) | 预处理 | `#define ATYPE_BENCH_MODE 0` |
+| [16](../Inc/board_config.h#L16) | 预处理 | `#endif` |
+| [17](../Inc/board_config.h#L17) | 预处理 | `#if REFEREE_ENABLE != 0 && REFEREE_ENABLE != 1` |
+| [19](../Inc/board_config.h#L19) | 预处理 | `#endif` |
+| [20](../Inc/board_config.h#L20) | 预处理 | `#if LOG_OUTPUT < 0 &#124;&#124; LOG_OUTPUT > 3` |
+| [22](../Inc/board_config.h#L22) | 预处理 | `#endif` |
+| [23](../Inc/board_config.h#L23) | 预处理 | `#if ATYPE_BENCH_MODE != 0 && ATYPE_BENCH_MODE != 1` |
+| [25](../Inc/board_config.h#L25) | 预处理 | `#endif` |
+| [26](../Inc/board_config.h#L26) | 预处理 | `#define BOARD_LOG_UART_ENABLED (LOG_OUTPUT == 2 &#124;&#124; LOG_OUTPUT == 3)` |
+| [27](../Inc/board_config.h#L27) | 预处理 | `#define BOARD_LOG_RTT_ENABLED (LOG_OUTPUT == 1 &#124;&#124; LOG_OUTPUT == 3)` |
+| [29](../Inc/board_config.h#L29) | 预处理 | `#define BOARD_REMOTE_UART (&huart1)` |
+| [30](../Inc/board_config.h#L30) | 预处理 | `#define BOARD_VISION_UART (&huart3)` |
+| [31](../Inc/board_config.h#L31) | 预处理 | `#define BOARD_VTX_UART (&huart8)` |
+| [32](../Inc/board_config.h#L32) | 预处理 | `#define BOARD_REFEREE_UART (&huart6)` |
+| [33](../Inc/board_config.h#L33) | 预处理 | `#define BOARD_LOG_UART (&huart2)` |
+| [34](../Inc/board_config.h#L34) | 预处理 | `#define BOARD_SUPERCAP_CAN (&hcan1)` |
+| [35](../Inc/board_config.h#L35) | 预处理 | `#define BOARD_POWER_METER_CAN (&hcan1)` |
+| [37](../Inc/board_config.h#L37) | 预处理 | `#ifndef OLED_USE_I2C` |
+| [38](../Inc/board_config.h#L38) | 预处理 | `#define OLED_USE_I2C 0 /* A-board SPI1 OLED; I2C2 backend remains optional. */` |
+| [39](../Inc/board_config.h#L39) | 预处理 | `#endif` |
+| [40](../Inc/board_config.h#L40) | 预处理 | `#if OLED_USE_I2C != 0 && OLED_USE_I2C != 1` |
+| [42](../Inc/board_config.h#L42) | 预处理 | `#endif` |
+| [45](../Inc/board_config.h#L45) | 预处理 | `#ifndef BOARD_AUX_UART2_DEVICE` |
+| [46](../Inc/board_config.h#L46) | 预处理 | `#define BOARD_AUX_UART2_DEVICE 0` |
+| [47](../Inc/board_config.h#L47) | 预处理 | `#endif` |
+| [48](../Inc/board_config.h#L48) | 预处理 | `#ifndef BOARD_AUX_UART7_DEVICE` |
+| [49](../Inc/board_config.h#L49) | 预处理 | `#define BOARD_AUX_UART7_DEVICE 0` |
+| [50](../Inc/board_config.h#L50) | 预处理 | `#endif` |
+| [51](../Inc/board_config.h#L51) | 预处理 | `#ifndef BOARD_OLED_ENABLE` |
+| [52](../Inc/board_config.h#L52) | 预处理 | `#define BOARD_OLED_ENABLE 0` |
+| [53](../Inc/board_config.h#L53) | 预处理 | `#endif` |
+| [54](../Inc/board_config.h#L54) | 预处理 | `#ifndef BOARD_KEY_ENABLE` |
+| [55](../Inc/board_config.h#L55) | 预处理 | `#define BOARD_KEY_ENABLE 0` |
+| [56](../Inc/board_config.h#L56) | 预处理 | `#endif` |
+| [57](../Inc/board_config.h#L57) | 预处理 | `#if BOARD_AUX_UART2_DEVICE < 0 &#124;&#124; BOARD_AUX_UART2_DEVICE > 3 &#124;&#124; BOARD_AUX_UART7_DEVICE < 0 &#124;&#124; BOARD_AUX_UART7_DEVICE > 3` |
+| [59](../Inc/board_config.h#L59) | 预处理 | `#endif` |
+| [60](../Inc/board_config.h#L60) | 预处理 | `#if BOARD_AUX_UART2_DEVICE && BOARD_LOG_UART_ENABLED` |
+| [62](../Inc/board_config.h#L62) | 预处理 | `#endif` |
+| [63](../Inc/board_config.h#L63) | 预处理 | `#if BOARD_AUX_UART2_DEVICE && BOARD_AUX_UART7_DEVICE && BOARD_AUX_UART2_DEVICE == BOARD_AUX_UART7_DEVICE` |
+| [65](../Inc/board_config.h#L65) | 预处理 | `#endif` |
+| [66](../Inc/board_config.h#L66) | 预处理 | `#if BOARD_OLED_ENABLE < 0 &#124;&#124; BOARD_OLED_ENABLE > 1 &#124;&#124; BOARD_KEY_ENABLE < 0 &#124;&#124; BOARD_KEY_ENABLE > 1` |
+| [68](../Inc/board_config.h#L68) | 预处理 | `#endif` |
+| [70](../Inc/board_config.h#L70) | 预处理 | `#endif` |
 
 ## Inc/can.h
 
-源文件：[打开 Inc/can.h](../Inc/can.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Inc/can.h:22](../Inc/can.h#L22) | `__CAN_H__` | 空定义 | `#ifndef __CAN_H__` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [21](../Inc/can.h#L21) | 预处理 | `#ifndef __CAN_H__` |
+| [22](../Inc/can.h#L22) | 预处理 | `#define __CAN_H__` |
+| [24](../Inc/can.h#L24) | 预处理 | `#ifdef __cplusplus` |
+| [26](../Inc/can.h#L26) | 预处理 | `#endif` |
+| [50](../Inc/can.h#L50) | 预处理 | `#ifdef __cplusplus` |
+| [52](../Inc/can.h#L52) | 预处理 | `#endif` |
+| [54](../Inc/can.h#L54) | 预处理 | `#endif /* __CAN_H__ */` |
 
 ## Inc/crc.h
 
-源文件：[打开 Inc/crc.h](../Inc/crc.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Inc/crc.h:22](../Inc/crc.h#L22) | `__CRC_H__` | 空定义 | `#ifndef __CRC_H__` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [21](../Inc/crc.h#L21) | 预处理 | `#ifndef __CRC_H__` |
+| [22](../Inc/crc.h#L22) | 预处理 | `#define __CRC_H__` |
+| [24](../Inc/crc.h#L24) | 预处理 | `#ifdef __cplusplus` |
+| [26](../Inc/crc.h#L26) | 预处理 | `#endif` |
+| [47](../Inc/crc.h#L47) | 预处理 | `#ifdef __cplusplus` |
+| [49](../Inc/crc.h#L49) | 预处理 | `#endif` |
+| [51](../Inc/crc.h#L51) | 预处理 | `#endif /* __CRC_H__ */` |
 
 ## Inc/dac.h
 
-源文件：[打开 Inc/dac.h](../Inc/dac.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Inc/dac.h:22](../Inc/dac.h#L22) | `__DAC_H__` | 空定义 | `#ifndef __DAC_H__` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [21](../Inc/dac.h#L21) | 预处理 | `#ifndef __DAC_H__` |
+| [22](../Inc/dac.h#L22) | 预处理 | `#define __DAC_H__` |
+| [24](../Inc/dac.h#L24) | 预处理 | `#ifdef __cplusplus` |
+| [26](../Inc/dac.h#L26) | 预处理 | `#endif` |
+| [47](../Inc/dac.h#L47) | 预处理 | `#ifdef __cplusplus` |
+| [49](../Inc/dac.h#L49) | 预处理 | `#endif` |
+| [51](../Inc/dac.h#L51) | 预处理 | `#endif /* __DAC_H__ */` |
 
 ## Inc/dma.h
 
-源文件：[打开 Inc/dma.h](../Inc/dma.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Inc/dma.h:22](../Inc/dma.h#L22) | `__DMA_H__` | 空定义 | `#ifndef __DMA_H__` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [21](../Inc/dma.h#L21) | 预处理 | `#ifndef __DMA_H__` |
+| [22](../Inc/dma.h#L22) | 预处理 | `#define __DMA_H__` |
+| [24](../Inc/dma.h#L24) | 预处理 | `#ifdef __cplusplus` |
+| [26](../Inc/dma.h#L26) | 预处理 | `#endif` |
+| [47](../Inc/dma.h#L47) | 预处理 | `#ifdef __cplusplus` |
+| [49](../Inc/dma.h#L49) | 预处理 | `#endif` |
+| [51](../Inc/dma.h#L51) | 预处理 | `#endif /* __DMA_H__ */` |
 
 ## Inc/FreeRTOSConfig.h
 
-源文件：[打开 Inc/FreeRTOSConfig.h](../Inc/FreeRTOSConfig.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Inc/FreeRTOSConfig.h:32](../Inc/FreeRTOSConfig.h#L32) | `FREERTOS_CONFIG_H` | 空定义 | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:55](../Inc/FreeRTOSConfig.h#L55) | `configENABLE_FPU` | `1` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:56](../Inc/FreeRTOSConfig.h#L56) | `configENABLE_MPU` | `0` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:58](../Inc/FreeRTOSConfig.h#L58) | `configUSE_PREEMPTION` | `1` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:59](../Inc/FreeRTOSConfig.h#L59) | `configSUPPORT_STATIC_ALLOCATION` | `1` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:60](../Inc/FreeRTOSConfig.h#L60) | `configSUPPORT_DYNAMIC_ALLOCATION` | `1` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:61](../Inc/FreeRTOSConfig.h#L61) | `configUSE_IDLE_HOOK` | `0` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:62](../Inc/FreeRTOSConfig.h#L62) | `configUSE_TICK_HOOK` | `0` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:63](../Inc/FreeRTOSConfig.h#L63) | `configCPU_CLOCK_HZ` | `( SystemCoreClock )` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:64](../Inc/FreeRTOSConfig.h#L64) | `configTICK_RATE_HZ` | `((TickType_t)1000)` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:65](../Inc/FreeRTOSConfig.h#L65) | `configMAX_PRIORITIES` | `( 7 )` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:66](../Inc/FreeRTOSConfig.h#L66) | `configMINIMAL_STACK_SIZE` | `((uint16_t)128)` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:67](../Inc/FreeRTOSConfig.h#L67) | `configTOTAL_HEAP_SIZE` | `((size_t)20000)` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:68](../Inc/FreeRTOSConfig.h#L68) | `configMAX_TASK_NAME_LEN` | `( 32 )` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:69](../Inc/FreeRTOSConfig.h#L69) | `configUSE_16_BIT_TICKS` | `0` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:70](../Inc/FreeRTOSConfig.h#L70) | `configUSE_MUTEXES` | `1` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:71](../Inc/FreeRTOSConfig.h#L71) | `configQUEUE_REGISTRY_SIZE` | `8` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:72](../Inc/FreeRTOSConfig.h#L72) | `configUSE_COUNTING_SEMAPHORES` | `1` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:73](../Inc/FreeRTOSConfig.h#L73) | `configUSE_PORT_OPTIMISED_TASK_SELECTION` | `1` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:77](../Inc/FreeRTOSConfig.h#L77) | `configMESSAGE_BUFFER_LENGTH_TYPE` | `size_t` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:81](../Inc/FreeRTOSConfig.h#L81) | `configUSE_CO_ROUTINES` | `0` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:82](../Inc/FreeRTOSConfig.h#L82) | `configMAX_CO_ROUTINE_PRIORITIES` | `( 2 )` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:86](../Inc/FreeRTOSConfig.h#L86) | `INCLUDE_vTaskPrioritySet` | `1` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:87](../Inc/FreeRTOSConfig.h#L87) | `INCLUDE_uxTaskPriorityGet` | `1` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:88](../Inc/FreeRTOSConfig.h#L88) | `INCLUDE_vTaskDelete` | `1` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:89](../Inc/FreeRTOSConfig.h#L89) | `INCLUDE_vTaskCleanUpResources` | `0` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:90](../Inc/FreeRTOSConfig.h#L90) | `INCLUDE_vTaskSuspend` | `1` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:91](../Inc/FreeRTOSConfig.h#L91) | `INCLUDE_vTaskDelayUntil` | `1` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:92](../Inc/FreeRTOSConfig.h#L92) | `INCLUDE_vTaskDelay` | `1` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:93](../Inc/FreeRTOSConfig.h#L93) | `INCLUDE_xTaskGetSchedulerState` | `1` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:94](../Inc/FreeRTOSConfig.h#L94) | `INCLUDE_uxTaskGetStackHighWaterMark` | `1` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:99](../Inc/FreeRTOSConfig.h#L99) | `configPRIO_BITS` | `__NVIC_PRIO_BITS` | `#ifndef FREERTOS_CONFIG_H；#ifdef __NVIC_PRIO_BITS` |  |
-| [Inc/FreeRTOSConfig.h:101](../Inc/FreeRTOSConfig.h#L101) | `configPRIO_BITS` | `4` | `#ifndef FREERTOS_CONFIG_H；#ifdef __NVIC_PRIO_BITS → #else` |  |
-| [Inc/FreeRTOSConfig.h:106](../Inc/FreeRTOSConfig.h#L106) | `configLIBRARY_LOWEST_INTERRUPT_PRIORITY` | `15` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:112](../Inc/FreeRTOSConfig.h#L112) | `configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY` | `5` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:116](../Inc/FreeRTOSConfig.h#L116) | `configKERNEL_INTERRUPT_PRIORITY` | `( configLIBRARY_LOWEST_INTERRUPT_PRIORITY << (8 - configPRIO_BITS) )` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:119](../Inc/FreeRTOSConfig.h#L119) | `configMAX_SYSCALL_INTERRUPT_PRIORITY` | `( configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY << (8 - configPRIO_BITS) )` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:124](../Inc/FreeRTOSConfig.h#L124) | `configASSERT( x )` | `if ((x) == 0) {taskDISABLE_INTERRUPTS(); for( ;; );}` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:129](../Inc/FreeRTOSConfig.h#L129) | `vPortSVCHandler` | `SVC_Handler` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:130](../Inc/FreeRTOSConfig.h#L130) | `xPortPendSVHandler` | `PendSV_Handler` | `#ifndef FREERTOS_CONFIG_H` |  |
-| [Inc/FreeRTOSConfig.h:135](../Inc/FreeRTOSConfig.h#L135) | `xPortSysTickHandler` | `SysTick_Handler` | `#ifndef FREERTOS_CONFIG_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [31](../Inc/FreeRTOSConfig.h#L31) | 预处理 | `#ifndef FREERTOS_CONFIG_H` |
+| [32](../Inc/FreeRTOSConfig.h#L32) | 预处理 | `#define FREERTOS_CONFIG_H` |
+| [51](../Inc/FreeRTOSConfig.h#L51) | 预处理 | `#if defined(__ICCARM__) &#124;&#124; defined(__CC_ARM) &#124;&#124; defined(__GNUC__)` |
+| [54](../Inc/FreeRTOSConfig.h#L54) | 预处理 | `#endif` |
+| [55](../Inc/FreeRTOSConfig.h#L55) | 预处理 | `#define configENABLE_FPU                         1` |
+| [56](../Inc/FreeRTOSConfig.h#L56) | 预处理 | `#define configENABLE_MPU                         0` |
+| [58](../Inc/FreeRTOSConfig.h#L58) | 预处理 | `#define configUSE_PREEMPTION                     1` |
+| [59](../Inc/FreeRTOSConfig.h#L59) | 预处理 | `#define configSUPPORT_STATIC_ALLOCATION          1` |
+| [60](../Inc/FreeRTOSConfig.h#L60) | 预处理 | `#define configSUPPORT_DYNAMIC_ALLOCATION         1` |
+| [61](../Inc/FreeRTOSConfig.h#L61) | 预处理 | `#define configUSE_IDLE_HOOK                      0` |
+| [62](../Inc/FreeRTOSConfig.h#L62) | 预处理 | `#define configUSE_TICK_HOOK                      0` |
+| [63](../Inc/FreeRTOSConfig.h#L63) | 预处理 | `#define configCPU_CLOCK_HZ                       ( SystemCoreClock )` |
+| [64](../Inc/FreeRTOSConfig.h#L64) | 预处理 | `#define configTICK_RATE_HZ                       ((TickType_t)1000)` |
+| [65](../Inc/FreeRTOSConfig.h#L65) | 预处理 | `#define configMAX_PRIORITIES                     ( 7 )` |
+| [66](../Inc/FreeRTOSConfig.h#L66) | 预处理 | `#define configMINIMAL_STACK_SIZE                 ((uint16_t)128)` |
+| [67](../Inc/FreeRTOSConfig.h#L67) | 预处理 | `#define configTOTAL_HEAP_SIZE                    ((size_t)(64U*1024U))` |
+| [68](../Inc/FreeRTOSConfig.h#L68) | 预处理 | `#define configMAX_TASK_NAME_LEN                  ( 32 )` |
+| [69](../Inc/FreeRTOSConfig.h#L69) | 预处理 | `#define configUSE_16_BIT_TICKS                   0` |
+| [70](../Inc/FreeRTOSConfig.h#L70) | 预处理 | `#define configUSE_MUTEXES                        1` |
+| [71](../Inc/FreeRTOSConfig.h#L71) | 预处理 | `#define configQUEUE_REGISTRY_SIZE                8` |
+| [72](../Inc/FreeRTOSConfig.h#L72) | 预处理 | `#define configUSE_PORT_OPTIMISED_TASK_SELECTION  1` |
+| [76](../Inc/FreeRTOSConfig.h#L76) | 预处理 | `#define configMESSAGE_BUFFER_LENGTH_TYPE         size_t` |
+| [80](../Inc/FreeRTOSConfig.h#L80) | 预处理 | `#define configUSE_CO_ROUTINES                    0` |
+| [81](../Inc/FreeRTOSConfig.h#L81) | 预处理 | `#define configMAX_CO_ROUTINE_PRIORITIES          ( 2 )` |
+| [85](../Inc/FreeRTOSConfig.h#L85) | 预处理 | `#define INCLUDE_vTaskPrioritySet             1` |
+| [86](../Inc/FreeRTOSConfig.h#L86) | 预处理 | `#define INCLUDE_uxTaskPriorityGet            1` |
+| [87](../Inc/FreeRTOSConfig.h#L87) | 预处理 | `#define INCLUDE_uxTaskGetStackHighWaterMark   1` |
+| [88](../Inc/FreeRTOSConfig.h#L88) | 预处理 | `#define INCLUDE_vTaskDelete                  1` |
+| [89](../Inc/FreeRTOSConfig.h#L89) | 预处理 | `#define INCLUDE_vTaskCleanUpResources        0` |
+| [90](../Inc/FreeRTOSConfig.h#L90) | 预处理 | `#define INCLUDE_vTaskSuspend                 1` |
+| [91](../Inc/FreeRTOSConfig.h#L91) | 预处理 | `#define INCLUDE_vTaskDelayUntil              1` |
+| [92](../Inc/FreeRTOSConfig.h#L92) | 预处理 | `#define INCLUDE_vTaskDelay                   1` |
+| [93](../Inc/FreeRTOSConfig.h#L93) | 预处理 | `#define INCLUDE_xTaskGetSchedulerState       1` |
+| [96](../Inc/FreeRTOSConfig.h#L96) | 预处理 | `#ifdef __NVIC_PRIO_BITS` |
+| [98](../Inc/FreeRTOSConfig.h#L98) | 预处理 | `#define configPRIO_BITS         __NVIC_PRIO_BITS` |
+| [99](../Inc/FreeRTOSConfig.h#L99) | 预处理 | `#else` |
+| [100](../Inc/FreeRTOSConfig.h#L100) | 预处理 | `#define configPRIO_BITS         4` |
+| [101](../Inc/FreeRTOSConfig.h#L101) | 预处理 | `#endif` |
+| [105](../Inc/FreeRTOSConfig.h#L105) | 预处理 | `#define configLIBRARY_LOWEST_INTERRUPT_PRIORITY   15` |
+| [111](../Inc/FreeRTOSConfig.h#L111) | 预处理 | `#define configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY 5` |
+| [115](../Inc/FreeRTOSConfig.h#L115) | 预处理 | `#define configKERNEL_INTERRUPT_PRIORITY 		( configLIBRARY_LOWEST_INTERRUPT_PRIORITY << (8 - configPRIO_BITS) )` |
+| [118](../Inc/FreeRTOSConfig.h#L118) | 预处理 | `#define configMAX_SYSCALL_INTERRUPT_PRIORITY 	( configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY << (8 - configPRIO_BITS) )` |
+| [123](../Inc/FreeRTOSConfig.h#L123) | 预处理 | `#define configASSERT( x ) if ((x) == 0) {taskDISABLE_INTERRUPTS(); for( ;; );}` |
+| [128](../Inc/FreeRTOSConfig.h#L128) | 预处理 | `#define vPortSVCHandler    SVC_Handler` |
+| [129](../Inc/FreeRTOSConfig.h#L129) | 预处理 | `#define xPortPendSVHandler PendSV_Handler` |
+| [134](../Inc/FreeRTOSConfig.h#L134) | 预处理 | `#define xPortSysTickHandler SysTick_Handler` |
+| [140](../Inc/FreeRTOSConfig.h#L140) | 预处理 | `#endif /* FREERTOS_CONFIG_H */` |
 
 ## Inc/gpio.h
 
-源文件：[打开 Inc/gpio.h](../Inc/gpio.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Inc/gpio.h:22](../Inc/gpio.h#L22) | `__GPIO_H__` | 空定义 | `#ifndef __GPIO_H__` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [21](../Inc/gpio.h#L21) | 预处理 | `#ifndef __GPIO_H__` |
+| [22](../Inc/gpio.h#L22) | 预处理 | `#define __GPIO_H__` |
+| [24](../Inc/gpio.h#L24) | 预处理 | `#ifdef __cplusplus` |
+| [26](../Inc/gpio.h#L26) | 预处理 | `#endif` |
+| [45](../Inc/gpio.h#L45) | 预处理 | `#ifdef __cplusplus` |
+| [47](../Inc/gpio.h#L47) | 预处理 | `#endif` |
+| [48](../Inc/gpio.h#L48) | 预处理 | `#endif /*__ GPIO_H__ */` |
 
 ## Inc/i2c.h
 
-源文件：[打开 Inc/i2c.h](../Inc/i2c.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Inc/i2c.h:22](../Inc/i2c.h#L22) | `__I2C_H__` | 空定义 | `#ifndef __I2C_H__` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [21](../Inc/i2c.h#L21) | 预处理 | `#ifndef __I2C_H__` |
+| [22](../Inc/i2c.h#L22) | 预处理 | `#define __I2C_H__` |
+| [24](../Inc/i2c.h#L24) | 预处理 | `#ifdef __cplusplus` |
+| [26](../Inc/i2c.h#L26) | 预处理 | `#endif` |
+| [47](../Inc/i2c.h#L47) | 预处理 | `#ifdef __cplusplus` |
+| [49](../Inc/i2c.h#L49) | 预处理 | `#endif` |
+| [51](../Inc/i2c.h#L51) | 预处理 | `#endif /* __I2C_H__ */` |
 
 ## Inc/main.h
 
-源文件：[打开 Inc/main.h](../Inc/main.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Inc/main.h:23](../Inc/main.h#L23) | `__MAIN_H` | 空定义 | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:60](../Inc/main.h#L60) | `MAG_RST_Pin` | `GPIO_PIN_6` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:61](../Inc/main.h#L61) | `MAG_RST_GPIO_Port` | `GPIOG` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:62](../Inc/main.h#L62) | `IMU_TEMP_Pin` | `GPIO_PIN_6` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:63](../Inc/main.h#L63) | `IMU_TEMP_GPIO_Port` | `GPIOF` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:64](../Inc/main.h#L64) | `LED_R_Pin` | `GPIO_PIN_12` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:65](../Inc/main.h#L65) | `LED_R_GPIO_Port` | `GPIOH` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:66](../Inc/main.h#L66) | `INT_MAG_Pin` | `GPIO_PIN_3` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:67](../Inc/main.h#L67) | `INT_MAG_GPIO_Port` | `GPIOG` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:68](../Inc/main.h#L68) | `INT_MAG_EXTI_IRQn` | `EXTI3_IRQn` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:69](../Inc/main.h#L69) | `LED_G_Pin` | `GPIO_PIN_11` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:70](../Inc/main.h#L70) | `LED_G_GPIO_Port` | `GPIOH` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:71](../Inc/main.h#L71) | `LED_B_Pin` | `GPIO_PIN_10` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:72](../Inc/main.h#L72) | `LED_B_GPIO_Port` | `GPIOH` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:73](../Inc/main.h#L73) | `BUZZER_Pin` | `GPIO_PIN_14` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:74](../Inc/main.h#L74) | `BUZZER_GPIO_Port` | `GPIOD` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:75](../Inc/main.h#L75) | `KEY_Pin` | `GPIO_PIN_0` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:76](../Inc/main.h#L76) | `KEY_GPIO_Port` | `GPIOA` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:77](../Inc/main.h#L77) | `CS1_ACCEL_Pin` | `GPIO_PIN_4` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:78](../Inc/main.h#L78) | `CS1_ACCEL_GPIO_Port` | `GPIOA` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:79](../Inc/main.h#L79) | `INT_ACC_Pin` | `GPIO_PIN_4` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:80](../Inc/main.h#L80) | `INT_ACC_GPIO_Port` | `GPIOC` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:81](../Inc/main.h#L81) | `INT_ACC_EXTI_IRQn` | `EXTI4_IRQn` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:82](../Inc/main.h#L82) | `INT_GYRO_Pin` | `GPIO_PIN_5` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:83](../Inc/main.h#L83) | `INT_GYRO_GPIO_Port` | `GPIOC` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:84](../Inc/main.h#L84) | `INT_GYRO_EXTI_IRQn` | `EXTI9_5_IRQn` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:85](../Inc/main.h#L85) | `SERVO_Pin` | `GPIO_PIN_9` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:86](../Inc/main.h#L86) | `SERVO_GPIO_Port` | `GPIOE` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:87](../Inc/main.h#L87) | `CS1_GYRO_Pin` | `GPIO_PIN_0` | `#ifndef __MAIN_H` |  |
-| [Inc/main.h:88](../Inc/main.h#L88) | `CS1_GYRO_GPIO_Port` | `GPIOB` | `#ifndef __MAIN_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [22](../Inc/main.h#L22) | 预处理 | `#ifndef __MAIN_H` |
+| [23](../Inc/main.h#L23) | 预处理 | `#define __MAIN_H` |
+| [25](../Inc/main.h#L25) | 预处理 | `#ifdef __cplusplus` |
+| [27](../Inc/main.h#L27) | 预处理 | `#endif` |
+| [60](../Inc/main.h#L60) | 预处理 | `#define MAG_INT_Pin GPIO_PIN_3` |
+| [61](../Inc/main.h#L61) | 预处理 | `#define MAG_INT_GPIO_Port GPIOE` |
+| [62](../Inc/main.h#L62) | 预处理 | `#define MAG_RST_Pin GPIO_PIN_2` |
+| [63](../Inc/main.h#L63) | 预处理 | `#define MAG_RST_GPIO_Port GPIOE` |
+| [64](../Inc/main.h#L64) | 预处理 | `#define IMU_INT_Pin GPIO_PIN_8` |
+| [65](../Inc/main.h#L65) | 预处理 | `#define IMU_INT_GPIO_Port GPIOB` |
+| [66](../Inc/main.h#L66) | 预处理 | `#define Laser_Pin GPIO_PIN_13` |
+| [67](../Inc/main.h#L67) | 预处理 | `#define Laser_GPIO_Port GPIOG` |
+| [68](../Inc/main.h#L68) | 预处理 | `#define OLED_DC_Pin GPIO_PIN_9` |
+| [69](../Inc/main.h#L69) | 预处理 | `#define OLED_DC_GPIO_Port GPIOB` |
+| [70](../Inc/main.h#L70) | 预处理 | `#define Power1_Pin GPIO_PIN_2` |
+| [71](../Inc/main.h#L71) | 预处理 | `#define Power1_GPIO_Port GPIOH` |
+| [72](../Inc/main.h#L72) | 预处理 | `#define Power2_Pin GPIO_PIN_3` |
+| [73](../Inc/main.h#L73) | 预处理 | `#define Power2_GPIO_Port GPIOH` |
+| [74](../Inc/main.h#L74) | 预处理 | `#define Power3_Pin GPIO_PIN_4` |
+| [75](../Inc/main.h#L75) | 预处理 | `#define Power3_GPIO_Port GPIOH` |
+| [76](../Inc/main.h#L76) | 预处理 | `#define D8_Pin GPIO_PIN_8` |
+| [77](../Inc/main.h#L77) | 预处理 | `#define D8_GPIO_Port GPIOG` |
+| [78](../Inc/main.h#L78) | 预处理 | `#define Power4_Pin GPIO_PIN_5` |
+| [79](../Inc/main.h#L79) | 预处理 | `#define Power4_GPIO_Port GPIOH` |
+| [80](../Inc/main.h#L80) | 预处理 | `#define D7_Pin GPIO_PIN_7` |
+| [81](../Inc/main.h#L81) | 预处理 | `#define D7_GPIO_Port GPIOG` |
+| [82](../Inc/main.h#L82) | 预处理 | `#define D6_Pin GPIO_PIN_6` |
+| [83](../Inc/main.h#L83) | 预处理 | `#define D6_GPIO_Port GPIOG` |
+| [84](../Inc/main.h#L84) | 预处理 | `#define D5_Pin GPIO_PIN_5` |
+| [85](../Inc/main.h#L85) | 预处理 | `#define D5_GPIO_Port GPIOG` |
+| [86](../Inc/main.h#L86) | 预处理 | `#define D4_Pin GPIO_PIN_4` |
+| [87](../Inc/main.h#L87) | 预处理 | `#define D4_GPIO_Port GPIOG` |
+| [88](../Inc/main.h#L88) | 预处理 | `#define D3_Pin GPIO_PIN_3` |
+| [89](../Inc/main.h#L89) | 预处理 | `#define D3_GPIO_Port GPIOG` |
+| [90](../Inc/main.h#L90) | 预处理 | `#define D2_Pin GPIO_PIN_2` |
+| [91](../Inc/main.h#L91) | 预处理 | `#define D2_GPIO_Port GPIOG` |
+| [92](../Inc/main.h#L92) | 预处理 | `#define HJ_L1_Pin GPIO_PIN_0` |
+| [93](../Inc/main.h#L93) | 预处理 | `#define HJ_L1_GPIO_Port GPIOC` |
+| [94](../Inc/main.h#L94) | 预处理 | `#define HJ_L2_Pin GPIO_PIN_1` |
+| [95](../Inc/main.h#L95) | 预处理 | `#define HJ_L2_GPIO_Port GPIOC` |
+| [96](../Inc/main.h#L96) | 预处理 | `#define KEY_Pin GPIO_PIN_2` |
+| [97](../Inc/main.h#L97) | 预处理 | `#define KEY_GPIO_Port GPIOB` |
+| [98](../Inc/main.h#L98) | 预处理 | `#define KEY_EXTI_IRQn EXTI2_IRQn` |
+| [99](../Inc/main.h#L99) | 预处理 | `#define D1_Pin GPIO_PIN_1` |
+| [100](../Inc/main.h#L100) | 预处理 | `#define D1_GPIO_Port GPIOG` |
+| [101](../Inc/main.h#L101) | 预处理 | `#define BUZZER_Pin GPIO_PIN_6` |
+| [102](../Inc/main.h#L102) | 预处理 | `#define BUZZER_GPIO_Port GPIOH` |
+| [103](../Inc/main.h#L103) | 预处理 | `#define HJ_M_Pin GPIO_PIN_4` |
+| [104](../Inc/main.h#L104) | 预处理 | `#define HJ_M_GPIO_Port GPIOA` |
+| [105](../Inc/main.h#L105) | 预处理 | `#define LED_R_Pin GPIO_PIN_11` |
+| [106](../Inc/main.h#L106) | 预处理 | `#define LED_R_GPIO_Port GPIOE` |
+| [107](../Inc/main.h#L107) | 预处理 | `#define HJ_R1_Pin GPIO_PIN_1` |
+| [108](../Inc/main.h#L108) | 预处理 | `#define HJ_R1_GPIO_Port GPIOB` |
+| [109](../Inc/main.h#L109) | 预处理 | `#define HJ_R2_Pin GPIO_PIN_0` |
+| [110](../Inc/main.h#L110) | 预处理 | `#define HJ_R2_GPIO_Port GPIOB` |
+| [111](../Inc/main.h#L111) | 预处理 | `#define LED_G_Pin GPIO_PIN_14` |
+| [112](../Inc/main.h#L112) | 预处理 | `#define LED_G_GPIO_Port GPIOF` |
+| [113](../Inc/main.h#L113) | 预处理 | `#define OLED_RST_Pin GPIO_PIN_10` |
+| [114](../Inc/main.h#L114) | 预处理 | `#define OLED_RST_GPIO_Port GPIOB` |
+| [120](../Inc/main.h#L120) | 预处理 | `#ifdef __cplusplus` |
+| [122](../Inc/main.h#L122) | 预处理 | `#endif` |
+| [124](../Inc/main.h#L124) | 预处理 | `#endif /* __MAIN_H */` |
 
 ## Inc/rng.h
 
-源文件：[打开 Inc/rng.h](../Inc/rng.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Inc/rng.h:22](../Inc/rng.h#L22) | `__RNG_H__` | 空定义 | `#ifndef __RNG_H__` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [21](../Inc/rng.h#L21) | 预处理 | `#ifndef __RNG_H__` |
+| [22](../Inc/rng.h#L22) | 预处理 | `#define __RNG_H__` |
+| [24](../Inc/rng.h#L24) | 预处理 | `#ifdef __cplusplus` |
+| [26](../Inc/rng.h#L26) | 预处理 | `#endif` |
+| [47](../Inc/rng.h#L47) | 预处理 | `#ifdef __cplusplus` |
+| [49](../Inc/rng.h#L49) | 预处理 | `#endif` |
+| [51](../Inc/rng.h#L51) | 预处理 | `#endif /* __RNG_H__ */` |
 
 ## Inc/rtc.h
 
-源文件：[打开 Inc/rtc.h](../Inc/rtc.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Inc/rtc.h:22](../Inc/rtc.h#L22) | `__RTC_H__` | 空定义 | `#ifndef __RTC_H__` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [21](../Inc/rtc.h#L21) | 预处理 | `#ifndef __RTC_H__` |
+| [22](../Inc/rtc.h#L22) | 预处理 | `#define __RTC_H__` |
+| [24](../Inc/rtc.h#L24) | 预处理 | `#ifdef __cplusplus` |
+| [26](../Inc/rtc.h#L26) | 预处理 | `#endif` |
+| [47](../Inc/rtc.h#L47) | 预处理 | `#ifdef __cplusplus` |
+| [49](../Inc/rtc.h#L49) | 预处理 | `#endif` |
+| [51](../Inc/rtc.h#L51) | 预处理 | `#endif /* __RTC_H__ */` |
 
 ## Inc/spi.h
 
-源文件：[打开 Inc/spi.h](../Inc/spi.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Inc/spi.h:22](../Inc/spi.h#L22) | `__SPI_H__` | 空定义 | `#ifndef __SPI_H__` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [21](../Inc/spi.h#L21) | 预处理 | `#ifndef __SPI_H__` |
+| [22](../Inc/spi.h#L22) | 预处理 | `#define __SPI_H__` |
+| [24](../Inc/spi.h#L24) | 预处理 | `#ifdef __cplusplus` |
+| [26](../Inc/spi.h#L26) | 预处理 | `#endif` |
+| [50](../Inc/spi.h#L50) | 预处理 | `#ifdef __cplusplus` |
+| [52](../Inc/spi.h#L52) | 预处理 | `#endif` |
+| [54](../Inc/spi.h#L54) | 预处理 | `#endif /* __SPI_H__ */` |
 
 ## Inc/stm32f4xx_hal_conf.h
 
-源文件：[打开 Inc/stm32f4xx_hal_conf.h](../Inc/stm32f4xx_hal_conf.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Inc/stm32f4xx_hal_conf.h:25](../Inc/stm32f4xx_hal_conf.h#L25) | `__STM32F4xx_HAL_CONF_H` | 空定义 | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:38](../Inc/stm32f4xx_hal_conf.h#L38) | `HAL_MODULE_ENABLED` | 空定义 | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:41](../Inc/stm32f4xx_hal_conf.h#L41) | `HAL_ADC_MODULE_ENABLED` | 空定义 | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:42](../Inc/stm32f4xx_hal_conf.h#L42) | `HAL_CAN_MODULE_ENABLED` | 空定义 | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:43](../Inc/stm32f4xx_hal_conf.h#L43) | `HAL_CRC_MODULE_ENABLED` | 空定义 | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:45](../Inc/stm32f4xx_hal_conf.h#L45) | `HAL_DAC_MODULE_ENABLED` | 空定义 | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:55](../Inc/stm32f4xx_hal_conf.h#L55) | `HAL_I2C_MODULE_ENABLED` | 空定义 | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:59](../Inc/stm32f4xx_hal_conf.h#L59) | `HAL_RNG_MODULE_ENABLED` | 空定义 | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:60](../Inc/stm32f4xx_hal_conf.h#L60) | `HAL_RTC_MODULE_ENABLED` | 空定义 | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:64](../Inc/stm32f4xx_hal_conf.h#L64) | `HAL_SPI_MODULE_ENABLED` | 空定义 | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:65](../Inc/stm32f4xx_hal_conf.h#L65) | `HAL_TIM_MODULE_ENABLED` | 空定义 | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:66](../Inc/stm32f4xx_hal_conf.h#L66) | `HAL_UART_MODULE_ENABLED` | 空定义 | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:72](../Inc/stm32f4xx_hal_conf.h#L72) | `HAL_PCD_MODULE_ENABLED` | 空定义 | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:83](../Inc/stm32f4xx_hal_conf.h#L83) | `HAL_GPIO_MODULE_ENABLED` | 空定义 | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:84](../Inc/stm32f4xx_hal_conf.h#L84) | `HAL_EXTI_MODULE_ENABLED` | 空定义 | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:85](../Inc/stm32f4xx_hal_conf.h#L85) | `HAL_DMA_MODULE_ENABLED` | 空定义 | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:86](../Inc/stm32f4xx_hal_conf.h#L86) | `HAL_RCC_MODULE_ENABLED` | 空定义 | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:87](../Inc/stm32f4xx_hal_conf.h#L87) | `HAL_FLASH_MODULE_ENABLED` | 空定义 | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:88](../Inc/stm32f4xx_hal_conf.h#L88) | `HAL_PWR_MODULE_ENABLED` | 空定义 | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:89](../Inc/stm32f4xx_hal_conf.h#L89) | `HAL_CORTEX_MODULE_ENABLED` | 空定义 | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:98](../Inc/stm32f4xx_hal_conf.h#L98) | `HSE_VALUE` | `12000000U` | `#ifndef __STM32F4xx_HAL_CONF_H；#if !defined (HSE_VALUE)` | !< Value of the External oscillator in Hz |
-| [Inc/stm32f4xx_hal_conf.h:102](../Inc/stm32f4xx_hal_conf.h#L102) | `HSE_STARTUP_TIMEOUT` | `100U` | `#ifndef __STM32F4xx_HAL_CONF_H；#if !defined (HSE_STARTUP_TIMEOUT)` | !< Time out for HSE start up, in ms |
-| [Inc/stm32f4xx_hal_conf.h:111](../Inc/stm32f4xx_hal_conf.h#L111) | `HSI_VALUE` | `((uint32_t)16000000U)` | `#ifndef __STM32F4xx_HAL_CONF_H；#if !defined (HSI_VALUE)` | !< Value of the Internal oscillator in Hz |
-| [Inc/stm32f4xx_hal_conf.h:118](../Inc/stm32f4xx_hal_conf.h#L118) | `LSI_VALUE` | `32000U` | `#ifndef __STM32F4xx_HAL_CONF_H；#if !defined (LSI_VALUE)` | !< LSI Typical Value in Hz |
-| [Inc/stm32f4xx_hal_conf.h:126](../Inc/stm32f4xx_hal_conf.h#L126) | `LSE_VALUE` | `32768U` | `#ifndef __STM32F4xx_HAL_CONF_H；#if !defined (LSE_VALUE)` | !< Value of the External Low Speed oscillator in Hz |
-| [Inc/stm32f4xx_hal_conf.h:130](../Inc/stm32f4xx_hal_conf.h#L130) | `LSE_STARTUP_TIMEOUT` | `5000U` | `#ifndef __STM32F4xx_HAL_CONF_H；#if !defined (LSE_STARTUP_TIMEOUT)` | !< Time out for LSE start up, in ms |
-| [Inc/stm32f4xx_hal_conf.h:139](../Inc/stm32f4xx_hal_conf.h#L139) | `EXTERNAL_CLOCK_VALUE` | `12288000U` | `#ifndef __STM32F4xx_HAL_CONF_H；#if !defined (EXTERNAL_CLOCK_VALUE)` | !< Value of the External audio frequency in Hz |
-| [Inc/stm32f4xx_hal_conf.h:149](../Inc/stm32f4xx_hal_conf.h#L149) | `VDD_VALUE` | `3300U` | `#ifndef __STM32F4xx_HAL_CONF_H` | !< Value of VDD in mv |
-| [Inc/stm32f4xx_hal_conf.h:150](../Inc/stm32f4xx_hal_conf.h#L150) | `TICK_INT_PRIORITY` | `15U` | `#ifndef __STM32F4xx_HAL_CONF_H` | !< tick interrupt priority |
-| [Inc/stm32f4xx_hal_conf.h:151](../Inc/stm32f4xx_hal_conf.h#L151) | `USE_RTOS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:152](../Inc/stm32f4xx_hal_conf.h#L152) | `PREFETCH_ENABLE` | `1U` | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:153](../Inc/stm32f4xx_hal_conf.h#L153) | `INSTRUCTION_CACHE_ENABLE` | `1U` | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:154](../Inc/stm32f4xx_hal_conf.h#L154) | `DATA_CACHE_ENABLE` | `1U` | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:156](../Inc/stm32f4xx_hal_conf.h#L156) | `USE_HAL_ADC_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | ADC register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:157](../Inc/stm32f4xx_hal_conf.h#L157) | `USE_HAL_CAN_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | CAN register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:158](../Inc/stm32f4xx_hal_conf.h#L158) | `USE_HAL_CEC_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | CEC register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:159](../Inc/stm32f4xx_hal_conf.h#L159) | `USE_HAL_CRYP_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | CRYP register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:160](../Inc/stm32f4xx_hal_conf.h#L160) | `USE_HAL_DAC_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | DAC register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:161](../Inc/stm32f4xx_hal_conf.h#L161) | `USE_HAL_DCMI_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | DCMI register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:162](../Inc/stm32f4xx_hal_conf.h#L162) | `USE_HAL_DFSDM_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | DFSDM register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:163](../Inc/stm32f4xx_hal_conf.h#L163) | `USE_HAL_DMA2D_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | DMA2D register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:164](../Inc/stm32f4xx_hal_conf.h#L164) | `USE_HAL_DSI_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | DSI register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:165](../Inc/stm32f4xx_hal_conf.h#L165) | `USE_HAL_ETH_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | ETH register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:166](../Inc/stm32f4xx_hal_conf.h#L166) | `USE_HAL_HASH_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | HASH register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:167](../Inc/stm32f4xx_hal_conf.h#L167) | `USE_HAL_HCD_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | HCD register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:168](../Inc/stm32f4xx_hal_conf.h#L168) | `USE_HAL_I2C_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | I2C register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:169](../Inc/stm32f4xx_hal_conf.h#L169) | `USE_HAL_FMPI2C_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | FMPI2C register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:170](../Inc/stm32f4xx_hal_conf.h#L170) | `USE_HAL_FMPSMBUS_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | FMPSMBUS register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:171](../Inc/stm32f4xx_hal_conf.h#L171) | `USE_HAL_I2S_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | I2S register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:172](../Inc/stm32f4xx_hal_conf.h#L172) | `USE_HAL_IRDA_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | IRDA register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:173](../Inc/stm32f4xx_hal_conf.h#L173) | `USE_HAL_LPTIM_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | LPTIM register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:174](../Inc/stm32f4xx_hal_conf.h#L174) | `USE_HAL_LTDC_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | LTDC register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:175](../Inc/stm32f4xx_hal_conf.h#L175) | `USE_HAL_MMC_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | MMC register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:176](../Inc/stm32f4xx_hal_conf.h#L176) | `USE_HAL_NAND_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | NAND register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:177](../Inc/stm32f4xx_hal_conf.h#L177) | `USE_HAL_NOR_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | NOR register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:178](../Inc/stm32f4xx_hal_conf.h#L178) | `USE_HAL_PCCARD_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | PCCARD register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:179](../Inc/stm32f4xx_hal_conf.h#L179) | `USE_HAL_PCD_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | PCD register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:180](../Inc/stm32f4xx_hal_conf.h#L180) | `USE_HAL_QSPI_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | QSPI register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:181](../Inc/stm32f4xx_hal_conf.h#L181) | `USE_HAL_RNG_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | RNG register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:182](../Inc/stm32f4xx_hal_conf.h#L182) | `USE_HAL_RTC_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | RTC register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:183](../Inc/stm32f4xx_hal_conf.h#L183) | `USE_HAL_SAI_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | SAI register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:184](../Inc/stm32f4xx_hal_conf.h#L184) | `USE_HAL_SD_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | SD register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:185](../Inc/stm32f4xx_hal_conf.h#L185) | `USE_HAL_SMARTCARD_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | SMARTCARD register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:186](../Inc/stm32f4xx_hal_conf.h#L186) | `USE_HAL_SDRAM_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | SDRAM register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:187](../Inc/stm32f4xx_hal_conf.h#L187) | `USE_HAL_SRAM_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | SRAM register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:188](../Inc/stm32f4xx_hal_conf.h#L188) | `USE_HAL_SPDIFRX_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | SPDIFRX register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:189](../Inc/stm32f4xx_hal_conf.h#L189) | `USE_HAL_SMBUS_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | SMBUS register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:190](../Inc/stm32f4xx_hal_conf.h#L190) | `USE_HAL_SPI_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | SPI register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:191](../Inc/stm32f4xx_hal_conf.h#L191) | `USE_HAL_TIM_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | TIM register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:192](../Inc/stm32f4xx_hal_conf.h#L192) | `USE_HAL_UART_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | UART register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:193](../Inc/stm32f4xx_hal_conf.h#L193) | `USE_HAL_USART_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | USART register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:194](../Inc/stm32f4xx_hal_conf.h#L194) | `USE_HAL_WWDG_REGISTER_CALLBACKS` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` | WWDG register callback disabled |
-| [Inc/stm32f4xx_hal_conf.h:208](../Inc/stm32f4xx_hal_conf.h#L208) | `MAC_ADDR0` | `2U` | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:209](../Inc/stm32f4xx_hal_conf.h#L209) | `MAC_ADDR1` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:210](../Inc/stm32f4xx_hal_conf.h#L210) | `MAC_ADDR2` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:211](../Inc/stm32f4xx_hal_conf.h#L211) | `MAC_ADDR3` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:212](../Inc/stm32f4xx_hal_conf.h#L212) | `MAC_ADDR4` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:213](../Inc/stm32f4xx_hal_conf.h#L213) | `MAC_ADDR5` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:216](../Inc/stm32f4xx_hal_conf.h#L216) | `ETH_RX_BUF_SIZE` | 空定义 | `#ifndef __STM32F4xx_HAL_CONF_H` | buffer size for receive |
-| [Inc/stm32f4xx_hal_conf.h:217](../Inc/stm32f4xx_hal_conf.h#L217) | `ETH_TX_BUF_SIZE` | `ETH_MAX_PACKET_SIZE` | `#ifndef __STM32F4xx_HAL_CONF_H` | buffer size for transmit |
-| [Inc/stm32f4xx_hal_conf.h:218](../Inc/stm32f4xx_hal_conf.h#L218) | `ETH_RXBUFNB` | `4U` | `#ifndef __STM32F4xx_HAL_CONF_H` | 4 Rx buffers of size ETH_RX_BUF_SIZE |
-| [Inc/stm32f4xx_hal_conf.h:219](../Inc/stm32f4xx_hal_conf.h#L219) | `ETH_TXBUFNB` | `4U` | `#ifndef __STM32F4xx_HAL_CONF_H` | 4 Tx buffers of size ETH_TX_BUF_SIZE |
-| [Inc/stm32f4xx_hal_conf.h:224](../Inc/stm32f4xx_hal_conf.h#L224) | `DP83848_PHY_ADDRESS` | `0x01U` | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:226](../Inc/stm32f4xx_hal_conf.h#L226) | `PHY_RESET_DELAY` | `0x000000FFU` | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:228](../Inc/stm32f4xx_hal_conf.h#L228) | `PHY_CONFIG_DELAY` | `0x00000FFFU` | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:230](../Inc/stm32f4xx_hal_conf.h#L230) | `PHY_READ_TO` | `0x0000FFFFU` | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:231](../Inc/stm32f4xx_hal_conf.h#L231) | `PHY_WRITE_TO` | `0x0000FFFFU` | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:235](../Inc/stm32f4xx_hal_conf.h#L235) | `PHY_BCR` | `((uint16_t)0x0000U)` | `#ifndef __STM32F4xx_HAL_CONF_H` | !< Transceiver Basic Control Register |
-| [Inc/stm32f4xx_hal_conf.h:236](../Inc/stm32f4xx_hal_conf.h#L236) | `PHY_BSR` | `((uint16_t)0x0001U)` | `#ifndef __STM32F4xx_HAL_CONF_H` | !< Transceiver Basic Status Register |
-| [Inc/stm32f4xx_hal_conf.h:238](../Inc/stm32f4xx_hal_conf.h#L238) | `PHY_RESET` | `((uint16_t)0x8000U)` | `#ifndef __STM32F4xx_HAL_CONF_H` | !< PHY Reset |
-| [Inc/stm32f4xx_hal_conf.h:239](../Inc/stm32f4xx_hal_conf.h#L239) | `PHY_LOOPBACK` | `((uint16_t)0x4000U)` | `#ifndef __STM32F4xx_HAL_CONF_H` | !< Select loop-back mode |
-| [Inc/stm32f4xx_hal_conf.h:240](../Inc/stm32f4xx_hal_conf.h#L240) | `PHY_FULLDUPLEX_100M` | `((uint16_t)0x2100U)` | `#ifndef __STM32F4xx_HAL_CONF_H` | !< Set the full-duplex mode at 100 Mb/s |
-| [Inc/stm32f4xx_hal_conf.h:241](../Inc/stm32f4xx_hal_conf.h#L241) | `PHY_HALFDUPLEX_100M` | `((uint16_t)0x2000U)` | `#ifndef __STM32F4xx_HAL_CONF_H` | !< Set the half-duplex mode at 100 Mb/s |
-| [Inc/stm32f4xx_hal_conf.h:242](../Inc/stm32f4xx_hal_conf.h#L242) | `PHY_FULLDUPLEX_10M` | `((uint16_t)0x0100U)` | `#ifndef __STM32F4xx_HAL_CONF_H` | !< Set the full-duplex mode at 10 Mb/s |
-| [Inc/stm32f4xx_hal_conf.h:243](../Inc/stm32f4xx_hal_conf.h#L243) | `PHY_HALFDUPLEX_10M` | `((uint16_t)0x0000U)` | `#ifndef __STM32F4xx_HAL_CONF_H` | !< Set the half-duplex mode at 10 Mb/s |
-| [Inc/stm32f4xx_hal_conf.h:244](../Inc/stm32f4xx_hal_conf.h#L244) | `PHY_AUTONEGOTIATION` | `((uint16_t)0x1000U)` | `#ifndef __STM32F4xx_HAL_CONF_H` | !< Enable auto-negotiation function |
-| [Inc/stm32f4xx_hal_conf.h:245](../Inc/stm32f4xx_hal_conf.h#L245) | `PHY_RESTART_AUTONEGOTIATION` | `((uint16_t)0x0200U)` | `#ifndef __STM32F4xx_HAL_CONF_H` | !< Restart auto-negotiation function |
-| [Inc/stm32f4xx_hal_conf.h:246](../Inc/stm32f4xx_hal_conf.h#L246) | `PHY_POWERDOWN` | `((uint16_t)0x0800U)` | `#ifndef __STM32F4xx_HAL_CONF_H` | !< Select the power down mode |
-| [Inc/stm32f4xx_hal_conf.h:247](../Inc/stm32f4xx_hal_conf.h#L247) | `PHY_ISOLATE` | `((uint16_t)0x0400U)` | `#ifndef __STM32F4xx_HAL_CONF_H` | !< Isolate PHY from MII |
-| [Inc/stm32f4xx_hal_conf.h:249](../Inc/stm32f4xx_hal_conf.h#L249) | `PHY_AUTONEGO_COMPLETE` | `((uint16_t)0x0020U)` | `#ifndef __STM32F4xx_HAL_CONF_H` | !< Auto-Negotiation process completed |
-| [Inc/stm32f4xx_hal_conf.h:250](../Inc/stm32f4xx_hal_conf.h#L250) | `PHY_LINKED_STATUS` | `((uint16_t)0x0004U)` | `#ifndef __STM32F4xx_HAL_CONF_H` | !< Valid link established |
-| [Inc/stm32f4xx_hal_conf.h:251](../Inc/stm32f4xx_hal_conf.h#L251) | `PHY_JABBER_DETECTION` | `((uint16_t)0x0002U)` | `#ifndef __STM32F4xx_HAL_CONF_H` | !< Jabber condition detected |
-| [Inc/stm32f4xx_hal_conf.h:254](../Inc/stm32f4xx_hal_conf.h#L254) | `PHY_SR` | `((uint16_t)0x10U)` | `#ifndef __STM32F4xx_HAL_CONF_H` | !< PHY status register Offset |
-| [Inc/stm32f4xx_hal_conf.h:256](../Inc/stm32f4xx_hal_conf.h#L256) | `PHY_SPEED_STATUS` | `((uint16_t)0x0002U)` | `#ifndef __STM32F4xx_HAL_CONF_H` | !< PHY Speed mask |
-| [Inc/stm32f4xx_hal_conf.h:257](../Inc/stm32f4xx_hal_conf.h#L257) | `PHY_DUPLEX_STATUS` | `((uint16_t)0x0004U)` | `#ifndef __STM32F4xx_HAL_CONF_H` | !< PHY Duplex mask |
-| [Inc/stm32f4xx_hal_conf.h:266](../Inc/stm32f4xx_hal_conf.h#L266) | `USE_SPI_CRC` | `0U` | `#ifndef __STM32F4xx_HAL_CONF_H` |  |
-| [Inc/stm32f4xx_hal_conf.h:479](../Inc/stm32f4xx_hal_conf.h#L479) | `assert_param(expr)` | `((expr) ? (void)0U : assert_failed((uint8_t *)__FILE__, __LINE__))` | `#ifndef __STM32F4xx_HAL_CONF_H；#ifdef USE_FULL_ASSERT` |  |
-| [Inc/stm32f4xx_hal_conf.h:483](../Inc/stm32f4xx_hal_conf.h#L483) | `assert_param(expr)` | `((void)0U)` | `#ifndef __STM32F4xx_HAL_CONF_H；#ifdef USE_FULL_ASSERT → #else` |  |
-
-### 已注释的宏选项（当前不定义）
-
-| 行 | 原选项 |
-| --- | --- |
-| [Inc/stm32f4xx_hal_conf.h:40](../Inc/stm32f4xx_hal_conf.h#L40) | `#define HAL_CRYP_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:44](../Inc/stm32f4xx_hal_conf.h#L44) | `#define HAL_CAN_LEGACY_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:46](../Inc/stm32f4xx_hal_conf.h#L46) | `#define HAL_DCMI_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:47](../Inc/stm32f4xx_hal_conf.h#L47) | `#define HAL_DMA2D_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:48](../Inc/stm32f4xx_hal_conf.h#L48) | `#define HAL_ETH_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:49](../Inc/stm32f4xx_hal_conf.h#L49) | `#define HAL_NAND_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:50](../Inc/stm32f4xx_hal_conf.h#L50) | `#define HAL_NOR_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:51](../Inc/stm32f4xx_hal_conf.h#L51) | `#define HAL_PCCARD_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:52](../Inc/stm32f4xx_hal_conf.h#L52) | `#define HAL_SRAM_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:53](../Inc/stm32f4xx_hal_conf.h#L53) | `#define HAL_SDRAM_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:54](../Inc/stm32f4xx_hal_conf.h#L54) | `#define HAL_HASH_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:56](../Inc/stm32f4xx_hal_conf.h#L56) | `#define HAL_I2S_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:57](../Inc/stm32f4xx_hal_conf.h#L57) | `#define HAL_IWDG_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:58](../Inc/stm32f4xx_hal_conf.h#L58) | `#define HAL_LTDC_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:61](../Inc/stm32f4xx_hal_conf.h#L61) | `#define HAL_SAI_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:62](../Inc/stm32f4xx_hal_conf.h#L62) | `#define HAL_SD_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:63](../Inc/stm32f4xx_hal_conf.h#L63) | `#define HAL_MMC_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:67](../Inc/stm32f4xx_hal_conf.h#L67) | `#define HAL_USART_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:68](../Inc/stm32f4xx_hal_conf.h#L68) | `#define HAL_IRDA_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:69](../Inc/stm32f4xx_hal_conf.h#L69) | `#define HAL_SMARTCARD_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:70](../Inc/stm32f4xx_hal_conf.h#L70) | `#define HAL_SMBUS_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:71](../Inc/stm32f4xx_hal_conf.h#L71) | `#define HAL_WWDG_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:73](../Inc/stm32f4xx_hal_conf.h#L73) | `#define HAL_HCD_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:74](../Inc/stm32f4xx_hal_conf.h#L74) | `#define HAL_DSI_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:75](../Inc/stm32f4xx_hal_conf.h#L75) | `#define HAL_QSPI_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:76](../Inc/stm32f4xx_hal_conf.h#L76) | `#define HAL_QSPI_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:77](../Inc/stm32f4xx_hal_conf.h#L77) | `#define HAL_CEC_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:78](../Inc/stm32f4xx_hal_conf.h#L78) | `#define HAL_FMPI2C_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:79](../Inc/stm32f4xx_hal_conf.h#L79) | `#define HAL_FMPSMBUS_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:80](../Inc/stm32f4xx_hal_conf.h#L80) | `#define HAL_SPDIFRX_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:81](../Inc/stm32f4xx_hal_conf.h#L81) | `#define HAL_DFSDM_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:82](../Inc/stm32f4xx_hal_conf.h#L82) | `#define HAL_LPTIM_MODULE_ENABLED` |
-| [Inc/stm32f4xx_hal_conf.h:201](../Inc/stm32f4xx_hal_conf.h#L201) | `#define USE_FULL_ASSERT 1U` |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [24](../Inc/stm32f4xx_hal_conf.h#L24) | 预处理 | `#ifndef __STM32F4xx_HAL_CONF_H` |
+| [25](../Inc/stm32f4xx_hal_conf.h#L25) | 预处理 | `#define __STM32F4xx_HAL_CONF_H` |
+| [27](../Inc/stm32f4xx_hal_conf.h#L27) | 预处理 | `#ifdef __cplusplus` |
+| [29](../Inc/stm32f4xx_hal_conf.h#L29) | 预处理 | `#endif` |
+| [38](../Inc/stm32f4xx_hal_conf.h#L38) | 预处理 | `#define HAL_MODULE_ENABLED` |
+| [41](../Inc/stm32f4xx_hal_conf.h#L41) | 预处理 | `#define HAL_ADC_MODULE_ENABLED` |
+| [42](../Inc/stm32f4xx_hal_conf.h#L42) | 预处理 | `#define HAL_CAN_MODULE_ENABLED` |
+| [43](../Inc/stm32f4xx_hal_conf.h#L43) | 预处理 | `#define HAL_CRC_MODULE_ENABLED` |
+| [45](../Inc/stm32f4xx_hal_conf.h#L45) | 预处理 | `#define HAL_DAC_MODULE_ENABLED` |
+| [56](../Inc/stm32f4xx_hal_conf.h#L56) | 预处理 | `#define HAL_I2C_MODULE_ENABLED` |
+| [60](../Inc/stm32f4xx_hal_conf.h#L60) | 预处理 | `#define HAL_RNG_MODULE_ENABLED` |
+| [61](../Inc/stm32f4xx_hal_conf.h#L61) | 预处理 | `#define HAL_RTC_MODULE_ENABLED` |
+| [65](../Inc/stm32f4xx_hal_conf.h#L65) | 预处理 | `#define HAL_SPI_MODULE_ENABLED` |
+| [66](../Inc/stm32f4xx_hal_conf.h#L66) | 预处理 | `#define HAL_TIM_MODULE_ENABLED` |
+| [67](../Inc/stm32f4xx_hal_conf.h#L67) | 预处理 | `#define HAL_UART_MODULE_ENABLED` |
+| [73](../Inc/stm32f4xx_hal_conf.h#L73) | 预处理 | `#define HAL_PCD_MODULE_ENABLED` |
+| [84](../Inc/stm32f4xx_hal_conf.h#L84) | 预处理 | `#define HAL_GPIO_MODULE_ENABLED` |
+| [85](../Inc/stm32f4xx_hal_conf.h#L85) | 预处理 | `#define HAL_EXTI_MODULE_ENABLED` |
+| [86](../Inc/stm32f4xx_hal_conf.h#L86) | 预处理 | `#define HAL_DMA_MODULE_ENABLED` |
+| [87](../Inc/stm32f4xx_hal_conf.h#L87) | 预处理 | `#define HAL_RCC_MODULE_ENABLED` |
+| [88](../Inc/stm32f4xx_hal_conf.h#L88) | 预处理 | `#define HAL_FLASH_MODULE_ENABLED` |
+| [89](../Inc/stm32f4xx_hal_conf.h#L89) | 预处理 | `#define HAL_PWR_MODULE_ENABLED` |
+| [90](../Inc/stm32f4xx_hal_conf.h#L90) | 预处理 | `#define HAL_CORTEX_MODULE_ENABLED` |
+| [98](../Inc/stm32f4xx_hal_conf.h#L98) | 预处理 | `#if !defined  (HSE_VALUE)` |
+| [99](../Inc/stm32f4xx_hal_conf.h#L99) | 预处理 | `#define HSE_VALUE    12000000U /*!< Value of the External oscillator in Hz */` |
+| [100](../Inc/stm32f4xx_hal_conf.h#L100) | 预处理 | `#endif /* HSE_VALUE */` |
+| [102](../Inc/stm32f4xx_hal_conf.h#L102) | 预处理 | `#if !defined  (HSE_STARTUP_TIMEOUT)` |
+| [103](../Inc/stm32f4xx_hal_conf.h#L103) | 预处理 | `#define HSE_STARTUP_TIMEOUT    100U   /*!< Time out for HSE start up, in ms */` |
+| [104](../Inc/stm32f4xx_hal_conf.h#L104) | 预处理 | `#endif /* HSE_STARTUP_TIMEOUT */` |
+| [111](../Inc/stm32f4xx_hal_conf.h#L111) | 预处理 | `#if !defined  (HSI_VALUE)` |
+| [112](../Inc/stm32f4xx_hal_conf.h#L112) | 预处理 | `#define HSI_VALUE    ((uint32_t)16000000U) /*!< Value of the Internal oscillator in Hz*/` |
+| [113](../Inc/stm32f4xx_hal_conf.h#L113) | 预处理 | `#endif /* HSI_VALUE */` |
+| [118](../Inc/stm32f4xx_hal_conf.h#L118) | 预处理 | `#if !defined  (LSI_VALUE)` |
+| [119](../Inc/stm32f4xx_hal_conf.h#L119) | 预处理 | `#define LSI_VALUE  32000U       /*!< LSI Typical Value in Hz*/` |
+| [120](../Inc/stm32f4xx_hal_conf.h#L120) | 预处理 | `#endif /* LSI_VALUE */                      /*!< Value of the Internal Low Speed oscillator in Hz` |
+| [126](../Inc/stm32f4xx_hal_conf.h#L126) | 预处理 | `#if !defined  (LSE_VALUE)` |
+| [127](../Inc/stm32f4xx_hal_conf.h#L127) | 预处理 | `#define LSE_VALUE  32768U    /*!< Value of the External Low Speed oscillator in Hz */` |
+| [128](../Inc/stm32f4xx_hal_conf.h#L128) | 预处理 | `#endif /* LSE_VALUE */` |
+| [130](../Inc/stm32f4xx_hal_conf.h#L130) | 预处理 | `#if !defined  (LSE_STARTUP_TIMEOUT)` |
+| [131](../Inc/stm32f4xx_hal_conf.h#L131) | 预处理 | `#define LSE_STARTUP_TIMEOUT    5000U   /*!< Time out for LSE start up, in ms */` |
+| [132](../Inc/stm32f4xx_hal_conf.h#L132) | 预处理 | `#endif /* LSE_STARTUP_TIMEOUT */` |
+| [139](../Inc/stm32f4xx_hal_conf.h#L139) | 预处理 | `#if !defined  (EXTERNAL_CLOCK_VALUE)` |
+| [140](../Inc/stm32f4xx_hal_conf.h#L140) | 预处理 | `#define EXTERNAL_CLOCK_VALUE    12288000U /*!< Value of the External audio frequency in Hz*/` |
+| [141](../Inc/stm32f4xx_hal_conf.h#L141) | 预处理 | `#endif /* EXTERNAL_CLOCK_VALUE */` |
+| [150](../Inc/stm32f4xx_hal_conf.h#L150) | 预处理 | `#define  VDD_VALUE		      3300U /*!< Value of VDD in mv */` |
+| [151](../Inc/stm32f4xx_hal_conf.h#L151) | 预处理 | `#define  TICK_INT_PRIORITY            15U   /*!< tick interrupt priority */` |
+| [152](../Inc/stm32f4xx_hal_conf.h#L152) | 预处理 | `#define  USE_RTOS                     0U` |
+| [153](../Inc/stm32f4xx_hal_conf.h#L153) | 预处理 | `#define  PREFETCH_ENABLE              1U` |
+| [154](../Inc/stm32f4xx_hal_conf.h#L154) | 预处理 | `#define  INSTRUCTION_CACHE_ENABLE     1U` |
+| [155](../Inc/stm32f4xx_hal_conf.h#L155) | 预处理 | `#define  DATA_CACHE_ENABLE            1U` |
+| [157](../Inc/stm32f4xx_hal_conf.h#L157) | 预处理 | `#define  USE_HAL_ADC_REGISTER_CALLBACKS         0U /* ADC register callback disabled       */` |
+| [158](../Inc/stm32f4xx_hal_conf.h#L158) | 预处理 | `#define  USE_HAL_CAN_REGISTER_CALLBACKS         0U /* CAN register callback disabled       */` |
+| [159](../Inc/stm32f4xx_hal_conf.h#L159) | 预处理 | `#define  USE_HAL_CEC_REGISTER_CALLBACKS         0U /* CEC register callback disabled       */` |
+| [160](../Inc/stm32f4xx_hal_conf.h#L160) | 预处理 | `#define  USE_HAL_CRYP_REGISTER_CALLBACKS        0U /* CRYP register callback disabled      */` |
+| [161](../Inc/stm32f4xx_hal_conf.h#L161) | 预处理 | `#define  USE_HAL_DAC_REGISTER_CALLBACKS         0U /* DAC register callback disabled       */` |
+| [162](../Inc/stm32f4xx_hal_conf.h#L162) | 预处理 | `#define  USE_HAL_DCMI_REGISTER_CALLBACKS        0U /* DCMI register callback disabled      */` |
+| [163](../Inc/stm32f4xx_hal_conf.h#L163) | 预处理 | `#define  USE_HAL_DFSDM_REGISTER_CALLBACKS       0U /* DFSDM register callback disabled     */` |
+| [164](../Inc/stm32f4xx_hal_conf.h#L164) | 预处理 | `#define  USE_HAL_DMA2D_REGISTER_CALLBACKS       0U /* DMA2D register callback disabled     */` |
+| [165](../Inc/stm32f4xx_hal_conf.h#L165) | 预处理 | `#define  USE_HAL_DSI_REGISTER_CALLBACKS         0U /* DSI register callback disabled       */` |
+| [166](../Inc/stm32f4xx_hal_conf.h#L166) | 预处理 | `#define  USE_HAL_ETH_REGISTER_CALLBACKS         0U /* ETH register callback disabled       */` |
+| [167](../Inc/stm32f4xx_hal_conf.h#L167) | 预处理 | `#define  USE_HAL_HASH_REGISTER_CALLBACKS        0U /* HASH register callback disabled      */` |
+| [168](../Inc/stm32f4xx_hal_conf.h#L168) | 预处理 | `#define  USE_HAL_HCD_REGISTER_CALLBACKS         0U /* HCD register callback disabled       */` |
+| [169](../Inc/stm32f4xx_hal_conf.h#L169) | 预处理 | `#define  USE_HAL_I2C_REGISTER_CALLBACKS         0U /* I2C register callback disabled       */` |
+| [170](../Inc/stm32f4xx_hal_conf.h#L170) | 预处理 | `#define  USE_HAL_FMPI2C_REGISTER_CALLBACKS      0U /* FMPI2C register callback disabled    */` |
+| [171](../Inc/stm32f4xx_hal_conf.h#L171) | 预处理 | `#define  USE_HAL_FMPSMBUS_REGISTER_CALLBACKS    0U /* FMPSMBUS register callback disabled  */` |
+| [172](../Inc/stm32f4xx_hal_conf.h#L172) | 预处理 | `#define  USE_HAL_I2S_REGISTER_CALLBACKS         0U /* I2S register callback disabled       */` |
+| [173](../Inc/stm32f4xx_hal_conf.h#L173) | 预处理 | `#define  USE_HAL_IRDA_REGISTER_CALLBACKS        0U /* IRDA register callback disabled      */` |
+| [174](../Inc/stm32f4xx_hal_conf.h#L174) | 预处理 | `#define  USE_HAL_LPTIM_REGISTER_CALLBACKS       0U /* LPTIM register callback disabled     */` |
+| [175](../Inc/stm32f4xx_hal_conf.h#L175) | 预处理 | `#define  USE_HAL_LTDC_REGISTER_CALLBACKS        0U /* LTDC register callback disabled      */` |
+| [176](../Inc/stm32f4xx_hal_conf.h#L176) | 预处理 | `#define  USE_HAL_MMC_REGISTER_CALLBACKS         0U /* MMC register callback disabled       */` |
+| [177](../Inc/stm32f4xx_hal_conf.h#L177) | 预处理 | `#define  USE_HAL_NAND_REGISTER_CALLBACKS        0U /* NAND register callback disabled      */` |
+| [178](../Inc/stm32f4xx_hal_conf.h#L178) | 预处理 | `#define  USE_HAL_NOR_REGISTER_CALLBACKS         0U /* NOR register callback disabled       */` |
+| [179](../Inc/stm32f4xx_hal_conf.h#L179) | 预处理 | `#define  USE_HAL_PCCARD_REGISTER_CALLBACKS      0U /* PCCARD register callback disabled    */` |
+| [180](../Inc/stm32f4xx_hal_conf.h#L180) | 预处理 | `#define  USE_HAL_PCD_REGISTER_CALLBACKS         0U /* PCD register callback disabled       */` |
+| [181](../Inc/stm32f4xx_hal_conf.h#L181) | 预处理 | `#define  USE_HAL_QSPI_REGISTER_CALLBACKS        0U /* QSPI register callback disabled      */` |
+| [182](../Inc/stm32f4xx_hal_conf.h#L182) | 预处理 | `#define  USE_HAL_RNG_REGISTER_CALLBACKS         0U /* RNG register callback disabled       */` |
+| [183](../Inc/stm32f4xx_hal_conf.h#L183) | 预处理 | `#define  USE_HAL_RTC_REGISTER_CALLBACKS         0U /* RTC register callback disabled       */` |
+| [184](../Inc/stm32f4xx_hal_conf.h#L184) | 预处理 | `#define  USE_HAL_SAI_REGISTER_CALLBACKS         0U /* SAI register callback disabled       */` |
+| [185](../Inc/stm32f4xx_hal_conf.h#L185) | 预处理 | `#define  USE_HAL_SD_REGISTER_CALLBACKS          0U /* SD register callback disabled        */` |
+| [186](../Inc/stm32f4xx_hal_conf.h#L186) | 预处理 | `#define  USE_HAL_SMARTCARD_REGISTER_CALLBACKS   0U /* SMARTCARD register callback disabled */` |
+| [187](../Inc/stm32f4xx_hal_conf.h#L187) | 预处理 | `#define  USE_HAL_SDRAM_REGISTER_CALLBACKS       0U /* SDRAM register callback disabled     */` |
+| [188](../Inc/stm32f4xx_hal_conf.h#L188) | 预处理 | `#define  USE_HAL_SRAM_REGISTER_CALLBACKS        0U /* SRAM register callback disabled      */` |
+| [189](../Inc/stm32f4xx_hal_conf.h#L189) | 预处理 | `#define  USE_HAL_SPDIFRX_REGISTER_CALLBACKS     0U /* SPDIFRX register callback disabled   */` |
+| [190](../Inc/stm32f4xx_hal_conf.h#L190) | 预处理 | `#define  USE_HAL_SMBUS_REGISTER_CALLBACKS       0U /* SMBUS register callback disabled     */` |
+| [191](../Inc/stm32f4xx_hal_conf.h#L191) | 预处理 | `#define  USE_HAL_SPI_REGISTER_CALLBACKS         0U /* SPI register callback disabled       */` |
+| [192](../Inc/stm32f4xx_hal_conf.h#L192) | 预处理 | `#define  USE_HAL_TIM_REGISTER_CALLBACKS         0U /* TIM register callback disabled       */` |
+| [193](../Inc/stm32f4xx_hal_conf.h#L193) | 预处理 | `#define  USE_HAL_UART_REGISTER_CALLBACKS        0U /* UART register callback disabled      */` |
+| [194](../Inc/stm32f4xx_hal_conf.h#L194) | 预处理 | `#define  USE_HAL_USART_REGISTER_CALLBACKS       0U /* USART register callback disabled     */` |
+| [195](../Inc/stm32f4xx_hal_conf.h#L195) | 预处理 | `#define  USE_HAL_WWDG_REGISTER_CALLBACKS        0U /* WWDG register callback disabled      */` |
+| [209](../Inc/stm32f4xx_hal_conf.h#L209) | 预处理 | `#define MAC_ADDR0   2U` |
+| [210](../Inc/stm32f4xx_hal_conf.h#L210) | 预处理 | `#define MAC_ADDR1   0U` |
+| [211](../Inc/stm32f4xx_hal_conf.h#L211) | 预处理 | `#define MAC_ADDR2   0U` |
+| [212](../Inc/stm32f4xx_hal_conf.h#L212) | 预处理 | `#define MAC_ADDR3   0U` |
+| [213](../Inc/stm32f4xx_hal_conf.h#L213) | 预处理 | `#define MAC_ADDR4   0U` |
+| [214](../Inc/stm32f4xx_hal_conf.h#L214) | 预处理 | `#define MAC_ADDR5   0U` |
+| [217](../Inc/stm32f4xx_hal_conf.h#L217) | 预处理 | `#define ETH_RX_BUF_SIZE                 /* buffer size for receive               */` |
+| [218](../Inc/stm32f4xx_hal_conf.h#L218) | 预处理 | `#define ETH_TX_BUF_SIZE                ETH_MAX_PACKET_SIZE /* buffer size for transmit              */` |
+| [219](../Inc/stm32f4xx_hal_conf.h#L219) | 预处理 | `#define ETH_RXBUFNB                    4U       /* 4 Rx buffers of size ETH_RX_BUF_SIZE  */` |
+| [220](../Inc/stm32f4xx_hal_conf.h#L220) | 预处理 | `#define ETH_TXBUFNB                    4U       /* 4 Tx buffers of size ETH_TX_BUF_SIZE  */` |
+| [225](../Inc/stm32f4xx_hal_conf.h#L225) | 预处理 | `#define DP83848_PHY_ADDRESS` |
+| [227](../Inc/stm32f4xx_hal_conf.h#L227) | 预处理 | `#define PHY_RESET_DELAY                 0x000000FFU` |
+| [229](../Inc/stm32f4xx_hal_conf.h#L229) | 预处理 | `#define PHY_CONFIG_DELAY                0x00000FFFU` |
+| [231](../Inc/stm32f4xx_hal_conf.h#L231) | 预处理 | `#define PHY_READ_TO                     0x0000FFFFU` |
+| [232](../Inc/stm32f4xx_hal_conf.h#L232) | 预处理 | `#define PHY_WRITE_TO                    0x0000FFFFU` |
+| [236](../Inc/stm32f4xx_hal_conf.h#L236) | 预处理 | `#define PHY_BCR                         ((uint16_t)0x0000U)    /*!< Transceiver Basic Control Register   */` |
+| [237](../Inc/stm32f4xx_hal_conf.h#L237) | 预处理 | `#define PHY_BSR                         ((uint16_t)0x0001U)    /*!< Transceiver Basic Status Register    */` |
+| [239](../Inc/stm32f4xx_hal_conf.h#L239) | 预处理 | `#define PHY_RESET                       ((uint16_t)0x8000U)  /*!< PHY Reset */` |
+| [240](../Inc/stm32f4xx_hal_conf.h#L240) | 预处理 | `#define PHY_LOOPBACK                    ((uint16_t)0x4000U)  /*!< Select loop-back mode */` |
+| [241](../Inc/stm32f4xx_hal_conf.h#L241) | 预处理 | `#define PHY_FULLDUPLEX_100M             ((uint16_t)0x2100U)  /*!< Set the full-duplex mode at 100 Mb/s */` |
+| [242](../Inc/stm32f4xx_hal_conf.h#L242) | 预处理 | `#define PHY_HALFDUPLEX_100M             ((uint16_t)0x2000U)  /*!< Set the half-duplex mode at 100 Mb/s */` |
+| [243](../Inc/stm32f4xx_hal_conf.h#L243) | 预处理 | `#define PHY_FULLDUPLEX_10M              ((uint16_t)0x0100U)  /*!< Set the full-duplex mode at 10 Mb/s  */` |
+| [244](../Inc/stm32f4xx_hal_conf.h#L244) | 预处理 | `#define PHY_HALFDUPLEX_10M              ((uint16_t)0x0000U)  /*!< Set the half-duplex mode at 10 Mb/s  */` |
+| [245](../Inc/stm32f4xx_hal_conf.h#L245) | 预处理 | `#define PHY_AUTONEGOTIATION             ((uint16_t)0x1000U)  /*!< Enable auto-negotiation function     */` |
+| [246](../Inc/stm32f4xx_hal_conf.h#L246) | 预处理 | `#define PHY_RESTART_AUTONEGOTIATION     ((uint16_t)0x0200U)  /*!< Restart auto-negotiation function    */` |
+| [247](../Inc/stm32f4xx_hal_conf.h#L247) | 预处理 | `#define PHY_POWERDOWN                   ((uint16_t)0x0800U)  /*!< Select the power down mode           */` |
+| [248](../Inc/stm32f4xx_hal_conf.h#L248) | 预处理 | `#define PHY_ISOLATE                     ((uint16_t)0x0400U)  /*!< Isolate PHY from MII                 */` |
+| [250](../Inc/stm32f4xx_hal_conf.h#L250) | 预处理 | `#define PHY_AUTONEGO_COMPLETE           ((uint16_t)0x0020U)  /*!< Auto-Negotiation process completed   */` |
+| [251](../Inc/stm32f4xx_hal_conf.h#L251) | 预处理 | `#define PHY_LINKED_STATUS               ((uint16_t)0x0004U)  /*!< Valid link established               */` |
+| [252](../Inc/stm32f4xx_hal_conf.h#L252) | 预处理 | `#define PHY_JABBER_DETECTION            ((uint16_t)0x0002U)  /*!< Jabber condition detected            */` |
+| [255](../Inc/stm32f4xx_hal_conf.h#L255) | 预处理 | `#define PHY_SR                          ((uint16_t))    /*!< PHY status register Offset                      */` |
+| [257](../Inc/stm32f4xx_hal_conf.h#L257) | 预处理 | `#define PHY_SPEED_STATUS                ((uint16_t))  /*!< PHY Speed mask                                  */` |
+| [258](../Inc/stm32f4xx_hal_conf.h#L258) | 预处理 | `#define PHY_DUPLEX_STATUS               ((uint16_t))  /*!< PHY Duplex mask                                 */` |
+| [267](../Inc/stm32f4xx_hal_conf.h#L267) | 预处理 | `#define USE_SPI_CRC                     0U` |
+| [274](../Inc/stm32f4xx_hal_conf.h#L274) | 预处理 | `#ifdef HAL_RCC_MODULE_ENABLED` |
+| [276](../Inc/stm32f4xx_hal_conf.h#L276) | 预处理 | `#endif /* HAL_RCC_MODULE_ENABLED */` |
+| [278](../Inc/stm32f4xx_hal_conf.h#L278) | 预处理 | `#ifdef HAL_GPIO_MODULE_ENABLED` |
+| [280](../Inc/stm32f4xx_hal_conf.h#L280) | 预处理 | `#endif /* HAL_GPIO_MODULE_ENABLED */` |
+| [282](../Inc/stm32f4xx_hal_conf.h#L282) | 预处理 | `#ifdef HAL_EXTI_MODULE_ENABLED` |
+| [284](../Inc/stm32f4xx_hal_conf.h#L284) | 预处理 | `#endif /* HAL_EXTI_MODULE_ENABLED */` |
+| [286](../Inc/stm32f4xx_hal_conf.h#L286) | 预处理 | `#ifdef HAL_DMA_MODULE_ENABLED` |
+| [288](../Inc/stm32f4xx_hal_conf.h#L288) | 预处理 | `#endif /* HAL_DMA_MODULE_ENABLED */` |
+| [290](../Inc/stm32f4xx_hal_conf.h#L290) | 预处理 | `#ifdef HAL_CORTEX_MODULE_ENABLED` |
+| [292](../Inc/stm32f4xx_hal_conf.h#L292) | 预处理 | `#endif /* HAL_CORTEX_MODULE_ENABLED */` |
+| [294](../Inc/stm32f4xx_hal_conf.h#L294) | 预处理 | `#ifdef HAL_ADC_MODULE_ENABLED` |
+| [296](../Inc/stm32f4xx_hal_conf.h#L296) | 预处理 | `#endif /* HAL_ADC_MODULE_ENABLED */` |
+| [298](../Inc/stm32f4xx_hal_conf.h#L298) | 预处理 | `#ifdef HAL_CAN_MODULE_ENABLED` |
+| [300](../Inc/stm32f4xx_hal_conf.h#L300) | 预处理 | `#endif /* HAL_CAN_MODULE_ENABLED */` |
+| [302](../Inc/stm32f4xx_hal_conf.h#L302) | 预处理 | `#ifdef HAL_CAN_LEGACY_MODULE_ENABLED` |
+| [304](../Inc/stm32f4xx_hal_conf.h#L304) | 预处理 | `#endif /* HAL_CAN_LEGACY_MODULE_ENABLED */` |
+| [306](../Inc/stm32f4xx_hal_conf.h#L306) | 预处理 | `#ifdef HAL_CRC_MODULE_ENABLED` |
+| [308](../Inc/stm32f4xx_hal_conf.h#L308) | 预处理 | `#endif /* HAL_CRC_MODULE_ENABLED */` |
+| [310](../Inc/stm32f4xx_hal_conf.h#L310) | 预处理 | `#ifdef HAL_CRYP_MODULE_ENABLED` |
+| [312](../Inc/stm32f4xx_hal_conf.h#L312) | 预处理 | `#endif /* HAL_CRYP_MODULE_ENABLED */` |
+| [314](../Inc/stm32f4xx_hal_conf.h#L314) | 预处理 | `#ifdef HAL_DMA2D_MODULE_ENABLED` |
+| [316](../Inc/stm32f4xx_hal_conf.h#L316) | 预处理 | `#endif /* HAL_DMA2D_MODULE_ENABLED */` |
+| [318](../Inc/stm32f4xx_hal_conf.h#L318) | 预处理 | `#ifdef HAL_DAC_MODULE_ENABLED` |
+| [320](../Inc/stm32f4xx_hal_conf.h#L320) | 预处理 | `#endif /* HAL_DAC_MODULE_ENABLED */` |
+| [322](../Inc/stm32f4xx_hal_conf.h#L322) | 预处理 | `#ifdef HAL_DCMI_MODULE_ENABLED` |
+| [324](../Inc/stm32f4xx_hal_conf.h#L324) | 预处理 | `#endif /* HAL_DCMI_MODULE_ENABLED */` |
+| [326](../Inc/stm32f4xx_hal_conf.h#L326) | 预处理 | `#ifdef HAL_ETH_MODULE_ENABLED` |
+| [328](../Inc/stm32f4xx_hal_conf.h#L328) | 预处理 | `#endif /* HAL_ETH_MODULE_ENABLED */` |
+| [330](../Inc/stm32f4xx_hal_conf.h#L330) | 预处理 | `#ifdef HAL_ETH_LEGACY_MODULE_ENABLED` |
+| [332](../Inc/stm32f4xx_hal_conf.h#L332) | 预处理 | `#endif /* HAL_ETH_LEGACY_MODULE_ENABLED */` |
+| [334](../Inc/stm32f4xx_hal_conf.h#L334) | 预处理 | `#ifdef HAL_FLASH_MODULE_ENABLED` |
+| [336](../Inc/stm32f4xx_hal_conf.h#L336) | 预处理 | `#endif /* HAL_FLASH_MODULE_ENABLED */` |
+| [338](../Inc/stm32f4xx_hal_conf.h#L338) | 预处理 | `#ifdef HAL_SRAM_MODULE_ENABLED` |
+| [340](../Inc/stm32f4xx_hal_conf.h#L340) | 预处理 | `#endif /* HAL_SRAM_MODULE_ENABLED */` |
+| [342](../Inc/stm32f4xx_hal_conf.h#L342) | 预处理 | `#ifdef HAL_NOR_MODULE_ENABLED` |
+| [344](../Inc/stm32f4xx_hal_conf.h#L344) | 预处理 | `#endif /* HAL_NOR_MODULE_ENABLED */` |
+| [346](../Inc/stm32f4xx_hal_conf.h#L346) | 预处理 | `#ifdef HAL_NAND_MODULE_ENABLED` |
+| [348](../Inc/stm32f4xx_hal_conf.h#L348) | 预处理 | `#endif /* HAL_NAND_MODULE_ENABLED */` |
+| [350](../Inc/stm32f4xx_hal_conf.h#L350) | 预处理 | `#ifdef HAL_PCCARD_MODULE_ENABLED` |
+| [352](../Inc/stm32f4xx_hal_conf.h#L352) | 预处理 | `#endif /* HAL_PCCARD_MODULE_ENABLED */` |
+| [354](../Inc/stm32f4xx_hal_conf.h#L354) | 预处理 | `#ifdef HAL_SDRAM_MODULE_ENABLED` |
+| [356](../Inc/stm32f4xx_hal_conf.h#L356) | 预处理 | `#endif /* HAL_SDRAM_MODULE_ENABLED */` |
+| [358](../Inc/stm32f4xx_hal_conf.h#L358) | 预处理 | `#ifdef HAL_HASH_MODULE_ENABLED` |
+| [360](../Inc/stm32f4xx_hal_conf.h#L360) | 预处理 | `#endif /* HAL_HASH_MODULE_ENABLED */` |
+| [362](../Inc/stm32f4xx_hal_conf.h#L362) | 预处理 | `#ifdef HAL_I2C_MODULE_ENABLED` |
+| [364](../Inc/stm32f4xx_hal_conf.h#L364) | 预处理 | `#endif /* HAL_I2C_MODULE_ENABLED */` |
+| [366](../Inc/stm32f4xx_hal_conf.h#L366) | 预处理 | `#ifdef HAL_SMBUS_MODULE_ENABLED` |
+| [368](../Inc/stm32f4xx_hal_conf.h#L368) | 预处理 | `#endif /* HAL_SMBUS_MODULE_ENABLED */` |
+| [370](../Inc/stm32f4xx_hal_conf.h#L370) | 预处理 | `#ifdef HAL_I2S_MODULE_ENABLED` |
+| [372](../Inc/stm32f4xx_hal_conf.h#L372) | 预处理 | `#endif /* HAL_I2S_MODULE_ENABLED */` |
+| [374](../Inc/stm32f4xx_hal_conf.h#L374) | 预处理 | `#ifdef HAL_IWDG_MODULE_ENABLED` |
+| [376](../Inc/stm32f4xx_hal_conf.h#L376) | 预处理 | `#endif /* HAL_IWDG_MODULE_ENABLED */` |
+| [378](../Inc/stm32f4xx_hal_conf.h#L378) | 预处理 | `#ifdef HAL_LTDC_MODULE_ENABLED` |
+| [380](../Inc/stm32f4xx_hal_conf.h#L380) | 预处理 | `#endif /* HAL_LTDC_MODULE_ENABLED */` |
+| [382](../Inc/stm32f4xx_hal_conf.h#L382) | 预处理 | `#ifdef HAL_PWR_MODULE_ENABLED` |
+| [384](../Inc/stm32f4xx_hal_conf.h#L384) | 预处理 | `#endif /* HAL_PWR_MODULE_ENABLED */` |
+| [386](../Inc/stm32f4xx_hal_conf.h#L386) | 预处理 | `#ifdef HAL_RNG_MODULE_ENABLED` |
+| [388](../Inc/stm32f4xx_hal_conf.h#L388) | 预处理 | `#endif /* HAL_RNG_MODULE_ENABLED */` |
+| [390](../Inc/stm32f4xx_hal_conf.h#L390) | 预处理 | `#ifdef HAL_RTC_MODULE_ENABLED` |
+| [392](../Inc/stm32f4xx_hal_conf.h#L392) | 预处理 | `#endif /* HAL_RTC_MODULE_ENABLED */` |
+| [394](../Inc/stm32f4xx_hal_conf.h#L394) | 预处理 | `#ifdef HAL_SAI_MODULE_ENABLED` |
+| [396](../Inc/stm32f4xx_hal_conf.h#L396) | 预处理 | `#endif /* HAL_SAI_MODULE_ENABLED */` |
+| [398](../Inc/stm32f4xx_hal_conf.h#L398) | 预处理 | `#ifdef HAL_SD_MODULE_ENABLED` |
+| [400](../Inc/stm32f4xx_hal_conf.h#L400) | 预处理 | `#endif /* HAL_SD_MODULE_ENABLED */` |
+| [402](../Inc/stm32f4xx_hal_conf.h#L402) | 预处理 | `#ifdef HAL_SPI_MODULE_ENABLED` |
+| [404](../Inc/stm32f4xx_hal_conf.h#L404) | 预处理 | `#endif /* HAL_SPI_MODULE_ENABLED */` |
+| [406](../Inc/stm32f4xx_hal_conf.h#L406) | 预处理 | `#ifdef HAL_TIM_MODULE_ENABLED` |
+| [408](../Inc/stm32f4xx_hal_conf.h#L408) | 预处理 | `#endif /* HAL_TIM_MODULE_ENABLED */` |
+| [410](../Inc/stm32f4xx_hal_conf.h#L410) | 预处理 | `#ifdef HAL_UART_MODULE_ENABLED` |
+| [412](../Inc/stm32f4xx_hal_conf.h#L412) | 预处理 | `#endif /* HAL_UART_MODULE_ENABLED */` |
+| [414](../Inc/stm32f4xx_hal_conf.h#L414) | 预处理 | `#ifdef HAL_USART_MODULE_ENABLED` |
+| [416](../Inc/stm32f4xx_hal_conf.h#L416) | 预处理 | `#endif /* HAL_USART_MODULE_ENABLED */` |
+| [418](../Inc/stm32f4xx_hal_conf.h#L418) | 预处理 | `#ifdef HAL_IRDA_MODULE_ENABLED` |
+| [420](../Inc/stm32f4xx_hal_conf.h#L420) | 预处理 | `#endif /* HAL_IRDA_MODULE_ENABLED */` |
+| [422](../Inc/stm32f4xx_hal_conf.h#L422) | 预处理 | `#ifdef HAL_SMARTCARD_MODULE_ENABLED` |
+| [424](../Inc/stm32f4xx_hal_conf.h#L424) | 预处理 | `#endif /* HAL_SMARTCARD_MODULE_ENABLED */` |
+| [426](../Inc/stm32f4xx_hal_conf.h#L426) | 预处理 | `#ifdef HAL_WWDG_MODULE_ENABLED` |
+| [428](../Inc/stm32f4xx_hal_conf.h#L428) | 预处理 | `#endif /* HAL_WWDG_MODULE_ENABLED */` |
+| [430](../Inc/stm32f4xx_hal_conf.h#L430) | 预处理 | `#ifdef HAL_PCD_MODULE_ENABLED` |
+| [432](../Inc/stm32f4xx_hal_conf.h#L432) | 预处理 | `#endif /* HAL_PCD_MODULE_ENABLED */` |
+| [434](../Inc/stm32f4xx_hal_conf.h#L434) | 预处理 | `#ifdef HAL_HCD_MODULE_ENABLED` |
+| [436](../Inc/stm32f4xx_hal_conf.h#L436) | 预处理 | `#endif /* HAL_HCD_MODULE_ENABLED */` |
+| [438](../Inc/stm32f4xx_hal_conf.h#L438) | 预处理 | `#ifdef HAL_DSI_MODULE_ENABLED` |
+| [440](../Inc/stm32f4xx_hal_conf.h#L440) | 预处理 | `#endif /* HAL_DSI_MODULE_ENABLED */` |
+| [442](../Inc/stm32f4xx_hal_conf.h#L442) | 预处理 | `#ifdef HAL_QSPI_MODULE_ENABLED` |
+| [444](../Inc/stm32f4xx_hal_conf.h#L444) | 预处理 | `#endif /* HAL_QSPI_MODULE_ENABLED */` |
+| [446](../Inc/stm32f4xx_hal_conf.h#L446) | 预处理 | `#ifdef HAL_CEC_MODULE_ENABLED` |
+| [448](../Inc/stm32f4xx_hal_conf.h#L448) | 预处理 | `#endif /* HAL_CEC_MODULE_ENABLED */` |
+| [450](../Inc/stm32f4xx_hal_conf.h#L450) | 预处理 | `#ifdef HAL_FMPI2C_MODULE_ENABLED` |
+| [452](../Inc/stm32f4xx_hal_conf.h#L452) | 预处理 | `#endif /* HAL_FMPI2C_MODULE_ENABLED */` |
+| [454](../Inc/stm32f4xx_hal_conf.h#L454) | 预处理 | `#ifdef HAL_FMPSMBUS_MODULE_ENABLED` |
+| [456](../Inc/stm32f4xx_hal_conf.h#L456) | 预处理 | `#endif /* HAL_FMPSMBUS_MODULE_ENABLED */` |
+| [458](../Inc/stm32f4xx_hal_conf.h#L458) | 预处理 | `#ifdef HAL_SPDIFRX_MODULE_ENABLED` |
+| [460](../Inc/stm32f4xx_hal_conf.h#L460) | 预处理 | `#endif /* HAL_SPDIFRX_MODULE_ENABLED */` |
+| [462](../Inc/stm32f4xx_hal_conf.h#L462) | 预处理 | `#ifdef HAL_DFSDM_MODULE_ENABLED` |
+| [464](../Inc/stm32f4xx_hal_conf.h#L464) | 预处理 | `#endif /* HAL_DFSDM_MODULE_ENABLED */` |
+| [466](../Inc/stm32f4xx_hal_conf.h#L466) | 预处理 | `#ifdef HAL_LPTIM_MODULE_ENABLED` |
+| [468](../Inc/stm32f4xx_hal_conf.h#L468) | 预处理 | `#endif /* HAL_LPTIM_MODULE_ENABLED */` |
+| [470](../Inc/stm32f4xx_hal_conf.h#L470) | 预处理 | `#ifdef HAL_MMC_MODULE_ENABLED` |
+| [472](../Inc/stm32f4xx_hal_conf.h#L472) | 预处理 | `#endif /* HAL_MMC_MODULE_ENABLED */` |
+| [475](../Inc/stm32f4xx_hal_conf.h#L475) | 预处理 | `#ifdef  USE_FULL_ASSERT` |
+| [484](../Inc/stm32f4xx_hal_conf.h#L484) | 预处理 | `#define assert_param(expr) ((expr) ? (void)0U : assert_failed((uint8_t *)__FILE__, __LINE__))` |
+| [487](../Inc/stm32f4xx_hal_conf.h#L487) | 预处理 | `#else` |
+| [488](../Inc/stm32f4xx_hal_conf.h#L488) | 预处理 | `#define assert_param(expr) ((void)0U)` |
+| [489](../Inc/stm32f4xx_hal_conf.h#L489) | 预处理 | `#endif /* USE_FULL_ASSERT */` |
+| [491](../Inc/stm32f4xx_hal_conf.h#L491) | 预处理 | `#ifdef __cplusplus` |
+| [493](../Inc/stm32f4xx_hal_conf.h#L493) | 预处理 | `#endif` |
+| [495](../Inc/stm32f4xx_hal_conf.h#L495) | 预处理 | `#endif /* __STM32F4xx_HAL_CONF_H */` |
 
 ## Inc/stm32f4xx_it.h
 
-源文件：[打开 Inc/stm32f4xx_it.h](../Inc/stm32f4xx_it.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Inc/stm32f4xx_it.h:22](../Inc/stm32f4xx_it.h#L22) | `__STM32F4xx_IT_H` | 空定义 | `#ifndef __STM32F4xx_IT_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [21](../Inc/stm32f4xx_it.h#L21) | 预处理 | `#ifndef __STM32F4xx_IT_H` |
+| [22](../Inc/stm32f4xx_it.h#L22) | 预处理 | `#define __STM32F4xx_IT_H` |
+| [24](../Inc/stm32f4xx_it.h#L24) | 预处理 | `#ifdef __cplusplus` |
+| [26](../Inc/stm32f4xx_it.h#L26) | 预处理 | `#endif` |
+| [82](../Inc/stm32f4xx_it.h#L82) | 预处理 | `#ifdef __cplusplus` |
+| [84](../Inc/stm32f4xx_it.h#L84) | 预处理 | `#endif` |
+| [86](../Inc/stm32f4xx_it.h#L86) | 预处理 | `#endif /* __STM32F4xx_IT_H */` |
 
 ## Inc/tim.h
 
-源文件：[打开 Inc/tim.h](../Inc/tim.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Inc/tim.h:22](../Inc/tim.h#L22) | `__TIM_H__` | 空定义 | `#ifndef __TIM_H__` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [21](../Inc/tim.h#L21) | 预处理 | `#ifndef __TIM_H__` |
+| [22](../Inc/tim.h#L22) | 预处理 | `#define __TIM_H__` |
+| [24](../Inc/tim.h#L24) | 预处理 | `#ifdef __cplusplus` |
+| [26](../Inc/tim.h#L26) | 预处理 | `#endif` |
+| [67](../Inc/tim.h#L67) | 预处理 | `#ifdef __cplusplus` |
+| [69](../Inc/tim.h#L69) | 预处理 | `#endif` |
+| [71](../Inc/tim.h#L71) | 预处理 | `#endif /* __TIM_H__ */` |
 
 ## Inc/usart.h
 
-源文件：[打开 Inc/usart.h](../Inc/usart.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Inc/usart.h:22](../Inc/usart.h#L22) | `__USART_H__` | 空定义 | `#ifndef __USART_H__` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [21](../Inc/usart.h#L21) | 预处理 | `#ifndef __USART_H__` |
+| [22](../Inc/usart.h#L22) | 预处理 | `#define __USART_H__` |
+| [24](../Inc/usart.h#L24) | 预处理 | `#ifdef __cplusplus` |
+| [26](../Inc/usart.h#L26) | 预处理 | `#endif` |
+| [62](../Inc/usart.h#L62) | 预处理 | `#ifdef __cplusplus` |
+| [64](../Inc/usart.h#L64) | 预处理 | `#endif` |
+| [66](../Inc/usart.h#L66) | 预处理 | `#endif /* __USART_H__ */` |
 
 ## Inc/usb_device.h
 
-源文件：[打开 Inc/usb_device.h](../Inc/usb_device.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Inc/usb_device.h:23](../Inc/usb_device.h#L23) | `__USB_DEVICE__H__` | 空定义 | `#ifndef __USB_DEVICE__H__` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [22](../Inc/usb_device.h#L22) | 预处理 | `#ifndef __USB_DEVICE__H__` |
+| [23](../Inc/usb_device.h#L23) | 预处理 | `#define __USB_DEVICE__H__` |
+| [25](../Inc/usb_device.h#L25) | 预处理 | `#ifdef __cplusplus` |
+| [27](../Inc/usb_device.h#L27) | 预处理 | `#endif` |
+| [98](../Inc/usb_device.h#L98) | 预处理 | `#ifdef __cplusplus` |
+| [100](../Inc/usb_device.h#L100) | 预处理 | `#endif` |
+| [102](../Inc/usb_device.h#L102) | 预处理 | `#endif /* __USB_DEVICE__H__ */` |
 
 ## Inc/usbd_cdc_if.h
 
-源文件：[打开 Inc/usbd_cdc_if.h](../Inc/usbd_cdc_if.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Inc/usbd_cdc_if.h:23](../Inc/usbd_cdc_if.h#L23) | `__USBD_CDC_IF_H__` | 空定义 | `#ifndef __USBD_CDC_IF_H__` |  |
-| [Inc/usbd_cdc_if.h:51](../Inc/usbd_cdc_if.h#L51) | `APP_RX_DATA_SIZE` | `2048` | `#ifndef __USBD_CDC_IF_H__` |  |
-| [Inc/usbd_cdc_if.h:52](../Inc/usbd_cdc_if.h#L52) | `APP_TX_DATA_SIZE` | `2048` | `#ifndef __USBD_CDC_IF_H__` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [22](../Inc/usbd_cdc_if.h#L22) | 预处理 | `#ifndef __USBD_CDC_IF_H__` |
+| [23](../Inc/usbd_cdc_if.h#L23) | 预处理 | `#define __USBD_CDC_IF_H__` |
+| [25](../Inc/usbd_cdc_if.h#L25) | 预处理 | `#ifdef __cplusplus` |
+| [27](../Inc/usbd_cdc_if.h#L27) | 预处理 | `#endif` |
+| [51](../Inc/usbd_cdc_if.h#L51) | 预处理 | `#define APP_RX_DATA_SIZE  2048` |
+| [52](../Inc/usbd_cdc_if.h#L52) | 预处理 | `#define APP_TX_DATA_SIZE  2048` |
+| [129](../Inc/usbd_cdc_if.h#L129) | 预处理 | `#ifdef __cplusplus` |
+| [131](../Inc/usbd_cdc_if.h#L131) | 预处理 | `#endif` |
+| [133](../Inc/usbd_cdc_if.h#L133) | 预处理 | `#endif /* __USBD_CDC_IF_H__ */` |
 
 ## Inc/usbd_conf.h
 
-源文件：[打开 Inc/usbd_conf.h](../Inc/usbd_conf.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Inc/usbd_conf.h:23](../Inc/usbd_conf.h#L23) | `__USBD_CONF__H__` | 空定义 | `#ifndef __USBD_CONF__H__` |  |
-| [Inc/usbd_conf.h:66](../Inc/usbd_conf.h#L66) | `USBD_MAX_NUM_INTERFACES` | `1U` | `#ifndef __USBD_CONF__H__` |  |
-| [Inc/usbd_conf.h:68](../Inc/usbd_conf.h#L68) | `USBD_MAX_NUM_CONFIGURATION` | `1U` | `#ifndef __USBD_CONF__H__` |  |
-| [Inc/usbd_conf.h:70](../Inc/usbd_conf.h#L70) | `USBD_MAX_STR_DESC_SIZ` | `512U` | `#ifndef __USBD_CONF__H__` |  |
-| [Inc/usbd_conf.h:72](../Inc/usbd_conf.h#L72) | `USBD_DEBUG_LEVEL` | `0U` | `#ifndef __USBD_CONF__H__` |  |
-| [Inc/usbd_conf.h:74](../Inc/usbd_conf.h#L74) | `USBD_LPM_ENABLED` | `0U` | `#ifndef __USBD_CONF__H__` |  |
-| [Inc/usbd_conf.h:76](../Inc/usbd_conf.h#L76) | `USBD_SELF_POWERED` | `1U` | `#ifndef __USBD_CONF__H__` |  |
-| [Inc/usbd_conf.h:80](../Inc/usbd_conf.h#L80) | `DEVICE_FS` | `0` | `#ifndef __USBD_CONF__H__` |  |
-| [Inc/usbd_conf.h:81](../Inc/usbd_conf.h#L81) | `DEVICE_HS` | `1` | `#ifndef __USBD_CONF__H__` |  |
-| [Inc/usbd_conf.h:94](../Inc/usbd_conf.h#L94) | `USBD_malloc` | `(void *)USBD_static_malloc` | `#ifndef __USBD_CONF__H__` |  |
-| [Inc/usbd_conf.h:97](../Inc/usbd_conf.h#L97) | `USBD_free` | `USBD_static_free` | `#ifndef __USBD_CONF__H__` |  |
-| [Inc/usbd_conf.h:100](../Inc/usbd_conf.h#L100) | `USBD_memset` | `memset` | `#ifndef __USBD_CONF__H__` |  |
-| [Inc/usbd_conf.h:103](../Inc/usbd_conf.h#L103) | `USBD_memcpy` | `memcpy` | `#ifndef __USBD_CONF__H__` |  |
-| [Inc/usbd_conf.h:106](../Inc/usbd_conf.h#L106) | `USBD_Delay` | `HAL_Delay` | `#ifndef __USBD_CONF__H__` |  |
-| [Inc/usbd_conf.h:111](../Inc/usbd_conf.h#L111) | `USBD_UsrLog(...)` | `printf(__VA_ARGS__); printf("\n");` | `#ifndef __USBD_CONF__H__；#if (USBD_DEBUG_LEVEL > 0)` |  |
-| [Inc/usbd_conf.h:114](../Inc/usbd_conf.h#L114) | `USBD_UsrLog(...)` | 空定义 | `#ifndef __USBD_CONF__H__；#if (USBD_DEBUG_LEVEL > 0) → #else` |  |
-| [Inc/usbd_conf.h:119](../Inc/usbd_conf.h#L119) | `USBD_ErrLog(...)` | `printf("ERROR: "); printf(__VA_ARGS__); printf("\n");` | `#ifndef __USBD_CONF__H__；#if (USBD_DEBUG_LEVEL > 1)` |  |
-| [Inc/usbd_conf.h:123](../Inc/usbd_conf.h#L123) | `USBD_ErrLog(...)` | 空定义 | `#ifndef __USBD_CONF__H__；#if (USBD_DEBUG_LEVEL > 1) → #else` |  |
-| [Inc/usbd_conf.h:127](../Inc/usbd_conf.h#L127) | `USBD_DbgLog(...)` | `printf("DEBUG : "); printf(__VA_ARGS__); printf("\n");` | `#ifndef __USBD_CONF__H__；#if (USBD_DEBUG_LEVEL > 2)` |  |
-| [Inc/usbd_conf.h:131](../Inc/usbd_conf.h#L131) | `USBD_DbgLog(...)` | 空定义 | `#ifndef __USBD_CONF__H__；#if (USBD_DEBUG_LEVEL > 2) → #else` |  |
-
-### 已注释的宏选项（当前不定义）
-
-| 行 | 原选项 |
-| --- | --- |
-| [Inc/usbd_conf.h:79](../Inc/usbd_conf.h#L79) | `#define for FS and HS identification` |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [22](../Inc/usbd_conf.h#L22) | 预处理 | `#ifndef __USBD_CONF__H__` |
+| [23](../Inc/usbd_conf.h#L23) | 预处理 | `#define __USBD_CONF__H__` |
+| [25](../Inc/usbd_conf.h#L25) | 预处理 | `#ifdef __cplusplus` |
+| [27](../Inc/usbd_conf.h#L27) | 预处理 | `#endif` |
+| [66](../Inc/usbd_conf.h#L66) | 预处理 | `#define USBD_MAX_NUM_INTERFACES     1U` |
+| [68](../Inc/usbd_conf.h#L68) | 预处理 | `#define USBD_MAX_NUM_CONFIGURATION     1U` |
+| [70](../Inc/usbd_conf.h#L70) | 预处理 | `#define USBD_MAX_STR_DESC_SIZ     512U` |
+| [72](../Inc/usbd_conf.h#L72) | 预处理 | `#define USBD_DEBUG_LEVEL     0U` |
+| [74](../Inc/usbd_conf.h#L74) | 预处理 | `#define USBD_LPM_ENABLED     0U` |
+| [76](../Inc/usbd_conf.h#L76) | 预处理 | `#define USBD_SELF_POWERED     1U` |
+| [80](../Inc/usbd_conf.h#L80) | 预处理 | `#define DEVICE_FS 		0` |
+| [81](../Inc/usbd_conf.h#L81) | 预处理 | `#define DEVICE_HS 		1` |
+| [94](../Inc/usbd_conf.h#L94) | 预处理 | `#define USBD_malloc         (void *)USBD_static_malloc` |
+| [97](../Inc/usbd_conf.h#L97) | 预处理 | `#define USBD_free           USBD_static_free` |
+| [100](../Inc/usbd_conf.h#L100) | 预处理 | `#define USBD_memset         memset` |
+| [103](../Inc/usbd_conf.h#L103) | 预处理 | `#define USBD_memcpy         memcpy` |
+| [106](../Inc/usbd_conf.h#L106) | 预处理 | `#define USBD_Delay          HAL_Delay` |
+| [110](../Inc/usbd_conf.h#L110) | 预处理 | `#if (USBD_DEBUG_LEVEL > 0)` |
+| [111](../Inc/usbd_conf.h#L111) | 预处理 | `#define USBD_UsrLog(...)    printf(__VA_ARGS__);\` |
+| [113](../Inc/usbd_conf.h#L113) | 预处理 | `#else` |
+| [114](../Inc/usbd_conf.h#L114) | 预处理 | `#define USBD_UsrLog(...)` |
+| [115](../Inc/usbd_conf.h#L115) | 预处理 | `#endif /* (USBD_DEBUG_LEVEL > 0U) */` |
+| [117](../Inc/usbd_conf.h#L117) | 预处理 | `#if (USBD_DEBUG_LEVEL > 1)` |
+| [119](../Inc/usbd_conf.h#L119) | 预处理 | `#define USBD_ErrLog(...)    printf("ERROR: ");\` |
+| [122](../Inc/usbd_conf.h#L122) | 预处理 | `#else` |
+| [123](../Inc/usbd_conf.h#L123) | 预处理 | `#define USBD_ErrLog(...)` |
+| [124](../Inc/usbd_conf.h#L124) | 预处理 | `#endif /* (USBD_DEBUG_LEVEL > 1U) */` |
+| [126](../Inc/usbd_conf.h#L126) | 预处理 | `#if (USBD_DEBUG_LEVEL > 2)` |
+| [127](../Inc/usbd_conf.h#L127) | 预处理 | `#define USBD_DbgLog(...)    printf("DEBUG : ");\` |
+| [130](../Inc/usbd_conf.h#L130) | 预处理 | `#else` |
+| [131](../Inc/usbd_conf.h#L131) | 预处理 | `#define USBD_DbgLog(...)` |
+| [132](../Inc/usbd_conf.h#L132) | 预处理 | `#endif /* (USBD_DEBUG_LEVEL > 2U) */` |
+| [168](../Inc/usbd_conf.h#L168) | 预处理 | `#ifdef __cplusplus` |
+| [170](../Inc/usbd_conf.h#L170) | 预处理 | `#endif` |
+| [172](../Inc/usbd_conf.h#L172) | 预处理 | `#endif /* __USBD_CONF__H__ */` |
 
 ## Inc/usbd_desc.h
 
-源文件：[打开 Inc/usbd_desc.h](../Inc/usbd_desc.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Inc/usbd_desc.h:22](../Inc/usbd_desc.h#L22) | `__USBD_DESC__C__` | 空定义 | `#ifndef __USBD_DESC__C__` |  |
-| [Inc/usbd_desc.h:48](../Inc/usbd_desc.h#L48) | `DEVICE_ID1` | `(UID_BASE)` | `#ifndef __USBD_DESC__C__` |  |
-| [Inc/usbd_desc.h:49](../Inc/usbd_desc.h#L49) | `DEVICE_ID2` | `(UID_BASE + 0x4)` | `#ifndef __USBD_DESC__C__` |  |
-| [Inc/usbd_desc.h:50](../Inc/usbd_desc.h#L50) | `DEVICE_ID3` | `(UID_BASE + 0x8)` | `#ifndef __USBD_DESC__C__` |  |
-| [Inc/usbd_desc.h:52](../Inc/usbd_desc.h#L52) | `USB_SIZ_STRING_SERIAL` | `0x1A` | `#ifndef __USBD_DESC__C__` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [21](../Inc/usbd_desc.h#L21) | 预处理 | `#ifndef __USBD_DESC__C__` |
+| [22](../Inc/usbd_desc.h#L22) | 预处理 | `#define __USBD_DESC__C__` |
+| [24](../Inc/usbd_desc.h#L24) | 预处理 | `#ifdef __cplusplus` |
+| [26](../Inc/usbd_desc.h#L26) | 预处理 | `#endif` |
+| [48](../Inc/usbd_desc.h#L48) | 预处理 | `#define         DEVICE_ID1          (UID_BASE)` |
+| [49](../Inc/usbd_desc.h#L49) | 预处理 | `#define         DEVICE_ID2          (UID_BASE + 0x4)` |
+| [50](../Inc/usbd_desc.h#L50) | 预处理 | `#define         DEVICE_ID3          (UID_BASE + 0x8)` |
+| [52](../Inc/usbd_desc.h#L52) | 预处理 | `#define  USB_SIZ_STRING_SERIAL       0x1A` |
+| [138](../Inc/usbd_desc.h#L138) | 预处理 | `#ifdef __cplusplus` |
+| [140](../Inc/usbd_desc.h#L140) | 预处理 | `#endif` |
+| [142](../Inc/usbd_desc.h#L142) | 预处理 | `#endif /* __USBD_DESC__C__ */` |
 
 ## Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h
 
-源文件：[打开 Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:59](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L59) | `SEGGER_RTT_CONF_H` | 空定义 | `#ifndef SEGGER_RTT_CONF_H` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:83](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L83) | `SEGGER_RTT_MAX_NUM_UP_BUFFERS` | `(3)` | `#ifndef SEGGER_RTT_CONF_H；#ifndef SEGGER_RTT_MAX_NUM_UP_BUFFERS` | Max. number of up-buffers (T->H) available on this target    (Default: 3) |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:91](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L91) | `SEGGER_RTT_MAX_NUM_DOWN_BUFFERS` | `(3)` | `#ifndef SEGGER_RTT_CONF_H；#ifndef SEGGER_RTT_MAX_NUM_DOWN_BUFFERS` | Max. number of down-buffers (H->T) available on this target  (Default: 3) |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:95](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L95) | `BUFFER_SIZE_UP` | `(1024)` | `#ifndef SEGGER_RTT_CONF_H；#ifndef BUFFER_SIZE_UP` | Size of the buffer for terminal output of target, up to host (Default: 1k) |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:99](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L99) | `BUFFER_SIZE_DOWN` | `(16)` | `#ifndef SEGGER_RTT_CONF_H；#ifndef BUFFER_SIZE_DOWN` | Size of the buffer for terminal input to target from host (Usually keyboard input) (Default: 16) |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:103](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L103) | `SEGGER_RTT_PRINTF_BUFFER_SIZE` | `(64u)` | `#ifndef SEGGER_RTT_CONF_H；#ifndef SEGGER_RTT_PRINTF_BUFFER_SIZE` | Size of buffer for RTT printf to bulk-send chars via RTT     (Default: 64) |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:107](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L107) | `SEGGER_RTT_MODE_DEFAULT` | `SEGGER_RTT_MODE_NO_BLOCK_SKIP` | `#ifndef SEGGER_RTT_CONF_H；#ifndef SEGGER_RTT_MODE_DEFAULT` | Mode for pre-initialized terminal channel (buffer 0) |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:123](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L123) | `SEGGER_RTT_MEMCPY_USE_BYTELOOP` | `0` | `#ifndef SEGGER_RTT_CONF_H；#ifndef SEGGER_RTT_MEMCPY_USE_BYTELOOP` | 0: Use memcpy/SEGGER_RTT_MEMCPY, 1: Use a simple byte-loop |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:147](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L147) | `SEGGER_RTT_MAX_INTERRUPT_PRIORITY` | `(0x20)` | `#ifndef SEGGER_RTT_CONF_H；#ifndef SEGGER_RTT_MAX_INTERRUPT_PRIORITY` | Interrupt priority to lock on SEGGER_RTT_LOCK on Cortex-M3/4 (Default: 0x20) |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:157](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L157) | `SEGGER_RTT_LOCK()` | `{ unsigned int _SEGGER_RTT__LockState; __asm volatile ("mrs %0, primask \n\t" "movs r1, #1 \n\t" "msr primask, r1 \n\t" : "=r" (_SEGGER_RTT__LockState) : : "r1", "cc" );` | `#ifndef SEGGER_RTT_CONF_H；#if ((defined(__SES_ARM) \|\| defined(__SES_RISCV) \|\| defined(__CROSSWORKS_ARM) \|\| defined(__GNUC__) \|\| defined(__clang__)) && !defined (__CC_ARM) && !defined(WIN32))；#if (defined(__ARM_ARCH_6M__) \|\| defined(__ARM_ARCH_8M_BASE__))` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:167](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L167) | `SEGGER_RTT_UNLOCK()` | `__asm volatile ("msr primask, %0 \n\t" : : "r" (_SEGGER_RTT__LockState) : ); }` | `#ifndef SEGGER_RTT_CONF_H；#if ((defined(__SES_ARM) \|\| defined(__SES_RISCV) \|\| defined(__CROSSWORKS_ARM) \|\| defined(__GNUC__) \|\| defined(__clang__)) && !defined (__CC_ARM) && !defined(WIN32))；#if (defined(__ARM_ARCH_6M__) \|\| defined(__ARM_ARCH_8M_BASE__))` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:175](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L175) | `SEGGER_RTT_MAX_INTERRUPT_PRIORITY` | `(0x20)` | `#ifndef SEGGER_RTT_CONF_H；#if ((defined(__SES_ARM) \|\| defined(__SES_RISCV) \|\| defined(__CROSSWORKS_ARM) \|\| defined(__GNUC__) \|\| defined(__clang__)) && !defined (__CC_ARM) && !defined(WIN32))；#if (defined(__ARM_ARCH_6M__) \|\| defined(__ARM_ARCH_8M_BASE__)) → #elif (defined(__ARM_ARCH_7M__) \|\| defined(__ARM_ARCH_7EM__) \|\| defined(__ARM_ARCH_8M_MAIN__))；#ifndef SEGGER_RTT_MAX_INTERRUPT_PRIORITY` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:177](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L177) | `SEGGER_RTT_LOCK()` | `{ unsigned int _SEGGER_RTT__LockState; __asm volatile ("mrs %0, basepri \n\t" "mov r1, %1 \n\t" "msr basepri, r1 \n\t" : "=r" (_SEGGER_RTT__LockState) : "i"(SEGGER_RTT_MAX_INTERRUPT_PRIORITY) : "r1", "cc" );` | `#ifndef SEGGER_RTT_CONF_H；#if ((defined(__SES_ARM) \|\| defined(__SES_RISCV) \|\| defined(__CROSSWORKS_ARM) \|\| defined(__GNUC__) \|\| defined(__clang__)) && !defined (__CC_ARM) && !defined(WIN32))；#if (defined(__ARM_ARCH_6M__) \|\| defined(__ARM_ARCH_8M_BASE__)) → #elif (defined(__ARM_ARCH_7M__) \|\| defined(__ARM_ARCH_7EM__) \|\| defined(__ARM_ARCH_8M_MAIN__))` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:187](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L187) | `SEGGER_RTT_UNLOCK()` | `__asm volatile ("msr basepri, %0 \n\t" : : "r" (_SEGGER_RTT__LockState) : ); }` | `#ifndef SEGGER_RTT_CONF_H；#if ((defined(__SES_ARM) \|\| defined(__SES_RISCV) \|\| defined(__CROSSWORKS_ARM) \|\| defined(__GNUC__) \|\| defined(__clang__)) && !defined (__CC_ARM) && !defined(WIN32))；#if (defined(__ARM_ARCH_6M__) \|\| defined(__ARM_ARCH_8M_BASE__)) → #elif (defined(__ARM_ARCH_7M__) \|\| defined(__ARM_ARCH_7EM__) \|\| defined(__ARM_ARCH_8M_MAIN__))` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:195](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L195) | `SEGGER_RTT_LOCK()` | `{ unsigned int _SEGGER_RTT__LockState; __asm volatile ("mrs r1, CPSR \n\t" "mov %0, r1 \n\t" "orr r1, r1, #0xC0 \n\t" "msr CPSR_c, r1 \n\t" : "=r" (_SEGGER_RTT__LockState) : : "r1", "cc" );` | `#ifndef SEGGER_RTT_CONF_H；#if ((defined(__SES_ARM) \|\| defined(__SES_RISCV) \|\| defined(__CROSSWORKS_ARM) \|\| defined(__GNUC__) \|\| defined(__clang__)) && !defined (__CC_ARM) && !defined(WIN32))；#if (defined(__ARM_ARCH_6M__) \|\| defined(__ARM_ARCH_8M_BASE__)) → #elif (defined(__ARM_ARCH_7M__) \|\| defined(__ARM_ARCH_7EM__) \|\| defined(__ARM_ARCH_8M_MAIN__)) → #elif (defined(__ARM_ARCH_7A__) \|\| defined(__ARM_ARCH_7R__))` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:206](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L206) | `SEGGER_RTT_UNLOCK()` | `__asm volatile ("mov r0, %0 \n\t" "mrs r1, CPSR \n\t" "bic r1, r1, #0xC0 \n\t" "and r0, r0, #0xC0 \n\t" "orr r1, r1, r0 \n\t" "msr CPSR_c, r1 \n\t" : : "r" (_SEGGER_RTT__LockState) : "r0", "r1", "cc" ); }` | `#ifndef SEGGER_RTT_CONF_H；#if ((defined(__SES_ARM) \|\| defined(__SES_RISCV) \|\| defined(__CROSSWORKS_ARM) \|\| defined(__GNUC__) \|\| defined(__clang__)) && !defined (__CC_ARM) && !defined(WIN32))；#if (defined(__ARM_ARCH_6M__) \|\| defined(__ARM_ARCH_8M_BASE__)) → #elif (defined(__ARM_ARCH_7M__) \|\| defined(__ARM_ARCH_7EM__) \|\| defined(__ARM_ARCH_8M_MAIN__)) → #elif (defined(__ARM_ARCH_7A__) \|\| defined(__ARM_ARCH_7R__))` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:218](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L218) | `SEGGER_RTT_LOCK()` | `{ unsigned int _SEGGER_RTT__LockState; __asm volatile ("csrr %0, mstatus \n\t" "csrci mstatus, 8 \n\t" "andi %0, %0, 8 \n\t" : "=r" (_SEGGER_RTT__LockState) : : );` | `#ifndef SEGGER_RTT_CONF_H；#if ((defined(__SES_ARM) \|\| defined(__SES_RISCV) \|\| defined(__CROSSWORKS_ARM) \|\| defined(__GNUC__) \|\| defined(__clang__)) && !defined (__CC_ARM) && !defined(WIN32))；#if (defined(__ARM_ARCH_6M__) \|\| defined(__ARM_ARCH_8M_BASE__)) → #elif (defined(__ARM_ARCH_7M__) \|\| defined(__ARM_ARCH_7EM__) \|\| defined(__ARM_ARCH_8M_MAIN__)) → #elif (defined(__ARM_ARCH_7A__) \|\| defined(__ARM_ARCH_7R__)) → #elif defined(__riscv) \|\| defined(__riscv_xlen)` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:228](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L228) | `SEGGER_RTT_UNLOCK()` | `__asm volatile ("csrr a1, mstatus \n\t" "or %0, %0, a1 \n\t" "csrs mstatus, %0 \n\t" : : "r" (_SEGGER_RTT__LockState) : "a1" ); }` | `#ifndef SEGGER_RTT_CONF_H；#if ((defined(__SES_ARM) \|\| defined(__SES_RISCV) \|\| defined(__CROSSWORKS_ARM) \|\| defined(__GNUC__) \|\| defined(__clang__)) && !defined (__CC_ARM) && !defined(WIN32))；#if (defined(__ARM_ARCH_6M__) \|\| defined(__ARM_ARCH_8M_BASE__)) → #elif (defined(__ARM_ARCH_7M__) \|\| defined(__ARM_ARCH_7EM__) \|\| defined(__ARM_ARCH_8M_MAIN__)) → #elif (defined(__ARM_ARCH_7A__) \|\| defined(__ARM_ARCH_7R__)) → #elif defined(__riscv) \|\| defined(__riscv_xlen)` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:237](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L237) | `SEGGER_RTT_LOCK()` | 空定义 | `#ifndef SEGGER_RTT_CONF_H；#if ((defined(__SES_ARM) \|\| defined(__SES_RISCV) \|\| defined(__CROSSWORKS_ARM) \|\| defined(__GNUC__) \|\| defined(__clang__)) && !defined (__CC_ARM) && !defined(WIN32))；#if (defined(__ARM_ARCH_6M__) \|\| defined(__ARM_ARCH_8M_BASE__)) → #elif (defined(__ARM_ARCH_7M__) \|\| defined(__ARM_ARCH_7EM__) \|\| defined(__ARM_ARCH_8M_MAIN__)) → #elif (defined(__ARM_ARCH_7A__) \|\| defined(__ARM_ARCH_7R__)) → #elif defined(__riscv) \|\| defined(__riscv_xlen) → #else` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:238](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L238) | `SEGGER_RTT_UNLOCK()` | 空定义 | `#ifndef SEGGER_RTT_CONF_H；#if ((defined(__SES_ARM) \|\| defined(__SES_RISCV) \|\| defined(__CROSSWORKS_ARM) \|\| defined(__GNUC__) \|\| defined(__clang__)) && !defined (__CC_ARM) && !defined(WIN32))；#if (defined(__ARM_ARCH_6M__) \|\| defined(__ARM_ARCH_8M_BASE__)) → #elif (defined(__ARM_ARCH_7M__) \|\| defined(__ARM_ARCH_7EM__) \|\| defined(__ARM_ARCH_8M_MAIN__)) → #elif (defined(__ARM_ARCH_7A__) \|\| defined(__ARM_ARCH_7R__)) → #elif defined(__riscv) \|\| defined(__riscv_xlen) → #else` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:249](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L249) | `SEGGER_RTT_LOCK()` | `{ unsigned int _SEGGER_RTT__LockState; _SEGGER_RTT__LockState = __get_PRIMASK(); __set_PRIMASK(1);` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __ICCARM__；#if (defined (__ARM6M__) && (__CORE__ == __ARM6M__)) \|\| (defined (__ARM8M_BASELINE__) && (__CORE__ == __ARM8M_BASELINE__))` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:254](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L254) | `SEGGER_RTT_UNLOCK()` | `__set_PRIMASK(_SEGGER_RTT__LockState); }` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __ICCARM__；#if (defined (__ARM6M__) && (__CORE__ == __ARM6M__)) \|\| (defined (__ARM8M_BASELINE__) && (__CORE__ == __ARM8M_BASELINE__))` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:261](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L261) | `SEGGER_RTT_MAX_INTERRUPT_PRIORITY` | `(0x20)` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __ICCARM__；#if (defined (__ARM6M__) && (__CORE__ == __ARM6M__)) \|\| (defined (__ARM8M_BASELINE__) && (__CORE__ == __ARM8M_BASELINE__)) → #elif (defined (__ARM7EM__) && (__CORE__ == __ARM7EM__)) \|\| (defined (__ARM7M__) && (__CORE__ == __ARM7M__)) \|\| (defined (__ARM8M_MAINLINE__) && (__CORE__ == __ARM8M_MAINLINE__)) \|\| (defined (__ARM8M_MAINLINE__) && (__CORE__ == __ARM8M_MAINLINE__))；#ifndef SEGGER_RTT_MAX_INTERRUPT_PRIORITY` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:263](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L263) | `SEGGER_RTT_LOCK()` | `{ unsigned int _SEGGER_RTT__LockState; _SEGGER_RTT__LockState = __get_BASEPRI(); __set_BASEPRI(SEGGER_RTT_MAX_INTERRUPT_PRIORITY);` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __ICCARM__；#if (defined (__ARM6M__) && (__CORE__ == __ARM6M__)) \|\| (defined (__ARM8M_BASELINE__) && (__CORE__ == __ARM8M_BASELINE__)) → #elif (defined (__ARM7EM__) && (__CORE__ == __ARM7EM__)) \|\| (defined (__ARM7M__) && (__CORE__ == __ARM7M__)) \|\| (defined (__ARM8M_MAINLINE__) && (__CORE__ == __ARM8M_MAINLINE__)) \|\| (defined (__ARM8M_MAINLINE__) && (__CORE__ == __ARM8M_MAINLINE__))` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:268](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L268) | `SEGGER_RTT_UNLOCK()` | `__set_BASEPRI(_SEGGER_RTT__LockState); }` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __ICCARM__；#if (defined (__ARM6M__) && (__CORE__ == __ARM6M__)) \|\| (defined (__ARM8M_BASELINE__) && (__CORE__ == __ARM8M_BASELINE__)) → #elif (defined (__ARM7EM__) && (__CORE__ == __ARM7EM__)) \|\| (defined (__ARM7M__) && (__CORE__ == __ARM7M__)) \|\| (defined (__ARM8M_MAINLINE__) && (__CORE__ == __ARM8M_MAINLINE__)) \|\| (defined (__ARM8M_MAINLINE__) && (__CORE__ == __ARM8M_MAINLINE__))` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:272](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L272) | `SEGGER_RTT_LOCK()` | `{ unsigned int _SEGGER_RTT__LockState; __asm volatile ("mrs r1, CPSR \n\t" "mov %0, r1 \n\t" "orr r1, r1, #0xC0 \n\t" "msr CPSR_c, r1 \n\t" : "=r" (_SEGGER_RTT__LockState) : : "r1", "cc" );` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __ICCARM__；#if (defined (__ARM6M__) && (__CORE__ == __ARM6M__)) \|\| (defined (__ARM8M_BASELINE__) && (__CORE__ == __ARM8M_BASELINE__)) → #elif (defined (__ARM7EM__) && (__CORE__ == __ARM7EM__)) \|\| (defined (__ARM7M__) && (__CORE__ == __ARM7M__)) \|\| (defined (__ARM8M_MAINLINE__) && (__CORE__ == __ARM8M_MAINLINE__)) \|\| (defined (__ARM8M_MAINLINE__) && (__CORE__ == __ARM8M_MAINLINE__)) → #elif (defined (__ARM7A__) && (__CORE__ == __ARM7A__)) \|\| (defined (__ARM7R__) && (__CORE__ == __ARM7R__))` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:283](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L283) | `SEGGER_RTT_UNLOCK()` | `__asm volatile ("mov r0, %0 \n\t" "mrs r1, CPSR \n\t" "bic r1, r1, #0xC0 \n\t" "and r0, r0, #0xC0 \n\t" "orr r1, r1, r0 \n\t" "msr CPSR_c, r1 \n\t" : : "r" (_SEGGER_RTT__LockState) : "r0", "r1", "cc" ); }` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __ICCARM__；#if (defined (__ARM6M__) && (__CORE__ == __ARM6M__)) \|\| (defined (__ARM8M_BASELINE__) && (__CORE__ == __ARM8M_BASELINE__)) → #elif (defined (__ARM7EM__) && (__CORE__ == __ARM7EM__)) \|\| (defined (__ARM7M__) && (__CORE__ == __ARM7M__)) \|\| (defined (__ARM8M_MAINLINE__) && (__CORE__ == __ARM8M_MAINLINE__)) \|\| (defined (__ARM8M_MAINLINE__) && (__CORE__ == __ARM8M_MAINLINE__)) → #elif (defined (__ARM7A__) && (__CORE__ == __ARM7A__)) \|\| (defined (__ARM7R__) && (__CORE__ == __ARM7R__))` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:302](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L302) | `SEGGER_RTT_LOCK()` | `{ unsigned long _SEGGER_RTT__LockState; _SEGGER_RTT__LockState = __get_interrupt_state(); __disable_interrupt();` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __ICCRX__` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:307](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L307) | `SEGGER_RTT_UNLOCK()` | `__set_interrupt_state(_SEGGER_RTT__LockState); }` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __ICCRX__` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:316](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L316) | `SEGGER_RTT_LOCK()` | `{ __istate_t _SEGGER_RTT__LockState; _SEGGER_RTT__LockState = __get_interrupt_state(); __disable_interrupt();` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __ICCRL78__` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:321](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L321) | `SEGGER_RTT_UNLOCK()` | `__set_interrupt_state(_SEGGER_RTT__LockState); }` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __ICCRL78__` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:331](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L331) | `SEGGER_RTT_LOCK()` | `{ unsigned int _SEGGER_RTT__LockState; register unsigned char _SEGGER_RTT__PRIMASK __asm( "primask"); _SEGGER_RTT__LockState = _SEGGER_RTT__PRIMASK; _SEGGER_RTT__PRIMASK = 1u; __schedule_barrier();` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __CC_ARM；#if (defined __TARGET_ARCH_6S_M)` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:338](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L338) | `SEGGER_RTT_UNLOCK()` | `_SEGGER_RTT__PRIMASK = _SEGGER_RTT__LockState; __schedule_barrier(); }` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __CC_ARM；#if (defined __TARGET_ARCH_6S_M)` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:343](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L343) | `SEGGER_RTT_MAX_INTERRUPT_PRIORITY` | `(0x20)` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __CC_ARM；#if (defined __TARGET_ARCH_6S_M) → #elif (defined(__TARGET_ARCH_7_M) \|\| defined(__TARGET_ARCH_7E_M))；#ifndef SEGGER_RTT_MAX_INTERRUPT_PRIORITY` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:345](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L345) | `SEGGER_RTT_LOCK()` | `{ unsigned int _SEGGER_RTT__LockState; register unsigned char BASEPRI __asm( "basepri"); _SEGGER_RTT__LockState = BASEPRI; BASEPRI = SEGGER_RTT_MAX_INTERRUPT_PRIORITY; __schedule_barrier();` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __CC_ARM；#if (defined __TARGET_ARCH_6S_M) → #elif (defined(__TARGET_ARCH_7_M) \|\| defined(__TARGET_ARCH_7E_M))` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:352](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L352) | `SEGGER_RTT_UNLOCK()` | `BASEPRI = _SEGGER_RTT__LockState; __schedule_barrier(); }` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __CC_ARM；#if (defined __TARGET_ARCH_6S_M) → #elif (defined(__TARGET_ARCH_7_M) \|\| defined(__TARGET_ARCH_7E_M))` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:364](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L364) | `SEGGER_RTT_LOCK()` | `{ unsigned int _SEGGER_RTT__LockState; _SEGGER_RTT__LockState = __get_PRIMASK(); __set_PRIMASK(1);` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __TI_ARM__；#if defined (__TI_ARM_V6M0__)` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:369](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L369) | `SEGGER_RTT_UNLOCK()` | `__set_PRIMASK(_SEGGER_RTT__LockState); }` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __TI_ARM__；#if defined (__TI_ARM_V6M0__)` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:373](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L373) | `SEGGER_RTT_MAX_INTERRUPT_PRIORITY` | `(0x20)` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __TI_ARM__；#if defined (__TI_ARM_V6M0__) → #elif (defined (__TI_ARM_V7M3__) \|\| defined (__TI_ARM_V7M4__))；#ifndef SEGGER_RTT_MAX_INTERRUPT_PRIORITY` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:375](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L375) | `SEGGER_RTT_LOCK()` | `{ unsigned int _SEGGER_RTT__LockState; _SEGGER_RTT__LockState = _set_interrupt_priority(SEGGER_RTT_MAX_INTERRUPT_PRIORITY);` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __TI_ARM__；#if defined (__TI_ARM_V6M0__) → #elif (defined (__TI_ARM_V7M3__) \|\| defined (__TI_ARM_V7M4__))` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:379](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L379) | `SEGGER_RTT_UNLOCK()` | `_set_interrupt_priority(_SEGGER_RTT__LockState); }` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __TI_ARM__；#if defined (__TI_ARM_V6M0__) → #elif (defined (__TI_ARM_V7M3__) \|\| defined (__TI_ARM_V7M4__))` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:390](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L390) | `SEGGER_RTT_LOCK()` | `{ unsigned long _SEGGER_RTT__LockState; _SEGGER_RTT__LockState = get_psw() & 0x010000; clrpsw_i();` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __RX` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:395](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L395) | `SEGGER_RTT_UNLOCK()` | `set_psw(get_psw() \| _SEGGER_RTT__LockState); }` | `#ifndef SEGGER_RTT_CONF_H；#ifdef __RX` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:409](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L409) | `SEGGER_RTT_LOCK()` | `{ OS_SIM_EnterCriticalSection();` | `#ifndef SEGGER_RTT_CONF_H；#if defined(WIN32) \|\| defined(SEGGER_RTT_LOCK_EMBOS)` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:412](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L412) | `SEGGER_RTT_UNLOCK()` | `OS_SIM_LeaveCriticalSection(); }` | `#ifndef SEGGER_RTT_CONF_H；#if defined(WIN32) \|\| defined(SEGGER_RTT_LOCK_EMBOS)` |  |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:421](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L421) | `SEGGER_RTT_LOCK()` | 空定义 | `#ifndef SEGGER_RTT_CONF_H；#ifndef SEGGER_RTT_LOCK` | Lock RTT (nestable)   (i.e. disable interrupts) |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:425](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L425) | `SEGGER_RTT_UNLOCK()` | 空定义 | `#ifndef SEGGER_RTT_CONF_H；#ifndef SEGGER_RTT_UNLOCK` | Unlock RTT (nestable) (i.e. enable previous interrupt lock state) |
-
-### 已注释的宏选项（当前不定义）
-
-| 行 | 原选项 |
-| --- | --- |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:75](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L75) | `#define SEGGER_RTT_CPU_CACHE_LINE_SIZE (32) // Largest cache line size (in bytes) in the current system` |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:76](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L76) | `#define SEGGER_RTT_UNCACHED_OFF (0xFB000000) // Address alias where RTT CB and buffers can be accessed uncached` |
-| [Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h:129](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L129) | `#define SEGGER_RTT_MEMCPY(pDest, pSrc, NumBytes) SEGGER_memcpy((pDest), (pSrc), (NumBytes))` |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [58](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L58) | 预处理 | `#ifndef SEGGER_RTT_CONF_H` |
+| [59](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L59) | 预处理 | `#define SEGGER_RTT_CONF_H` |
+| [61](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L61) | 预处理 | `#ifdef __IAR_SYSTEMS_ICC__` |
+| [63](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L63) | 预处理 | `#endif` |
+| [82](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L82) | 预处理 | `#ifndef   SEGGER_RTT_MAX_NUM_UP_BUFFERS` |
+| [83](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L83) | 预处理 | `#define SEGGER_RTT_MAX_NUM_UP_BUFFERS             (3)     // Max. number of up-buffers (T->H) available on this target    (Default: 3)` |
+| [84](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L84) | 预处理 | `#endif` |
+| [90](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L90) | 预处理 | `#ifndef   SEGGER_RTT_MAX_NUM_DOWN_BUFFERS` |
+| [91](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L91) | 预处理 | `#define SEGGER_RTT_MAX_NUM_DOWN_BUFFERS           (3)     // Max. number of down-buffers (H->T) available on this target  (Default: 3)` |
+| [92](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L92) | 预处理 | `#endif` |
+| [94](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L94) | 预处理 | `#ifndef   BUFFER_SIZE_UP` |
+| [95](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L95) | 预处理 | `#define BUFFER_SIZE_UP                            (1024)  // Size of the buffer for terminal output of target, up to host (Default: 1k)` |
+| [96](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L96) | 预处理 | `#endif` |
+| [98](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L98) | 预处理 | `#ifndef   BUFFER_SIZE_DOWN` |
+| [99](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L99) | 预处理 | `#define BUFFER_SIZE_DOWN                          (16)    // Size of the buffer for terminal input to target from host (Usually keyboard input) (Default: 16)` |
+| [100](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L100) | 预处理 | `#endif` |
+| [102](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L102) | 预处理 | `#ifndef   SEGGER_RTT_PRINTF_BUFFER_SIZE` |
+| [103](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L103) | 预处理 | `#define SEGGER_RTT_PRINTF_BUFFER_SIZE             (64u)    // Size of buffer for RTT printf to bulk-send chars via RTT     (Default: 64)` |
+| [104](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L104) | 预处理 | `#endif` |
+| [106](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L106) | 预处理 | `#ifndef   SEGGER_RTT_MODE_DEFAULT` |
+| [107](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L107) | 预处理 | `#define SEGGER_RTT_MODE_DEFAULT                   SEGGER_RTT_MODE_NO_BLOCK_SKIP // Mode for pre-initialized terminal channel (buffer 0)` |
+| [108](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L108) | 预处理 | `#endif` |
+| [122](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L122) | 预处理 | `#ifndef   SEGGER_RTT_MEMCPY_USE_BYTELOOP` |
+| [123](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L123) | 预处理 | `#define SEGGER_RTT_MEMCPY_USE_BYTELOOP              0 // 0: Use memcpy/SEGGER_RTT_MEMCPY, 1: Use a simple byte-loop` |
+| [124](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L124) | 预处理 | `#endif` |
+| [146](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L146) | 预处理 | `#ifndef   SEGGER_RTT_MAX_INTERRUPT_PRIORITY` |
+| [147](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L147) | 预处理 | `#define SEGGER_RTT_MAX_INTERRUPT_PRIORITY         (0x20)   // Interrupt priority to lock on SEGGER_RTT_LOCK on Cortex-M3/4 (Default: 0x20)` |
+| [148](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L148) | 预处理 | `#endif` |
+| [155](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L155) | 预处理 | `#if ((defined(__SES_ARM) &#124;&#124; defined(__SES_RISCV) &#124;&#124; defined(__CROSSWORKS_ARM) &#124;&#124; defined(__GNUC__) &#124;&#124; defined(__clang__)) && !defined (__CC_ARM) && !defined(WIN32))` |
+| [156](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L156) | 预处理 | `#if (defined(__ARM_ARCH_6M__) &#124;&#124; defined(__ARM_ARCH_8M_BASE__))` |
+| [157](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L157) | 预处理 | `#define SEGGER_RTT_LOCK()   {                                                                   \` |
+| [167](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L167) | 预处理 | `#define SEGGER_RTT_UNLOCK()   __asm volatile ("msr   primask, %0  \n\t"                         \` |
+| [173](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L173) | 预处理 | `#elif (defined(__ARM_ARCH_7M__) &#124;&#124; defined(__ARM_ARCH_7EM__) &#124;&#124; defined(__ARM_ARCH_8M_MAIN__))` |
+| [174](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L174) | 预处理 | `#ifndef   SEGGER_RTT_MAX_INTERRUPT_PRIORITY` |
+| [175](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L175) | 预处理 | `#define SEGGER_RTT_MAX_INTERRUPT_PRIORITY   (0x20)` |
+| [176](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L176) | 预处理 | `#endif` |
+| [177](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L177) | 预处理 | `#define SEGGER_RTT_LOCK()   {                                                                   \` |
+| [187](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L187) | 预处理 | `#define SEGGER_RTT_UNLOCK()   __asm volatile ("msr   basepri, %0  \n\t"                         \` |
+| [194](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L194) | 预处理 | `#elif (defined(__ARM_ARCH_7A__) &#124;&#124; defined(__ARM_ARCH_7R__))` |
+| [195](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L195) | 预处理 | `#define SEGGER_RTT_LOCK() {                                                \` |
+| [206](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L206) | 预处理 | `#define SEGGER_RTT_UNLOCK() __asm volatile ("mov r0, %0 \n\t"              \` |
+| [217](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L217) | 预处理 | `#elif defined(__riscv) &#124;&#124; defined(__riscv_xlen)` |
+| [218](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L218) | 预处理 | `#define SEGGER_RTT_LOCK()  {                                               \` |
+| [228](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L228) | 预处理 | `#define SEGGER_RTT_UNLOCK()    __asm volatile ("csrr  a1, mstatus  \n\t"     \` |
+| [236](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L236) | 预处理 | `#else` |
+| [237](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L237) | 预处理 | `#define SEGGER_RTT_LOCK()` |
+| [238](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L238) | 预处理 | `#define SEGGER_RTT_UNLOCK()` |
+| [239](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L239) | 预处理 | `#endif` |
+| [240](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L240) | 预处理 | `#endif` |
+| [246](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L246) | 预处理 | `#ifdef __ICCARM__` |
+| [247](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L247) | 预处理 | `#if (defined (__ARM6M__)          && (__CORE__ == __ARM6M__))             &#124;&#124;                      \` |
+| [249](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L249) | 预处理 | `#define SEGGER_RTT_LOCK()   {                                                                   \` |
+| [254](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L254) | 预处理 | `#define SEGGER_RTT_UNLOCK()   __set_PRIMASK(_SEGGER_RTT__LockState);                                         \` |
+| [256](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L256) | 预处理 | `#elif (defined (__ARM7EM__)         && (__CORE__ == __ARM7EM__))          &#124;&#124;                      \` |
+| [260](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L260) | 预处理 | `#ifndef   SEGGER_RTT_MAX_INTERRUPT_PRIORITY` |
+| [261](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L261) | 预处理 | `#define SEGGER_RTT_MAX_INTERRUPT_PRIORITY   (0x20)` |
+| [262](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L262) | 预处理 | `#endif` |
+| [263](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L263) | 预处理 | `#define SEGGER_RTT_LOCK()   {                                                                   \` |
+| [268](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L268) | 预处理 | `#define SEGGER_RTT_UNLOCK()   __set_BASEPRI(_SEGGER_RTT__LockState);                                         \` |
+| [270](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L270) | 预处理 | `#elif (defined (__ARM7A__) && (__CORE__ == __ARM7A__))                    &#124;&#124;                      \` |
+| [272](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L272) | 预处理 | `#define SEGGER_RTT_LOCK() {                                                                     \` |
+| [283](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L283) | 预处理 | `#define SEGGER_RTT_UNLOCK() __asm volatile ("mov r0, %0 \n\t"                                   \` |
+| [294](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L294) | 预处理 | `#endif` |
+| [295](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L295) | 预处理 | `#endif` |
+| [301](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L301) | 预处理 | `#ifdef __ICCRX__` |
+| [302](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L302) | 预处理 | `#define SEGGER_RTT_LOCK()   {                                                                     \` |
+| [307](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L307) | 预处理 | `#define SEGGER_RTT_UNLOCK()   __set_interrupt_state(_SEGGER_RTT__LockState);                                   \` |
+| [309](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L309) | 预处理 | `#endif` |
+| [315](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L315) | 预处理 | `#ifdef __ICCRL78__` |
+| [316](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L316) | 预处理 | `#define SEGGER_RTT_LOCK()   {                                                                     \` |
+| [321](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L321) | 预处理 | `#define SEGGER_RTT_UNLOCK()   __set_interrupt_state(_SEGGER_RTT__LockState);                                   \` |
+| [323](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L323) | 预处理 | `#endif` |
+| [329](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L329) | 预处理 | `#ifdef __CC_ARM` |
+| [330](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L330) | 预处理 | `#if (defined __TARGET_ARCH_6S_M)` |
+| [331](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L331) | 预处理 | `#define SEGGER_RTT_LOCK()   {                                                                   \` |
+| [338](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L338) | 预处理 | `#define SEGGER_RTT_UNLOCK()   _SEGGER_RTT__PRIMASK = _SEGGER_RTT__LockState;                                              \` |
+| [341](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L341) | 预处理 | `#elif (defined(__TARGET_ARCH_7_M) &#124;&#124; defined(__TARGET_ARCH_7E_M))` |
+| [342](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L342) | 预处理 | `#ifndef   SEGGER_RTT_MAX_INTERRUPT_PRIORITY` |
+| [343](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L343) | 预处理 | `#define SEGGER_RTT_MAX_INTERRUPT_PRIORITY   (0x20)` |
+| [344](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L344) | 预处理 | `#endif` |
+| [345](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L345) | 预处理 | `#define SEGGER_RTT_LOCK()   {                                                                   \` |
+| [352](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L352) | 预处理 | `#define SEGGER_RTT_UNLOCK()   BASEPRI = _SEGGER_RTT__LockState;                                              \` |
+| [355](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L355) | 预处理 | `#endif` |
+| [356](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L356) | 预处理 | `#endif` |
+| [362](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L362) | 预处理 | `#ifdef __TI_ARM__` |
+| [363](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L363) | 预处理 | `#if defined (__TI_ARM_V6M0__)` |
+| [364](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L364) | 预处理 | `#define SEGGER_RTT_LOCK()   {                                                                   \` |
+| [369](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L369) | 预处理 | `#define SEGGER_RTT_UNLOCK()   __set_PRIMASK(_SEGGER_RTT__LockState);                                         \` |
+| [371](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L371) | 预处理 | `#elif (defined (__TI_ARM_V7M3__) &#124;&#124; defined (__TI_ARM_V7M4__))` |
+| [372](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L372) | 预处理 | `#ifndef   SEGGER_RTT_MAX_INTERRUPT_PRIORITY` |
+| [373](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L373) | 预处理 | `#define SEGGER_RTT_MAX_INTERRUPT_PRIORITY   (0x20)` |
+| [374](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L374) | 预处理 | `#endif` |
+| [375](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L375) | 预处理 | `#define SEGGER_RTT_LOCK()   {                                                                   \` |
+| [379](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L379) | 预处理 | `#define SEGGER_RTT_UNLOCK()   _set_interrupt_priority(_SEGGER_RTT__LockState);                               \` |
+| [381](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L381) | 预处理 | `#endif` |
+| [382](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L382) | 预处理 | `#endif` |
+| [388](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L388) | 预处理 | `#ifdef __RX` |
+| [390](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L390) | 预处理 | `#define SEGGER_RTT_LOCK()   {                                                                     \` |
+| [395](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L395) | 预处理 | `#define SEGGER_RTT_UNLOCK()   set_psw(get_psw() &#124; _SEGGER_RTT__LockState);                                     \` |
+| [397](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L397) | 预处理 | `#endif` |
+| [404](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L404) | 预处理 | `#if defined(WIN32) &#124;&#124; defined(SEGGER_RTT_LOCK_EMBOS)` |
+| [409](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L409) | 预处理 | `#define SEGGER_RTT_LOCK()       {                                                                   \` |
+| [412](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L412) | 预处理 | `#define SEGGER_RTT_UNLOCK()       OS_SIM_LeaveCriticalSection();                                    \` |
+| [414](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L414) | 预处理 | `#endif` |
+| [420](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L420) | 预处理 | `#ifndef   SEGGER_RTT_LOCK` |
+| [421](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L421) | 预处理 | `#define SEGGER_RTT_LOCK()                // Lock RTT (nestable)   (i.e. disable interrupts)` |
+| [422](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L422) | 预处理 | `#endif` |
+| [424](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L424) | 预处理 | `#ifndef   SEGGER_RTT_UNLOCK` |
+| [425](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L425) | 预处理 | `#define SEGGER_RTT_UNLOCK()              // Unlock RTT (nestable) (i.e. enable previous interrupt lock state)` |
+| [426](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L426) | 预处理 | `#endif` |
+| [428](../Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h#L428) | 预处理 | `#endif` |
 
 ## modules/alarm/buzzer.c
 
-源文件：[打开 modules/alarm/buzzer.c](../modules/alarm/buzzer.c)。
-
-### 配置结构体初值
-
-以下记录原始定义，不自动推断运行路径或后续覆盖。未填字段为零；指针/回调表示绑定关系。
-
-[modules/alarm/buzzer.c:16](../modules/alarm/buzzer.c#L16)
-
-```c
-PWM_Init_Config_s buzzer_config = {
-        .htim = &htim4,
-        .channel = TIM_CHANNEL_3,
-        .dutyratio = 0,
-        .period = 0.001,
-    };
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [16](../modules/alarm/buzzer.c#L16) | 配置初值 | `PWM_Init_Config_s buzzer_config = {` |
+| [17](../modules/alarm/buzzer.c#L17) | 配置初值 | `.htim = &htim12,` |
+| [18](../modules/alarm/buzzer.c#L18) | 配置初值 | `.channel = TIM_CHANNEL_1,` |
+| [19](../modules/alarm/buzzer.c#L19) | 配置初值 | `.dutyratio = 0,` |
+| [20](../modules/alarm/buzzer.c#L20) | 配置初值 | `.period = 0.001,` |
 
 ## modules/alarm/buzzer.h
 
-源文件：[打开 modules/alarm/buzzer.h](../modules/alarm/buzzer.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/alarm/buzzer.h:2](../modules/alarm/buzzer.h#L2) | `BUZZER_H` | 空定义 | `#ifndef BUZZER_H` |  |
-| [modules/alarm/buzzer.h:4](../modules/alarm/buzzer.h#L4) | `BUZZER_DEVICE_CNT` | `5` | `#ifndef BUZZER_H` |  |
-| [modules/alarm/buzzer.h:6](../modules/alarm/buzzer.h#L6) | `DoFreq` | `523` | `#ifndef BUZZER_H` |  |
-| [modules/alarm/buzzer.h:7](../modules/alarm/buzzer.h#L7) | `ReFreq` | `587` | `#ifndef BUZZER_H` |  |
-| [modules/alarm/buzzer.h:8](../modules/alarm/buzzer.h#L8) | `MiFreq` | `659` | `#ifndef BUZZER_H` |  |
-| [modules/alarm/buzzer.h:9](../modules/alarm/buzzer.h#L9) | `FaFreq` | `698` | `#ifndef BUZZER_H` |  |
-| [modules/alarm/buzzer.h:10](../modules/alarm/buzzer.h#L10) | `SoFreq` | `784` | `#ifndef BUZZER_H` |  |
-| [modules/alarm/buzzer.h:11](../modules/alarm/buzzer.h#L11) | `LaFreq` | `880` | `#ifndef BUZZER_H` |  |
-| [modules/alarm/buzzer.h:12](../modules/alarm/buzzer.h#L12) | `SiFreq` | `988` | `#ifndef BUZZER_H` |  |
-
-### 可设置的结构体字段
-
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
-
-[modules/alarm/buzzer.h:40](../modules/alarm/buzzer.h#L40)
-
-```c
-typedef struct
-{
-    AlarmLevel_e alarm_level;
-    octave_e octave;
-    float loudness;
-}Buzzer_config_s;
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/alarm/buzzer.h#L1) | 预处理 | `#ifndef BUZZER_H` |
+| [2](../modules/alarm/buzzer.h#L2) | 预处理 | `#define BUZZER_H` |
+| [4](../modules/alarm/buzzer.h#L4) | 预处理 | `#define BUZZER_DEVICE_CNT 5` |
+| [6](../modules/alarm/buzzer.h#L6) | 预处理 | `#define  DoFreq  523` |
+| [7](../modules/alarm/buzzer.h#L7) | 预处理 | `#define  ReFreq  587` |
+| [8](../modules/alarm/buzzer.h#L8) | 预处理 | `#define  MiFreq  659` |
+| [9](../modules/alarm/buzzer.h#L9) | 预处理 | `#define  FaFreq  698` |
+| [10](../modules/alarm/buzzer.h#L10) | 预处理 | `#define  SoFreq  784` |
+| [11](../modules/alarm/buzzer.h#L11) | 预处理 | `#define  LaFreq  880` |
+| [12](../modules/alarm/buzzer.h#L12) | 预处理 | `#define  SiFreq  988` |
+| [60](../modules/alarm/buzzer.h#L60) | 预处理 | `#endif // !BUZZER_H` |
 
 ## modules/algorithm/chassis_energy_config.h
 
-源文件：[打开 modules/algorithm/chassis_energy_config.h](../modules/algorithm/chassis_energy_config.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/algorithm/chassis_energy_config.h:2](../modules/algorithm/chassis_energy_config.h#L2) | `CHASSIS_ENERGY_CONFIG_H` | 空定义 | `#ifndef CHASSIS_ENERGY_CONFIG_H` |  |
-| [modules/algorithm/chassis_energy_config.h:6](../modules/algorithm/chassis_energy_config.h#L6) | `CHASSIS_BUFFER_POWER_ENABLE` | `1` | `#ifndef CHASSIS_ENERGY_CONFIG_H；#ifndef CHASSIS_BUFFER_POWER_ENABLE` |  |
-| [modules/algorithm/chassis_energy_config.h:9](../modules/algorithm/chassis_energy_config.h#L9) | `CHASSIS_POWER_SOURCE_DIRECT` | `0` | `#ifndef CHASSIS_ENERGY_CONFIG_H` |  |
-| [modules/algorithm/chassis_energy_config.h:10](../modules/algorithm/chassis_energy_config.h#L10) | `CHASSIS_POWER_SOURCE_SUPERCAP` | `1` | `#ifndef CHASSIS_ENERGY_CONFIG_H` |  |
-| [modules/algorithm/chassis_energy_config.h:14](../modules/algorithm/chassis_energy_config.h#L14) | `CHASSIS_POWER_SOURCE_MODE` | `CHASSIS_POWER_SOURCE_DIRECT` | `#ifndef CHASSIS_ENERGY_CONFIG_H；#ifndef CHASSIS_POWER_SOURCE_MODE` |  |
-| [modules/algorithm/chassis_energy_config.h:27](../modules/algorithm/chassis_energy_config.h#L27) | `CHASSIS_BUFFER_MAX_ENERGY_J` | `60.0f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 缓冲能量满值(J):裁判原始读数超过它即判缓冲数据无效,不再参与增补 |
-| [modules/algorithm/chassis_energy_config.h:28](../modules/algorithm/chassis_energy_config.h#L28) | `CHASSIS_BUFFER_RECOVERY_ENTER_J` | `15.0f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 进入回充(J):估算下限降到它或以下就转入恢复 |
-| [modules/algorithm/chassis_energy_config.h:29](../modules/algorithm/chassis_energy_config.h#L29) | `CHASSIS_BUFFER_RECOVERY_EXIT_J` | `30.0f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 退出回充(J):估算下限回到它或以上并保持 RECOVERY_HOLD_S 才解除 |
-| [modules/algorithm/chassis_energy_config.h:30](../modules/algorithm/chassis_energy_config.h#L30) | `CHASSIS_BUFFER_HARD_FLOOR_J` | `5.0f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 能量硬底座(J):预测值跌破它强制转入恢复,也是增补功率的保底基准 |
-| [modules/algorithm/chassis_energy_config.h:31](../modules/algorithm/chassis_energy_config.h#L31) | `CHASSIS_BUFFER_PREDICTION_WINDOW_S` | `0.5f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 预测窗口(s):把高于进入门槛的富余能量按该时长摊成允许的额外输入功率 |
-| [modules/algorithm/chassis_energy_config.h:32](../modules/algorithm/chassis_energy_config.h#L32) | `CHASSIS_BUFFER_GUARD_WINDOW_S` | `0.3f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 保护窗口(s):把超限输入功率和硬底座余量换算成该时长内的能量预算 |
-| [modules/algorithm/chassis_energy_config.h:33](../modules/algorithm/chassis_energy_config.h#L33) | `CHASSIS_BUFFER_SETTLEMENT_DELAY_S` | `0.1f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 结算延迟(s):裁判帧接收时刻不等于结算时刻,额外预留这段时间的消耗 |
-| [modules/algorithm/chassis_energy_config.h:34](../modules/algorithm/chassis_energy_config.h#L34) | `CHASSIS_BUFFER_ENERGY_MARGIN_J` | `3.0f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 能量安全余量(J):计算估算下限时直接扣除 |
-| [modules/algorithm/chassis_energy_config.h:35](../modules/algorithm/chassis_energy_config.h#L35) | `CHASSIS_BUFFER_POWER_MARGIN_W` | `5.0f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 功率安全余量(W):估算下限按它预留消耗,判输入超限和增补时也扣掉 |
-| [modules/algorithm/chassis_energy_config.h:36](../modules/algorithm/chassis_energy_config.h#L36) | `CHASSIS_BUFFER_BOOST_MAX_W` | `60.0f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 输入预算增补上限(W):注意与外层 max_boost_w(电容负载增补上限)不是同一个量 |
-| [modules/algorithm/chassis_energy_config.h:37](../modules/algorithm/chassis_energy_config.h#L37) | `CHASSIS_BUFFER_RECOVERY_POWER_W` | `20.0f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 最大回充减让(W):按能量缺口调节,逼近硬底座时使用全部减让 |
-| [modules/algorithm/chassis_energy_config.h:38](../modules/algorithm/chassis_energy_config.h#L38) | `CHASSIS_BUFFER_RECOVERY_TARGET_TIME_S` | `1.0f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 目标恢复时间(s):能量缺口除以该时间得到回充减让功率 |
-| [modules/algorithm/chassis_energy_config.h:39](../modules/algorithm/chassis_energy_config.h#L39) | `CHASSIS_BUFFER_OBSERVER_MAX_STEP_S` | `0.020f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 最大连续积分间隔(s):超出时按最坏耗能扣减并撤销增补 |
-| [modules/algorithm/chassis_energy_config.h:40](../modules/algorithm/chassis_energy_config.h#L40) | `CHASSIS_BUFFER_RECOVERY_HOLD_S` | `0.1f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 退出回充的确认时长(s):在该时长内持续高于退出门槛才解除 |
-| [modules/algorithm/chassis_energy_config.h:41](../modules/algorithm/chassis_energy_config.h#L41) | `CHASSIS_BUFFER_RISE_RATE_W_PER_S` | `600.0f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 输入预算上升斜率(W/s);电容负载侧使用独立斜率,下降立即生效 |
-| [modules/algorithm/chassis_energy_config.h:42](../modules/algorithm/chassis_energy_config.h#L42) | `CHASSIS_BUFFER_CORRECTION_RISE_J_PER_S` | `20.0f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 新裁判帧向上校正估算的上限(J/s);向下立即校正 |
-| [modules/algorithm/chassis_energy_config.h:43](../modules/algorithm/chassis_energy_config.h#L43) | `CHASSIS_POWER_DEMAND_MARGIN_W` | `5.0f` | `#ifndef CHASSIS_ENERGY_CONFIG_H` | 高于基础功率的真实驱动需求所允许的额外余量(W) |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/algorithm/chassis_energy_config.h#L1) | 预处理 | `#ifndef CHASSIS_ENERGY_CONFIG_H` |
+| [2](../modules/algorithm/chassis_energy_config.h#L2) | 预处理 | `#define CHASSIS_ENERGY_CONFIG_H` |
+| [5](../modules/algorithm/chassis_energy_config.h#L5) | 预处理 | `#ifndef CHASSIS_BUFFER_POWER_ENABLE` |
+| [6](../modules/algorithm/chassis_energy_config.h#L6) | 预处理 | `#define CHASSIS_BUFFER_POWER_ENABLE 1` |
+| [7](../modules/algorithm/chassis_energy_config.h#L7) | 预处理 | `#endif` |
+| [9](../modules/algorithm/chassis_energy_config.h#L9) | 预处理 | `#define CHASSIS_POWER_SOURCE_DIRECT 0` |
+| [10](../modules/algorithm/chassis_energy_config.h#L10) | 预处理 | `#define CHASSIS_POWER_SOURCE_SUPERCAP 1` |
+| [13](../modules/algorithm/chassis_energy_config.h#L13) | 预处理 | `#ifndef CHASSIS_POWER_SOURCE_MODE` |
+| [14](../modules/algorithm/chassis_energy_config.h#L14) | 预处理 | `#define CHASSIS_POWER_SOURCE_MODE CHASSIS_POWER_SOURCE_SUPERCAP` |
+| [15](../modules/algorithm/chassis_energy_config.h#L15) | 预处理 | `#endif` |
+| [17](../modules/algorithm/chassis_energy_config.h#L17) | 预处理 | `#if CHASSIS_BUFFER_POWER_ENABLE != 0 && CHASSIS_BUFFER_POWER_ENABLE != 1` |
+| [19](../modules/algorithm/chassis_energy_config.h#L19) | 预处理 | `#endif` |
+| [20](../modules/algorithm/chassis_energy_config.h#L20) | 预处理 | `#if CHASSIS_POWER_SOURCE_MODE != CHASSIS_POWER_SOURCE_DIRECT && \` |
+| [23](../modules/algorithm/chassis_energy_config.h#L23) | 预处理 | `#endif` |
+| [27](../modules/algorithm/chassis_energy_config.h#L27) | 预处理 | `#ifndef CHASSIS_BUFFER_MAX_ENERGY_J` |
+| [28](../modules/algorithm/chassis_energy_config.h#L28) | 预处理 | `#define CHASSIS_BUFFER_MAX_ENERGY_J 60.0f       // 缓冲能量满值(J):裁判原始读数超过它即判缓冲数据无效,不再参与增补` |
+| [29](../modules/algorithm/chassis_energy_config.h#L29) | 预处理 | `#endif` |
+| [30](../modules/algorithm/chassis_energy_config.h#L30) | 预处理 | `#ifndef CHASSIS_BUFFER_RECOVERY_ENTER_J` |
+| [31](../modules/algorithm/chassis_energy_config.h#L31) | 预处理 | `#define CHASSIS_BUFFER_RECOVERY_ENTER_J 15.0f   // 进入回充(J):估算下限降到它或以下就转入恢复` |
+| [32](../modules/algorithm/chassis_energy_config.h#L32) | 预处理 | `#endif` |
+| [33](../modules/algorithm/chassis_energy_config.h#L33) | 预处理 | `#ifndef CHASSIS_BUFFER_RECOVERY_EXIT_J` |
+| [34](../modules/algorithm/chassis_energy_config.h#L34) | 预处理 | `#define CHASSIS_BUFFER_RECOVERY_EXIT_J 30.0f    // 退出回充(J):估算下限回到它或以上并保持 RECOVERY_HOLD_S 才解除` |
+| [35](../modules/algorithm/chassis_energy_config.h#L35) | 预处理 | `#endif` |
+| [36](../modules/algorithm/chassis_energy_config.h#L36) | 预处理 | `#ifndef CHASSIS_BUFFER_HARD_FLOOR_J` |
+| [37](../modules/algorithm/chassis_energy_config.h#L37) | 预处理 | `#define CHASSIS_BUFFER_HARD_FLOOR_J 5.0f        // 能量硬底座(J):预测值跌破它强制转入恢复,也是增补功率的保底基准` |
+| [38](../modules/algorithm/chassis_energy_config.h#L38) | 预处理 | `#endif` |
+| [39](../modules/algorithm/chassis_energy_config.h#L39) | 预处理 | `#ifndef CHASSIS_BUFFER_PREDICTION_WINDOW_S` |
+| [40](../modules/algorithm/chassis_energy_config.h#L40) | 预处理 | `#define CHASSIS_BUFFER_PREDICTION_WINDOW_S 0.5f // 预测窗口(s):把高于进入门槛的富余能量按该时长摊成允许的额外输入功率` |
+| [41](../modules/algorithm/chassis_energy_config.h#L41) | 预处理 | `#endif` |
+| [42](../modules/algorithm/chassis_energy_config.h#L42) | 预处理 | `#ifndef CHASSIS_BUFFER_GUARD_WINDOW_S` |
+| [43](../modules/algorithm/chassis_energy_config.h#L43) | 预处理 | `#define CHASSIS_BUFFER_GUARD_WINDOW_S 0.3f      // 保护窗口(s):把超限输入功率和硬底座余量换算成该时长内的能量预算` |
+| [44](../modules/algorithm/chassis_energy_config.h#L44) | 预处理 | `#endif` |
+| [45](../modules/algorithm/chassis_energy_config.h#L45) | 预处理 | `#ifndef CHASSIS_BUFFER_SETTLEMENT_DELAY_S` |
+| [46](../modules/algorithm/chassis_energy_config.h#L46) | 预处理 | `#define CHASSIS_BUFFER_SETTLEMENT_DELAY_S 0.1f  // 结算延迟(s):裁判帧接收时刻不等于结算时刻,额外预留这段时间的消耗` |
+| [47](../modules/algorithm/chassis_energy_config.h#L47) | 预处理 | `#endif` |
+| [48](../modules/algorithm/chassis_energy_config.h#L48) | 预处理 | `#ifndef CHASSIS_BUFFER_ENERGY_MARGIN_J` |
+| [49](../modules/algorithm/chassis_energy_config.h#L49) | 预处理 | `#define CHASSIS_BUFFER_ENERGY_MARGIN_J 3.0f     // 能量安全余量(J):计算估算下限时直接扣除` |
+| [50](../modules/algorithm/chassis_energy_config.h#L50) | 预处理 | `#endif` |
+| [51](../modules/algorithm/chassis_energy_config.h#L51) | 预处理 | `#ifndef CHASSIS_BUFFER_POWER_MARGIN_W` |
+| [52](../modules/algorithm/chassis_energy_config.h#L52) | 预处理 | `#define CHASSIS_BUFFER_POWER_MARGIN_W 5.0f      // 功率安全余量(W):估算下限按它预留消耗,判输入超限和增补时也扣掉` |
+| [53](../modules/algorithm/chassis_energy_config.h#L53) | 预处理 | `#endif` |
+| [54](../modules/algorithm/chassis_energy_config.h#L54) | 预处理 | `#ifndef CHASSIS_BUFFER_BOOST_MAX_W` |
+| [55](../modules/algorithm/chassis_energy_config.h#L55) | 预处理 | `#define CHASSIS_BUFFER_BOOST_MAX_W 60.0f        // 输入预算增补上限(W):注意与外层 max_boost_w(电容负载增补上限)不是同一个量` |
+| [56](../modules/algorithm/chassis_energy_config.h#L56) | 预处理 | `#endif` |
+| [57](../modules/algorithm/chassis_energy_config.h#L57) | 预处理 | `#ifndef CHASSIS_BUFFER_RECOVERY_POWER_W` |
+| [58](../modules/algorithm/chassis_energy_config.h#L58) | 预处理 | `#define CHASSIS_BUFFER_RECOVERY_POWER_W 20.0f   // 最大回充减让(W):按能量缺口调节,逼近硬底座时使用全部减让` |
+| [59](../modules/algorithm/chassis_energy_config.h#L59) | 预处理 | `#endif` |
+| [60](../modules/algorithm/chassis_energy_config.h#L60) | 预处理 | `#ifndef CHASSIS_BUFFER_RECOVERY_TARGET_TIME_S` |
+| [61](../modules/algorithm/chassis_energy_config.h#L61) | 预处理 | `#define CHASSIS_BUFFER_RECOVERY_TARGET_TIME_S 1.0f // 目标恢复时间(s):能量缺口除以该时间得到回充减让功率` |
+| [62](../modules/algorithm/chassis_energy_config.h#L62) | 预处理 | `#endif` |
+| [63](../modules/algorithm/chassis_energy_config.h#L63) | 预处理 | `#ifndef CHASSIS_BUFFER_OBSERVER_MAX_STEP_S` |
+| [64](../modules/algorithm/chassis_energy_config.h#L64) | 预处理 | `#define CHASSIS_BUFFER_OBSERVER_MAX_STEP_S 0.020f // 最大连续积分间隔(s):超出时按最坏耗能扣减并撤销增补` |
+| [65](../modules/algorithm/chassis_energy_config.h#L65) | 预处理 | `#endif` |
+| [66](../modules/algorithm/chassis_energy_config.h#L66) | 预处理 | `#ifndef CHASSIS_BUFFER_RECOVERY_HOLD_S` |
+| [67](../modules/algorithm/chassis_energy_config.h#L67) | 预处理 | `#define CHASSIS_BUFFER_RECOVERY_HOLD_S 0.1f     // 退出回充的确认时长(s):在该时长内持续高于退出门槛才解除` |
+| [68](../modules/algorithm/chassis_energy_config.h#L68) | 预处理 | `#endif` |
+| [69](../modules/algorithm/chassis_energy_config.h#L69) | 预处理 | `#ifndef CHASSIS_BUFFER_RISE_RATE_W_PER_S` |
+| [70](../modules/algorithm/chassis_energy_config.h#L70) | 预处理 | `#define CHASSIS_BUFFER_RISE_RATE_W_PER_S 600.0f // 输入预算上升斜率(W/s);电容负载侧使用独立斜率,下降立即生效` |
+| [71](../modules/algorithm/chassis_energy_config.h#L71) | 预处理 | `#endif` |
+| [72](../modules/algorithm/chassis_energy_config.h#L72) | 预处理 | `#ifndef CHASSIS_BUFFER_CORRECTION_RISE_J_PER_S` |
+| [73](../modules/algorithm/chassis_energy_config.h#L73) | 预处理 | `#define CHASSIS_BUFFER_CORRECTION_RISE_J_PER_S 20.0f // 新裁判帧向上校正估算的上限(J/s);向下立即校正` |
+| [74](../modules/algorithm/chassis_energy_config.h#L74) | 预处理 | `#endif` |
+| [75](../modules/algorithm/chassis_energy_config.h#L75) | 预处理 | `#ifndef CHASSIS_POWER_DEMAND_MARGIN_W` |
+| [76](../modules/algorithm/chassis_energy_config.h#L76) | 预处理 | `#define CHASSIS_POWER_DEMAND_MARGIN_W 5.0f     // 高于基础功率的真实驱动需求所允许的额外余量(W)` |
+| [77](../modules/algorithm/chassis_energy_config.h#L77) | 预处理 | `#endif` |
+| [79](../modules/algorithm/chassis_energy_config.h#L79) | 预处理 | `#endif` |
 
 ## modules/algorithm/chassis_kinematics.c
 
-源文件：[打开 modules/algorithm/chassis_kinematics.c](../modules/algorithm/chassis_kinematics.c)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/algorithm/chassis_kinematics.c:5](../modules/algorithm/chassis_kinematics.c#L5) | `OMNI_X_PROJECTION` | `0.70710678118654752440f` | 无外层条件 |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [5](../modules/algorithm/chassis_kinematics.c#L5) | 预处理 | `#define OMNI_X_PROJECTION 0.70710678118654752440f` |
 
 ## modules/algorithm/chassis_kinematics.h
 
-源文件：[打开 modules/algorithm/chassis_kinematics.h](../modules/algorithm/chassis_kinematics.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/algorithm/chassis_kinematics.h:2](../modules/algorithm/chassis_kinematics.h#L2) | `CHASSIS_KINEMATICS_H` | 空定义 | `#ifndef CHASSIS_KINEMATICS_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/algorithm/chassis_kinematics.h#L1) | 预处理 | `#ifndef CHASSIS_KINEMATICS_H` |
+| [2](../modules/algorithm/chassis_kinematics.h#L2) | 预处理 | `#define CHASSIS_KINEMATICS_H` |
+| [35](../modules/algorithm/chassis_kinematics.h#L35) | 预处理 | `#endif // CHASSIS_KINEMATICS_H` |
 
 ## modules/algorithm/chassis_power_budget.h
 
-源文件：[打开 modules/algorithm/chassis_power_budget.h](../modules/algorithm/chassis_power_budget.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/algorithm/chassis_power_budget.h:2](../modules/algorithm/chassis_power_budget.h#L2) | `CHASSIS_POWER_BUDGET_H` | 空定义 | `#ifndef CHASSIS_POWER_BUDGET_H` |  |
-| [modules/algorithm/chassis_power_budget.h:7](../modules/algorithm/chassis_power_budget.h#L7) | `CHASSIS_BUFFER_HISTORY_LENGTH` | `96U` | `#ifndef CHASSIS_POWER_BUDGET_H` | 固定输入功率历史段数 |
-
-### 可设置的结构体字段
-
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
-
-[modules/algorithm/chassis_power_budget.h:14](../modules/algorithm/chassis_power_budget.h#L14)
-
-```c
-typedef struct
-{
-    float max_energy_j;
-    float recovery_enter_j;
-    float recovery_exit_j;
-    float hard_floor_j;
-    float prediction_window_s;
-    float guard_window_s;
-    float settlement_delay_s;
-    float energy_margin_j;
-    float power_margin_w;
-    float max_boost_w;
-    float recovery_power_w; /* Maximum recovery reduction, not a fixed decrement. */
-    float recovery_target_time_s;
-    float observer_max_step_s;
-    float recovery_hold_s;
-    float rise_rate_w_per_s;
-    float safety_factor;
-} ChassisBufferBudgetConfig_s;
-```
-
-[modules/algorithm/chassis_power_budget.h:34](../modules/algorithm/chassis_power_budget.h#L34)
-
-```c
-typedef struct
-{
-    float empty_energy_ratio;
-    float full_energy_ratio;
-    float max_boost_w;
-    float rise_rate_w_per_s;
-    ChassisBufferBudgetConfig_s buffer;
-} ChassisPowerBudgetConfig_s;
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/algorithm/chassis_power_budget.h#L1) | 预处理 | `#ifndef CHASSIS_POWER_BUDGET_H` |
+| [2](../modules/algorithm/chassis_power_budget.h#L2) | 预处理 | `#define CHASSIS_POWER_BUDGET_H` |
+| [7](../modules/algorithm/chassis_power_budget.h#L7) | 预处理 | `#define CHASSIS_BUFFER_HISTORY_LENGTH 96U` |
+| [120](../modules/algorithm/chassis_power_budget.h#L120) | 预处理 | `#endif` |
 
 ## modules/algorithm/chassis_power_config.h
 
-源文件：[打开 modules/algorithm/chassis_power_config.h](../modules/algorithm/chassis_power_config.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/algorithm/chassis_power_config.h:2](../modules/algorithm/chassis_power_config.h#L2) | `CHASSIS_POWER_CONFIG_H` | 空定义 | `#ifndef CHASSIS_POWER_CONFIG_H` |  |
-| [modules/algorithm/chassis_power_config.h:10](../modules/algorithm/chassis_power_config.h#L10) | `CHASSIS_POWER_CONTROL_STAGE` | `3` | `#ifndef CHASSIS_POWER_CONFIG_H；#ifndef CHASSIS_POWER_CONTROL_STAGE` |  |
-| [modules/algorithm/chassis_power_config.h:13](../modules/algorithm/chassis_power_config.h#L13) | `CHASSIS_POWER_CAPTURE_ENABLE` | `0` | `#ifndef CHASSIS_POWER_CONFIG_H；#ifndef CHASSIS_POWER_CAPTURE_ENABLE` |  |
-| [modules/algorithm/chassis_power_config.h:16](../modules/algorithm/chassis_power_config.h#L16) | `POWER_METER_ENABLE` | `1` | `#ifndef CHASSIS_POWER_CONFIG_H；#ifndef POWER_METER_ENABLE` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/algorithm/chassis_power_config.h#L1) | 预处理 | `#ifndef CHASSIS_POWER_CONFIG_H` |
+| [2](../modules/algorithm/chassis_power_config.h#L2) | 预处理 | `#define CHASSIS_POWER_CONFIG_H` |
+| [9](../modules/algorithm/chassis_power_config.h#L9) | 预处理 | `#ifndef CHASSIS_POWER_CONTROL_STAGE` |
+| [10](../modules/algorithm/chassis_power_config.h#L10) | 预处理 | `#define CHASSIS_POWER_CONTROL_STAGE 3` |
+| [11](../modules/algorithm/chassis_power_config.h#L11) | 预处理 | `#endif` |
+| [12](../modules/algorithm/chassis_power_config.h#L12) | 预处理 | `#ifndef CHASSIS_POWER_CAPTURE_ENABLE` |
+| [13](../modules/algorithm/chassis_power_config.h#L13) | 预处理 | `#define CHASSIS_POWER_CAPTURE_ENABLE 0` |
+| [14](../modules/algorithm/chassis_power_config.h#L14) | 预处理 | `#endif` |
+| [15](../modules/algorithm/chassis_power_config.h#L15) | 预处理 | `#ifndef POWER_METER_ENABLE` |
+| [16](../modules/algorithm/chassis_power_config.h#L16) | 预处理 | `#define POWER_METER_ENABLE 1` |
+| [17](../modules/algorithm/chassis_power_config.h#L17) | 预处理 | `#endif` |
+| [18](../modules/algorithm/chassis_power_config.h#L18) | 预处理 | `#if CHASSIS_POWER_CONTROL_STAGE < 0 &#124;&#124; CHASSIS_POWER_CONTROL_STAGE > 3` |
+| [20](../modules/algorithm/chassis_power_config.h#L20) | 预处理 | `#endif` |
+| [21](../modules/algorithm/chassis_power_config.h#L21) | 预处理 | `#if CHASSIS_POWER_CAPTURE_ENABLE != 0 && CHASSIS_POWER_CAPTURE_ENABLE != 1` |
+| [23](../modules/algorithm/chassis_power_config.h#L23) | 预处理 | `#endif` |
+| [24](../modules/algorithm/chassis_power_config.h#L24) | 预处理 | `#if CHASSIS_POWER_CAPTURE_ENABLE` |
+| [26](../modules/algorithm/chassis_power_config.h#L26) | 预处理 | `#if !BOARD_LOG_UART_ENABLED` |
+| [28](../modules/algorithm/chassis_power_config.h#L28) | 预处理 | `#endif` |
+| [29](../modules/algorithm/chassis_power_config.h#L29) | 预处理 | `#endif` |
+| [30](../modules/algorithm/chassis_power_config.h#L30) | 预处理 | `#endif` |
 
 ## modules/algorithm/chassis_power_outer_loop.h
 
-源文件：[打开 modules/algorithm/chassis_power_outer_loop.h](../modules/algorithm/chassis_power_outer_loop.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/algorithm/chassis_power_outer_loop.h:2](../modules/algorithm/chassis_power_outer_loop.h#L2) | `CHASSIS_POWER_OUTER_LOOP_H` | 空定义 | `#ifndef CHASSIS_POWER_OUTER_LOOP_H` |  |
-
-### 可设置的结构体字段
-
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
-
-[modules/algorithm/chassis_power_outer_loop.h:14](../modules/algorithm/chassis_power_outer_loop.h#L14)
-
-```c
-typedef struct
-{
-    float kp;
-    float ki;
-    float measurement_lpf_tau_s;
-    float activation_margin_w;
-    float error_deadband_w;
-    float max_positive_correction_w;
-    float positive_slew_rate_w_per_s;
-    float budget_drop_reset_w;
-    float antiwindup_gain_per_s, low_demand_delay_s, low_demand_decay_w_per_s;
-} ChassisPowerOuterLoopConfig_s;
-```
-
-## modules/algorithm/chassis_power_transient.c
-
-源文件：[打开 modules/algorithm/chassis_power_transient.c](../modules/algorithm/chassis_power_transient.c)。
-
-### 配置结构体初值
-
-以下记录原始定义，不自动推断运行路径或后续覆盖。未填字段为零；指针/回调表示绑定关系。
-
-[modules/algorithm/chassis_power_transient.c:28](../modules/algorithm/chassis_power_transient.c#L28)
-
-```c
-return (ChassisPowerTransientConfig_s){.eta = .95f, .fast_gain = .5f,
-        .release_w_per_s = 60, .stale_release_w_per_s = 20,
-        .meter_fresh_ms = 20, .feedback_fresh_ms = 5,
-        .release_confirm_ms = 10, .stable_run_ms = 100,
-        .max_current_command = 15000, .acceleration_tau_s = .010f, .prediction_s = .008f,
-        .growth_time_s = .005f, .peak_ratio = 1.30f, .low_rpm = 100, .low_current = 500,
-        .target_step_rpm = 300, .zero_enter_rpm = 50, .zero_exit_rpm = 100,
-        .demand_enter_current = 200, .demand_exit_current = 100,
-        .low_hold_ms = 100, .startup_window_ms = 30, .startup_cooldown_ms = 500,
-        .guard_search_nodes = 256};
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/algorithm/chassis_power_outer_loop.h#L1) | 预处理 | `#ifndef CHASSIS_POWER_OUTER_LOOP_H` |
+| [2](../modules/algorithm/chassis_power_outer_loop.h#L2) | 预处理 | `#define CHASSIS_POWER_OUTER_LOOP_H` |
+| [81](../modules/algorithm/chassis_power_outer_loop.h#L81) | 预处理 | `#endif` |
 
 ## modules/algorithm/chassis_power_transient.h
 
-源文件：[打开 modules/algorithm/chassis_power_transient.h](../modules/algorithm/chassis_power_transient.h)。
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/algorithm/chassis_power_transient.h#L1) | 预处理 | `#ifndef CHASSIS_POWER_TRANSIENT_H` |
+| [2](../modules/algorithm/chassis_power_transient.h#L2) | 预处理 | `#define CHASSIS_POWER_TRANSIENT_H` |
+| [74](../modules/algorithm/chassis_power_transient.h#L74) | 预处理 | `#endif` |
 
-### 宏定义
+## modules/algorithm/chassis_spin.c
 
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/algorithm/chassis_power_transient.h:2](../modules/algorithm/chassis_power_transient.h#L2) | `CHASSIS_POWER_TRANSIENT_H` | 空定义 | `#ifndef CHASSIS_POWER_TRANSIENT_H` |  |
-
-### 可设置的结构体字段
-
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
-
-[modules/algorithm/chassis_power_transient.h:14](../modules/algorithm/chassis_power_transient.h#L14)
-
-```c
-typedef struct {
-    float eta, fast_gain, release_w_per_s, stale_release_w_per_s;
-    uint32_t meter_fresh_ms, feedback_fresh_ms, release_confirm_ms, stable_run_ms;
-    float max_current_command, acceleration_tau_s, prediction_s, growth_time_s;
-    float peak_ratio, low_rpm, low_current, target_step_rpm;
-    float zero_enter_rpm, zero_exit_rpm, demand_enter_current, demand_exit_current;
-    uint32_t low_hold_ms, startup_window_ms, startup_cooldown_ms;
-    uint16_t guard_search_nodes;
-} ChassisPowerTransientConfig_s;
-```
-
-## modules/algorithm/chassis_spin_config.h
-
-源文件：[打开 modules/algorithm/chassis_spin_config.h](../modules/algorithm/chassis_spin_config.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/algorithm/chassis_spin_config.h:2](../modules/algorithm/chassis_spin_config.h#L2) | `CHASSIS_SPIN_CONFIG_H` | 空定义 | `#ifndef CHASSIS_SPIN_CONFIG_H` |  |
-| [modules/algorithm/chassis_spin_config.h:6](../modules/algorithm/chassis_spin_config.h#L6) | `CHASSIS_SPIN_ADAPTIVE_ENABLE` | `1` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_ADAPTIVE_ENABLE` |  |
-| [modules/algorithm/chassis_spin_config.h:12](../modules/algorithm/chassis_spin_config.h#L12) | `CHASSIS_SPIN_MODE_FIXED` | `0` | `#ifndef CHASSIS_SPIN_CONFIG_H` |  |
-| [modules/algorithm/chassis_spin_config.h:13](../modules/algorithm/chassis_spin_config.h#L13) | `CHASSIS_SPIN_MODE_ADAPTIVE` | `1` | `#ifndef CHASSIS_SPIN_CONFIG_H` |  |
-| [modules/algorithm/chassis_spin_config.h:14](../modules/algorithm/chassis_spin_config.h#L14) | `CHASSIS_SPIN_MODE_SINE` | `2` | `#ifndef CHASSIS_SPIN_CONFIG_H` |  |
-| [modules/algorithm/chassis_spin_config.h:17](../modules/algorithm/chassis_spin_config.h#L17) | `CHASSIS_SPIN_MODE` | `CHASSIS_SPIN_MODE_ADAPTIVE` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_MODE；#if CHASSIS_SPIN_ADAPTIVE_ENABLE` |  |
-| [modules/algorithm/chassis_spin_config.h:19](../modules/algorithm/chassis_spin_config.h#L19) | `CHASSIS_SPIN_MODE` | `CHASSIS_SPIN_MODE_FIXED` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_MODE；#if CHASSIS_SPIN_ADAPTIVE_ENABLE → #else` |  |
-| [modules/algorithm/chassis_spin_config.h:25](../modules/algorithm/chassis_spin_config.h#L25) | `CHASSIS_SPIN_DYNAMIC_ENABLED` | `(CHASSIS_SPIN_MODE != CHASSIS_SPIN_MODE_FIXED)` | `#ifndef CHASSIS_SPIN_CONFIG_H` |  |
-| [modules/algorithm/chassis_spin_config.h:29](../modules/algorithm/chassis_spin_config.h#L29) | `CHASSIS_SPIN_FIXED_WZ` | `4000.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_FIXED_WZ` |  |
-| [modules/algorithm/chassis_spin_config.h:32](../modules/algorithm/chassis_spin_config.h#L32) | `CHASSIS_SPIN_MIN_WZ` | `1000.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_MIN_WZ` |  |
-| [modules/algorithm/chassis_spin_config.h:35](../modules/algorithm/chassis_spin_config.h#L35) | `CHASSIS_SPIN_MAX_WZ` | `6000.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_MAX_WZ` |  |
-| [modules/algorithm/chassis_spin_config.h:38](../modules/algorithm/chassis_spin_config.h#L38) | `CHASSIS_SPIN_POWER_GAIN` | `40.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_POWER_GAIN` |  |
-| [modules/algorithm/chassis_spin_config.h:41](../modules/algorithm/chassis_spin_config.h#L41) | `CHASSIS_SPIN_RISE_RATE` | `400.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_RISE_RATE` |  |
-| [modules/algorithm/chassis_spin_config.h:44](../modules/algorithm/chassis_spin_config.h#L44) | `CHASSIS_SPIN_FALL_RATE` | `2000.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_FALL_RATE` |  |
-| [modules/algorithm/chassis_spin_config.h:47](../modules/algorithm/chassis_spin_config.h#L47) | `CHASSIS_SPIN_POWER_LPF_TAU_S` | `0.1f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_POWER_LPF_TAU_S` |  |
-| [modules/algorithm/chassis_spin_config.h:50](../modules/algorithm/chassis_spin_config.h#L50) | `CHASSIS_SPIN_POWER_DEADBAND_W` | `1.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_POWER_DEADBAND_W` |  |
-| [modules/algorithm/chassis_spin_config.h:53](../modules/algorithm/chassis_spin_config.h#L53) | `CHASSIS_SPIN_SETTLE_TIME_S` | `0.2f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SETTLE_TIME_S` |  |
-| [modules/algorithm/chassis_spin_config.h:56](../modules/algorithm/chassis_spin_config.h#L56) | `CHASSIS_SPIN_TRACKING_ERROR_RPM` | `500.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_TRACKING_ERROR_RPM` |  |
-| [modules/algorithm/chassis_spin_config.h:59](../modules/algorithm/chassis_spin_config.h#L59) | `CHASSIS_SPIN_BUDGET_DROP_RESET_W` | `1.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_BUDGET_DROP_RESET_W` |  |
-| [modules/algorithm/chassis_spin_config.h:65](../modules/algorithm/chassis_spin_config.h#L65) | `CHASSIS_SPIN_SINE_CENTER_WZ` | `800.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SINE_CENTER_WZ` |  |
-| [modules/algorithm/chassis_spin_config.h:68](../modules/algorithm/chassis_spin_config.h#L68) | `CHASSIS_SPIN_SINE_MIN_WZ` | `200.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SINE_MIN_WZ` |  |
-| [modules/algorithm/chassis_spin_config.h:71](../modules/algorithm/chassis_spin_config.h#L71) | `CHASSIS_SPIN_SINE_AMPLITUDE_WZ` | `200.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SINE_AMPLITUDE_WZ` |  |
-| [modules/algorithm/chassis_spin_config.h:74](../modules/algorithm/chassis_spin_config.h#L74) | `CHASSIS_SPIN_SINE_PERIOD_S` | `4.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SINE_PERIOD_S` |  |
-| [modules/algorithm/chassis_spin_config.h:77](../modules/algorithm/chassis_spin_config.h#L77) | `CHASSIS_SPIN_SINE_RAMP_S` | `1.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SINE_RAMP_S` |  |
-| [modules/algorithm/chassis_spin_config.h:80](../modules/algorithm/chassis_spin_config.h#L80) | `CHASSIS_SPIN_SINE_RISE_RATE` | `400.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SINE_RISE_RATE` |  |
-| [modules/algorithm/chassis_spin_config.h:83](../modules/algorithm/chassis_spin_config.h#L83) | `CHASSIS_SPIN_SINE_FALL_RATE` | `2000.0f` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SINE_FALL_RATE` |  |
-| [modules/algorithm/chassis_spin_config.h:86](../modules/algorithm/chassis_spin_config.h#L86) | `CHASSIS_SPIN_SINE_DIRECTION` | `1` | `#ifndef CHASSIS_SPIN_CONFIG_H；#ifndef CHASSIS_SPIN_SINE_DIRECTION` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [15](../modules/algorithm/chassis_spin.c#L15) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE` |
+| [23](../modules/algorithm/chassis_spin.c#L23) | 预处理 | `#else` |
+| [25](../modules/algorithm/chassis_spin.c#L25) | 预处理 | `#endif` |
+| [40](../modules/algorithm/chassis_spin.c#L40) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE` |
+| [50](../modules/algorithm/chassis_spin.c#L50) | 预处理 | `#else` |
+| [52](../modules/algorithm/chassis_spin.c#L52) | 预处理 | `#endif` |
+| [55](../modules/algorithm/chassis_spin.c#L55) | 预处理 | `#if CHASSIS_SPIN_MODE != CHASSIS_SPIN_MODE_SINE` |
+| [60](../modules/algorithm/chassis_spin.c#L60) | 预处理 | `#else` |
+| [137](../modules/algorithm/chassis_spin.c#L137) | 预处理 | `#endif` |
+| [149](../modules/algorithm/chassis_spin.c#L149) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE` |
+| [151](../modules/algorithm/chassis_spin.c#L151) | 预处理 | `#endif` |
+| [156](../modules/algorithm/chassis_spin.c#L156) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_FIXED` |
+| [160](../modules/algorithm/chassis_spin.c#L160) | 预处理 | `#elif CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE` |
+| [162](../modules/algorithm/chassis_spin.c#L162) | 预处理 | `#else` |
+| [212](../modules/algorithm/chassis_spin.c#L212) | 预处理 | `#endif` |
+| [218](../modules/algorithm/chassis_spin.c#L218) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE` |
+| [221](../modules/algorithm/chassis_spin.c#L221) | 预处理 | `#endif` |
+| [241](../modules/algorithm/chassis_spin.c#L241) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE` |
+| [244](../modules/algorithm/chassis_spin.c#L244) | 预处理 | `#else` |
+| [247](../modules/algorithm/chassis_spin.c#L247) | 预处理 | `#endif` |
 
 ## modules/algorithm/chassis_spin.h
 
-源文件：[打开 modules/algorithm/chassis_spin.h](../modules/algorithm/chassis_spin.h)。
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/algorithm/chassis_spin.h#L1) | 预处理 | `#ifndef CHASSIS_SPIN_H` |
+| [2](../modules/algorithm/chassis_spin.h#L2) | 预处理 | `#define CHASSIS_SPIN_H` |
+| [53](../modules/algorithm/chassis_spin.h#L53) | 预处理 | `#endif` |
 
-### 宏定义
+## modules/algorithm/chassis_spin_config.h
 
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/algorithm/chassis_spin.h:2](../modules/algorithm/chassis_spin.h#L2) | `CHASSIS_SPIN_H` | 空定义 | `#ifndef CHASSIS_SPIN_H` |  |
-
-### 可设置的结构体字段
-
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
-
-[modules/algorithm/chassis_spin.h:8](../modules/algorithm/chassis_spin.h#L8)
-
-```c
-typedef struct
-{
-    float fixed_wz, min_wz, max_wz;
-    float gain_wz_per_w_s, rise_wz_per_s, fall_wz_per_s;
-    float power_lpf_tau_s, power_deadband_w, settle_time_s;
-    float budget_drop_reset_w;
-    float sine_amplitude_wz, sine_period_s, sine_ramp_s;
-    float sine_rise_wz_per_s, sine_fall_wz_per_s;
-    int8_t sine_direction;
-} ChassisSpinConfig_s;
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/algorithm/chassis_spin_config.h#L1) | 预处理 | `#ifndef CHASSIS_SPIN_CONFIG_H` |
+| [2](../modules/algorithm/chassis_spin_config.h#L2) | 预处理 | `#define CHASSIS_SPIN_CONFIG_H` |
+| [5](../modules/algorithm/chassis_spin_config.h#L5) | 预处理 | `#ifndef CHASSIS_SPIN_ADAPTIVE_ENABLE` |
+| [6](../modules/algorithm/chassis_spin_config.h#L6) | 预处理 | `#define CHASSIS_SPIN_ADAPTIVE_ENABLE 0` |
+| [7](../modules/algorithm/chassis_spin_config.h#L7) | 预处理 | `#endif` |
+| [8](../modules/algorithm/chassis_spin_config.h#L8) | 预处理 | `#if CHASSIS_SPIN_ADAPTIVE_ENABLE != 0 && CHASSIS_SPIN_ADAPTIVE_ENABLE != 1` |
+| [10](../modules/algorithm/chassis_spin_config.h#L10) | 预处理 | `#endif` |
+| [12](../modules/algorithm/chassis_spin_config.h#L12) | 预处理 | `#define CHASSIS_SPIN_MODE_FIXED 0` |
+| [13](../modules/algorithm/chassis_spin_config.h#L13) | 预处理 | `#define CHASSIS_SPIN_MODE_ADAPTIVE 1` |
+| [14](../modules/algorithm/chassis_spin_config.h#L14) | 预处理 | `#define CHASSIS_SPIN_MODE_SINE 2` |
+| [15](../modules/algorithm/chassis_spin_config.h#L15) | 预处理 | `#ifndef CHASSIS_SPIN_MODE` |
+| [16](../modules/algorithm/chassis_spin_config.h#L16) | 预处理 | `#if CHASSIS_SPIN_ADAPTIVE_ENABLE` |
+| [17](../modules/algorithm/chassis_spin_config.h#L17) | 预处理 | `#define CHASSIS_SPIN_MODE CHASSIS_SPIN_MODE_ADAPTIVE` |
+| [18](../modules/algorithm/chassis_spin_config.h#L18) | 预处理 | `#else` |
+| [19](../modules/algorithm/chassis_spin_config.h#L19) | 预处理 | `#define CHASSIS_SPIN_MODE CHASSIS_SPIN_MODE_FIXED` |
+| [20](../modules/algorithm/chassis_spin_config.h#L20) | 预处理 | `#endif` |
+| [21](../modules/algorithm/chassis_spin_config.h#L21) | 预处理 | `#endif` |
+| [22](../modules/algorithm/chassis_spin_config.h#L22) | 预处理 | `#if CHASSIS_SPIN_MODE < CHASSIS_SPIN_MODE_FIXED &#124;&#124; CHASSIS_SPIN_MODE > CHASSIS_SPIN_MODE_SINE` |
+| [24](../modules/algorithm/chassis_spin_config.h#L24) | 预处理 | `#endif` |
+| [25](../modules/algorithm/chassis_spin_config.h#L25) | 预处理 | `#define CHASSIS_SPIN_DYNAMIC_ENABLED (CHASSIS_SPIN_MODE != CHASSIS_SPIN_MODE_FIXED)` |
+| [28](../modules/algorithm/chassis_spin_config.h#L28) | 预处理 | `#ifndef CHASSIS_SPIN_FIXED_WZ` |
+| [29](../modules/algorithm/chassis_spin_config.h#L29) | 预处理 | `#define CHASSIS_SPIN_FIXED_WZ 4000.0f` |
+| [30](../modules/algorithm/chassis_spin_config.h#L30) | 预处理 | `#endif` |
+| [31](../modules/algorithm/chassis_spin_config.h#L31) | 预处理 | `#ifndef CHASSIS_SPIN_MIN_WZ` |
+| [32](../modules/algorithm/chassis_spin_config.h#L32) | 预处理 | `#define CHASSIS_SPIN_MIN_WZ 1000.0f` |
+| [33](../modules/algorithm/chassis_spin_config.h#L33) | 预处理 | `#endif` |
+| [34](../modules/algorithm/chassis_spin_config.h#L34) | 预处理 | `#ifndef CHASSIS_SPIN_MAX_WZ` |
+| [35](../modules/algorithm/chassis_spin_config.h#L35) | 预处理 | `#define CHASSIS_SPIN_MAX_WZ 6000.0f` |
+| [36](../modules/algorithm/chassis_spin_config.h#L36) | 预处理 | `#endif` |
+| [37](../modules/algorithm/chassis_spin_config.h#L37) | 预处理 | `#ifndef CHASSIS_SPIN_POWER_GAIN` |
+| [38](../modules/algorithm/chassis_spin_config.h#L38) | 预处理 | `#define CHASSIS_SPIN_POWER_GAIN 40.0f` |
+| [39](../modules/algorithm/chassis_spin_config.h#L39) | 预处理 | `#endif` |
+| [40](../modules/algorithm/chassis_spin_config.h#L40) | 预处理 | `#ifndef CHASSIS_SPIN_RISE_RATE` |
+| [41](../modules/algorithm/chassis_spin_config.h#L41) | 预处理 | `#define CHASSIS_SPIN_RISE_RATE 400.0f` |
+| [42](../modules/algorithm/chassis_spin_config.h#L42) | 预处理 | `#endif` |
+| [43](../modules/algorithm/chassis_spin_config.h#L43) | 预处理 | `#ifndef CHASSIS_SPIN_FALL_RATE` |
+| [44](../modules/algorithm/chassis_spin_config.h#L44) | 预处理 | `#define CHASSIS_SPIN_FALL_RATE 2000.0f` |
+| [45](../modules/algorithm/chassis_spin_config.h#L45) | 预处理 | `#endif` |
+| [46](../modules/algorithm/chassis_spin_config.h#L46) | 预处理 | `#ifndef CHASSIS_SPIN_POWER_LPF_TAU_S` |
+| [47](../modules/algorithm/chassis_spin_config.h#L47) | 预处理 | `#define CHASSIS_SPIN_POWER_LPF_TAU_S 0.1f` |
+| [48](../modules/algorithm/chassis_spin_config.h#L48) | 预处理 | `#endif` |
+| [49](../modules/algorithm/chassis_spin_config.h#L49) | 预处理 | `#ifndef CHASSIS_SPIN_POWER_DEADBAND_W` |
+| [50](../modules/algorithm/chassis_spin_config.h#L50) | 预处理 | `#define CHASSIS_SPIN_POWER_DEADBAND_W 1.0f` |
+| [51](../modules/algorithm/chassis_spin_config.h#L51) | 预处理 | `#endif` |
+| [52](../modules/algorithm/chassis_spin_config.h#L52) | 预处理 | `#ifndef CHASSIS_SPIN_SETTLE_TIME_S` |
+| [53](../modules/algorithm/chassis_spin_config.h#L53) | 预处理 | `#define CHASSIS_SPIN_SETTLE_TIME_S 0.2f` |
+| [54](../modules/algorithm/chassis_spin_config.h#L54) | 预处理 | `#endif` |
+| [55](../modules/algorithm/chassis_spin_config.h#L55) | 预处理 | `#ifndef CHASSIS_SPIN_TRACKING_ERROR_RPM` |
+| [56](../modules/algorithm/chassis_spin_config.h#L56) | 预处理 | `#define CHASSIS_SPIN_TRACKING_ERROR_RPM 500.0f` |
+| [57](../modules/algorithm/chassis_spin_config.h#L57) | 预处理 | `#endif` |
+| [58](../modules/algorithm/chassis_spin_config.h#L58) | 预处理 | `#ifndef CHASSIS_SPIN_BUDGET_DROP_RESET_W` |
+| [59](../modules/algorithm/chassis_spin_config.h#L59) | 预处理 | `#define CHASSIS_SPIN_BUDGET_DROP_RESET_W 1.0f` |
+| [60](../modules/algorithm/chassis_spin_config.h#L60) | 预处理 | `#endif` |
+| [64](../modules/algorithm/chassis_spin_config.h#L64) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_CENTER_WZ` |
+| [65](../modules/algorithm/chassis_spin_config.h#L65) | 预处理 | `#define CHASSIS_SPIN_SINE_CENTER_WZ 800.0f` |
+| [66](../modules/algorithm/chassis_spin_config.h#L66) | 预处理 | `#endif` |
+| [67](../modules/algorithm/chassis_spin_config.h#L67) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_MIN_WZ` |
+| [68](../modules/algorithm/chassis_spin_config.h#L68) | 预处理 | `#define CHASSIS_SPIN_SINE_MIN_WZ 200.0f` |
+| [69](../modules/algorithm/chassis_spin_config.h#L69) | 预处理 | `#endif` |
+| [70](../modules/algorithm/chassis_spin_config.h#L70) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_AMPLITUDE_WZ` |
+| [71](../modules/algorithm/chassis_spin_config.h#L71) | 预处理 | `#define CHASSIS_SPIN_SINE_AMPLITUDE_WZ 200.0f` |
+| [72](../modules/algorithm/chassis_spin_config.h#L72) | 预处理 | `#endif` |
+| [73](../modules/algorithm/chassis_spin_config.h#L73) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_PERIOD_S` |
+| [74](../modules/algorithm/chassis_spin_config.h#L74) | 预处理 | `#define CHASSIS_SPIN_SINE_PERIOD_S 4.0f` |
+| [75](../modules/algorithm/chassis_spin_config.h#L75) | 预处理 | `#endif` |
+| [76](../modules/algorithm/chassis_spin_config.h#L76) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_RAMP_S` |
+| [77](../modules/algorithm/chassis_spin_config.h#L77) | 预处理 | `#define CHASSIS_SPIN_SINE_RAMP_S 1.0f` |
+| [78](../modules/algorithm/chassis_spin_config.h#L78) | 预处理 | `#endif` |
+| [79](../modules/algorithm/chassis_spin_config.h#L79) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_RISE_RATE` |
+| [80](../modules/algorithm/chassis_spin_config.h#L80) | 预处理 | `#define CHASSIS_SPIN_SINE_RISE_RATE 400.0f` |
+| [81](../modules/algorithm/chassis_spin_config.h#L81) | 预处理 | `#endif` |
+| [82](../modules/algorithm/chassis_spin_config.h#L82) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_FALL_RATE` |
+| [83](../modules/algorithm/chassis_spin_config.h#L83) | 预处理 | `#define CHASSIS_SPIN_SINE_FALL_RATE 2000.0f` |
+| [84](../modules/algorithm/chassis_spin_config.h#L84) | 预处理 | `#endif` |
+| [85](../modules/algorithm/chassis_spin_config.h#L85) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_DIRECTION` |
+| [86](../modules/algorithm/chassis_spin_config.h#L86) | 预处理 | `#define CHASSIS_SPIN_SINE_DIRECTION 1` |
+| [87](../modules/algorithm/chassis_spin_config.h#L87) | 预处理 | `#endif` |
+| [89](../modules/algorithm/chassis_spin_config.h#L89) | 预处理 | `#endif` |
 
 ## modules/algorithm/controller.h
 
-源文件：[打开 modules/algorithm/controller.h](../modules/algorithm/controller.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/algorithm/controller.h:14](../modules/algorithm/controller.h#L14) | `_CONTROLLER_H` | 空定义 | `#ifndef _CONTROLLER_H` |  |
-| [modules/algorithm/controller.h:25](../modules/algorithm/controller.h#L25) | `abs(x)` | `((x > 0) ? x : -x)` | `#ifndef _CONTROLLER_H；#ifndef abs` |  |
-
-### 可设置的结构体字段
-
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
-
-[modules/algorithm/controller.h:100](../modules/algorithm/controller.h#L100)
-
-```c
-typedef struct // config parameter
-{
-    // basic parameter
-    float Kp;
-    float Ki;
-    float Kd;
-    float MaxOut;   // 输出限幅
-    float DeadBand; // 死区
-
-    // improve parameter
-    PID_Improvement_e Improve;
-    float IntegralLimit; // 积分限幅
-    float CoefA;         // AB为变速积分参数,变速积分实际上就引入了积分分离
-    float CoefB;         // ITerm = Err*((A-abs(err)+B)/A)  when B<|err|<A+B
-    float Output_LPF_RC; // RC = 1/omegac
-    float Derivative_LPF_RC;
-} PID_Init_Config_s;
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [13](../modules/algorithm/controller.h#L13) | 预处理 | `#ifndef _CONTROLLER_H` |
+| [14](../modules/algorithm/controller.h#L14) | 预处理 | `#define _CONTROLLER_H` |
+| [24](../modules/algorithm/controller.h#L24) | 预处理 | `#ifndef abs` |
+| [25](../modules/algorithm/controller.h#L25) | 预处理 | `#define abs(x) ((x > 0) ? x : -x)` |
+| [26](../modules/algorithm/controller.h#L26) | 预处理 | `#endif` |
+| [136](../modules/algorithm/controller.h#L136) | 预处理 | `#endif` |
 
 ## modules/algorithm/crc16.h
 
-源文件：[打开 modules/algorithm/crc16.h](../modules/algorithm/crc16.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/algorithm/crc16.h:2](../modules/algorithm/crc16.h#L2) | `__CRC16_H` | 空定义 | `#ifndef __CRC16_H` |  |
-| [modules/algorithm/crc16.h:5](../modules/algorithm/crc16.h#L5) | `CRC_START_16` | `0xFFFF` | `#ifndef __CRC16_H` |  |
-| [modules/algorithm/crc16.h:6](../modules/algorithm/crc16.h#L6) | `CRC_START_MODBUS` | `0xFFFF` | `#ifndef __CRC16_H` |  |
-| [modules/algorithm/crc16.h:7](../modules/algorithm/crc16.h#L7) | `CRC_POLY_16` | `0xA001` | `#ifndef __CRC16_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/algorithm/crc16.h#L1) | 预处理 | `#ifndef __CRC16_H` |
+| [2](../modules/algorithm/crc16.h#L2) | 预处理 | `#define __CRC16_H` |
+| [5](../modules/algorithm/crc16.h#L5) | 预处理 | `#define CRC_START_16 0xFFFF` |
+| [6](../modules/algorithm/crc16.h#L6) | 预处理 | `#define CRC_START_MODBUS 0xFFFF` |
+| [7](../modules/algorithm/crc16.h#L7) | 预处理 | `#define CRC_POLY_16 0xA001` |
+| [14](../modules/algorithm/crc16.h#L14) | 预处理 | `#endif` |
 
 ## modules/algorithm/crc8.h
 
-源文件：[打开 modules/algorithm/crc8.h](../modules/algorithm/crc8.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/algorithm/crc8.h:2](../modules/algorithm/crc8.h#L2) | `__CRC8_H` | 空定义 | `#ifndef __CRC8_H` |  |
-| [modules/algorithm/crc8.h:6](../modules/algorithm/crc8.h#L6) | `CRC_START_8` | `0x00` | `#ifndef __CRC8_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/algorithm/crc8.h#L1) | 预处理 | `#ifndef __CRC8_H` |
+| [2](../modules/algorithm/crc8.h#L2) | 预处理 | `#define __CRC8_H` |
+| [6](../modules/algorithm/crc8.h#L6) | 预处理 | `#define CRC_START_8 0x00` |
+| [11](../modules/algorithm/crc8.h#L11) | 预处理 | `#endif` |
 
 ## modules/algorithm/kalman_filter.h
 
-源文件：[打开 modules/algorithm/kalman_filter.h](../modules/algorithm/kalman_filter.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/algorithm/kalman_filter.h:14](../modules/algorithm/kalman_filter.h#L14) | `__KALMAN_FILTER_H` | 空定义 | `#ifndef __KALMAN_FILTER_H` |  |
-| [modules/algorithm/kalman_filter.h:34](../modules/algorithm/kalman_filter.h#L34) | `user_malloc` | `pvPortMalloc` | `#ifndef __KALMAN_FILTER_H；#ifndef user_malloc；#ifdef _CMSIS_OS_H` |  |
-| [modules/algorithm/kalman_filter.h:36](../modules/algorithm/kalman_filter.h#L36) | `user_malloc` | `malloc` | `#ifndef __KALMAN_FILTER_H；#ifndef user_malloc；#ifdef _CMSIS_OS_H → #else` |  |
-| [modules/algorithm/kalman_filter.h:41](../modules/algorithm/kalman_filter.h#L41) | `mat` | `arm_matrix_instance_f32` | `#ifndef __KALMAN_FILTER_H` |  |
-| [modules/algorithm/kalman_filter.h:42](../modules/algorithm/kalman_filter.h#L42) | `Matrix_Init` | `arm_mat_init_f32` | `#ifndef __KALMAN_FILTER_H` |  |
-| [modules/algorithm/kalman_filter.h:43](../modules/algorithm/kalman_filter.h#L43) | `Matrix_Add` | `arm_mat_add_f32` | `#ifndef __KALMAN_FILTER_H` |  |
-| [modules/algorithm/kalman_filter.h:44](../modules/algorithm/kalman_filter.h#L44) | `Matrix_Subtract` | `arm_mat_sub_f32` | `#ifndef __KALMAN_FILTER_H` |  |
-| [modules/algorithm/kalman_filter.h:45](../modules/algorithm/kalman_filter.h#L45) | `Matrix_Multiply` | `arm_mat_mult_f32` | `#ifndef __KALMAN_FILTER_H` |  |
-| [modules/algorithm/kalman_filter.h:46](../modules/algorithm/kalman_filter.h#L46) | `Matrix_Transpose` | `arm_mat_trans_f32` | `#ifndef __KALMAN_FILTER_H` |  |
-| [modules/algorithm/kalman_filter.h:47](../modules/algorithm/kalman_filter.h#L47) | `Matrix_Inverse` | `arm_mat_inverse_f32` | `#ifndef __KALMAN_FILTER_H` |  |
-
-### 已注释的宏选项（当前不定义）
-
-| 行 | 原选项 |
-| --- | --- |
-| [modules/algorithm/kalman_filter.h:18](../modules/algorithm/kalman_filter.h#L18) | `#define __CC_ARM // Keil` |
-| [modules/algorithm/kalman_filter.h:19](../modules/algorithm/kalman_filter.h#L19) | `#define ARM_MATH_CM4` |
-| [modules/algorithm/kalman_filter.h:20](../modules/algorithm/kalman_filter.h#L20) | `#define ARM_MATH_MATRIX_CHECK` |
-| [modules/algorithm/kalman_filter.h:21](../modules/algorithm/kalman_filter.h#L21) | `#define ARM_MATH_ROUNDING` |
-| [modules/algorithm/kalman_filter.h:22](../modules/algorithm/kalman_filter.h#L22) | `#define ARM_MATH_DSP // define in arm_math.h` |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [13](../modules/algorithm/kalman_filter.h#L13) | 预处理 | `#ifndef __KALMAN_FILTER_H` |
+| [14](../modules/algorithm/kalman_filter.h#L14) | 预处理 | `#define __KALMAN_FILTER_H` |
+| [18](../modules/algorithm/kalman_filter.h#L18) | 预处理 | `#define __CC_ARM    // Keil` |
+| [19](../modules/algorithm/kalman_filter.h#L19) | 预处理 | `#define ARM_MATH_CM4` |
+| [20](../modules/algorithm/kalman_filter.h#L20) | 预处理 | `#define ARM_MATH_MATRIX_CHECK` |
+| [21](../modules/algorithm/kalman_filter.h#L21) | 预处理 | `#define ARM_MATH_ROUNDING` |
+| [22](../modules/algorithm/kalman_filter.h#L22) | 预处理 | `#define ARM_MATH_DSP    // define in arm_math.h` |
+| [32](../modules/algorithm/kalman_filter.h#L32) | 预处理 | `#ifndef user_malloc` |
+| [33](../modules/algorithm/kalman_filter.h#L33) | 预处理 | `#ifdef _CMSIS_OS_H` |
+| [34](../modules/algorithm/kalman_filter.h#L34) | 预处理 | `#define user_malloc pvPortMalloc` |
+| [35](../modules/algorithm/kalman_filter.h#L35) | 预处理 | `#else` |
+| [36](../modules/algorithm/kalman_filter.h#L36) | 预处理 | `#define user_malloc malloc` |
+| [37](../modules/algorithm/kalman_filter.h#L37) | 预处理 | `#endif` |
+| [38](../modules/algorithm/kalman_filter.h#L38) | 预处理 | `#endif` |
+| [41](../modules/algorithm/kalman_filter.h#L41) | 预处理 | `#define mat arm_matrix_instance_f32` |
+| [42](../modules/algorithm/kalman_filter.h#L42) | 预处理 | `#define Matrix_Init arm_mat_init_f32` |
+| [43](../modules/algorithm/kalman_filter.h#L43) | 预处理 | `#define Matrix_Add arm_mat_add_f32` |
+| [44](../modules/algorithm/kalman_filter.h#L44) | 预处理 | `#define Matrix_Subtract arm_mat_sub_f32` |
+| [45](../modules/algorithm/kalman_filter.h#L45) | 预处理 | `#define Matrix_Multiply arm_mat_mult_f32` |
+| [46](../modules/algorithm/kalman_filter.h#L46) | 预处理 | `#define Matrix_Transpose arm_mat_trans_f32` |
+| [47](../modules/algorithm/kalman_filter.h#L47) | 预处理 | `#define Matrix_Inverse arm_mat_inverse_f32` |
+| [122](../modules/algorithm/kalman_filter.h#L122) | 预处理 | `#endif //__KALMAN_FILTER_H` |
 
 ## modules/algorithm/power_model.h
 
-源文件：[打开 modules/algorithm/power_model.h](../modules/algorithm/power_model.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/algorithm/power_model.h:2](../modules/algorithm/power_model.h#L2) | `POWER_MODEL_H` | 空定义 | `#ifndef POWER_MODEL_H` |  |
-| [modules/algorithm/power_model.h:7](../modules/algorithm/power_model.h#L7) | `POWER_MODEL_MOTOR_COUNT` | `4U` | `#ifndef POWER_MODEL_H` |  |
-
-### 可设置的结构体字段
-
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
-
-[modules/algorithm/power_model.h:18](../modules/algorithm/power_model.h#L18)
-
-```c
-typedef struct
-{
-    float k0;
-    float k1;
-    float k2;
-    float k3;
-    float k4;
-    float k5;
-    float current_conversion;
-} MotorPowerModelConfig_s;
-```
-
-[modules/algorithm/power_model.h:29](../modules/algorithm/power_model.h#L29)
-
-```c
-typedef struct
-{
-    float safety_factor;
-    float small_error_threshold_rpm;
-    float reserved_power_threshold_w;
-    float per_motor_reserved_power_w;
-    float max_current_command;
-} ChassisPowerAlgorithmConfig_s;
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/algorithm/power_model.h#L1) | 预处理 | `#ifndef POWER_MODEL_H` |
+| [2](../modules/algorithm/power_model.h#L2) | 预处理 | `#define POWER_MODEL_H` |
+| [7](../modules/algorithm/power_model.h#L7) | 预处理 | `#define POWER_MODEL_MOTOR_COUNT 4U` |
+| [98](../modules/algorithm/power_model.h#L98) | 预处理 | `#endif // POWER_MODEL_H` |
 
 ## modules/algorithm/QuaternionEKF.h
 
-源文件：[打开 modules/algorithm/QuaternionEKF.h](../modules/algorithm/QuaternionEKF.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/algorithm/QuaternionEKF.h:14](../modules/algorithm/QuaternionEKF.h#L14) | `_QUAT_EKF_H` | 空定义 | `#ifndef _QUAT_EKF_H` |  |
-| [modules/algorithm/QuaternionEKF.h:19](../modules/algorithm/QuaternionEKF.h#L19) | `TRUE` | `1` | `#ifndef _QUAT_EKF_H；#ifndef TRUE` | *< boolean true |
-| [modules/algorithm/QuaternionEKF.h:23](../modules/algorithm/QuaternionEKF.h#L23) | `FALSE` | `0` | `#ifndef _QUAT_EKF_H；#ifndef FALSE` | *< boolean fails |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [13](../modules/algorithm/QuaternionEKF.h#L13) | 预处理 | `#ifndef _QUAT_EKF_H` |
+| [14](../modules/algorithm/QuaternionEKF.h#L14) | 预处理 | `#define _QUAT_EKF_H` |
+| [18](../modules/algorithm/QuaternionEKF.h#L18) | 预处理 | `#ifndef TRUE` |
+| [19](../modules/algorithm/QuaternionEKF.h#L19) | 预处理 | `#define TRUE 1 /**< boolean true  */` |
+| [20](../modules/algorithm/QuaternionEKF.h#L20) | 预处理 | `#endif` |
+| [22](../modules/algorithm/QuaternionEKF.h#L22) | 预处理 | `#ifndef FALSE` |
+| [23](../modules/algorithm/QuaternionEKF.h#L23) | 预处理 | `#define FALSE 0 /**< boolean fails */` |
+| [24](../modules/algorithm/QuaternionEKF.h#L24) | 预处理 | `#endif` |
+| [75](../modules/algorithm/QuaternionEKF.h#L75) | 预处理 | `#endif` |
 
 ## modules/algorithm/user_lib.c
 
-源文件：[打开 modules/algorithm/user_lib.c](../modules/algorithm/user_lib.c)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/algorithm/user_lib.c:21](../modules/algorithm/user_lib.c#L21) | `user_malloc` | `pvPortMalloc` | `#ifdef _CMSIS_OS_H` |  |
-| [modules/algorithm/user_lib.c:23](../modules/algorithm/user_lib.c#L23) | `user_malloc` | `malloc` | `#ifdef _CMSIS_OS_H → #else` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [20](../modules/algorithm/user_lib.c#L20) | 预处理 | `#ifdef _CMSIS_OS_H` |
+| [21](../modules/algorithm/user_lib.c#L21) | 预处理 | `#define user_malloc pvPortMalloc` |
+| [22](../modules/algorithm/user_lib.c#L22) | 预处理 | `#else` |
+| [23](../modules/algorithm/user_lib.c#L23) | 预处理 | `#define user_malloc malloc` |
+| [24](../modules/algorithm/user_lib.c#L24) | 预处理 | `#endif` |
 
 ## modules/algorithm/user_lib.h
 
-源文件：[打开 modules/algorithm/user_lib.h](../modules/algorithm/user_lib.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/algorithm/user_lib.h:14](../modules/algorithm/user_lib.h#L14) | `_USER_LIB_H` | 空定义 | `#ifndef _USER_LIB_H` |  |
-| [modules/algorithm/user_lib.h:25](../modules/algorithm/user_lib.h#L25) | `user_malloc` | `pvPortMalloc` | `#ifndef _USER_LIB_H；#ifndef user_malloc；#ifdef _CMSIS_OS_H` |  |
-| [modules/algorithm/user_lib.h:27](../modules/algorithm/user_lib.h#L27) | `user_malloc` | `malloc` | `#ifndef _USER_LIB_H；#ifndef user_malloc；#ifdef _CMSIS_OS_H → #else` |  |
-| [modules/algorithm/user_lib.h:31](../modules/algorithm/user_lib.h#L31) | `msin(x)` | `(arm_sin_f32(x))` | `#ifndef _USER_LIB_H` |  |
-| [modules/algorithm/user_lib.h:32](../modules/algorithm/user_lib.h#L32) | `mcos(x)` | `(arm_cos_f32(x))` | `#ifndef _USER_LIB_H` |  |
-| [modules/algorithm/user_lib.h:36](../modules/algorithm/user_lib.h#L36) | `MatAdd` | `arm_mat_add_f32` | `#ifndef _USER_LIB_H` |  |
-| [modules/algorithm/user_lib.h:37](../modules/algorithm/user_lib.h#L37) | `MatSubtract` | `arm_mat_sub_f32` | `#ifndef _USER_LIB_H` |  |
-| [modules/algorithm/user_lib.h:38](../modules/algorithm/user_lib.h#L38) | `MatMultiply` | `arm_mat_mult_f32` | `#ifndef _USER_LIB_H` |  |
-| [modules/algorithm/user_lib.h:39](../modules/algorithm/user_lib.h#L39) | `MatTranspose` | `arm_mat_trans_f32` | `#ifndef _USER_LIB_H` |  |
-| [modules/algorithm/user_lib.h:40](../modules/algorithm/user_lib.h#L40) | `MatInverse` | `arm_mat_inverse_f32` | `#ifndef _USER_LIB_H` |  |
-| [modules/algorithm/user_lib.h:45](../modules/algorithm/user_lib.h#L45) | `TRUE` | `1` | `#ifndef _USER_LIB_H；#ifndef TRUE` | *< boolean true |
-| [modules/algorithm/user_lib.h:49](../modules/algorithm/user_lib.h#L49) | `FALSE` | `0` | `#ifndef _USER_LIB_H；#ifndef FALSE` | *< boolean fails |
-| [modules/algorithm/user_lib.h:54](../modules/algorithm/user_lib.h#L54) | `PI` | `3.14159265354f` | `#ifndef _USER_LIB_H；#ifndef PI` |  |
-| [modules/algorithm/user_lib.h:57](../modules/algorithm/user_lib.h#L57) | `VAL_LIMIT(val, min, max)` | `do { if ((val) <= (min)) { (val) = (min); } else if ((val) >= (max)) { (val) = (max); } } while (0)` | `#ifndef _USER_LIB_H` |  |
-| [modules/algorithm/user_lib.h:70](../modules/algorithm/user_lib.h#L70) | `ANGLE_LIMIT_360(val, angle)` | `do { (val) = (angle) - (int)(angle); (val) += (int)(angle) % 360; } while (0)` | `#ifndef _USER_LIB_H` |  |
-| [modules/algorithm/user_lib.h:77](../modules/algorithm/user_lib.h#L77) | `ANGLE_LIMIT_360_TO_180(val)` | `do { if ((val) > 180) (val) -= 360; } while (0)` | `#ifndef _USER_LIB_H` |  |
-| [modules/algorithm/user_lib.h:84](../modules/algorithm/user_lib.h#L84) | `VAL_MIN(a, b)` | `((a) < (b) ? (a) : (b))` | `#ifndef _USER_LIB_H` |  |
-| [modules/algorithm/user_lib.h:85](../modules/algorithm/user_lib.h#L85) | `VAL_MAX(a, b)` | `((a) > (b) ? (a) : (b))` | `#ifndef _USER_LIB_H` |  |
-| [modules/algorithm/user_lib.h:124](../modules/algorithm/user_lib.h#L124) | `rad_format(Ang)` | `loop_float_constrain((Ang), -PI, PI)` | `#ifndef _USER_LIB_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [13](../modules/algorithm/user_lib.h#L13) | 预处理 | `#ifndef _USER_LIB_H` |
+| [14](../modules/algorithm/user_lib.h#L14) | 预处理 | `#define _USER_LIB_H` |
+| [23](../modules/algorithm/user_lib.h#L23) | 预处理 | `#ifndef user_malloc` |
+| [24](../modules/algorithm/user_lib.h#L24) | 预处理 | `#ifdef _CMSIS_OS_H` |
+| [25](../modules/algorithm/user_lib.h#L25) | 预处理 | `#define user_malloc pvPortMalloc` |
+| [26](../modules/algorithm/user_lib.h#L26) | 预处理 | `#else` |
+| [27](../modules/algorithm/user_lib.h#L27) | 预处理 | `#define user_malloc malloc` |
+| [28](../modules/algorithm/user_lib.h#L28) | 预处理 | `#endif` |
+| [29](../modules/algorithm/user_lib.h#L29) | 预处理 | `#endif` |
+| [31](../modules/algorithm/user_lib.h#L31) | 预处理 | `#define msin(x) (arm_sin_f32(x))` |
+| [32](../modules/algorithm/user_lib.h#L32) | 预处理 | `#define mcos(x) (arm_cos_f32(x))` |
+| [36](../modules/algorithm/user_lib.h#L36) | 预处理 | `#define MatAdd arm_mat_add_f32` |
+| [37](../modules/algorithm/user_lib.h#L37) | 预处理 | `#define MatSubtract arm_mat_sub_f32` |
+| [38](../modules/algorithm/user_lib.h#L38) | 预处理 | `#define MatMultiply arm_mat_mult_f32` |
+| [39](../modules/algorithm/user_lib.h#L39) | 预处理 | `#define MatTranspose arm_mat_trans_f32` |
+| [40](../modules/algorithm/user_lib.h#L40) | 预处理 | `#define MatInverse arm_mat_inverse_f32` |
+| [44](../modules/algorithm/user_lib.h#L44) | 预处理 | `#ifndef TRUE` |
+| [45](../modules/algorithm/user_lib.h#L45) | 预处理 | `#define TRUE 1 /**< boolean true  */` |
+| [46](../modules/algorithm/user_lib.h#L46) | 预处理 | `#endif` |
+| [48](../modules/algorithm/user_lib.h#L48) | 预处理 | `#ifndef FALSE` |
+| [49](../modules/algorithm/user_lib.h#L49) | 预处理 | `#define FALSE 0 /**< boolean fails */` |
+| [50](../modules/algorithm/user_lib.h#L50) | 预处理 | `#endif` |
+| [53](../modules/algorithm/user_lib.h#L53) | 预处理 | `#ifndef PI` |
+| [54](../modules/algorithm/user_lib.h#L54) | 预处理 | `#define PI 3.14159265354f` |
+| [55](../modules/algorithm/user_lib.h#L55) | 预处理 | `#endif` |
+| [57](../modules/algorithm/user_lib.h#L57) | 预处理 | `#define VAL_LIMIT(val, min, max) \` |
+| [70](../modules/algorithm/user_lib.h#L70) | 预处理 | `#define ANGLE_LIMIT_360(val, angle)     \` |
+| [77](../modules/algorithm/user_lib.h#L77) | 预处理 | `#define ANGLE_LIMIT_360_TO_180(val) \` |
+| [84](../modules/algorithm/user_lib.h#L84) | 预处理 | `#define VAL_MIN(a, b) ((a) < (b) ? (a) : (b))` |
+| [85](../modules/algorithm/user_lib.h#L85) | 预处理 | `#define VAL_MAX(a, b) ((a) > (b) ? (a) : (b))` |
+| [124](../modules/algorithm/user_lib.h#L124) | 预处理 | `#define rad_format(Ang) loop_float_constrain((Ang), -PI, PI)` |
+| [126](../modules/algorithm/user_lib.h#L126) | 预处理 | `#endif` |
 
 ## modules/bluetooth/HC05.c
 
-源文件：[打开 modules/bluetooth/HC05.c](../modules/bluetooth/HC05.c)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/bluetooth/HC05.c:4](../modules/bluetooth/HC05.c#L4) | `HC05_BUFFERSIZE` | `HC05_DATASIZE+2` | 无外层条件 | HC05发送和接收数据buffer大小，不得大于256 |
-| [modules/bluetooth/HC05.c:6](../modules/bluetooth/HC05.c#L6) | `FRAME_HEAD` | `0XAA` | 无外层条件 | 帧头 |
-| [modules/bluetooth/HC05.c:7](../modules/bluetooth/HC05.c#L7) | `FRAME_END` | `0X55` | 无外层条件 | 帧尾 |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [4](../modules/bluetooth/HC05.c#L4) | 预处理 | `#define HC05_BUFFERSIZE  HC05_DATASIZE+2  // HC05发送和接收数据buffer大小，不得大于256` |
+| [6](../modules/bluetooth/HC05.c#L6) | 预处理 | `#define FRAME_HEAD  0XAA    // 帧头` |
+| [7](../modules/bluetooth/HC05.c#L7) | 预处理 | `#define FRAME_END   0X55    // 帧尾` |
 
 ## modules/bluetooth/HC05.h
 
-源文件：[打开 modules/bluetooth/HC05.h](../modules/bluetooth/HC05.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/bluetooth/HC05.h:2](../modules/bluetooth/HC05.h#L2) | `HC05_H` | 空定义 | `#ifndef HC05_H` |  |
-| [modules/bluetooth/HC05.h:8](../modules/bluetooth/HC05.h#L8) | `HC05_DATASIZE` | `4` | `#ifndef HC05_H` | HC05接收和发送数据大小，根据需要修改 |
-
-## modules/BMI088/bmi088_regNdef.h
-
-源文件：[打开 modules/BMI088/bmi088_regNdef.h](../modules/BMI088/bmi088_regNdef.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/BMI088/bmi088_regNdef.h:2](../modules/BMI088/bmi088_regNdef.h#L2) | `BMI088REG_H` | 空定义 | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:6](../modules/BMI088/bmi088_regNdef.h#L6) | `BMI088_ACC_CHIP_ID` | `0x00` | `#ifndef BMI088REG_H` | the register is  " Who am I " |
-| [modules/BMI088/bmi088_regNdef.h:7](../modules/BMI088/bmi088_regNdef.h#L7) | `BMI088_ACC_CHIP_ID_VALUE` | `0x1E` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:9](../modules/BMI088/bmi088_regNdef.h#L9) | `BMI088_ACC_ERR_REG` | `0x02` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:10](../modules/BMI088/bmi088_regNdef.h#L10) | `BMI088_ACCEL_CONGIF_ERROR_SHFITS` | `0x2` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:11](../modules/BMI088/bmi088_regNdef.h#L11) | `BMI088_ACCEL_CONGIF_ERROR` | `(1 << BMI088_ACCEL_CONGIF_ERROR_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:12](../modules/BMI088/bmi088_regNdef.h#L12) | `BMI088_FATAL_ERROR_SHFITS` | `0x0` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:13](../modules/BMI088/bmi088_regNdef.h#L13) | `BMI088_FATAL_ERROR` | `(1 << BMI088_FATAL_ERROR)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:15](../modules/BMI088/bmi088_regNdef.h#L15) | `BMI088_ACC_STATUS` | `0x03` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:16](../modules/BMI088/bmi088_regNdef.h#L16) | `BMI088_ACCEL_DRDY_SHFITS` | `0x7` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:17](../modules/BMI088/bmi088_regNdef.h#L17) | `BMI088_ACCEL_DRDY` | `(1 << BMI088_ACCEL_DRDY_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:19](../modules/BMI088/bmi088_regNdef.h#L19) | `BMI088_ACCEL_XOUT_L` | `0x12` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:20](../modules/BMI088/bmi088_regNdef.h#L20) | `BMI088_ACCEL_XOUT_M` | `0x13` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:21](../modules/BMI088/bmi088_regNdef.h#L21) | `BMI088_ACCEL_YOUT_L` | `0x14` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:22](../modules/BMI088/bmi088_regNdef.h#L22) | `BMI088_ACCEL_YOUT_M` | `0x15` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:23](../modules/BMI088/bmi088_regNdef.h#L23) | `BMI088_ACCEL_ZOUT_L` | `0x16` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:24](../modules/BMI088/bmi088_regNdef.h#L24) | `BMI088_ACCEL_ZOUT_M` | `0x17` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:26](../modules/BMI088/bmi088_regNdef.h#L26) | `BMI088_SENSORTIME_DATA_L` | `0x18` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:27](../modules/BMI088/bmi088_regNdef.h#L27) | `BMI088_SENSORTIME_DATA_M` | `0x19` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:28](../modules/BMI088/bmi088_regNdef.h#L28) | `BMI088_SENSORTIME_DATA_H` | `0x1A` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:30](../modules/BMI088/bmi088_regNdef.h#L30) | `BMI088_ACC_INT_STAT_1` | `0x1D` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:31](../modules/BMI088/bmi088_regNdef.h#L31) | `BMI088_ACCEL_DRDY_INTERRUPT_SHFITS` | `0x7` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:32](../modules/BMI088/bmi088_regNdef.h#L32) | `BMI088_ACCEL_DRDY_INTERRUPT` | `(1 << BMI088_ACCEL_DRDY_INTERRUPT_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:34](../modules/BMI088/bmi088_regNdef.h#L34) | `BMI088_TEMP_M` | `0x22` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:36](../modules/BMI088/bmi088_regNdef.h#L36) | `BMI088_TEMP_L` | `0x23` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:38](../modules/BMI088/bmi088_regNdef.h#L38) | `BMI088_ACC_CONF` | `0x40` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:39](../modules/BMI088/bmi088_regNdef.h#L39) | `BMI088_ACC_CONF_MUST_Set` | `0x80` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:40](../modules/BMI088/bmi088_regNdef.h#L40) | `BMI088_ACC_BWP_SHFITS` | `0x4` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:41](../modules/BMI088/bmi088_regNdef.h#L41) | `BMI088_ACC_OSR4` | `(0x0 << BMI088_ACC_BWP_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:42](../modules/BMI088/bmi088_regNdef.h#L42) | `BMI088_ACC_OSR2` | `(0x1 << BMI088_ACC_BWP_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:43](../modules/BMI088/bmi088_regNdef.h#L43) | `BMI088_ACC_NORMAL` | `(0x2 << BMI088_ACC_BWP_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:45](../modules/BMI088/bmi088_regNdef.h#L45) | `BMI088_ACC_ODR_SHFITS` | `0x0` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:46](../modules/BMI088/bmi088_regNdef.h#L46) | `BMI088_ACC_12_5_HZ` | `(0x5 << BMI088_ACC_ODR_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:47](../modules/BMI088/bmi088_regNdef.h#L47) | `BMI088_ACC_25_HZ` | `(0x6 << BMI088_ACC_ODR_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:48](../modules/BMI088/bmi088_regNdef.h#L48) | `BMI088_ACC_50_HZ` | `(0x7 << BMI088_ACC_ODR_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:49](../modules/BMI088/bmi088_regNdef.h#L49) | `BMI088_ACC_100_HZ` | `(0x8 << BMI088_ACC_ODR_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:50](../modules/BMI088/bmi088_regNdef.h#L50) | `BMI088_ACC_200_HZ` | `(0x9 << BMI088_ACC_ODR_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:51](../modules/BMI088/bmi088_regNdef.h#L51) | `BMI088_ACC_400_HZ` | `(0xA << BMI088_ACC_ODR_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:52](../modules/BMI088/bmi088_regNdef.h#L52) | `BMI088_ACC_800_HZ` | `(0xB << BMI088_ACC_ODR_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:53](../modules/BMI088/bmi088_regNdef.h#L53) | `BMI088_ACC_1600_HZ` | `(0xC << BMI088_ACC_ODR_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:55](../modules/BMI088/bmi088_regNdef.h#L55) | `BMI088_ACC_RANGE` | `0x41` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:57](../modules/BMI088/bmi088_regNdef.h#L57) | `BMI088_ACC_RANGE_SHFITS` | `0x0` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:58](../modules/BMI088/bmi088_regNdef.h#L58) | `BMI088_ACC_RANGE_3G` | `(0x0 << BMI088_ACC_RANGE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:59](../modules/BMI088/bmi088_regNdef.h#L59) | `BMI088_ACC_RANGE_6G` | `(0x1 << BMI088_ACC_RANGE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:60](../modules/BMI088/bmi088_regNdef.h#L60) | `BMI088_ACC_RANGE_12G` | `(0x2 << BMI088_ACC_RANGE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:61](../modules/BMI088/bmi088_regNdef.h#L61) | `BMI088_ACC_RANGE_24G` | `(0x3 << BMI088_ACC_RANGE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:63](../modules/BMI088/bmi088_regNdef.h#L63) | `BMI088_INT1_IO_CTRL` | `0x53` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:64](../modules/BMI088/bmi088_regNdef.h#L64) | `BMI088_ACC_INT1_IO_ENABLE_SHFITS` | `0x3` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:65](../modules/BMI088/bmi088_regNdef.h#L65) | `BMI088_ACC_INT1_IO_ENABLE` | `(0x1 << BMI088_ACC_INT1_IO_ENABLE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:66](../modules/BMI088/bmi088_regNdef.h#L66) | `BMI088_ACC_INT1_GPIO_MODE_SHFITS` | `0x2` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:67](../modules/BMI088/bmi088_regNdef.h#L67) | `BMI088_ACC_INT1_GPIO_PP` | `(0x0 << BMI088_ACC_INT1_GPIO_MODE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:68](../modules/BMI088/bmi088_regNdef.h#L68) | `BMI088_ACC_INT1_GPIO_OD` | `(0x1 << BMI088_ACC_INT1_GPIO_MODE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:69](../modules/BMI088/bmi088_regNdef.h#L69) | `BMI088_ACC_INT1_GPIO_LVL_SHFITS` | `0x1` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:70](../modules/BMI088/bmi088_regNdef.h#L70) | `BMI088_ACC_INT1_GPIO_LOW` | `(0x0 << BMI088_ACC_INT1_GPIO_LVL_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:71](../modules/BMI088/bmi088_regNdef.h#L71) | `BMI088_ACC_INT1_GPIO_HIGH` | `(0x1 << BMI088_ACC_INT1_GPIO_LVL_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:73](../modules/BMI088/bmi088_regNdef.h#L73) | `BMI088_INT2_IO_CTRL` | `0x54` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:74](../modules/BMI088/bmi088_regNdef.h#L74) | `BMI088_ACC_INT2_IO_ENABLE_SHFITS` | `0x3` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:75](../modules/BMI088/bmi088_regNdef.h#L75) | `BMI088_ACC_INT2_IO_ENABLE` | `(0x1 << BMI088_ACC_INT2_IO_ENABLE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:76](../modules/BMI088/bmi088_regNdef.h#L76) | `BMI088_ACC_INT2_GPIO_MODE_SHFITS` | `0x2` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:77](../modules/BMI088/bmi088_regNdef.h#L77) | `BMI088_ACC_INT2_GPIO_PP` | `(0x0 << BMI088_ACC_INT2_GPIO_MODE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:78](../modules/BMI088/bmi088_regNdef.h#L78) | `BMI088_ACC_INT2_GPIO_OD` | `(0x1 << BMI088_ACC_INT2_GPIO_MODE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:79](../modules/BMI088/bmi088_regNdef.h#L79) | `BMI088_ACC_INT2_GPIO_LVL_SHFITS` | `0x1` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:80](../modules/BMI088/bmi088_regNdef.h#L80) | `BMI088_ACC_INT2_GPIO_LOW` | `(0x0 << BMI088_ACC_INT2_GPIO_LVL_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:81](../modules/BMI088/bmi088_regNdef.h#L81) | `BMI088_ACC_INT2_GPIO_HIGH` | `(0x1 << BMI088_ACC_INT2_GPIO_LVL_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:83](../modules/BMI088/bmi088_regNdef.h#L83) | `BMI088_INT_MAP_DATA` | `0x58` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:84](../modules/BMI088/bmi088_regNdef.h#L84) | `BMI088_ACC_INT2_DRDY_INTERRUPT_SHFITS` | `0x6` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:85](../modules/BMI088/bmi088_regNdef.h#L85) | `BMI088_ACC_INT2_DRDY_INTERRUPT` | `(0x1 << BMI088_ACC_INT2_DRDY_INTERRUPT_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:86](../modules/BMI088/bmi088_regNdef.h#L86) | `BMI088_ACC_INT1_DRDY_INTERRUPT_SHFITS` | `0x2` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:87](../modules/BMI088/bmi088_regNdef.h#L87) | `BMI088_ACC_INT1_DRDY_INTERRUPT` | `(0x1 << BMI088_ACC_INT1_DRDY_INTERRUPT_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:89](../modules/BMI088/bmi088_regNdef.h#L89) | `BMI088_ACC_SELF_TEST` | `0x6D` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:90](../modules/BMI088/bmi088_regNdef.h#L90) | `BMI088_ACC_SELF_TEST_OFF` | `0x00` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:91](../modules/BMI088/bmi088_regNdef.h#L91) | `BMI088_ACC_SELF_TEST_POSITIVE_SIGNAL` | `0x0D` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:92](../modules/BMI088/bmi088_regNdef.h#L92) | `BMI088_ACC_SELF_TEST_NEGATIVE_SIGNAL` | `0x09` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:94](../modules/BMI088/bmi088_regNdef.h#L94) | `BMI088_ACC_PWR_CONF` | `0x7C` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:95](../modules/BMI088/bmi088_regNdef.h#L95) | `BMI088_ACC_PWR_SUSPEND_MODE` | `0x03` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:96](../modules/BMI088/bmi088_regNdef.h#L96) | `BMI088_ACC_PWR_ACTIVE_MODE` | `0x00` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:98](../modules/BMI088/bmi088_regNdef.h#L98) | `BMI088_ACC_PWR_CTRL` | `0x7D` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:99](../modules/BMI088/bmi088_regNdef.h#L99) | `BMI088_ACC_ENABLE_ACC_OFF` | `0x00` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:100](../modules/BMI088/bmi088_regNdef.h#L100) | `BMI088_ACC_ENABLE_ACC_ON` | `0x04` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:102](../modules/BMI088/bmi088_regNdef.h#L102) | `BMI088_ACC_SOFTRESET` | `0x7E` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:103](../modules/BMI088/bmi088_regNdef.h#L103) | `BMI088_ACC_SOFTRESET_VALUE` | `0xB6` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:105](../modules/BMI088/bmi088_regNdef.h#L105) | `BMI088_GYRO_CHIP_ID` | `0x00` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:106](../modules/BMI088/bmi088_regNdef.h#L106) | `BMI088_GYRO_CHIP_ID_VALUE` | `0x0F` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:108](../modules/BMI088/bmi088_regNdef.h#L108) | `BMI088_GYRO_X_L` | `0x02` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:109](../modules/BMI088/bmi088_regNdef.h#L109) | `BMI088_GYRO_X_H` | `0x03` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:110](../modules/BMI088/bmi088_regNdef.h#L110) | `BMI088_GYRO_Y_L` | `0x04` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:111](../modules/BMI088/bmi088_regNdef.h#L111) | `BMI088_GYRO_Y_H` | `0x05` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:112](../modules/BMI088/bmi088_regNdef.h#L112) | `BMI088_GYRO_Z_L` | `0x06` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:113](../modules/BMI088/bmi088_regNdef.h#L113) | `BMI088_GYRO_Z_H` | `0x07` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:115](../modules/BMI088/bmi088_regNdef.h#L115) | `BMI088_GYRO_INT_STAT_1` | `0x0A` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:116](../modules/BMI088/bmi088_regNdef.h#L116) | `BMI088_GYRO_DYDR_SHFITS` | `0x7` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:117](../modules/BMI088/bmi088_regNdef.h#L117) | `BMI088_GYRO_DYDR` | `(0x1 << BMI088_GYRO_DYDR_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:119](../modules/BMI088/bmi088_regNdef.h#L119) | `BMI088_GYRO_RANGE` | `0x0F` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:120](../modules/BMI088/bmi088_regNdef.h#L120) | `BMI088_GYRO_RANGE_SHFITS` | `0x0` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:121](../modules/BMI088/bmi088_regNdef.h#L121) | `BMI088_GYRO_2000` | `(0x0 << BMI088_GYRO_RANGE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:122](../modules/BMI088/bmi088_regNdef.h#L122) | `BMI088_GYRO_1000` | `(0x1 << BMI088_GYRO_RANGE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:123](../modules/BMI088/bmi088_regNdef.h#L123) | `BMI088_GYRO_500` | `(0x2 << BMI088_GYRO_RANGE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:124](../modules/BMI088/bmi088_regNdef.h#L124) | `BMI088_GYRO_250` | `(0x3 << BMI088_GYRO_RANGE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:125](../modules/BMI088/bmi088_regNdef.h#L125) | `BMI088_GYRO_125` | `(0x4 << BMI088_GYRO_RANGE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:127](../modules/BMI088/bmi088_regNdef.h#L127) | `BMI088_GYRO_BANDWIDTH` | `0x10` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:129](../modules/BMI088/bmi088_regNdef.h#L129) | `BMI088_GYRO_BANDWIDTH_MUST_Set` | `0x80` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:130](../modules/BMI088/bmi088_regNdef.h#L130) | `BMI088_GYRO_2000_532_HZ` | `0x00` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:131](../modules/BMI088/bmi088_regNdef.h#L131) | `BMI088_GYRO_2000_230_HZ` | `0x01` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:132](../modules/BMI088/bmi088_regNdef.h#L132) | `BMI088_GYRO_1000_116_HZ` | `0x02` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:133](../modules/BMI088/bmi088_regNdef.h#L133) | `BMI088_GYRO_400_47_HZ` | `0x03` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:134](../modules/BMI088/bmi088_regNdef.h#L134) | `BMI088_GYRO_200_23_HZ` | `0x04` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:135](../modules/BMI088/bmi088_regNdef.h#L135) | `BMI088_GYRO_100_12_HZ` | `0x05` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:136](../modules/BMI088/bmi088_regNdef.h#L136) | `BMI088_GYRO_200_64_HZ` | `0x06` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:137](../modules/BMI088/bmi088_regNdef.h#L137) | `BMI088_GYRO_100_32_HZ` | `0x07` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:139](../modules/BMI088/bmi088_regNdef.h#L139) | `BMI088_GYRO_LPM1` | `0x11` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:140](../modules/BMI088/bmi088_regNdef.h#L140) | `BMI088_GYRO_NORMAL_MODE` | `0x00` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:141](../modules/BMI088/bmi088_regNdef.h#L141) | `BMI088_GYRO_SUSPEND_MODE` | `0x80` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:142](../modules/BMI088/bmi088_regNdef.h#L142) | `BMI088_GYRO_DEEP_SUSPEND_MODE` | `0x20` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:144](../modules/BMI088/bmi088_regNdef.h#L144) | `BMI088_GYRO_SOFTRESET` | `0x14` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:145](../modules/BMI088/bmi088_regNdef.h#L145) | `BMI088_GYRO_SOFTRESET_VALUE` | `0xB6` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:147](../modules/BMI088/bmi088_regNdef.h#L147) | `BMI088_GYRO_CTRL` | `0x15` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:148](../modules/BMI088/bmi088_regNdef.h#L148) | `BMI088_DRDY_OFF` | `0x00` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:149](../modules/BMI088/bmi088_regNdef.h#L149) | `BMI088_DRDY_ON` | `0x80` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:151](../modules/BMI088/bmi088_regNdef.h#L151) | `BMI088_GYRO_INT3_INT4_IO_CONF` | `0x16` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:152](../modules/BMI088/bmi088_regNdef.h#L152) | `BMI088_GYRO_INT4_GPIO_MODE_SHFITS` | `0x3` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:153](../modules/BMI088/bmi088_regNdef.h#L153) | `BMI088_GYRO_INT4_GPIO_PP` | `(0x0 << BMI088_GYRO_INT4_GPIO_MODE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:154](../modules/BMI088/bmi088_regNdef.h#L154) | `BMI088_GYRO_INT4_GPIO_OD` | `(0x1 << BMI088_GYRO_INT4_GPIO_MODE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:155](../modules/BMI088/bmi088_regNdef.h#L155) | `BMI088_GYRO_INT4_GPIO_LVL_SHFITS` | `0x2` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:156](../modules/BMI088/bmi088_regNdef.h#L156) | `BMI088_GYRO_INT4_GPIO_LOW` | `(0x0 << BMI088_GYRO_INT4_GPIO_LVL_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:157](../modules/BMI088/bmi088_regNdef.h#L157) | `BMI088_GYRO_INT4_GPIO_HIGH` | `(0x1 << BMI088_GYRO_INT4_GPIO_LVL_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:158](../modules/BMI088/bmi088_regNdef.h#L158) | `BMI088_GYRO_INT3_GPIO_MODE_SHFITS` | `0x1` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:159](../modules/BMI088/bmi088_regNdef.h#L159) | `BMI088_GYRO_INT3_GPIO_PP` | `(0x0 << BMI088_GYRO_INT3_GPIO_MODE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:160](../modules/BMI088/bmi088_regNdef.h#L160) | `BMI088_GYRO_INT3_GPIO_OD` | `(0x1 << BMI088_GYRO_INT3_GPIO_MODE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:161](../modules/BMI088/bmi088_regNdef.h#L161) | `BMI088_GYRO_INT3_GPIO_LVL_SHFITS` | `0x0` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:162](../modules/BMI088/bmi088_regNdef.h#L162) | `BMI088_GYRO_INT3_GPIO_LOW` | `(0x0 << BMI088_GYRO_INT3_GPIO_LVL_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:163](../modules/BMI088/bmi088_regNdef.h#L163) | `BMI088_GYRO_INT3_GPIO_HIGH` | `(0x1 << BMI088_GYRO_INT3_GPIO_LVL_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:165](../modules/BMI088/bmi088_regNdef.h#L165) | `BMI088_GYRO_INT3_INT4_IO_MAP` | `0x18` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:167](../modules/BMI088/bmi088_regNdef.h#L167) | `BMI088_GYRO_DRDY_IO_OFF` | `0x00` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:168](../modules/BMI088/bmi088_regNdef.h#L168) | `BMI088_GYRO_DRDY_IO_INT3` | `0x01` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:169](../modules/BMI088/bmi088_regNdef.h#L169) | `BMI088_GYRO_DRDY_IO_INT4` | `0x80` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:170](../modules/BMI088/bmi088_regNdef.h#L170) | `BMI088_GYRO_DRDY_IO_BOTH` | `(BMI088_GYRO_DRDY_IO_INT3 \| BMI088_GYRO_DRDY_IO_INT4)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:172](../modules/BMI088/bmi088_regNdef.h#L172) | `BMI088_GYRO_SELF_TEST` | `0x3C` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:173](../modules/BMI088/bmi088_regNdef.h#L173) | `BMI088_GYRO_RATE_OK_SHFITS` | `0x4` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:174](../modules/BMI088/bmi088_regNdef.h#L174) | `BMI088_GYRO_RATE_OK` | `(0x1 << BMI088_GYRO_RATE_OK_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:175](../modules/BMI088/bmi088_regNdef.h#L175) | `BMI088_GYRO_BIST_FAIL_SHFITS` | `0x2` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:176](../modules/BMI088/bmi088_regNdef.h#L176) | `BMI088_GYRO_BIST_FAIL` | `(0x1 << BMI088_GYRO_BIST_FAIL_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:177](../modules/BMI088/bmi088_regNdef.h#L177) | `BMI088_GYRO_BIST_RDY_SHFITS` | `0x1` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:178](../modules/BMI088/bmi088_regNdef.h#L178) | `BMI088_GYRO_BIST_RDY` | `(0x1 << BMI088_GYRO_BIST_RDY_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:179](../modules/BMI088/bmi088_regNdef.h#L179) | `BMI088_GYRO_TRIG_BIST_SHFITS` | `0x0` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:180](../modules/BMI088/bmi088_regNdef.h#L180) | `BMI088_GYRO_TRIG_BIST` | `(0x1 << BMI088_GYRO_TRIG_BIST_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:184](../modules/BMI088/bmi088_regNdef.h#L184) | `BMI088_TEMP_FACTOR` | `0.125f` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:185](../modules/BMI088/bmi088_regNdef.h#L185) | `BMI088_TEMP_OFFSET` | `23.0f` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:187](../modules/BMI088/bmi088_regNdef.h#L187) | `BMI088_WRITE_ACCEL_REG_NUM` | `6` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:188](../modules/BMI088/bmi088_regNdef.h#L188) | `BMI088_WRITE_GYRO_REG_NUM` | `6` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:190](../modules/BMI088/bmi088_regNdef.h#L190) | `BMI088_GYRO_DATA_READY_BIT` | `0` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:191](../modules/BMI088/bmi088_regNdef.h#L191) | `BMI088_ACCEL_DATA_READY_BIT` | `1` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:192](../modules/BMI088/bmi088_regNdef.h#L192) | `BMI088_ACCEL_TEMP_DATA_READY_BIT` | `2` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:194](../modules/BMI088/bmi088_regNdef.h#L194) | `BMI088_LONG_DELAY_TIME` | `80` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:195](../modules/BMI088/bmi088_regNdef.h#L195) | `BMI088_COM_WAIT_SENSOR_TIME` | `150` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:197](../modules/BMI088/bmi088_regNdef.h#L197) | `BMI088_ACCEL_IIC_ADDRESSE` | `(0x18 << 1)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:198](../modules/BMI088/bmi088_regNdef.h#L198) | `BMI088_GYRO_IIC_ADDRESSE` | `(0x68 << 1)` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:200](../modules/BMI088/bmi088_regNdef.h#L200) | `BMI088_ACCEL_3G_SEN` | `0.0008974358974f` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:201](../modules/BMI088/bmi088_regNdef.h#L201) | `BMI088_ACCEL_6G_SEN` | `0.00179443359375f` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:202](../modules/BMI088/bmi088_regNdef.h#L202) | `BMI088_ACCEL_12G_SEN` | `0.0035888671875f` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:203](../modules/BMI088/bmi088_regNdef.h#L203) | `BMI088_ACCEL_24G_SEN` | `0.007177734375f` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:205](../modules/BMI088/bmi088_regNdef.h#L205) | `BMI088_GYRO_2000_SEN` | `0.00106526443603169529841533860381f` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:206](../modules/BMI088/bmi088_regNdef.h#L206) | `BMI088_GYRO_1000_SEN` | `0.00053263221801584764920766930190693f` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:207](../modules/BMI088/bmi088_regNdef.h#L207) | `BMI088_GYRO_500_SEN` | `0.00026631610900792382460383465095346f` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:208](../modules/BMI088/bmi088_regNdef.h#L208) | `BMI088_GYRO_250_SEN` | `0.00013315805450396191230191732547673f` | `#ifndef BMI088REG_H` |  |
-| [modules/BMI088/bmi088_regNdef.h:209](../modules/BMI088/bmi088_regNdef.h#L209) | `BMI088_GYRO_125_SEN` | `0.000066579027251980956150958662738366f` | `#ifndef BMI088REG_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/bluetooth/HC05.h#L1) | 预处理 | `#ifndef HC05_H` |
+| [2](../modules/bluetooth/HC05.h#L2) | 预处理 | `#define HC05_H` |
+| [8](../modules/bluetooth/HC05.h#L8) | 预处理 | `#define  HC05_DATASIZE  4   // HC05接收和发送数据大小，根据需要修改` |
+| [23](../modules/bluetooth/HC05.h#L23) | 预处理 | `#endif` |
 
 ## modules/BMI088/bmi088.c
 
-源文件：[打开 modules/BMI088/bmi088.c](../modules/BMI088/bmi088.c)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/BMI088/bmi088.c:82](../modules/BMI088/bmi088.c#L82) | `BMI088REG` | `0` | 无外层条件 |  |
-| [modules/BMI088/bmi088.c:83](../modules/BMI088/bmi088.c#L83) | `BMI088DATA` | `1` | 无外层条件 |  |
-| [modules/BMI088/bmi088.c:84](../modules/BMI088/bmi088.c#L84) | `BMI088ERROR` | `2` | 无外层条件 |  |
-| [modules/BMI088/bmi088.c:299](../modules/BMI088/bmi088.c#L299) | `BMI088_PRE_CALI_ACC_X_OFFSET` | `0.0f` | 无外层条件 |  |
-| [modules/BMI088/bmi088.c:300](../modules/BMI088/bmi088.c#L300) | `BMI088_PRE_CALI_ACC_Y_OFFSET` | `0.0f` | 无外层条件 |  |
-| [modules/BMI088/bmi088.c:301](../modules/BMI088/bmi088.c#L301) | `BMI088_PRE_CALI_ACC_Z_OFFSET` | `0.0f` | 无外层条件 |  |
-| [modules/BMI088/bmi088.c:302](../modules/BMI088/bmi088.c#L302) | `BMI088_PRE_CALI_G_NORM` | `9.805f` | 无外层条件 |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [82](../modules/BMI088/bmi088.c#L82) | 预处理 | `#define BMI088REG 0` |
+| [83](../modules/BMI088/bmi088.c#L83) | 预处理 | `#define BMI088DATA 1` |
+| [84](../modules/BMI088/bmi088.c#L84) | 预处理 | `#define BMI088ERROR 2` |
+| [299](../modules/BMI088/bmi088.c#L299) | 预处理 | `#define BMI088_PRE_CALI_ACC_X_OFFSET 0.0f` |
+| [300](../modules/BMI088/bmi088.c#L300) | 预处理 | `#define BMI088_PRE_CALI_ACC_Y_OFFSET 0.0f` |
+| [301](../modules/BMI088/bmi088.c#L301) | 预处理 | `#define BMI088_PRE_CALI_ACC_Z_OFFSET 0.0f` |
+| [302](../modules/BMI088/bmi088.c#L302) | 预处理 | `#define BMI088_PRE_CALI_G_NORM 9.805f` |
 
 ## modules/BMI088/bmi088.h
 
-源文件：[打开 modules/BMI088/bmi088.h](../modules/BMI088/bmi088.h)。
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/BMI088/bmi088.h#L1) | 预处理 | `#ifndef __BMI088_H__ // 防止重复包含` |
+| [2](../modules/BMI088/bmi088.h#L2) | 预处理 | `#define __BMI088_H__` |
+| [116](../modules/BMI088/bmi088.h#L116) | 预处理 | `#endif // !__BMI088_H__` |
 
-### 宏定义
+## modules/BMI088/bmi088_regNdef.h
 
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/BMI088/bmi088.h:2](../modules/BMI088/bmi088.h#L2) | `__BMI088_H__` | 空定义 | `#ifndef __BMI088_H__` |  |
-
-### 可设置的结构体字段
-
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
-
-[modules/BMI088/bmi088.h:80](../modules/BMI088/bmi088.h#L80)
-
-```c
-typedef struct
-{
-    BMI088_Work_Mode_e work_mode;
-    BMI088_Calibrate_Mode_e cali_mode;
-    SPI_Init_Config_s spi_gyro_config;
-    SPI_Init_Config_s spi_acc_config;
-    GPIO_Init_Config_s gyro_int_config;
-    GPIO_Init_Config_s acc_int_config;
-    PID_Init_Config_s heat_pid_config;
-    PWM_Init_Config_s heat_pwm_config;
-} BMI088_Init_Config_s;
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/BMI088/bmi088_regNdef.h#L1) | 预处理 | `#ifndef BMI088REG_H` |
+| [2](../modules/BMI088/bmi088_regNdef.h#L2) | 预处理 | `#define BMI088REG_H` |
+| [6](../modules/BMI088/bmi088_regNdef.h#L6) | 预处理 | `#define BMI088_ACC_CHIP_ID 0x00 // the register is  " Who am I "` |
+| [7](../modules/BMI088/bmi088_regNdef.h#L7) | 预处理 | `#define BMI088_ACC_CHIP_ID_VALUE 0x1E` |
+| [9](../modules/BMI088/bmi088_regNdef.h#L9) | 预处理 | `#define BMI088_ACC_ERR_REG 0x02` |
+| [10](../modules/BMI088/bmi088_regNdef.h#L10) | 预处理 | `#define BMI088_ACCEL_CONGIF_ERROR_SHFITS 0x2` |
+| [11](../modules/BMI088/bmi088_regNdef.h#L11) | 预处理 | `#define BMI088_ACCEL_CONGIF_ERROR (1 << BMI088_ACCEL_CONGIF_ERROR_SHFITS)` |
+| [12](../modules/BMI088/bmi088_regNdef.h#L12) | 预处理 | `#define BMI088_FATAL_ERROR_SHFITS 0x0` |
+| [13](../modules/BMI088/bmi088_regNdef.h#L13) | 预处理 | `#define BMI088_FATAL_ERROR (1 << BMI088_FATAL_ERROR)` |
+| [15](../modules/BMI088/bmi088_regNdef.h#L15) | 预处理 | `#define BMI088_ACC_STATUS 0x03` |
+| [16](../modules/BMI088/bmi088_regNdef.h#L16) | 预处理 | `#define BMI088_ACCEL_DRDY_SHFITS 0x7` |
+| [17](../modules/BMI088/bmi088_regNdef.h#L17) | 预处理 | `#define BMI088_ACCEL_DRDY (1 << BMI088_ACCEL_DRDY_SHFITS)` |
+| [19](../modules/BMI088/bmi088_regNdef.h#L19) | 预处理 | `#define BMI088_ACCEL_XOUT_L 0x12` |
+| [20](../modules/BMI088/bmi088_regNdef.h#L20) | 预处理 | `#define BMI088_ACCEL_XOUT_M 0x13` |
+| [21](../modules/BMI088/bmi088_regNdef.h#L21) | 预处理 | `#define BMI088_ACCEL_YOUT_L 0x14` |
+| [22](../modules/BMI088/bmi088_regNdef.h#L22) | 预处理 | `#define BMI088_ACCEL_YOUT_M 0x15` |
+| [23](../modules/BMI088/bmi088_regNdef.h#L23) | 预处理 | `#define BMI088_ACCEL_ZOUT_L 0x16` |
+| [24](../modules/BMI088/bmi088_regNdef.h#L24) | 预处理 | `#define BMI088_ACCEL_ZOUT_M 0x17` |
+| [26](../modules/BMI088/bmi088_regNdef.h#L26) | 预处理 | `#define BMI088_SENSORTIME_DATA_L 0x18` |
+| [27](../modules/BMI088/bmi088_regNdef.h#L27) | 预处理 | `#define BMI088_SENSORTIME_DATA_M 0x19` |
+| [28](../modules/BMI088/bmi088_regNdef.h#L28) | 预处理 | `#define BMI088_SENSORTIME_DATA_H 0x1A` |
+| [30](../modules/BMI088/bmi088_regNdef.h#L30) | 预处理 | `#define BMI088_ACC_INT_STAT_1 0x1D` |
+| [31](../modules/BMI088/bmi088_regNdef.h#L31) | 预处理 | `#define BMI088_ACCEL_DRDY_INTERRUPT_SHFITS 0x7` |
+| [32](../modules/BMI088/bmi088_regNdef.h#L32) | 预处理 | `#define BMI088_ACCEL_DRDY_INTERRUPT (1 << BMI088_ACCEL_DRDY_INTERRUPT_SHFITS)` |
+| [34](../modules/BMI088/bmi088_regNdef.h#L34) | 预处理 | `#define BMI088_TEMP_M 0x22` |
+| [36](../modules/BMI088/bmi088_regNdef.h#L36) | 预处理 | `#define BMI088_TEMP_L 0x23` |
+| [38](../modules/BMI088/bmi088_regNdef.h#L38) | 预处理 | `#define BMI088_ACC_CONF 0x40` |
+| [39](../modules/BMI088/bmi088_regNdef.h#L39) | 预处理 | `#define BMI088_ACC_CONF_MUST_Set 0x80` |
+| [40](../modules/BMI088/bmi088_regNdef.h#L40) | 预处理 | `#define BMI088_ACC_BWP_SHFITS 0x4` |
+| [41](../modules/BMI088/bmi088_regNdef.h#L41) | 预处理 | `#define BMI088_ACC_OSR4 (0x0 << BMI088_ACC_BWP_SHFITS)` |
+| [42](../modules/BMI088/bmi088_regNdef.h#L42) | 预处理 | `#define BMI088_ACC_OSR2 (0x1 << BMI088_ACC_BWP_SHFITS)` |
+| [43](../modules/BMI088/bmi088_regNdef.h#L43) | 预处理 | `#define BMI088_ACC_NORMAL (0x2 << BMI088_ACC_BWP_SHFITS)` |
+| [45](../modules/BMI088/bmi088_regNdef.h#L45) | 预处理 | `#define BMI088_ACC_ODR_SHFITS 0x0` |
+| [46](../modules/BMI088/bmi088_regNdef.h#L46) | 预处理 | `#define BMI088_ACC_12_5_HZ (0x5 << BMI088_ACC_ODR_SHFITS)` |
+| [47](../modules/BMI088/bmi088_regNdef.h#L47) | 预处理 | `#define BMI088_ACC_25_HZ (0x6 << BMI088_ACC_ODR_SHFITS)` |
+| [48](../modules/BMI088/bmi088_regNdef.h#L48) | 预处理 | `#define BMI088_ACC_50_HZ (0x7 << BMI088_ACC_ODR_SHFITS)` |
+| [49](../modules/BMI088/bmi088_regNdef.h#L49) | 预处理 | `#define BMI088_ACC_100_HZ (0x8 << BMI088_ACC_ODR_SHFITS)` |
+| [50](../modules/BMI088/bmi088_regNdef.h#L50) | 预处理 | `#define BMI088_ACC_200_HZ (0x9 << BMI088_ACC_ODR_SHFITS)` |
+| [51](../modules/BMI088/bmi088_regNdef.h#L51) | 预处理 | `#define BMI088_ACC_400_HZ (0xA << BMI088_ACC_ODR_SHFITS)` |
+| [52](../modules/BMI088/bmi088_regNdef.h#L52) | 预处理 | `#define BMI088_ACC_800_HZ (0xB << BMI088_ACC_ODR_SHFITS)` |
+| [53](../modules/BMI088/bmi088_regNdef.h#L53) | 预处理 | `#define BMI088_ACC_1600_HZ (0xC << BMI088_ACC_ODR_SHFITS)` |
+| [55](../modules/BMI088/bmi088_regNdef.h#L55) | 预处理 | `#define BMI088_ACC_RANGE 0x41` |
+| [57](../modules/BMI088/bmi088_regNdef.h#L57) | 预处理 | `#define BMI088_ACC_RANGE_SHFITS 0x0` |
+| [58](../modules/BMI088/bmi088_regNdef.h#L58) | 预处理 | `#define BMI088_ACC_RANGE_3G (0x0 << BMI088_ACC_RANGE_SHFITS)` |
+| [59](../modules/BMI088/bmi088_regNdef.h#L59) | 预处理 | `#define BMI088_ACC_RANGE_6G (0x1 << BMI088_ACC_RANGE_SHFITS)` |
+| [60](../modules/BMI088/bmi088_regNdef.h#L60) | 预处理 | `#define BMI088_ACC_RANGE_12G (0x2 << BMI088_ACC_RANGE_SHFITS)` |
+| [61](../modules/BMI088/bmi088_regNdef.h#L61) | 预处理 | `#define BMI088_ACC_RANGE_24G (0x3 << BMI088_ACC_RANGE_SHFITS)` |
+| [63](../modules/BMI088/bmi088_regNdef.h#L63) | 预处理 | `#define BMI088_INT1_IO_CTRL 0x53` |
+| [64](../modules/BMI088/bmi088_regNdef.h#L64) | 预处理 | `#define BMI088_ACC_INT1_IO_ENABLE_SHFITS 0x3` |
+| [65](../modules/BMI088/bmi088_regNdef.h#L65) | 预处理 | `#define BMI088_ACC_INT1_IO_ENABLE (0x1 << BMI088_ACC_INT1_IO_ENABLE_SHFITS)` |
+| [66](../modules/BMI088/bmi088_regNdef.h#L66) | 预处理 | `#define BMI088_ACC_INT1_GPIO_MODE_SHFITS 0x2` |
+| [67](../modules/BMI088/bmi088_regNdef.h#L67) | 预处理 | `#define BMI088_ACC_INT1_GPIO_PP (0x0 << BMI088_ACC_INT1_GPIO_MODE_SHFITS)` |
+| [68](../modules/BMI088/bmi088_regNdef.h#L68) | 预处理 | `#define BMI088_ACC_INT1_GPIO_OD (0x1 << BMI088_ACC_INT1_GPIO_MODE_SHFITS)` |
+| [69](../modules/BMI088/bmi088_regNdef.h#L69) | 预处理 | `#define BMI088_ACC_INT1_GPIO_LVL_SHFITS 0x1` |
+| [70](../modules/BMI088/bmi088_regNdef.h#L70) | 预处理 | `#define BMI088_ACC_INT1_GPIO_LOW (0x0 << BMI088_ACC_INT1_GPIO_LVL_SHFITS)` |
+| [71](../modules/BMI088/bmi088_regNdef.h#L71) | 预处理 | `#define BMI088_ACC_INT1_GPIO_HIGH (0x1 << BMI088_ACC_INT1_GPIO_LVL_SHFITS)` |
+| [73](../modules/BMI088/bmi088_regNdef.h#L73) | 预处理 | `#define BMI088_INT2_IO_CTRL 0x54` |
+| [74](../modules/BMI088/bmi088_regNdef.h#L74) | 预处理 | `#define BMI088_ACC_INT2_IO_ENABLE_SHFITS 0x3` |
+| [75](../modules/BMI088/bmi088_regNdef.h#L75) | 预处理 | `#define BMI088_ACC_INT2_IO_ENABLE (0x1 << BMI088_ACC_INT2_IO_ENABLE_SHFITS)` |
+| [76](../modules/BMI088/bmi088_regNdef.h#L76) | 预处理 | `#define BMI088_ACC_INT2_GPIO_MODE_SHFITS 0x2` |
+| [77](../modules/BMI088/bmi088_regNdef.h#L77) | 预处理 | `#define BMI088_ACC_INT2_GPIO_PP (0x0 << BMI088_ACC_INT2_GPIO_MODE_SHFITS)` |
+| [78](../modules/BMI088/bmi088_regNdef.h#L78) | 预处理 | `#define BMI088_ACC_INT2_GPIO_OD (0x1 << BMI088_ACC_INT2_GPIO_MODE_SHFITS)` |
+| [79](../modules/BMI088/bmi088_regNdef.h#L79) | 预处理 | `#define BMI088_ACC_INT2_GPIO_LVL_SHFITS 0x1` |
+| [80](../modules/BMI088/bmi088_regNdef.h#L80) | 预处理 | `#define BMI088_ACC_INT2_GPIO_LOW (0x0 << BMI088_ACC_INT2_GPIO_LVL_SHFITS)` |
+| [81](../modules/BMI088/bmi088_regNdef.h#L81) | 预处理 | `#define BMI088_ACC_INT2_GPIO_HIGH (0x1 << BMI088_ACC_INT2_GPIO_LVL_SHFITS)` |
+| [83](../modules/BMI088/bmi088_regNdef.h#L83) | 预处理 | `#define BMI088_INT_MAP_DATA 0x58` |
+| [84](../modules/BMI088/bmi088_regNdef.h#L84) | 预处理 | `#define BMI088_ACC_INT2_DRDY_INTERRUPT_SHFITS 0x6` |
+| [85](../modules/BMI088/bmi088_regNdef.h#L85) | 预处理 | `#define BMI088_ACC_INT2_DRDY_INTERRUPT (0x1 << BMI088_ACC_INT2_DRDY_INTERRUPT_SHFITS)` |
+| [86](../modules/BMI088/bmi088_regNdef.h#L86) | 预处理 | `#define BMI088_ACC_INT1_DRDY_INTERRUPT_SHFITS 0x2` |
+| [87](../modules/BMI088/bmi088_regNdef.h#L87) | 预处理 | `#define BMI088_ACC_INT1_DRDY_INTERRUPT (0x1 << BMI088_ACC_INT1_DRDY_INTERRUPT_SHFITS)` |
+| [89](../modules/BMI088/bmi088_regNdef.h#L89) | 预处理 | `#define BMI088_ACC_SELF_TEST 0x6D` |
+| [90](../modules/BMI088/bmi088_regNdef.h#L90) | 预处理 | `#define BMI088_ACC_SELF_TEST_OFF 0x00` |
+| [91](../modules/BMI088/bmi088_regNdef.h#L91) | 预处理 | `#define BMI088_ACC_SELF_TEST_POSITIVE_SIGNAL 0x0D` |
+| [92](../modules/BMI088/bmi088_regNdef.h#L92) | 预处理 | `#define BMI088_ACC_SELF_TEST_NEGATIVE_SIGNAL 0x09` |
+| [94](../modules/BMI088/bmi088_regNdef.h#L94) | 预处理 | `#define BMI088_ACC_PWR_CONF 0x7C` |
+| [95](../modules/BMI088/bmi088_regNdef.h#L95) | 预处理 | `#define BMI088_ACC_PWR_SUSPEND_MODE 0x03` |
+| [96](../modules/BMI088/bmi088_regNdef.h#L96) | 预处理 | `#define BMI088_ACC_PWR_ACTIVE_MODE 0x00` |
+| [98](../modules/BMI088/bmi088_regNdef.h#L98) | 预处理 | `#define BMI088_ACC_PWR_CTRL 0x7D` |
+| [99](../modules/BMI088/bmi088_regNdef.h#L99) | 预处理 | `#define BMI088_ACC_ENABLE_ACC_OFF 0x00` |
+| [100](../modules/BMI088/bmi088_regNdef.h#L100) | 预处理 | `#define BMI088_ACC_ENABLE_ACC_ON 0x04` |
+| [102](../modules/BMI088/bmi088_regNdef.h#L102) | 预处理 | `#define BMI088_ACC_SOFTRESET 0x7E` |
+| [103](../modules/BMI088/bmi088_regNdef.h#L103) | 预处理 | `#define BMI088_ACC_SOFTRESET_VALUE 0xB6` |
+| [105](../modules/BMI088/bmi088_regNdef.h#L105) | 预处理 | `#define BMI088_GYRO_CHIP_ID 0x00` |
+| [106](../modules/BMI088/bmi088_regNdef.h#L106) | 预处理 | `#define BMI088_GYRO_CHIP_ID_VALUE 0x0F` |
+| [108](../modules/BMI088/bmi088_regNdef.h#L108) | 预处理 | `#define BMI088_GYRO_X_L 0x02` |
+| [109](../modules/BMI088/bmi088_regNdef.h#L109) | 预处理 | `#define BMI088_GYRO_X_H 0x03` |
+| [110](../modules/BMI088/bmi088_regNdef.h#L110) | 预处理 | `#define BMI088_GYRO_Y_L 0x04` |
+| [111](../modules/BMI088/bmi088_regNdef.h#L111) | 预处理 | `#define BMI088_GYRO_Y_H 0x05` |
+| [112](../modules/BMI088/bmi088_regNdef.h#L112) | 预处理 | `#define BMI088_GYRO_Z_L 0x06` |
+| [113](../modules/BMI088/bmi088_regNdef.h#L113) | 预处理 | `#define BMI088_GYRO_Z_H 0x07` |
+| [115](../modules/BMI088/bmi088_regNdef.h#L115) | 预处理 | `#define BMI088_GYRO_INT_STAT_1 0x0A` |
+| [116](../modules/BMI088/bmi088_regNdef.h#L116) | 预处理 | `#define BMI088_GYRO_DYDR_SHFITS 0x7` |
+| [117](../modules/BMI088/bmi088_regNdef.h#L117) | 预处理 | `#define BMI088_GYRO_DYDR (0x1 << BMI088_GYRO_DYDR_SHFITS)` |
+| [119](../modules/BMI088/bmi088_regNdef.h#L119) | 预处理 | `#define BMI088_GYRO_RANGE 0x0F` |
+| [120](../modules/BMI088/bmi088_regNdef.h#L120) | 预处理 | `#define BMI088_GYRO_RANGE_SHFITS 0x0` |
+| [121](../modules/BMI088/bmi088_regNdef.h#L121) | 预处理 | `#define BMI088_GYRO_2000 (0x0 << BMI088_GYRO_RANGE_SHFITS)` |
+| [122](../modules/BMI088/bmi088_regNdef.h#L122) | 预处理 | `#define BMI088_GYRO_1000 (0x1 << BMI088_GYRO_RANGE_SHFITS)` |
+| [123](../modules/BMI088/bmi088_regNdef.h#L123) | 预处理 | `#define BMI088_GYRO_500 (0x2 << BMI088_GYRO_RANGE_SHFITS)` |
+| [124](../modules/BMI088/bmi088_regNdef.h#L124) | 预处理 | `#define BMI088_GYRO_250 (0x3 << BMI088_GYRO_RANGE_SHFITS)` |
+| [125](../modules/BMI088/bmi088_regNdef.h#L125) | 预处理 | `#define BMI088_GYRO_125 (0x4 << BMI088_GYRO_RANGE_SHFITS)` |
+| [127](../modules/BMI088/bmi088_regNdef.h#L127) | 预处理 | `#define BMI088_GYRO_BANDWIDTH 0x10` |
+| [129](../modules/BMI088/bmi088_regNdef.h#L129) | 预处理 | `#define BMI088_GYRO_BANDWIDTH_MUST_Set 0x80` |
+| [130](../modules/BMI088/bmi088_regNdef.h#L130) | 预处理 | `#define BMI088_GYRO_2000_532_HZ 0x00` |
+| [131](../modules/BMI088/bmi088_regNdef.h#L131) | 预处理 | `#define BMI088_GYRO_2000_230_HZ 0x01` |
+| [132](../modules/BMI088/bmi088_regNdef.h#L132) | 预处理 | `#define BMI088_GYRO_1000_116_HZ 0x02` |
+| [133](../modules/BMI088/bmi088_regNdef.h#L133) | 预处理 | `#define BMI088_GYRO_400_47_HZ 0x03` |
+| [134](../modules/BMI088/bmi088_regNdef.h#L134) | 预处理 | `#define BMI088_GYRO_200_23_HZ 0x04` |
+| [135](../modules/BMI088/bmi088_regNdef.h#L135) | 预处理 | `#define BMI088_GYRO_100_12_HZ 0x05` |
+| [136](../modules/BMI088/bmi088_regNdef.h#L136) | 预处理 | `#define BMI088_GYRO_200_64_HZ 0x06` |
+| [137](../modules/BMI088/bmi088_regNdef.h#L137) | 预处理 | `#define BMI088_GYRO_100_32_HZ 0x07` |
+| [139](../modules/BMI088/bmi088_regNdef.h#L139) | 预处理 | `#define BMI088_GYRO_LPM1 0x11` |
+| [140](../modules/BMI088/bmi088_regNdef.h#L140) | 预处理 | `#define BMI088_GYRO_NORMAL_MODE 0x00` |
+| [141](../modules/BMI088/bmi088_regNdef.h#L141) | 预处理 | `#define BMI088_GYRO_SUSPEND_MODE 0x80` |
+| [142](../modules/BMI088/bmi088_regNdef.h#L142) | 预处理 | `#define BMI088_GYRO_DEEP_SUSPEND_MODE 0x20` |
+| [144](../modules/BMI088/bmi088_regNdef.h#L144) | 预处理 | `#define BMI088_GYRO_SOFTRESET 0x14` |
+| [145](../modules/BMI088/bmi088_regNdef.h#L145) | 预处理 | `#define BMI088_GYRO_SOFTRESET_VALUE 0xB6` |
+| [147](../modules/BMI088/bmi088_regNdef.h#L147) | 预处理 | `#define BMI088_GYRO_CTRL 0x15` |
+| [148](../modules/BMI088/bmi088_regNdef.h#L148) | 预处理 | `#define BMI088_DRDY_OFF 0x00` |
+| [149](../modules/BMI088/bmi088_regNdef.h#L149) | 预处理 | `#define BMI088_DRDY_ON 0x80` |
+| [151](../modules/BMI088/bmi088_regNdef.h#L151) | 预处理 | `#define BMI088_GYRO_INT3_INT4_IO_CONF 0x16` |
+| [152](../modules/BMI088/bmi088_regNdef.h#L152) | 预处理 | `#define BMI088_GYRO_INT4_GPIO_MODE_SHFITS 0x3` |
+| [153](../modules/BMI088/bmi088_regNdef.h#L153) | 预处理 | `#define BMI088_GYRO_INT4_GPIO_PP (0x0 << BMI088_GYRO_INT4_GPIO_MODE_SHFITS)` |
+| [154](../modules/BMI088/bmi088_regNdef.h#L154) | 预处理 | `#define BMI088_GYRO_INT4_GPIO_OD (0x1 << BMI088_GYRO_INT4_GPIO_MODE_SHFITS)` |
+| [155](../modules/BMI088/bmi088_regNdef.h#L155) | 预处理 | `#define BMI088_GYRO_INT4_GPIO_LVL_SHFITS 0x2` |
+| [156](../modules/BMI088/bmi088_regNdef.h#L156) | 预处理 | `#define BMI088_GYRO_INT4_GPIO_LOW (0x0 << BMI088_GYRO_INT4_GPIO_LVL_SHFITS)` |
+| [157](../modules/BMI088/bmi088_regNdef.h#L157) | 预处理 | `#define BMI088_GYRO_INT4_GPIO_HIGH (0x1 << BMI088_GYRO_INT4_GPIO_LVL_SHFITS)` |
+| [158](../modules/BMI088/bmi088_regNdef.h#L158) | 预处理 | `#define BMI088_GYRO_INT3_GPIO_MODE_SHFITS 0x1` |
+| [159](../modules/BMI088/bmi088_regNdef.h#L159) | 预处理 | `#define BMI088_GYRO_INT3_GPIO_PP (0x0 << BMI088_GYRO_INT3_GPIO_MODE_SHFITS)` |
+| [160](../modules/BMI088/bmi088_regNdef.h#L160) | 预处理 | `#define BMI088_GYRO_INT3_GPIO_OD (0x1 << BMI088_GYRO_INT3_GPIO_MODE_SHFITS)` |
+| [161](../modules/BMI088/bmi088_regNdef.h#L161) | 预处理 | `#define BMI088_GYRO_INT3_GPIO_LVL_SHFITS 0x0` |
+| [162](../modules/BMI088/bmi088_regNdef.h#L162) | 预处理 | `#define BMI088_GYRO_INT3_GPIO_LOW (0x0 << BMI088_GYRO_INT3_GPIO_LVL_SHFITS)` |
+| [163](../modules/BMI088/bmi088_regNdef.h#L163) | 预处理 | `#define BMI088_GYRO_INT3_GPIO_HIGH (0x1 << BMI088_GYRO_INT3_GPIO_LVL_SHFITS)` |
+| [165](../modules/BMI088/bmi088_regNdef.h#L165) | 预处理 | `#define BMI088_GYRO_INT3_INT4_IO_MAP 0x18` |
+| [167](../modules/BMI088/bmi088_regNdef.h#L167) | 预处理 | `#define BMI088_GYRO_DRDY_IO_OFF 0x00` |
+| [168](../modules/BMI088/bmi088_regNdef.h#L168) | 预处理 | `#define BMI088_GYRO_DRDY_IO_INT3 0x01` |
+| [169](../modules/BMI088/bmi088_regNdef.h#L169) | 预处理 | `#define BMI088_GYRO_DRDY_IO_INT4 0x80` |
+| [170](../modules/BMI088/bmi088_regNdef.h#L170) | 预处理 | `#define BMI088_GYRO_DRDY_IO_BOTH (BMI088_GYRO_DRDY_IO_INT3 &#124; BMI088_GYRO_DRDY_IO_INT4)` |
+| [172](../modules/BMI088/bmi088_regNdef.h#L172) | 预处理 | `#define BMI088_GYRO_SELF_TEST 0x3C` |
+| [173](../modules/BMI088/bmi088_regNdef.h#L173) | 预处理 | `#define BMI088_GYRO_RATE_OK_SHFITS 0x4` |
+| [174](../modules/BMI088/bmi088_regNdef.h#L174) | 预处理 | `#define BMI088_GYRO_RATE_OK (0x1 << BMI088_GYRO_RATE_OK_SHFITS)` |
+| [175](../modules/BMI088/bmi088_regNdef.h#L175) | 预处理 | `#define BMI088_GYRO_BIST_FAIL_SHFITS 0x2` |
+| [176](../modules/BMI088/bmi088_regNdef.h#L176) | 预处理 | `#define BMI088_GYRO_BIST_FAIL (0x1 << BMI088_GYRO_BIST_FAIL_SHFITS)` |
+| [177](../modules/BMI088/bmi088_regNdef.h#L177) | 预处理 | `#define BMI088_GYRO_BIST_RDY_SHFITS 0x1` |
+| [178](../modules/BMI088/bmi088_regNdef.h#L178) | 预处理 | `#define BMI088_GYRO_BIST_RDY (0x1 << BMI088_GYRO_BIST_RDY_SHFITS)` |
+| [179](../modules/BMI088/bmi088_regNdef.h#L179) | 预处理 | `#define BMI088_GYRO_TRIG_BIST_SHFITS 0x0` |
+| [180](../modules/BMI088/bmi088_regNdef.h#L180) | 预处理 | `#define BMI088_GYRO_TRIG_BIST (0x1 << BMI088_GYRO_TRIG_BIST_SHFITS)` |
+| [184](../modules/BMI088/bmi088_regNdef.h#L184) | 预处理 | `#define BMI088_TEMP_FACTOR 0.125f` |
+| [185](../modules/BMI088/bmi088_regNdef.h#L185) | 预处理 | `#define BMI088_TEMP_OFFSET 23.0f` |
+| [187](../modules/BMI088/bmi088_regNdef.h#L187) | 预处理 | `#define BMI088_WRITE_ACCEL_REG_NUM 6` |
+| [188](../modules/BMI088/bmi088_regNdef.h#L188) | 预处理 | `#define BMI088_WRITE_GYRO_REG_NUM 6` |
+| [190](../modules/BMI088/bmi088_regNdef.h#L190) | 预处理 | `#define BMI088_GYRO_DATA_READY_BIT 0` |
+| [191](../modules/BMI088/bmi088_regNdef.h#L191) | 预处理 | `#define BMI088_ACCEL_DATA_READY_BIT 1` |
+| [192](../modules/BMI088/bmi088_regNdef.h#L192) | 预处理 | `#define BMI088_ACCEL_TEMP_DATA_READY_BIT 2` |
+| [194](../modules/BMI088/bmi088_regNdef.h#L194) | 预处理 | `#define BMI088_LONG_DELAY_TIME 80` |
+| [195](../modules/BMI088/bmi088_regNdef.h#L195) | 预处理 | `#define BMI088_COM_WAIT_SENSOR_TIME 150` |
+| [197](../modules/BMI088/bmi088_regNdef.h#L197) | 预处理 | `#define BMI088_ACCEL_IIC_ADDRESSE (0x18 << 1)` |
+| [198](../modules/BMI088/bmi088_regNdef.h#L198) | 预处理 | `#define BMI088_GYRO_IIC_ADDRESSE (0x68 << 1)` |
+| [200](../modules/BMI088/bmi088_regNdef.h#L200) | 预处理 | `#define BMI088_ACCEL_3G_SEN 0.0008974358974f` |
+| [201](../modules/BMI088/bmi088_regNdef.h#L201) | 预处理 | `#define BMI088_ACCEL_6G_SEN 0.00179443359375f` |
+| [202](../modules/BMI088/bmi088_regNdef.h#L202) | 预处理 | `#define BMI088_ACCEL_12G_SEN 0.0035888671875f` |
+| [203](../modules/BMI088/bmi088_regNdef.h#L203) | 预处理 | `#define BMI088_ACCEL_24G_SEN 0.007177734375f` |
+| [205](../modules/BMI088/bmi088_regNdef.h#L205) | 预处理 | `#define BMI088_GYRO_2000_SEN 0.00106526443603169529841533860381f` |
+| [206](../modules/BMI088/bmi088_regNdef.h#L206) | 预处理 | `#define BMI088_GYRO_1000_SEN 0.00053263221801584764920766930190693f` |
+| [207](../modules/BMI088/bmi088_regNdef.h#L207) | 预处理 | `#define BMI088_GYRO_500_SEN 0.00026631610900792382460383465095346f` |
+| [208](../modules/BMI088/bmi088_regNdef.h#L208) | 预处理 | `#define BMI088_GYRO_250_SEN 0.00013315805450396191230191732547673f` |
+| [209](../modules/BMI088/bmi088_regNdef.h#L209) | 预处理 | `#define BMI088_GYRO_125_SEN 0.000066579027251980956150958662738366f` |
+| [234](../modules/BMI088/bmi088_regNdef.h#L234) | 预处理 | `#endif` |
 
 ## modules/can_comm/can_comm.c
 
-源文件：[打开 modules/can_comm/can_comm.c](../modules/can_comm/can_comm.c)。
-
-### 配置结构体初值
-
-以下记录原始定义，不自动推断运行路径或后续覆盖。未填字段为零；指针/回调表示绑定关系。
-
-[modules/can_comm/can_comm.c:97](../modules/can_comm/can_comm.c#L97)
-
-```c
-Daemon_Init_Config_s daemon_config = {
-        .callback = CANCommLostCallback,
-        .owner_id = (void *)ins,
-        .reload_count = comm_config->daemon_count,
-    };
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [104](../modules/can_comm/can_comm.c#L104) | 配置初值 | `Daemon_Init_Config_s daemon_config = {` |
+| [105](../modules/can_comm/can_comm.c#L105) | 配置初值 | `.callback = CANCommLostCallback,` |
+| [106](../modules/can_comm/can_comm.c#L106) | 配置初值 | `.owner_id = (void *)ins,` |
+| [107](../modules/can_comm/can_comm.c#L107) | 配置初值 | `.reload_count = comm_config->daemon_count,` |
 
 ## modules/can_comm/can_comm.h
 
-源文件：[打开 modules/can_comm/can_comm.h](../modules/can_comm/can_comm.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/can_comm/can_comm.h:12](../modules/can_comm/can_comm.h#L12) | `CAN_COMM_H` | 空定义 | `#ifndef CAN_COMM_H` |  |
-| [modules/can_comm/can_comm.h:17](../modules/can_comm/can_comm.h#L17) | `MX_CAN_COMM_COUNT` | `4` | `#ifndef CAN_COMM_H` | 注意均衡负载,一条总线上不要挂载过多的外设 |
-| [modules/can_comm/can_comm.h:19](../modules/can_comm/can_comm.h#L19) | `CAN_COMM_MAX_BUFFSIZE` | `60` | `#ifndef CAN_COMM_H` | 最大发送/接收字节数,如果不够可以增加此数值 |
-| [modules/can_comm/can_comm.h:20](../modules/can_comm/can_comm.h#L20) | `CAN_COMM_HEADER` | `'s'` | `#ifndef CAN_COMM_H` | 帧头 |
-| [modules/can_comm/can_comm.h:21](../modules/can_comm/can_comm.h#L21) | `CAN_COMM_TAIL` | `'e'` | `#ifndef CAN_COMM_H` | 帧尾 |
-| [modules/can_comm/can_comm.h:22](../modules/can_comm/can_comm.h#L22) | `CAN_COMM_OFFSET_BYTES` | `4` | `#ifndef CAN_COMM_H` | 's'+ datalen + 'e' + crc8 |
-
-### 可设置的结构体字段
-
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
-
-[modules/can_comm/can_comm.h:48](../modules/can_comm/can_comm.h#L48)
-
-```c
-typedef struct
-{
-    CAN_Init_Config_s can_config; // CAN初始化结构体
-    uint8_t send_data_len;        // 发送数据长度
-    uint8_t recv_data_len;        // 接收数据长度
-
-    uint16_t daemon_count; // 守护进程计数,用于初始化守护进程
-} CANComm_Init_Config_s;
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [11](../modules/can_comm/can_comm.h#L11) | 预处理 | `#ifndef CAN_COMM_H` |
+| [12](../modules/can_comm/can_comm.h#L12) | 预处理 | `#define CAN_COMM_H` |
+| [17](../modules/can_comm/can_comm.h#L17) | 预处理 | `#define MX_CAN_COMM_COUNT 4 // 注意均衡负载,一条总线上不要挂载过多的外设` |
+| [19](../modules/can_comm/can_comm.h#L19) | 预处理 | `#define CAN_COMM_MAX_BUFFSIZE 128 // 最大发送/接收字节数,如果不够可以增加此数值` |
+| [20](../modules/can_comm/can_comm.h#L20) | 预处理 | `#define CAN_COMM_HEADER 's'      // 帧头` |
+| [21](../modules/can_comm/can_comm.h#L21) | 预处理 | `#define CAN_COMM_TAIL 'e'        // 帧尾` |
+| [22](../modules/can_comm/can_comm.h#L22) | 预处理 | `#define CAN_COMM_OFFSET_BYTES 4  // 's'+ datalen + 'e' + crc8` |
+| [98](../modules/can_comm/can_comm.h#L98) | 预处理 | `#endif // !CAN_COMM_H` |
 
 ## modules/daemon/daemon.h
 
-源文件：[打开 modules/daemon/daemon.h](../modules/daemon/daemon.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/daemon/daemon.h:2](../modules/daemon/daemon.h#L2) | `MONITOR_H` | 空定义 | `#ifndef MONITOR_H` |  |
-| [modules/daemon/daemon.h:7](../modules/daemon/daemon.h#L7) | `DAEMON_MX_CNT` | `64` | `#ifndef MONITOR_H` |  |
-
-### 可设置的结构体字段
-
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
-
-[modules/daemon/daemon.h:23](../modules/daemon/daemon.h#L23)
-
-```c
-typedef struct
-{
-    uint16_t reload_count;     // 实际上这是app唯一需要设置的值?
-    uint16_t init_count;       // 上线等待时间,有些模块需要收到主控的指令才会反馈报文,或pc等需要开机时间
-    offline_callback callback; // 异常处理函数,当模块发生异常时会被调用
-
-    void *owner_id;            // id取拥有daemon的实例的地址,如DJIMotorInstance*,cast成void*类型
-} Daemon_Init_Config_s;
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/daemon/daemon.h#L1) | 预处理 | `#ifndef MONITOR_H` |
+| [2](../modules/daemon/daemon.h#L2) | 预处理 | `#define MONITOR_H` |
+| [7](../modules/daemon/daemon.h#L7) | 预处理 | `#define DAEMON_MX_CNT 64` |
+| [62](../modules/daemon/daemon.h#L62) | 预处理 | `#endif // !MONITOR_H` |
 
 ## modules/general_def.h
 
-源文件：[打开 modules/general_def.h](../modules/general_def.h)。
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/general_def.h#L1) | 预处理 | `#ifndef GENERAL_DEF_H` |
+| [2](../modules/general_def.h#L2) | 预处理 | `#define GENERAL_DEF_H` |
+| [6](../modules/general_def.h#L6) | 预处理 | `#ifndef PI` |
+| [7](../modules/general_def.h#L7) | 预处理 | `#define PI 3.1415926535f` |
+| [8](../modules/general_def.h#L8) | 预处理 | `#endif` |
+| [9](../modules/general_def.h#L9) | 预处理 | `#define PI2 (PI * 2.0f) // 2 pi` |
+| [11](../modules/general_def.h#L11) | 预处理 | `#define RAD_2_DEGREE 57.2957795f    // 180/pi` |
+| [12](../modules/general_def.h#L12) | 预处理 | `#define DEGREE_2_RAD 0.01745329252f // pi/180` |
+| [14](../modules/general_def.h#L14) | 预处理 | `#define RPM_2_ANGLE_PER_SEC 6.0f       // ×360°/60sec` |
+| [15](../modules/general_def.h#L15) | 预处理 | `#define RPM_2_RAD_PER_SEC 0.104719755f // ×2pi/60sec` |
+| [17](../modules/general_def.h#L17) | 预处理 | `#endif // !GENERAL_DEF_H` |
 
-### 宏定义
+## modules/heat_control/heat_control.h
 
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/general_def.h:2](../modules/general_def.h#L2) | `GENERAL_DEF_H` | 空定义 | `#ifndef GENERAL_DEF_H` |  |
-| [modules/general_def.h:7](../modules/general_def.h#L7) | `PI` | `3.1415926535f` | `#ifndef GENERAL_DEF_H；#ifndef PI` |  |
-| [modules/general_def.h:9](../modules/general_def.h#L9) | `PI2` | `(PI * 2.0f)` | `#ifndef GENERAL_DEF_H` | 2 pi |
-| [modules/general_def.h:11](../modules/general_def.h#L11) | `RAD_2_DEGREE` | `57.2957795f` | `#ifndef GENERAL_DEF_H` | 180/pi |
-| [modules/general_def.h:12](../modules/general_def.h#L12) | `DEGREE_2_RAD` | `0.01745329252f` | `#ifndef GENERAL_DEF_H` | pi/180 |
-| [modules/general_def.h:14](../modules/general_def.h#L14) | `RPM_2_ANGLE_PER_SEC` | `6.0f` | `#ifndef GENERAL_DEF_H` | ×360°/60sec |
-| [modules/general_def.h:15](../modules/general_def.h#L15) | `RPM_2_RAD_PER_SEC` | `0.104719755f` | `#ifndef GENERAL_DEF_H` | ×2pi/60sec |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/heat_control/heat_control.h#L1) | 预处理 | `#ifndef HEAT_CONTROL_H` |
+| [2](../modules/heat_control/heat_control.h#L2) | 预处理 | `#define HEAT_CONTROL_H` |
+| [8](../modules/heat_control/heat_control.h#L8) | 预处理 | `#define HEAT_CONTROL_DATA_TOPIC "heat_control_data"` |
+| [11](../modules/heat_control/heat_control.h#L11) | 预处理 | `#define HEAT_CONTROL_BULLET_HEAT 10.0f` |
+| [12](../modules/heat_control/heat_control.h#L12) | 预处理 | `#define HEAT_CONTROL_DEFAULT_MAX_RATE 30.0f` |
+| [13](../modules/heat_control/heat_control.h#L13) | 预处理 | `#define HEAT_CONTROL_RESERVE_SHOTS 7.0f /* Delay reserve; see integration validation report. */` |
+| [14](../modules/heat_control/heat_control.h#L14) | 预处理 | `#define HEAT_CONTROL_SETTLE_PERIOD_S 0.1f /* 裁判系统按 10 Hz 结算冷却 */` |
+| [15](../modules/heat_control/heat_control.h#L15) | 预处理 | `#define HEAT_CONTROL_PLAN_PERIOD_S 0.5   /* 热量规划窗口；越长越早降速，与冷却周期独立 */` |
+| [77](../modules/heat_control/heat_control.h#L77) | 预处理 | `#endif` |
 
 ## modules/imu/BMI088driver.c
 
-源文件：[打开 modules/imu/BMI088driver.c](../modules/imu/BMI088driver.c)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/imu/BMI088driver.c:25](../modules/imu/BMI088driver.c#L25) | `BMI088_accel_write_single_reg(reg, data)` | `{ BMI088_ACCEL_NS_L(); BMI088_write_single_reg((reg), (data)); BMI088_ACCEL_NS_H(); }` | `#if defined(BMI088_USE_SPI)` |  |
-| [modules/imu/BMI088driver.c:31](../modules/imu/BMI088driver.c#L31) | `BMI088_accel_read_single_reg(reg, data)` | `{ BMI088_ACCEL_NS_L(); BMI088_read_write_byte((reg) \| 0x80); BMI088_read_write_byte(0x55); (data) = BMI088_read_write_byte(0x55); BMI088_ACCEL_NS_H(); }` | `#if defined(BMI088_USE_SPI)` |  |
-| [modules/imu/BMI088driver.c:39](../modules/imu/BMI088driver.c#L39) | `BMI088_accel_read_muli_reg(reg, data, len)` | `{ BMI088_ACCEL_NS_L(); BMI088_read_write_byte((reg) \| 0x80); BMI088_read_muli_reg(reg, data, len); BMI088_ACCEL_NS_H(); }` | `#if defined(BMI088_USE_SPI)` |  |
-| [modules/imu/BMI088driver.c:47](../modules/imu/BMI088driver.c#L47) | `BMI088_gyro_write_single_reg(reg, data)` | `{ BMI088_GYRO_NS_L(); BMI088_write_single_reg((reg), (data)); BMI088_GYRO_NS_H(); }` | `#if defined(BMI088_USE_SPI)` |  |
-| [modules/imu/BMI088driver.c:53](../modules/imu/BMI088driver.c#L53) | `BMI088_gyro_read_single_reg(reg, data)` | `{ BMI088_GYRO_NS_L(); BMI088_read_single_reg((reg), &(data)); BMI088_GYRO_NS_H(); }` | `#if defined(BMI088_USE_SPI)` |  |
-| [modules/imu/BMI088driver.c:59](../modules/imu/BMI088driver.c#L59) | `BMI088_gyro_read_muli_reg(reg, data, len)` | `{ BMI088_GYRO_NS_L(); BMI088_read_muli_reg((reg), (data), (len)); BMI088_GYRO_NS_H(); }` | `#if defined(BMI088_USE_SPI)` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [23](../modules/imu/BMI088driver.c#L23) | 预处理 | `#if defined(BMI088_USE_SPI)` |
+| [25](../modules/imu/BMI088driver.c#L25) | 预处理 | `#define BMI088_accel_write_single_reg(reg, data) \` |
+| [31](../modules/imu/BMI088driver.c#L31) | 预处理 | `#define BMI088_accel_read_single_reg(reg, data) \` |
+| [39](../modules/imu/BMI088driver.c#L39) | 预处理 | `#define BMI088_accel_read_muli_reg(reg, data, len) \` |
+| [47](../modules/imu/BMI088driver.c#L47) | 预处理 | `#define BMI088_gyro_write_single_reg(reg, data) \` |
+| [53](../modules/imu/BMI088driver.c#L53) | 预处理 | `#define BMI088_gyro_read_single_reg(reg, data)  \` |
+| [59](../modules/imu/BMI088driver.c#L59) | 预处理 | `#define BMI088_gyro_read_muli_reg(reg, data, len)   \` |
+| [70](../modules/imu/BMI088driver.c#L70) | 预处理 | `#elif defined(BMI088_USE_IIC)` |
+| [71](../modules/imu/BMI088driver.c#L71) | 预处理 | `#endif` |
+| [378](../modules/imu/BMI088driver.c#L378) | 预处理 | `#if defined(BMI088_USE_SPI)` |
+| [403](../modules/imu/BMI088driver.c#L403) | 预处理 | `#elif defined(BMI088_USE_IIC)` |
+| [405](../modules/imu/BMI088driver.c#L405) | 预处理 | `#endif` |
 
 ## modules/imu/BMI088driver.h
 
-源文件：[打开 modules/imu/BMI088driver.h](../modules/imu/BMI088driver.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/imu/BMI088driver.h:2](../modules/imu/BMI088driver.h#L2) | `BMI088DRIVER_H` | 空定义 | `#ifndef BMI088DRIVER_H` |  |
-| [modules/imu/BMI088driver.h:7](../modules/imu/BMI088driver.h#L7) | `BMI088_TEMP_FACTOR` | `0.125f` | `#ifndef BMI088DRIVER_H` |  |
-| [modules/imu/BMI088driver.h:8](../modules/imu/BMI088driver.h#L8) | `BMI088_TEMP_OFFSET` | `23.0f` | `#ifndef BMI088DRIVER_H` |  |
-| [modules/imu/BMI088driver.h:10](../modules/imu/BMI088driver.h#L10) | `BMI088_WRITE_ACCEL_REG_NUM` | `6` | `#ifndef BMI088DRIVER_H` |  |
-| [modules/imu/BMI088driver.h:11](../modules/imu/BMI088driver.h#L11) | `BMI088_WRITE_GYRO_REG_NUM` | `6` | `#ifndef BMI088DRIVER_H` |  |
-| [modules/imu/BMI088driver.h:13](../modules/imu/BMI088driver.h#L13) | `BMI088_GYRO_DATA_READY_BIT` | `0` | `#ifndef BMI088DRIVER_H` |  |
-| [modules/imu/BMI088driver.h:14](../modules/imu/BMI088driver.h#L14) | `BMI088_ACCEL_DATA_READY_BIT` | `1` | `#ifndef BMI088DRIVER_H` |  |
-| [modules/imu/BMI088driver.h:15](../modules/imu/BMI088driver.h#L15) | `BMI088_ACCEL_TEMP_DATA_READY_BIT` | `2` | `#ifndef BMI088DRIVER_H` |  |
-| [modules/imu/BMI088driver.h:17](../modules/imu/BMI088driver.h#L17) | `BMI088_LONG_DELAY_TIME` | `80` | `#ifndef BMI088DRIVER_H` |  |
-| [modules/imu/BMI088driver.h:18](../modules/imu/BMI088driver.h#L18) | `BMI088_COM_WAIT_SENSOR_TIME` | `150` | `#ifndef BMI088DRIVER_H` |  |
-| [modules/imu/BMI088driver.h:20](../modules/imu/BMI088driver.h#L20) | `BMI088_ACCEL_IIC_ADDRESSE` | `(0x18 << 1)` | `#ifndef BMI088DRIVER_H` |  |
-| [modules/imu/BMI088driver.h:21](../modules/imu/BMI088driver.h#L21) | `BMI088_GYRO_IIC_ADDRESSE` | `(0x68 << 1)` | `#ifndef BMI088DRIVER_H` |  |
-| [modules/imu/BMI088driver.h:23](../modules/imu/BMI088driver.h#L23) | `BMI088_ACCEL_3G_SEN` | `0.0008974358974f` | `#ifndef BMI088DRIVER_H` |  |
-| [modules/imu/BMI088driver.h:24](../modules/imu/BMI088driver.h#L24) | `BMI088_ACCEL_6G_SEN` | `0.00179443359375f` | `#ifndef BMI088DRIVER_H` |  |
-| [modules/imu/BMI088driver.h:25](../modules/imu/BMI088driver.h#L25) | `BMI088_ACCEL_12G_SEN` | `0.0035888671875f` | `#ifndef BMI088DRIVER_H` |  |
-| [modules/imu/BMI088driver.h:26](../modules/imu/BMI088driver.h#L26) | `BMI088_ACCEL_24G_SEN` | `0.007177734375f` | `#ifndef BMI088DRIVER_H` |  |
-| [modules/imu/BMI088driver.h:28](../modules/imu/BMI088driver.h#L28) | `BMI088_GYRO_2000_SEN` | `0.00106526443603169529841533860381f` | `#ifndef BMI088DRIVER_H` |  |
-| [modules/imu/BMI088driver.h:29](../modules/imu/BMI088driver.h#L29) | `BMI088_GYRO_1000_SEN` | `0.00053263221801584764920766930190693f` | `#ifndef BMI088DRIVER_H` |  |
-| [modules/imu/BMI088driver.h:30](../modules/imu/BMI088driver.h#L30) | `BMI088_GYRO_500_SEN` | `0.00026631610900792382460383465095346f` | `#ifndef BMI088DRIVER_H` |  |
-| [modules/imu/BMI088driver.h:31](../modules/imu/BMI088driver.h#L31) | `BMI088_GYRO_250_SEN` | `0.00013315805450396191230191732547673f` | `#ifndef BMI088DRIVER_H` |  |
-| [modules/imu/BMI088driver.h:32](../modules/imu/BMI088driver.h#L32) | `BMI088_GYRO_125_SEN` | `0.000066579027251980956150958662738366f` | `#ifndef BMI088DRIVER_H` |  |
-| [modules/imu/BMI088driver.h:36](../modules/imu/BMI088driver.h#L36) | `GxOFFSET` | `0.00247530174f` | `#ifndef BMI088DRIVER_H；#if INFANTRY_ID == 0` |  |
-| [modules/imu/BMI088driver.h:37](../modules/imu/BMI088driver.h#L37) | `GyOFFSET` | `0.000393082853f` | `#ifndef BMI088DRIVER_H；#if INFANTRY_ID == 0` |  |
-| [modules/imu/BMI088driver.h:38](../modules/imu/BMI088driver.h#L38) | `GzOFFSET` | `0.000393082853f` | `#ifndef BMI088DRIVER_H；#if INFANTRY_ID == 0` |  |
-| [modules/imu/BMI088driver.h:39](../modules/imu/BMI088driver.h#L39) | `gNORM` | `9.69293118f` | `#ifndef BMI088DRIVER_H；#if INFANTRY_ID == 0` |  |
-| [modules/imu/BMI088driver.h:41](../modules/imu/BMI088driver.h#L41) | `GxOFFSET` | `0.0007222f` | `#ifndef BMI088DRIVER_H；#if INFANTRY_ID == 0 → #elif INFANTRY_ID == 1` |  |
-| [modules/imu/BMI088driver.h:42](../modules/imu/BMI088driver.h#L42) | `GyOFFSET` | `-0.001786f` | `#ifndef BMI088DRIVER_H；#if INFANTRY_ID == 0 → #elif INFANTRY_ID == 1` |  |
-| [modules/imu/BMI088driver.h:43](../modules/imu/BMI088driver.h#L43) | `GzOFFSET` | `0.0004346f` | `#ifndef BMI088DRIVER_H；#if INFANTRY_ID == 0 → #elif INFANTRY_ID == 1` |  |
-| [modules/imu/BMI088driver.h:44](../modules/imu/BMI088driver.h#L44) | `gNORM` | `9.876785f` | `#ifndef BMI088DRIVER_H；#if INFANTRY_ID == 0 → #elif INFANTRY_ID == 1` |  |
-| [modules/imu/BMI088driver.h:46](../modules/imu/BMI088driver.h#L46) | `GxOFFSET` | `0.0007222f` | `#ifndef BMI088DRIVER_H；#if INFANTRY_ID == 0 → #elif INFANTRY_ID == 1 → #elif INFANTRY_ID == 2` |  |
-| [modules/imu/BMI088driver.h:47](../modules/imu/BMI088driver.h#L47) | `GyOFFSET` | `-0.001786f` | `#ifndef BMI088DRIVER_H；#if INFANTRY_ID == 0 → #elif INFANTRY_ID == 1 → #elif INFANTRY_ID == 2` |  |
-| [modules/imu/BMI088driver.h:48](../modules/imu/BMI088driver.h#L48) | `GzOFFSET` | `0.0004346f` | `#ifndef BMI088DRIVER_H；#if INFANTRY_ID == 0 → #elif INFANTRY_ID == 1 → #elif INFANTRY_ID == 2` |  |
-| [modules/imu/BMI088driver.h:49](../modules/imu/BMI088driver.h#L49) | `gNORM` | `9.876785f` | `#ifndef BMI088DRIVER_H；#if INFANTRY_ID == 0 → #elif INFANTRY_ID == 1 → #elif INFANTRY_ID == 2` |  |
-| [modules/imu/BMI088driver.h:51](../modules/imu/BMI088driver.h#L51) | `GxOFFSET` | `0.00270364084f` | `#ifndef BMI088DRIVER_H；#if INFANTRY_ID == 0 → #elif INFANTRY_ID == 1 → #elif INFANTRY_ID == 2 → #elif INFANTRY_ID == 3` |  |
-| [modules/imu/BMI088driver.h:52](../modules/imu/BMI088driver.h#L52) | `GyOFFSET` | `-0.000532632112f` | `#ifndef BMI088DRIVER_H；#if INFANTRY_ID == 0 → #elif INFANTRY_ID == 1 → #elif INFANTRY_ID == 2 → #elif INFANTRY_ID == 3` |  |
-| [modules/imu/BMI088driver.h:53](../modules/imu/BMI088driver.h#L53) | `GzOFFSET` | `0.00478090625f` | `#ifndef BMI088DRIVER_H；#if INFANTRY_ID == 0 → #elif INFANTRY_ID == 1 → #elif INFANTRY_ID == 2 → #elif INFANTRY_ID == 3` |  |
-| [modules/imu/BMI088driver.h:54](../modules/imu/BMI088driver.h#L54) | `gNORM` | `9.73574924f` | `#ifndef BMI088DRIVER_H；#if INFANTRY_ID == 0 → #elif INFANTRY_ID == 1 → #elif INFANTRY_ID == 2 → #elif INFANTRY_ID == 3` |  |
-| [modules/imu/BMI088driver.h:56](../modules/imu/BMI088driver.h#L56) | `GxOFFSET` | `0.0007222f` | `#ifndef BMI088DRIVER_H；#if INFANTRY_ID == 0 → #elif INFANTRY_ID == 1 → #elif INFANTRY_ID == 2 → #elif INFANTRY_ID == 3 → #elif INFANTRY_ID == 4` |  |
-| [modules/imu/BMI088driver.h:57](../modules/imu/BMI088driver.h#L57) | `GyOFFSET` | `-0.001786f` | `#ifndef BMI088DRIVER_H；#if INFANTRY_ID == 0 → #elif INFANTRY_ID == 1 → #elif INFANTRY_ID == 2 → #elif INFANTRY_ID == 3 → #elif INFANTRY_ID == 4` |  |
-| [modules/imu/BMI088driver.h:58](../modules/imu/BMI088driver.h#L58) | `GzOFFSET` | `0.0004346f` | `#ifndef BMI088DRIVER_H；#if INFANTRY_ID == 0 → #elif INFANTRY_ID == 1 → #elif INFANTRY_ID == 2 → #elif INFANTRY_ID == 3 → #elif INFANTRY_ID == 4` |  |
-| [modules/imu/BMI088driver.h:59](../modules/imu/BMI088driver.h#L59) | `gNORM` | `9.876785f` | `#ifndef BMI088DRIVER_H；#if INFANTRY_ID == 0 → #elif INFANTRY_ID == 1 → #elif INFANTRY_ID == 2 → #elif INFANTRY_ID == 3 → #elif INFANTRY_ID == 4` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/imu/BMI088driver.h#L1) | 预处理 | `#ifndef BMI088DRIVER_H` |
+| [2](../modules/imu/BMI088driver.h#L2) | 预处理 | `#define BMI088DRIVER_H` |
+| [7](../modules/imu/BMI088driver.h#L7) | 预处理 | `#define BMI088_TEMP_FACTOR 0.125f` |
+| [8](../modules/imu/BMI088driver.h#L8) | 预处理 | `#define BMI088_TEMP_OFFSET 23.0f` |
+| [10](../modules/imu/BMI088driver.h#L10) | 预处理 | `#define BMI088_WRITE_ACCEL_REG_NUM 6` |
+| [11](../modules/imu/BMI088driver.h#L11) | 预处理 | `#define BMI088_WRITE_GYRO_REG_NUM 6` |
+| [13](../modules/imu/BMI088driver.h#L13) | 预处理 | `#define BMI088_GYRO_DATA_READY_BIT 0` |
+| [14](../modules/imu/BMI088driver.h#L14) | 预处理 | `#define BMI088_ACCEL_DATA_READY_BIT 1` |
+| [15](../modules/imu/BMI088driver.h#L15) | 预处理 | `#define BMI088_ACCEL_TEMP_DATA_READY_BIT 2` |
+| [17](../modules/imu/BMI088driver.h#L17) | 预处理 | `#define BMI088_LONG_DELAY_TIME 80` |
+| [18](../modules/imu/BMI088driver.h#L18) | 预处理 | `#define BMI088_COM_WAIT_SENSOR_TIME 150` |
+| [20](../modules/imu/BMI088driver.h#L20) | 预处理 | `#define BMI088_ACCEL_IIC_ADDRESSE (0x18 << 1)` |
+| [21](../modules/imu/BMI088driver.h#L21) | 预处理 | `#define BMI088_GYRO_IIC_ADDRESSE (0x68 << 1)` |
+| [23](../modules/imu/BMI088driver.h#L23) | 预处理 | `#define BMI088_ACCEL_3G_SEN 0.0008974358974f` |
+| [24](../modules/imu/BMI088driver.h#L24) | 预处理 | `#define BMI088_ACCEL_6G_SEN 0.00179443359375f` |
+| [25](../modules/imu/BMI088driver.h#L25) | 预处理 | `#define BMI088_ACCEL_12G_SEN 0.0035888671875f` |
+| [26](../modules/imu/BMI088driver.h#L26) | 预处理 | `#define BMI088_ACCEL_24G_SEN 0.007177734375f` |
+| [28](../modules/imu/BMI088driver.h#L28) | 预处理 | `#define BMI088_GYRO_2000_SEN 0.00106526443603169529841533860381f` |
+| [29](../modules/imu/BMI088driver.h#L29) | 预处理 | `#define BMI088_GYRO_1000_SEN 0.00053263221801584764920766930190693f` |
+| [30](../modules/imu/BMI088driver.h#L30) | 预处理 | `#define BMI088_GYRO_500_SEN 0.00026631610900792382460383465095346f` |
+| [31](../modules/imu/BMI088driver.h#L31) | 预处理 | `#define BMI088_GYRO_250_SEN 0.00013315805450396191230191732547673f` |
+| [32](../modules/imu/BMI088driver.h#L32) | 预处理 | `#define BMI088_GYRO_125_SEN 0.000066579027251980956150958662738366f` |
+| [35](../modules/imu/BMI088driver.h#L35) | 预处理 | `#if INFANTRY_ID == 0` |
+| [36](../modules/imu/BMI088driver.h#L36) | 预处理 | `#define GxOFFSET 0.00247530174f` |
+| [37](../modules/imu/BMI088driver.h#L37) | 预处理 | `#define GyOFFSET 0.000393082853f` |
+| [38](../modules/imu/BMI088driver.h#L38) | 预处理 | `#define GzOFFSET 0.000393082853f` |
+| [39](../modules/imu/BMI088driver.h#L39) | 预处理 | `#define gNORM 9.69293118f` |
+| [40](../modules/imu/BMI088driver.h#L40) | 预处理 | `#elif INFANTRY_ID == 1` |
+| [41](../modules/imu/BMI088driver.h#L41) | 预处理 | `#define GxOFFSET 0.0007222f` |
+| [42](../modules/imu/BMI088driver.h#L42) | 预处理 | `#define GyOFFSET -0.001786f` |
+| [43](../modules/imu/BMI088driver.h#L43) | 预处理 | `#define GzOFFSET 0.0004346f` |
+| [44](../modules/imu/BMI088driver.h#L44) | 预处理 | `#define gNORM 9.876785f` |
+| [45](../modules/imu/BMI088driver.h#L45) | 预处理 | `#elif INFANTRY_ID == 2` |
+| [46](../modules/imu/BMI088driver.h#L46) | 预处理 | `#define GxOFFSET 0.0007222f` |
+| [47](../modules/imu/BMI088driver.h#L47) | 预处理 | `#define GyOFFSET -0.001786f` |
+| [48](../modules/imu/BMI088driver.h#L48) | 预处理 | `#define GzOFFSET 0.0004346f` |
+| [49](../modules/imu/BMI088driver.h#L49) | 预处理 | `#define gNORM 9.876785f` |
+| [50](../modules/imu/BMI088driver.h#L50) | 预处理 | `#elif INFANTRY_ID == 3` |
+| [51](../modules/imu/BMI088driver.h#L51) | 预处理 | `#define GxOFFSET 0.00270364084f` |
+| [52](../modules/imu/BMI088driver.h#L52) | 预处理 | `#define GyOFFSET -0.000532632112f` |
+| [53](../modules/imu/BMI088driver.h#L53) | 预处理 | `#define GzOFFSET 0.00478090625f` |
+| [54](../modules/imu/BMI088driver.h#L54) | 预处理 | `#define gNORM 9.73574924f` |
+| [55](../modules/imu/BMI088driver.h#L55) | 预处理 | `#elif INFANTRY_ID == 4` |
+| [56](../modules/imu/BMI088driver.h#L56) | 预处理 | `#define GxOFFSET 0.0007222f` |
+| [57](../modules/imu/BMI088driver.h#L57) | 预处理 | `#define GyOFFSET -0.001786f` |
+| [58](../modules/imu/BMI088driver.h#L58) | 预处理 | `#define GzOFFSET 0.0004346f` |
+| [59](../modules/imu/BMI088driver.h#L59) | 预处理 | `#define gNORM 9.876785f` |
+| [60](../modules/imu/BMI088driver.h#L60) | 预处理 | `#endif` |
+| [133](../modules/imu/BMI088driver.h#L133) | 预处理 | `#endif` |
 
 ## modules/imu/BMI088Middleware.h
 
-源文件：[打开 modules/imu/BMI088Middleware.h](../modules/imu/BMI088Middleware.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/imu/BMI088Middleware.h:2](../modules/imu/BMI088Middleware.h#L2) | `BMI088MIDDLEWARE_H` | 空定义 | `#ifndef BMI088MIDDLEWARE_H` |  |
-| [modules/imu/BMI088Middleware.h:6](../modules/imu/BMI088Middleware.h#L6) | `BMI088_USE_SPI` | 空定义 | `#ifndef BMI088MIDDLEWARE_H` |  |
-
-### 已注释的宏选项（当前不定义）
-
-| 行 | 原选项 |
-| --- | --- |
-| [modules/imu/BMI088Middleware.h:7](../modules/imu/BMI088Middleware.h#L7) | `#define BMI088_USE_IIC` |
-| [modules/imu/BMI088Middleware.h:10](../modules/imu/BMI088Middleware.h#L10) | `#define CS1_ACCEL_GPIO_Port ACCEL_NSS_GPIO_Port` |
-| [modules/imu/BMI088Middleware.h:11](../modules/imu/BMI088Middleware.h#L11) | `#define CS1_ACCEL_Pin ACCEL_NSS_Pin` |
-| [modules/imu/BMI088Middleware.h:12](../modules/imu/BMI088Middleware.h#L12) | `#define CS1_GYRO_GPIO_Port GYRO_NSS_GPIO_Port` |
-| [modules/imu/BMI088Middleware.h:13](../modules/imu/BMI088Middleware.h#L13) | `#define CS1_GYRO_Pin GYRO_NSS_Pin` |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/imu/BMI088Middleware.h#L1) | 预处理 | `#ifndef BMI088MIDDLEWARE_H` |
+| [2](../modules/imu/BMI088Middleware.h#L2) | 预处理 | `#define BMI088MIDDLEWARE_H` |
+| [6](../modules/imu/BMI088Middleware.h#L6) | 预处理 | `#define BMI088_USE_SPI` |
+| [10](../modules/imu/BMI088Middleware.h#L10) | 预处理 | `#define CS1_ACCEL_GPIO_Port ACCEL_NSS_GPIO_Port` |
+| [11](../modules/imu/BMI088Middleware.h#L11) | 预处理 | `#define CS1_ACCEL_Pin ACCEL_NSS_Pin` |
+| [12](../modules/imu/BMI088Middleware.h#L12) | 预处理 | `#define CS1_GYRO_GPIO_Port GYRO_NSS_GPIO_Port` |
+| [13](../modules/imu/BMI088Middleware.h#L13) | 预处理 | `#define CS1_GYRO_Pin GYRO_NSS_Pin` |
+| [17](../modules/imu/BMI088Middleware.h#L17) | 预处理 | `#if defined(BMI088_USE_SPI)` |
+| [28](../modules/imu/BMI088Middleware.h#L28) | 预处理 | `#elif defined(BMI088_USE_IIC)` |
+| [30](../modules/imu/BMI088Middleware.h#L30) | 预处理 | `#endif` |
+| [32](../modules/imu/BMI088Middleware.h#L32) | 预处理 | `#endif` |
 
 ## modules/imu/BMI088reg.h
 
-源文件：[打开 modules/imu/BMI088reg.h](../modules/imu/BMI088reg.h)。
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/imu/BMI088reg.h#L1) | 预处理 | `#ifndef BMI088REG_H` |
+| [2](../modules/imu/BMI088reg.h#L2) | 预处理 | `#define BMI088REG_H` |
+| [4](../modules/imu/BMI088reg.h#L4) | 预处理 | `#define BMI088_ACC_CHIP_ID 0x00 // the register is  " Who am I "` |
+| [5](../modules/imu/BMI088reg.h#L5) | 预处理 | `#define BMI088_ACC_CHIP_ID_VALUE 0x1E` |
+| [7](../modules/imu/BMI088reg.h#L7) | 预处理 | `#define BMI088_ACC_ERR_REG 0x02` |
+| [8](../modules/imu/BMI088reg.h#L8) | 预处理 | `#define BMI088_ACCEL_CONGIF_ERROR_SHFITS 0x2` |
+| [9](../modules/imu/BMI088reg.h#L9) | 预处理 | `#define BMI088_ACCEL_CONGIF_ERROR (1 << BMI088_ACCEL_CONGIF_ERROR_SHFITS)` |
+| [10](../modules/imu/BMI088reg.h#L10) | 预处理 | `#define BMI088_FATAL_ERROR_SHFITS 0x0` |
+| [11](../modules/imu/BMI088reg.h#L11) | 预处理 | `#define BMI088_FATAL_ERROR (1 << BMI088_FATAL_ERROR)` |
+| [13](../modules/imu/BMI088reg.h#L13) | 预处理 | `#define BMI088_ACC_STATUS 0x03` |
+| [14](../modules/imu/BMI088reg.h#L14) | 预处理 | `#define BMI088_ACCEL_DRDY_SHFITS 0x7` |
+| [15](../modules/imu/BMI088reg.h#L15) | 预处理 | `#define BMI088_ACCEL_DRDY (1 << BMI088_ACCEL_DRDY_SHFITS)` |
+| [17](../modules/imu/BMI088reg.h#L17) | 预处理 | `#define BMI088_ACCEL_XOUT_L 0x12` |
+| [18](../modules/imu/BMI088reg.h#L18) | 预处理 | `#define BMI088_ACCEL_XOUT_M 0x13` |
+| [19](../modules/imu/BMI088reg.h#L19) | 预处理 | `#define BMI088_ACCEL_YOUT_L 0x14` |
+| [20](../modules/imu/BMI088reg.h#L20) | 预处理 | `#define BMI088_ACCEL_YOUT_M 0x15` |
+| [21](../modules/imu/BMI088reg.h#L21) | 预处理 | `#define BMI088_ACCEL_ZOUT_L 0x16` |
+| [22](../modules/imu/BMI088reg.h#L22) | 预处理 | `#define BMI088_ACCEL_ZOUT_M 0x17` |
+| [24](../modules/imu/BMI088reg.h#L24) | 预处理 | `#define BMI088_SENSORTIME_DATA_L 0x18` |
+| [25](../modules/imu/BMI088reg.h#L25) | 预处理 | `#define BMI088_SENSORTIME_DATA_M 0x19` |
+| [26](../modules/imu/BMI088reg.h#L26) | 预处理 | `#define BMI088_SENSORTIME_DATA_H 0x1A` |
+| [28](../modules/imu/BMI088reg.h#L28) | 预处理 | `#define BMI088_ACC_INT_STAT_1 0x1D` |
+| [29](../modules/imu/BMI088reg.h#L29) | 预处理 | `#define BMI088_ACCEL_DRDY_INTERRUPT_SHFITS 0x7` |
+| [30](../modules/imu/BMI088reg.h#L30) | 预处理 | `#define BMI088_ACCEL_DRDY_INTERRUPT (1 << BMI088_ACCEL_DRDY_INTERRUPT_SHFITS)` |
+| [32](../modules/imu/BMI088reg.h#L32) | 预处理 | `#define BMI088_TEMP_M 0x22` |
+| [34](../modules/imu/BMI088reg.h#L34) | 预处理 | `#define BMI088_TEMP_L 0x23` |
+| [36](../modules/imu/BMI088reg.h#L36) | 预处理 | `#define BMI088_ACC_CONF 0x40` |
+| [37](../modules/imu/BMI088reg.h#L37) | 预处理 | `#define BMI088_ACC_CONF_MUST_Set 0x80` |
+| [38](../modules/imu/BMI088reg.h#L38) | 预处理 | `#define BMI088_ACC_BWP_SHFITS 0x4` |
+| [39](../modules/imu/BMI088reg.h#L39) | 预处理 | `#define BMI088_ACC_OSR4 (0x0 << BMI088_ACC_BWP_SHFITS)` |
+| [40](../modules/imu/BMI088reg.h#L40) | 预处理 | `#define BMI088_ACC_OSR2 (0x1 << BMI088_ACC_BWP_SHFITS)` |
+| [41](../modules/imu/BMI088reg.h#L41) | 预处理 | `#define BMI088_ACC_NORMAL (0x2 << BMI088_ACC_BWP_SHFITS)` |
+| [43](../modules/imu/BMI088reg.h#L43) | 预处理 | `#define BMI088_ACC_ODR_SHFITS 0x0` |
+| [44](../modules/imu/BMI088reg.h#L44) | 预处理 | `#define BMI088_ACC_12_5_HZ (0x5 << BMI088_ACC_ODR_SHFITS)` |
+| [45](../modules/imu/BMI088reg.h#L45) | 预处理 | `#define BMI088_ACC_25_HZ (0x6 << BMI088_ACC_ODR_SHFITS)` |
+| [46](../modules/imu/BMI088reg.h#L46) | 预处理 | `#define BMI088_ACC_50_HZ (0x7 << BMI088_ACC_ODR_SHFITS)` |
+| [47](../modules/imu/BMI088reg.h#L47) | 预处理 | `#define BMI088_ACC_100_HZ (0x8 << BMI088_ACC_ODR_SHFITS)` |
+| [48](../modules/imu/BMI088reg.h#L48) | 预处理 | `#define BMI088_ACC_200_HZ (0x9 << BMI088_ACC_ODR_SHFITS)` |
+| [49](../modules/imu/BMI088reg.h#L49) | 预处理 | `#define BMI088_ACC_400_HZ (0xA << BMI088_ACC_ODR_SHFITS)` |
+| [50](../modules/imu/BMI088reg.h#L50) | 预处理 | `#define BMI088_ACC_800_HZ (0xB << BMI088_ACC_ODR_SHFITS)` |
+| [51](../modules/imu/BMI088reg.h#L51) | 预处理 | `#define BMI088_ACC_1600_HZ (0xC << BMI088_ACC_ODR_SHFITS)` |
+| [53](../modules/imu/BMI088reg.h#L53) | 预处理 | `#define BMI088_ACC_RANGE 0x41` |
+| [55](../modules/imu/BMI088reg.h#L55) | 预处理 | `#define BMI088_ACC_RANGE_SHFITS 0x0` |
+| [56](../modules/imu/BMI088reg.h#L56) | 预处理 | `#define BMI088_ACC_RANGE_3G (0x0 << BMI088_ACC_RANGE_SHFITS)` |
+| [57](../modules/imu/BMI088reg.h#L57) | 预处理 | `#define BMI088_ACC_RANGE_6G (0x1 << BMI088_ACC_RANGE_SHFITS)` |
+| [58](../modules/imu/BMI088reg.h#L58) | 预处理 | `#define BMI088_ACC_RANGE_12G (0x2 << BMI088_ACC_RANGE_SHFITS)` |
+| [59](../modules/imu/BMI088reg.h#L59) | 预处理 | `#define BMI088_ACC_RANGE_24G (0x3 << BMI088_ACC_RANGE_SHFITS)` |
+| [61](../modules/imu/BMI088reg.h#L61) | 预处理 | `#define BMI088_INT1_IO_CTRL 0x53` |
+| [62](../modules/imu/BMI088reg.h#L62) | 预处理 | `#define BMI088_ACC_INT1_IO_ENABLE_SHFITS 0x3` |
+| [63](../modules/imu/BMI088reg.h#L63) | 预处理 | `#define BMI088_ACC_INT1_IO_ENABLE (0x1 << BMI088_ACC_INT1_IO_ENABLE_SHFITS)` |
+| [64](../modules/imu/BMI088reg.h#L64) | 预处理 | `#define BMI088_ACC_INT1_GPIO_MODE_SHFITS 0x2` |
+| [65](../modules/imu/BMI088reg.h#L65) | 预处理 | `#define BMI088_ACC_INT1_GPIO_PP (0x0 << BMI088_ACC_INT1_GPIO_MODE_SHFITS)` |
+| [66](../modules/imu/BMI088reg.h#L66) | 预处理 | `#define BMI088_ACC_INT1_GPIO_OD (0x1 << BMI088_ACC_INT1_GPIO_MODE_SHFITS)` |
+| [67](../modules/imu/BMI088reg.h#L67) | 预处理 | `#define BMI088_ACC_INT1_GPIO_LVL_SHFITS 0x1` |
+| [68](../modules/imu/BMI088reg.h#L68) | 预处理 | `#define BMI088_ACC_INT1_GPIO_LOW (0x0 << BMI088_ACC_INT1_GPIO_LVL_SHFITS)` |
+| [69](../modules/imu/BMI088reg.h#L69) | 预处理 | `#define BMI088_ACC_INT1_GPIO_HIGH (0x1 << BMI088_ACC_INT1_GPIO_LVL_SHFITS)` |
+| [71](../modules/imu/BMI088reg.h#L71) | 预处理 | `#define BMI088_INT2_IO_CTRL 0x54` |
+| [72](../modules/imu/BMI088reg.h#L72) | 预处理 | `#define BMI088_ACC_INT2_IO_ENABLE_SHFITS 0x3` |
+| [73](../modules/imu/BMI088reg.h#L73) | 预处理 | `#define BMI088_ACC_INT2_IO_ENABLE (0x1 << BMI088_ACC_INT2_IO_ENABLE_SHFITS)` |
+| [74](../modules/imu/BMI088reg.h#L74) | 预处理 | `#define BMI088_ACC_INT2_GPIO_MODE_SHFITS 0x2` |
+| [75](../modules/imu/BMI088reg.h#L75) | 预处理 | `#define BMI088_ACC_INT2_GPIO_PP (0x0 << BMI088_ACC_INT2_GPIO_MODE_SHFITS)` |
+| [76](../modules/imu/BMI088reg.h#L76) | 预处理 | `#define BMI088_ACC_INT2_GPIO_OD (0x1 << BMI088_ACC_INT2_GPIO_MODE_SHFITS)` |
+| [77](../modules/imu/BMI088reg.h#L77) | 预处理 | `#define BMI088_ACC_INT2_GPIO_LVL_SHFITS 0x1` |
+| [78](../modules/imu/BMI088reg.h#L78) | 预处理 | `#define BMI088_ACC_INT2_GPIO_LOW (0x0 << BMI088_ACC_INT2_GPIO_LVL_SHFITS)` |
+| [79](../modules/imu/BMI088reg.h#L79) | 预处理 | `#define BMI088_ACC_INT2_GPIO_HIGH (0x1 << BMI088_ACC_INT2_GPIO_LVL_SHFITS)` |
+| [81](../modules/imu/BMI088reg.h#L81) | 预处理 | `#define BMI088_INT_MAP_DATA 0x58` |
+| [82](../modules/imu/BMI088reg.h#L82) | 预处理 | `#define BMI088_ACC_INT2_DRDY_INTERRUPT_SHFITS 0x6` |
+| [83](../modules/imu/BMI088reg.h#L83) | 预处理 | `#define BMI088_ACC_INT2_DRDY_INTERRUPT (0x1 << BMI088_ACC_INT2_DRDY_INTERRUPT_SHFITS)` |
+| [84](../modules/imu/BMI088reg.h#L84) | 预处理 | `#define BMI088_ACC_INT1_DRDY_INTERRUPT_SHFITS 0x2` |
+| [85](../modules/imu/BMI088reg.h#L85) | 预处理 | `#define BMI088_ACC_INT1_DRDY_INTERRUPT (0x1 << BMI088_ACC_INT1_DRDY_INTERRUPT_SHFITS)` |
+| [87](../modules/imu/BMI088reg.h#L87) | 预处理 | `#define BMI088_ACC_SELF_TEST 0x6D` |
+| [88](../modules/imu/BMI088reg.h#L88) | 预处理 | `#define BMI088_ACC_SELF_TEST_OFF 0x00` |
+| [89](../modules/imu/BMI088reg.h#L89) | 预处理 | `#define BMI088_ACC_SELF_TEST_POSITIVE_SIGNAL 0x0D` |
+| [90](../modules/imu/BMI088reg.h#L90) | 预处理 | `#define BMI088_ACC_SELF_TEST_NEGATIVE_SIGNAL 0x09` |
+| [92](../modules/imu/BMI088reg.h#L92) | 预处理 | `#define BMI088_ACC_PWR_CONF 0x7C` |
+| [93](../modules/imu/BMI088reg.h#L93) | 预处理 | `#define BMI088_ACC_PWR_SUSPEND_MODE 0x03` |
+| [94](../modules/imu/BMI088reg.h#L94) | 预处理 | `#define BMI088_ACC_PWR_ACTIVE_MODE 0x00` |
+| [96](../modules/imu/BMI088reg.h#L96) | 预处理 | `#define BMI088_ACC_PWR_CTRL 0x7D` |
+| [97](../modules/imu/BMI088reg.h#L97) | 预处理 | `#define BMI088_ACC_ENABLE_ACC_OFF 0x00` |
+| [98](../modules/imu/BMI088reg.h#L98) | 预处理 | `#define BMI088_ACC_ENABLE_ACC_ON 0x04` |
+| [100](../modules/imu/BMI088reg.h#L100) | 预处理 | `#define BMI088_ACC_SOFTRESET 0x7E` |
+| [101](../modules/imu/BMI088reg.h#L101) | 预处理 | `#define BMI088_ACC_SOFTRESET_VALUE 0xB6` |
+| [103](../modules/imu/BMI088reg.h#L103) | 预处理 | `#define BMI088_GYRO_CHIP_ID 0x00` |
+| [104](../modules/imu/BMI088reg.h#L104) | 预处理 | `#define BMI088_GYRO_CHIP_ID_VALUE 0x0F` |
+| [106](../modules/imu/BMI088reg.h#L106) | 预处理 | `#define BMI088_GYRO_X_L 0x02` |
+| [107](../modules/imu/BMI088reg.h#L107) | 预处理 | `#define BMI088_GYRO_X_H 0x03` |
+| [108](../modules/imu/BMI088reg.h#L108) | 预处理 | `#define BMI088_GYRO_Y_L 0x04` |
+| [109](../modules/imu/BMI088reg.h#L109) | 预处理 | `#define BMI088_GYRO_Y_H 0x05` |
+| [110](../modules/imu/BMI088reg.h#L110) | 预处理 | `#define BMI088_GYRO_Z_L 0x06` |
+| [111](../modules/imu/BMI088reg.h#L111) | 预处理 | `#define BMI088_GYRO_Z_H 0x07` |
+| [113](../modules/imu/BMI088reg.h#L113) | 预处理 | `#define BMI088_GYRO_INT_STAT_1 0x0A` |
+| [114](../modules/imu/BMI088reg.h#L114) | 预处理 | `#define BMI088_GYRO_DYDR_SHFITS 0x7` |
+| [115](../modules/imu/BMI088reg.h#L115) | 预处理 | `#define BMI088_GYRO_DYDR (0x1 << BMI088_GYRO_DYDR_SHFITS)` |
+| [117](../modules/imu/BMI088reg.h#L117) | 预处理 | `#define BMI088_GYRO_RANGE 0x0F` |
+| [118](../modules/imu/BMI088reg.h#L118) | 预处理 | `#define BMI088_GYRO_RANGE_SHFITS 0x0` |
+| [119](../modules/imu/BMI088reg.h#L119) | 预处理 | `#define BMI088_GYRO_2000 (0x0 << BMI088_GYRO_RANGE_SHFITS)` |
+| [120](../modules/imu/BMI088reg.h#L120) | 预处理 | `#define BMI088_GYRO_1000 (0x1 << BMI088_GYRO_RANGE_SHFITS)` |
+| [121](../modules/imu/BMI088reg.h#L121) | 预处理 | `#define BMI088_GYRO_500 (0x2 << BMI088_GYRO_RANGE_SHFITS)` |
+| [122](../modules/imu/BMI088reg.h#L122) | 预处理 | `#define BMI088_GYRO_250 (0x3 << BMI088_GYRO_RANGE_SHFITS)` |
+| [123](../modules/imu/BMI088reg.h#L123) | 预处理 | `#define BMI088_GYRO_125 (0x4 << BMI088_GYRO_RANGE_SHFITS)` |
+| [125](../modules/imu/BMI088reg.h#L125) | 预处理 | `#define BMI088_GYRO_BANDWIDTH 0x10` |
+| [127](../modules/imu/BMI088reg.h#L127) | 预处理 | `#define BMI088_GYRO_BANDWIDTH_MUST_Set 0x80` |
+| [128](../modules/imu/BMI088reg.h#L128) | 预处理 | `#define BMI088_GYRO_2000_532_HZ 0x00` |
+| [129](../modules/imu/BMI088reg.h#L129) | 预处理 | `#define BMI088_GYRO_2000_230_HZ 0x01` |
+| [130](../modules/imu/BMI088reg.h#L130) | 预处理 | `#define BMI088_GYRO_1000_116_HZ 0x02` |
+| [131](../modules/imu/BMI088reg.h#L131) | 预处理 | `#define BMI088_GYRO_400_47_HZ 0x03` |
+| [132](../modules/imu/BMI088reg.h#L132) | 预处理 | `#define BMI088_GYRO_200_23_HZ 0x04` |
+| [133](../modules/imu/BMI088reg.h#L133) | 预处理 | `#define BMI088_GYRO_100_12_HZ 0x05` |
+| [134](../modules/imu/BMI088reg.h#L134) | 预处理 | `#define BMI088_GYRO_200_64_HZ 0x06` |
+| [135](../modules/imu/BMI088reg.h#L135) | 预处理 | `#define BMI088_GYRO_100_32_HZ 0x07` |
+| [137](../modules/imu/BMI088reg.h#L137) | 预处理 | `#define BMI088_GYRO_LPM1 0x11` |
+| [138](../modules/imu/BMI088reg.h#L138) | 预处理 | `#define BMI088_GYRO_NORMAL_MODE 0x00` |
+| [139](../modules/imu/BMI088reg.h#L139) | 预处理 | `#define BMI088_GYRO_SUSPEND_MODE 0x80` |
+| [140](../modules/imu/BMI088reg.h#L140) | 预处理 | `#define BMI088_GYRO_DEEP_SUSPEND_MODE 0x20` |
+| [142](../modules/imu/BMI088reg.h#L142) | 预处理 | `#define BMI088_GYRO_SOFTRESET 0x14` |
+| [143](../modules/imu/BMI088reg.h#L143) | 预处理 | `#define BMI088_GYRO_SOFTRESET_VALUE 0xB6` |
+| [145](../modules/imu/BMI088reg.h#L145) | 预处理 | `#define BMI088_GYRO_CTRL 0x15` |
+| [146](../modules/imu/BMI088reg.h#L146) | 预处理 | `#define BMI088_DRDY_OFF 0x00` |
+| [147](../modules/imu/BMI088reg.h#L147) | 预处理 | `#define BMI088_DRDY_ON 0x80` |
+| [149](../modules/imu/BMI088reg.h#L149) | 预处理 | `#define BMI088_GYRO_INT3_INT4_IO_CONF 0x16` |
+| [150](../modules/imu/BMI088reg.h#L150) | 预处理 | `#define BMI088_GYRO_INT4_GPIO_MODE_SHFITS 0x3` |
+| [151](../modules/imu/BMI088reg.h#L151) | 预处理 | `#define BMI088_GYRO_INT4_GPIO_PP (0x0 << BMI088_GYRO_INT4_GPIO_MODE_SHFITS)` |
+| [152](../modules/imu/BMI088reg.h#L152) | 预处理 | `#define BMI088_GYRO_INT4_GPIO_OD (0x1 << BMI088_GYRO_INT4_GPIO_MODE_SHFITS)` |
+| [153](../modules/imu/BMI088reg.h#L153) | 预处理 | `#define BMI088_GYRO_INT4_GPIO_LVL_SHFITS 0x2` |
+| [154](../modules/imu/BMI088reg.h#L154) | 预处理 | `#define BMI088_GYRO_INT4_GPIO_LOW (0x0 << BMI088_GYRO_INT4_GPIO_LVL_SHFITS)` |
+| [155](../modules/imu/BMI088reg.h#L155) | 预处理 | `#define BMI088_GYRO_INT4_GPIO_HIGH (0x1 << BMI088_GYRO_INT4_GPIO_LVL_SHFITS)` |
+| [156](../modules/imu/BMI088reg.h#L156) | 预处理 | `#define BMI088_GYRO_INT3_GPIO_MODE_SHFITS 0x1` |
+| [157](../modules/imu/BMI088reg.h#L157) | 预处理 | `#define BMI088_GYRO_INT3_GPIO_PP (0x0 << BMI088_GYRO_INT3_GPIO_MODE_SHFITS)` |
+| [158](../modules/imu/BMI088reg.h#L158) | 预处理 | `#define BMI088_GYRO_INT3_GPIO_OD (0x1 << BMI088_GYRO_INT3_GPIO_MODE_SHFITS)` |
+| [159](../modules/imu/BMI088reg.h#L159) | 预处理 | `#define BMI088_GYRO_INT3_GPIO_LVL_SHFITS 0x0` |
+| [160](../modules/imu/BMI088reg.h#L160) | 预处理 | `#define BMI088_GYRO_INT3_GPIO_LOW (0x0 << BMI088_GYRO_INT3_GPIO_LVL_SHFITS)` |
+| [161](../modules/imu/BMI088reg.h#L161) | 预处理 | `#define BMI088_GYRO_INT3_GPIO_HIGH (0x1 << BMI088_GYRO_INT3_GPIO_LVL_SHFITS)` |
+| [163](../modules/imu/BMI088reg.h#L163) | 预处理 | `#define BMI088_GYRO_INT3_INT4_IO_MAP 0x18` |
+| [165](../modules/imu/BMI088reg.h#L165) | 预处理 | `#define BMI088_GYRO_DRDY_IO_OFF 0x00` |
+| [166](../modules/imu/BMI088reg.h#L166) | 预处理 | `#define BMI088_GYRO_DRDY_IO_INT3 0x01` |
+| [167](../modules/imu/BMI088reg.h#L167) | 预处理 | `#define BMI088_GYRO_DRDY_IO_INT4 0x80` |
+| [168](../modules/imu/BMI088reg.h#L168) | 预处理 | `#define BMI088_GYRO_DRDY_IO_BOTH (BMI088_GYRO_DRDY_IO_INT3 &#124; BMI088_GYRO_DRDY_IO_INT4)` |
+| [170](../modules/imu/BMI088reg.h#L170) | 预处理 | `#define BMI088_GYRO_SELF_TEST 0x3C` |
+| [171](../modules/imu/BMI088reg.h#L171) | 预处理 | `#define BMI088_GYRO_RATE_OK_SHFITS 0x4` |
+| [172](../modules/imu/BMI088reg.h#L172) | 预处理 | `#define BMI088_GYRO_RATE_OK (0x1 << BMI088_GYRO_RATE_OK_SHFITS)` |
+| [173](../modules/imu/BMI088reg.h#L173) | 预处理 | `#define BMI088_GYRO_BIST_FAIL_SHFITS 0x2` |
+| [174](../modules/imu/BMI088reg.h#L174) | 预处理 | `#define BMI088_GYRO_BIST_FAIL (0x1 << BMI088_GYRO_BIST_FAIL_SHFITS)` |
+| [175](../modules/imu/BMI088reg.h#L175) | 预处理 | `#define BMI088_GYRO_BIST_RDY_SHFITS 0x1` |
+| [176](../modules/imu/BMI088reg.h#L176) | 预处理 | `#define BMI088_GYRO_BIST_RDY (0x1 << BMI088_GYRO_BIST_RDY_SHFITS)` |
+| [177](../modules/imu/BMI088reg.h#L177) | 预处理 | `#define BMI088_GYRO_TRIG_BIST_SHFITS 0x0` |
+| [178](../modules/imu/BMI088reg.h#L178) | 预处理 | `#define BMI088_GYRO_TRIG_BIST (0x1 << BMI088_GYRO_TRIG_BIST_SHFITS)` |
+| [180](../modules/imu/BMI088reg.h#L180) | 预处理 | `#endif` |
 
-### 宏定义
+## modules/imu/ins_math.h
 
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/imu/BMI088reg.h:2](../modules/imu/BMI088reg.h#L2) | `BMI088REG_H` | 空定义 | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:4](../modules/imu/BMI088reg.h#L4) | `BMI088_ACC_CHIP_ID` | `0x00` | `#ifndef BMI088REG_H` | the register is  " Who am I " |
-| [modules/imu/BMI088reg.h:5](../modules/imu/BMI088reg.h#L5) | `BMI088_ACC_CHIP_ID_VALUE` | `0x1E` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:7](../modules/imu/BMI088reg.h#L7) | `BMI088_ACC_ERR_REG` | `0x02` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:8](../modules/imu/BMI088reg.h#L8) | `BMI088_ACCEL_CONGIF_ERROR_SHFITS` | `0x2` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:9](../modules/imu/BMI088reg.h#L9) | `BMI088_ACCEL_CONGIF_ERROR` | `(1 << BMI088_ACCEL_CONGIF_ERROR_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:10](../modules/imu/BMI088reg.h#L10) | `BMI088_FATAL_ERROR_SHFITS` | `0x0` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:11](../modules/imu/BMI088reg.h#L11) | `BMI088_FATAL_ERROR` | `(1 << BMI088_FATAL_ERROR)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:13](../modules/imu/BMI088reg.h#L13) | `BMI088_ACC_STATUS` | `0x03` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:14](../modules/imu/BMI088reg.h#L14) | `BMI088_ACCEL_DRDY_SHFITS` | `0x7` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:15](../modules/imu/BMI088reg.h#L15) | `BMI088_ACCEL_DRDY` | `(1 << BMI088_ACCEL_DRDY_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:17](../modules/imu/BMI088reg.h#L17) | `BMI088_ACCEL_XOUT_L` | `0x12` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:18](../modules/imu/BMI088reg.h#L18) | `BMI088_ACCEL_XOUT_M` | `0x13` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:19](../modules/imu/BMI088reg.h#L19) | `BMI088_ACCEL_YOUT_L` | `0x14` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:20](../modules/imu/BMI088reg.h#L20) | `BMI088_ACCEL_YOUT_M` | `0x15` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:21](../modules/imu/BMI088reg.h#L21) | `BMI088_ACCEL_ZOUT_L` | `0x16` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:22](../modules/imu/BMI088reg.h#L22) | `BMI088_ACCEL_ZOUT_M` | `0x17` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:24](../modules/imu/BMI088reg.h#L24) | `BMI088_SENSORTIME_DATA_L` | `0x18` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:25](../modules/imu/BMI088reg.h#L25) | `BMI088_SENSORTIME_DATA_M` | `0x19` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:26](../modules/imu/BMI088reg.h#L26) | `BMI088_SENSORTIME_DATA_H` | `0x1A` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:28](../modules/imu/BMI088reg.h#L28) | `BMI088_ACC_INT_STAT_1` | `0x1D` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:29](../modules/imu/BMI088reg.h#L29) | `BMI088_ACCEL_DRDY_INTERRUPT_SHFITS` | `0x7` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:30](../modules/imu/BMI088reg.h#L30) | `BMI088_ACCEL_DRDY_INTERRUPT` | `(1 << BMI088_ACCEL_DRDY_INTERRUPT_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:32](../modules/imu/BMI088reg.h#L32) | `BMI088_TEMP_M` | `0x22` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:34](../modules/imu/BMI088reg.h#L34) | `BMI088_TEMP_L` | `0x23` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:36](../modules/imu/BMI088reg.h#L36) | `BMI088_ACC_CONF` | `0x40` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:37](../modules/imu/BMI088reg.h#L37) | `BMI088_ACC_CONF_MUST_Set` | `0x80` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:38](../modules/imu/BMI088reg.h#L38) | `BMI088_ACC_BWP_SHFITS` | `0x4` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:39](../modules/imu/BMI088reg.h#L39) | `BMI088_ACC_OSR4` | `(0x0 << BMI088_ACC_BWP_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:40](../modules/imu/BMI088reg.h#L40) | `BMI088_ACC_OSR2` | `(0x1 << BMI088_ACC_BWP_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:41](../modules/imu/BMI088reg.h#L41) | `BMI088_ACC_NORMAL` | `(0x2 << BMI088_ACC_BWP_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:43](../modules/imu/BMI088reg.h#L43) | `BMI088_ACC_ODR_SHFITS` | `0x0` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:44](../modules/imu/BMI088reg.h#L44) | `BMI088_ACC_12_5_HZ` | `(0x5 << BMI088_ACC_ODR_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:45](../modules/imu/BMI088reg.h#L45) | `BMI088_ACC_25_HZ` | `(0x6 << BMI088_ACC_ODR_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:46](../modules/imu/BMI088reg.h#L46) | `BMI088_ACC_50_HZ` | `(0x7 << BMI088_ACC_ODR_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:47](../modules/imu/BMI088reg.h#L47) | `BMI088_ACC_100_HZ` | `(0x8 << BMI088_ACC_ODR_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:48](../modules/imu/BMI088reg.h#L48) | `BMI088_ACC_200_HZ` | `(0x9 << BMI088_ACC_ODR_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:49](../modules/imu/BMI088reg.h#L49) | `BMI088_ACC_400_HZ` | `(0xA << BMI088_ACC_ODR_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:50](../modules/imu/BMI088reg.h#L50) | `BMI088_ACC_800_HZ` | `(0xB << BMI088_ACC_ODR_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:51](../modules/imu/BMI088reg.h#L51) | `BMI088_ACC_1600_HZ` | `(0xC << BMI088_ACC_ODR_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:53](../modules/imu/BMI088reg.h#L53) | `BMI088_ACC_RANGE` | `0x41` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:55](../modules/imu/BMI088reg.h#L55) | `BMI088_ACC_RANGE_SHFITS` | `0x0` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:56](../modules/imu/BMI088reg.h#L56) | `BMI088_ACC_RANGE_3G` | `(0x0 << BMI088_ACC_RANGE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:57](../modules/imu/BMI088reg.h#L57) | `BMI088_ACC_RANGE_6G` | `(0x1 << BMI088_ACC_RANGE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:58](../modules/imu/BMI088reg.h#L58) | `BMI088_ACC_RANGE_12G` | `(0x2 << BMI088_ACC_RANGE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:59](../modules/imu/BMI088reg.h#L59) | `BMI088_ACC_RANGE_24G` | `(0x3 << BMI088_ACC_RANGE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:61](../modules/imu/BMI088reg.h#L61) | `BMI088_INT1_IO_CTRL` | `0x53` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:62](../modules/imu/BMI088reg.h#L62) | `BMI088_ACC_INT1_IO_ENABLE_SHFITS` | `0x3` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:63](../modules/imu/BMI088reg.h#L63) | `BMI088_ACC_INT1_IO_ENABLE` | `(0x1 << BMI088_ACC_INT1_IO_ENABLE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:64](../modules/imu/BMI088reg.h#L64) | `BMI088_ACC_INT1_GPIO_MODE_SHFITS` | `0x2` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:65](../modules/imu/BMI088reg.h#L65) | `BMI088_ACC_INT1_GPIO_PP` | `(0x0 << BMI088_ACC_INT1_GPIO_MODE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:66](../modules/imu/BMI088reg.h#L66) | `BMI088_ACC_INT1_GPIO_OD` | `(0x1 << BMI088_ACC_INT1_GPIO_MODE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:67](../modules/imu/BMI088reg.h#L67) | `BMI088_ACC_INT1_GPIO_LVL_SHFITS` | `0x1` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:68](../modules/imu/BMI088reg.h#L68) | `BMI088_ACC_INT1_GPIO_LOW` | `(0x0 << BMI088_ACC_INT1_GPIO_LVL_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:69](../modules/imu/BMI088reg.h#L69) | `BMI088_ACC_INT1_GPIO_HIGH` | `(0x1 << BMI088_ACC_INT1_GPIO_LVL_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:71](../modules/imu/BMI088reg.h#L71) | `BMI088_INT2_IO_CTRL` | `0x54` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:72](../modules/imu/BMI088reg.h#L72) | `BMI088_ACC_INT2_IO_ENABLE_SHFITS` | `0x3` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:73](../modules/imu/BMI088reg.h#L73) | `BMI088_ACC_INT2_IO_ENABLE` | `(0x1 << BMI088_ACC_INT2_IO_ENABLE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:74](../modules/imu/BMI088reg.h#L74) | `BMI088_ACC_INT2_GPIO_MODE_SHFITS` | `0x2` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:75](../modules/imu/BMI088reg.h#L75) | `BMI088_ACC_INT2_GPIO_PP` | `(0x0 << BMI088_ACC_INT2_GPIO_MODE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:76](../modules/imu/BMI088reg.h#L76) | `BMI088_ACC_INT2_GPIO_OD` | `(0x1 << BMI088_ACC_INT2_GPIO_MODE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:77](../modules/imu/BMI088reg.h#L77) | `BMI088_ACC_INT2_GPIO_LVL_SHFITS` | `0x1` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:78](../modules/imu/BMI088reg.h#L78) | `BMI088_ACC_INT2_GPIO_LOW` | `(0x0 << BMI088_ACC_INT2_GPIO_LVL_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:79](../modules/imu/BMI088reg.h#L79) | `BMI088_ACC_INT2_GPIO_HIGH` | `(0x1 << BMI088_ACC_INT2_GPIO_LVL_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:81](../modules/imu/BMI088reg.h#L81) | `BMI088_INT_MAP_DATA` | `0x58` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:82](../modules/imu/BMI088reg.h#L82) | `BMI088_ACC_INT2_DRDY_INTERRUPT_SHFITS` | `0x6` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:83](../modules/imu/BMI088reg.h#L83) | `BMI088_ACC_INT2_DRDY_INTERRUPT` | `(0x1 << BMI088_ACC_INT2_DRDY_INTERRUPT_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:84](../modules/imu/BMI088reg.h#L84) | `BMI088_ACC_INT1_DRDY_INTERRUPT_SHFITS` | `0x2` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:85](../modules/imu/BMI088reg.h#L85) | `BMI088_ACC_INT1_DRDY_INTERRUPT` | `(0x1 << BMI088_ACC_INT1_DRDY_INTERRUPT_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:87](../modules/imu/BMI088reg.h#L87) | `BMI088_ACC_SELF_TEST` | `0x6D` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:88](../modules/imu/BMI088reg.h#L88) | `BMI088_ACC_SELF_TEST_OFF` | `0x00` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:89](../modules/imu/BMI088reg.h#L89) | `BMI088_ACC_SELF_TEST_POSITIVE_SIGNAL` | `0x0D` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:90](../modules/imu/BMI088reg.h#L90) | `BMI088_ACC_SELF_TEST_NEGATIVE_SIGNAL` | `0x09` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:92](../modules/imu/BMI088reg.h#L92) | `BMI088_ACC_PWR_CONF` | `0x7C` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:93](../modules/imu/BMI088reg.h#L93) | `BMI088_ACC_PWR_SUSPEND_MODE` | `0x03` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:94](../modules/imu/BMI088reg.h#L94) | `BMI088_ACC_PWR_ACTIVE_MODE` | `0x00` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:96](../modules/imu/BMI088reg.h#L96) | `BMI088_ACC_PWR_CTRL` | `0x7D` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:97](../modules/imu/BMI088reg.h#L97) | `BMI088_ACC_ENABLE_ACC_OFF` | `0x00` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:98](../modules/imu/BMI088reg.h#L98) | `BMI088_ACC_ENABLE_ACC_ON` | `0x04` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:100](../modules/imu/BMI088reg.h#L100) | `BMI088_ACC_SOFTRESET` | `0x7E` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:101](../modules/imu/BMI088reg.h#L101) | `BMI088_ACC_SOFTRESET_VALUE` | `0xB6` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:103](../modules/imu/BMI088reg.h#L103) | `BMI088_GYRO_CHIP_ID` | `0x00` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:104](../modules/imu/BMI088reg.h#L104) | `BMI088_GYRO_CHIP_ID_VALUE` | `0x0F` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:106](../modules/imu/BMI088reg.h#L106) | `BMI088_GYRO_X_L` | `0x02` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:107](../modules/imu/BMI088reg.h#L107) | `BMI088_GYRO_X_H` | `0x03` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:108](../modules/imu/BMI088reg.h#L108) | `BMI088_GYRO_Y_L` | `0x04` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:109](../modules/imu/BMI088reg.h#L109) | `BMI088_GYRO_Y_H` | `0x05` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:110](../modules/imu/BMI088reg.h#L110) | `BMI088_GYRO_Z_L` | `0x06` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:111](../modules/imu/BMI088reg.h#L111) | `BMI088_GYRO_Z_H` | `0x07` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:113](../modules/imu/BMI088reg.h#L113) | `BMI088_GYRO_INT_STAT_1` | `0x0A` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:114](../modules/imu/BMI088reg.h#L114) | `BMI088_GYRO_DYDR_SHFITS` | `0x7` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:115](../modules/imu/BMI088reg.h#L115) | `BMI088_GYRO_DYDR` | `(0x1 << BMI088_GYRO_DYDR_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:117](../modules/imu/BMI088reg.h#L117) | `BMI088_GYRO_RANGE` | `0x0F` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:118](../modules/imu/BMI088reg.h#L118) | `BMI088_GYRO_RANGE_SHFITS` | `0x0` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:119](../modules/imu/BMI088reg.h#L119) | `BMI088_GYRO_2000` | `(0x0 << BMI088_GYRO_RANGE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:120](../modules/imu/BMI088reg.h#L120) | `BMI088_GYRO_1000` | `(0x1 << BMI088_GYRO_RANGE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:121](../modules/imu/BMI088reg.h#L121) | `BMI088_GYRO_500` | `(0x2 << BMI088_GYRO_RANGE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:122](../modules/imu/BMI088reg.h#L122) | `BMI088_GYRO_250` | `(0x3 << BMI088_GYRO_RANGE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:123](../modules/imu/BMI088reg.h#L123) | `BMI088_GYRO_125` | `(0x4 << BMI088_GYRO_RANGE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:125](../modules/imu/BMI088reg.h#L125) | `BMI088_GYRO_BANDWIDTH` | `0x10` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:127](../modules/imu/BMI088reg.h#L127) | `BMI088_GYRO_BANDWIDTH_MUST_Set` | `0x80` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:128](../modules/imu/BMI088reg.h#L128) | `BMI088_GYRO_2000_532_HZ` | `0x00` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:129](../modules/imu/BMI088reg.h#L129) | `BMI088_GYRO_2000_230_HZ` | `0x01` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:130](../modules/imu/BMI088reg.h#L130) | `BMI088_GYRO_1000_116_HZ` | `0x02` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:131](../modules/imu/BMI088reg.h#L131) | `BMI088_GYRO_400_47_HZ` | `0x03` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:132](../modules/imu/BMI088reg.h#L132) | `BMI088_GYRO_200_23_HZ` | `0x04` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:133](../modules/imu/BMI088reg.h#L133) | `BMI088_GYRO_100_12_HZ` | `0x05` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:134](../modules/imu/BMI088reg.h#L134) | `BMI088_GYRO_200_64_HZ` | `0x06` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:135](../modules/imu/BMI088reg.h#L135) | `BMI088_GYRO_100_32_HZ` | `0x07` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:137](../modules/imu/BMI088reg.h#L137) | `BMI088_GYRO_LPM1` | `0x11` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:138](../modules/imu/BMI088reg.h#L138) | `BMI088_GYRO_NORMAL_MODE` | `0x00` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:139](../modules/imu/BMI088reg.h#L139) | `BMI088_GYRO_SUSPEND_MODE` | `0x80` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:140](../modules/imu/BMI088reg.h#L140) | `BMI088_GYRO_DEEP_SUSPEND_MODE` | `0x20` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:142](../modules/imu/BMI088reg.h#L142) | `BMI088_GYRO_SOFTRESET` | `0x14` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:143](../modules/imu/BMI088reg.h#L143) | `BMI088_GYRO_SOFTRESET_VALUE` | `0xB6` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:145](../modules/imu/BMI088reg.h#L145) | `BMI088_GYRO_CTRL` | `0x15` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:146](../modules/imu/BMI088reg.h#L146) | `BMI088_DRDY_OFF` | `0x00` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:147](../modules/imu/BMI088reg.h#L147) | `BMI088_DRDY_ON` | `0x80` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:149](../modules/imu/BMI088reg.h#L149) | `BMI088_GYRO_INT3_INT4_IO_CONF` | `0x16` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:150](../modules/imu/BMI088reg.h#L150) | `BMI088_GYRO_INT4_GPIO_MODE_SHFITS` | `0x3` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:151](../modules/imu/BMI088reg.h#L151) | `BMI088_GYRO_INT4_GPIO_PP` | `(0x0 << BMI088_GYRO_INT4_GPIO_MODE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:152](../modules/imu/BMI088reg.h#L152) | `BMI088_GYRO_INT4_GPIO_OD` | `(0x1 << BMI088_GYRO_INT4_GPIO_MODE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:153](../modules/imu/BMI088reg.h#L153) | `BMI088_GYRO_INT4_GPIO_LVL_SHFITS` | `0x2` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:154](../modules/imu/BMI088reg.h#L154) | `BMI088_GYRO_INT4_GPIO_LOW` | `(0x0 << BMI088_GYRO_INT4_GPIO_LVL_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:155](../modules/imu/BMI088reg.h#L155) | `BMI088_GYRO_INT4_GPIO_HIGH` | `(0x1 << BMI088_GYRO_INT4_GPIO_LVL_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:156](../modules/imu/BMI088reg.h#L156) | `BMI088_GYRO_INT3_GPIO_MODE_SHFITS` | `0x1` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:157](../modules/imu/BMI088reg.h#L157) | `BMI088_GYRO_INT3_GPIO_PP` | `(0x0 << BMI088_GYRO_INT3_GPIO_MODE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:158](../modules/imu/BMI088reg.h#L158) | `BMI088_GYRO_INT3_GPIO_OD` | `(0x1 << BMI088_GYRO_INT3_GPIO_MODE_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:159](../modules/imu/BMI088reg.h#L159) | `BMI088_GYRO_INT3_GPIO_LVL_SHFITS` | `0x0` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:160](../modules/imu/BMI088reg.h#L160) | `BMI088_GYRO_INT3_GPIO_LOW` | `(0x0 << BMI088_GYRO_INT3_GPIO_LVL_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:161](../modules/imu/BMI088reg.h#L161) | `BMI088_GYRO_INT3_GPIO_HIGH` | `(0x1 << BMI088_GYRO_INT3_GPIO_LVL_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:163](../modules/imu/BMI088reg.h#L163) | `BMI088_GYRO_INT3_INT4_IO_MAP` | `0x18` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:165](../modules/imu/BMI088reg.h#L165) | `BMI088_GYRO_DRDY_IO_OFF` | `0x00` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:166](../modules/imu/BMI088reg.h#L166) | `BMI088_GYRO_DRDY_IO_INT3` | `0x01` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:167](../modules/imu/BMI088reg.h#L167) | `BMI088_GYRO_DRDY_IO_INT4` | `0x80` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:168](../modules/imu/BMI088reg.h#L168) | `BMI088_GYRO_DRDY_IO_BOTH` | `(BMI088_GYRO_DRDY_IO_INT3 \| BMI088_GYRO_DRDY_IO_INT4)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:170](../modules/imu/BMI088reg.h#L170) | `BMI088_GYRO_SELF_TEST` | `0x3C` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:171](../modules/imu/BMI088reg.h#L171) | `BMI088_GYRO_RATE_OK_SHFITS` | `0x4` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:172](../modules/imu/BMI088reg.h#L172) | `BMI088_GYRO_RATE_OK` | `(0x1 << BMI088_GYRO_RATE_OK_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:173](../modules/imu/BMI088reg.h#L173) | `BMI088_GYRO_BIST_FAIL_SHFITS` | `0x2` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:174](../modules/imu/BMI088reg.h#L174) | `BMI088_GYRO_BIST_FAIL` | `(0x1 << BMI088_GYRO_BIST_FAIL_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:175](../modules/imu/BMI088reg.h#L175) | `BMI088_GYRO_BIST_RDY_SHFITS` | `0x1` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:176](../modules/imu/BMI088reg.h#L176) | `BMI088_GYRO_BIST_RDY` | `(0x1 << BMI088_GYRO_BIST_RDY_SHFITS)` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:177](../modules/imu/BMI088reg.h#L177) | `BMI088_GYRO_TRIG_BIST_SHFITS` | `0x0` | `#ifndef BMI088REG_H` |  |
-| [modules/imu/BMI088reg.h:178](../modules/imu/BMI088reg.h#L178) | `BMI088_GYRO_TRIG_BIST` | `(0x1 << BMI088_GYRO_TRIG_BIST_SHFITS)` | `#ifndef BMI088REG_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/imu/ins_math.h#L1) | 预处理 | `#ifndef INS_MATH_H` |
+| [2](../modules/imu/ins_math.h#L2) | 预处理 | `#define INS_MATH_H` |
+| [6](../modules/imu/ins_math.h#L6) | 预处理 | `#endif` |
 
 ## modules/imu/ins_task.c
 
-源文件：[打开 modules/imu/ins_task.c](../modules/imu/ins_task.c)。
-
-### 配置结构体初值
-
-以下记录原始定义，不自动推断运行路径或后续覆盖。未填字段为零；指针/回调表示绑定关系。
-
-[modules/imu/ins_task.c:103](../modules/imu/ins_task.c#L103)
-
-```c
-PID_Init_Config_s config = {.MaxOut = 2000,
-                                .IntegralLimit = 300,
-                                .DeadBand = 0,
-                                .Kp = 1000,
-                                .Ki = 20,
-                                .Kd = 0,
-                                .Improve = 0x01};
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [25](../modules/imu/ins_task.c#L25) | 配置初值 | `static PIDInstance TempCtrl = {0};` |
+| [103](../modules/imu/ins_task.c#L103) | 配置初值 | `PID_Init_Config_s config = {.MaxOut = 2000,` |
+| [104](../modules/imu/ins_task.c#L104) | 配置初值 | `.IntegralLimit = 300,` |
+| [105](../modules/imu/ins_task.c#L105) | 配置初值 | `.DeadBand = 0,` |
+| [106](../modules/imu/ins_task.c#L106) | 配置初值 | `.Kp = 1000,` |
+| [107](../modules/imu/ins_task.c#L107) | 配置初值 | `.Ki = 20,` |
+| [108](../modules/imu/ins_task.c#L108) | 配置初值 | `.Kd = 0,` |
+| [109](../modules/imu/ins_task.c#L109) | 配置初值 | `.Improve = 0x01}; // enable integratiaon limit` |
 
 ## modules/imu/ins_task.h
 
-源文件：[打开 modules/imu/ins_task.h](../modules/imu/ins_task.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/imu/ins_task.h:16](../modules/imu/ins_task.h#L16) | `__INS_TASK_H` | 空定义 | `#ifndef __INS_TASK_H` |  |
-| [modules/imu/ins_task.h:22](../modules/imu/ins_task.h#L22) | `X` | `0` | `#ifndef __INS_TASK_H` |  |
-| [modules/imu/ins_task.h:23](../modules/imu/ins_task.h#L23) | `Y` | `1` | `#ifndef __INS_TASK_H` |  |
-| [modules/imu/ins_task.h:24](../modules/imu/ins_task.h#L24) | `Z` | `2` | `#ifndef __INS_TASK_H` |  |
-| [modules/imu/ins_task.h:26](../modules/imu/ins_task.h#L26) | `INS_TASK_PERIOD` | `1` | `#ifndef __INS_TASK_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [15](../modules/imu/ins_task.h#L15) | 预处理 | `#ifndef __INS_TASK_H` |
+| [16](../modules/imu/ins_task.h#L16) | 预处理 | `#define __INS_TASK_H` |
+| [24](../modules/imu/ins_task.h#L24) | 预处理 | `#define X 0` |
+| [25](../modules/imu/ins_task.h#L25) | 预处理 | `#define Y 1` |
+| [26](../modules/imu/ins_task.h#L26) | 预处理 | `#define Z 2` |
+| [28](../modules/imu/ins_task.h#L28) | 预处理 | `#define INS_TASK_PERIOD 1` |
+| [145](../modules/imu/ins_task.h#L145) | 预处理 | `#endif` |
 
 ## modules/ist8310/ist8310.c
 
-源文件：[打开 modules/ist8310/ist8310.c](../modules/ist8310/ist8310.c)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/ist8310/ist8310.c:10](../modules/ist8310/ist8310.c#L10) | `IST8310_WRITE_REG_NUM` | `4` | 无外层条件 | 方便阅读 |
-| [modules/ist8310/ist8310.c:11](../modules/ist8310/ist8310.c#L11) | `IST8310_DATA_REG` | `0x03` | 无外层条件 | ist8310的数据寄存器 |
-| [modules/ist8310/ist8310.c:12](../modules/ist8310/ist8310.c#L12) | `IST8310_WHO_AM_I` | `0x00` | 无外层条件 | ist8310 id 寄存器值 |
-| [modules/ist8310/ist8310.c:13](../modules/ist8310/ist8310.c#L13) | `IST8310_WHO_AM_I_VALUE` | `0x10` | 无外层条件 | 用于检测是否连接成功,读取ist8310的whoami会返回该值 |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [10](../modules/ist8310/ist8310.c#L10) | 预处理 | `#define IST8310_WRITE_REG_NUM 4     // 方便阅读` |
+| [11](../modules/ist8310/ist8310.c#L11) | 预处理 | `#define IST8310_DATA_REG 0x03       // ist8310的数据寄存器` |
+| [12](../modules/ist8310/ist8310.c#L12) | 预处理 | `#define IST8310_WHO_AM_I 0x00       // ist8310 id 寄存器值` |
+| [13](../modules/ist8310/ist8310.c#L13) | 预处理 | `#define IST8310_WHO_AM_I_VALUE 0x10 // 用于检测是否连接成功,读取ist8310的whoami会返回该值` |
 
 ## modules/ist8310/ist8310.h
 
-源文件：[打开 modules/ist8310/ist8310.h](../modules/ist8310/ist8310.h)。
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [8](../modules/ist8310/ist8310.h#L8) | 预处理 | `#define MAG_SEN 0.3f // raw int16 data change to uT unit. 原始整型数据变成 单位ut` |
+| [11](../modules/ist8310/ist8310.h#L11) | 预处理 | `#define IST8310_NO_ERROR 0x00    // seldom used. 一般不会用到` |
+| [12](../modules/ist8310/ist8310.h#L12) | 预处理 | `#define IST8310_NO_SENSOR 0x40   // seldom used. 一般不会用到` |
+| [13](../modules/ist8310/ist8310.h#L13) | 预处理 | `#define IST8310_IIC_ADDRESS 0x0E // the I2C slave address of IST8310` |
 
-### 宏定义
+## modules/jam_detector/jam_detector.c
 
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/ist8310/ist8310.h:8](../modules/ist8310/ist8310.h#L8) | `MAG_SEN` | `0.3f` | 无外层条件 | raw int16 data change to uT unit. 原始整型数据变成 单位ut |
-| [modules/ist8310/ist8310.h:11](../modules/ist8310/ist8310.h#L11) | `IST8310_NO_ERROR` | `0x00` | 无外层条件 | seldom used. 一般不会用到 |
-| [modules/ist8310/ist8310.h:12](../modules/ist8310/ist8310.h#L12) | `IST8310_NO_SENSOR` | `0x40` | 无外层条件 | seldom used. 一般不会用到 |
-| [modules/ist8310/ist8310.h:13](../modules/ist8310/ist8310.h#L13) | `IST8310_IIC_ADDRESS` | `0x0E` | 无外层条件 | the I2C slave address of IST8310 |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [11](../modules/jam_detector/jam_detector.c#L11) | 预处理 | `#define DEFAULT_CURRENT_THRESHOLD   3000.0f  /**< 默认电流阈值, CAN原始值; 调用者应按对应电机的lCur实测调整 */` |
+| [12](../modules/jam_detector/jam_detector.c#L12) | 预处理 | `#define DEFAULT_SUSPECT_TIMEOUT_MS  150.0f   /**< 默认嫌疑超时 150ms */` |
+| [13](../modules/jam_detector/jam_detector.c#L13) | 预处理 | `#define DEFAULT_HANDLING_TIMEOUT_MS 800.0f   /**< 默认处理超时 800ms */` |
+| [14](../modules/jam_detector/jam_detector.c#L14) | 预处理 | `#define DEFAULT_REVERSE_ANGLE       45.0f   /**< 默认回退角度 45° (电机轴) */` |
+| [15](../modules/jam_detector/jam_detector.c#L15) | 预处理 | `#define DEFAULT_SPEED_THRESHOLD     200.0f  /**< 默认低速阈值 200°/s */` |
+| [16](../modules/jam_detector/jam_detector.c#L16) | 预处理 | `#define DEFAULT_MIN_ANGLE_ERROR     100.0f  /**< 默认最小角度误差 100° (电机轴) */` |
+| [17](../modules/jam_detector/jam_detector.c#L17) | 预处理 | `#define DEFAULT_MIN_SPEED_REFERENCE 100.0f  /**< 默认最小速度指令 100°/s */` |
+| [18](../modules/jam_detector/jam_detector.c#L18) | 预处理 | `#define JAM_ANGLE_TOLERANCE         8.0f    /**< 认为已到达回退目标的角度误差 */` |
+| [19](../modules/jam_detector/jam_detector.c#L19) | 预处理 | `#define JAM_HANDLING_SPEED_TOLERANCE 200.0f /**< 回退完成时允许的最大电机轴速度 */` |
 
-### 可设置的结构体字段
+## modules/jam_detector/jam_detector.h
 
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/jam_detector/jam_detector.h#L1) | 预处理 | `#ifndef JAM_DETECTOR_H` |
+| [2](../modules/jam_detector/jam_detector.h#L2) | 预处理 | `#define JAM_DETECTOR_H` |
+| [103](../modules/jam_detector/jam_detector.h#L103) | 预处理 | `#endif` |
 
-[modules/ist8310/ist8310.h:38](../modules/ist8310/ist8310.h#L38)
+## modules/jscope/jscope.c
 
-```c
-typedef struct
-{
-    IIC_Init_Config_s iic_config;      // iic初始化配置
-    GPIO_Init_Config_s gpio_conf_rst;  // gpio初始化配置,用于复位ist8310,看数据手册
-    GPIO_Init_Config_s gpio_conf_exti; // gpio初始化配置,用于获取MAG_DRDY引脚状态,判断数据是否准备好(EXTI外部中断)
-} IST8310_Init_Config_s;
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [11](../modules/jscope/jscope.c#L11) | 预处理 | `#define JSCOPE_BUFFER_SIZE 1024U` |
+| [12](../modules/jscope/jscope.c#L12) | 预处理 | `#define JSCOPE_ENTER_CRITICAL() __disable_irq()` |
+| [13](../modules/jscope/jscope.c#L13) | 预处理 | `#define JSCOPE_EXIT_CRITICAL()  __enable_irq()` |
+
+## modules/jscope/jscope.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/jscope/jscope.h#L1) | 预处理 | `#ifndef __JSCOPE_H__` |
+| [2](../modules/jscope/jscope.h#L2) | 预处理 | `#define __JSCOPE_H__` |
+| [6](../modules/jscope/jscope.h#L6) | 预处理 | `#ifdef __cplusplus` |
+| [8](../modules/jscope/jscope.h#L8) | 预处理 | `#endif` |
+| [10](../modules/jscope/jscope.h#L10) | 预处理 | `#define JSCOPE_CHANNEL_COUNT 4U` |
+| [12](../modules/jscope/jscope.h#L12) | 预处理 | `#define JSCOPE_RTT_BUFFER_INDEX 1U` |
+| [13](../modules/jscope/jscope.h#L13) | 预处理 | `#define JSCOPE_RTT_BUFFER_NAME "JScope_f4f4f4f4"` |
+| [47](../modules/jscope/jscope.h#L47) | 预处理 | `#ifdef __cplusplus` |
+| [49](../modules/jscope/jscope.h#L49) | 预处理 | `#endif` |
+| [51](../modules/jscope/jscope.h#L51) | 预处理 | `#endif` |
+
+## modules/key/key.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/key/key.h#L1) | 预处理 | `#ifndef KEY_H` |
+| [2](../modules/key/key.h#L2) | 预处理 | `#define KEY_H` |
+| [4](../modules/key/key.h#L4) | 预处理 | `#define KEY_CNT 4` |
+| [75](../modules/key/key.h#L75) | 预处理 | `#endif // !KEY_H` |
 
 ## modules/master_machine/master_process.c
 
-源文件：[打开 modules/master_machine/master_process.c](../modules/master_machine/master_process.c)。
-
-### 配置结构体初值
-
-以下记录原始定义，不自动推断运行路径或后续覆盖。未填字段为零；指针/回调表示绑定关系。
-
-[modules/master_machine/master_process.c:79](../modules/master_machine/master_process.c#L79)
-
-```c
-Daemon_Init_Config_s daemon_conf = {
-        .callback = VisionOfflineCallback, // 离线时调用的回调函数,会重启串口接收
-        .owner_id = vision_usart_instance,
-        .reload_count = 10,
-    };
-```
-
-[modules/master_machine/master_process.c:130](../modules/master_machine/master_process.c#L130)
-
-```c
-USB_Init_Config_s conf = {.rx_cbk = DecodeVision};
-```
-
-[modules/master_machine/master_process.c:134](../modules/master_machine/master_process.c#L134)
-
-```c
-Daemon_Init_Config_s daemon_conf = {
-        .callback = VisionOfflineCallback, // 离线时调用的回调函数,会重启串口接收
-        .owner_id = NULL,
-        .reload_count = 5, // 50ms
-    };
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [21](../modules/master_machine/master_process.c#L21) | 预处理 | `#if defined(VISION_USE_UART) &#124;&#124; (defined(VISION_USE_VCP) && !USB_TELEMETRY_ENABLE)` |
+| [23](../modules/master_machine/master_process.c#L23) | 预处理 | `#ifdef VISION_USE_UART` |
+| [25](../modules/master_machine/master_process.c#L25) | 预处理 | `#endif` |
+| [26](../modules/master_machine/master_process.c#L26) | 预处理 | `#endif` |
+| [49](../modules/master_machine/master_process.c#L49) | 预处理 | `#if defined(VISION_USE_UART) &#124;&#124; (defined(VISION_USE_VCP) && !USB_TELEMETRY_ENABLE)` |
+| [52](../modules/master_machine/master_process.c#L52) | 预处理 | `#ifdef VISION_USE_UART` |
+| [54](../modules/master_machine/master_process.c#L54) | 预处理 | `#endif // !VISION_USE_UART` |
+| [57](../modules/master_machine/master_process.c#L57) | 预处理 | `#endif` |
+| [59](../modules/master_machine/master_process.c#L59) | 预处理 | `#ifdef VISION_USE_UART` |
+| [87](../modules/master_machine/master_process.c#L87) | 配置初值 | `Daemon_Init_Config_s daemon_conf = {` |
+| [88](../modules/master_machine/master_process.c#L88) | 配置初值 | `.callback = VisionOfflineCallback, // 离线时调用的回调函数,会重启串口接收` |
+| [89](../modules/master_machine/master_process.c#L89) | 配置初值 | `.owner_id = vision_usart_instance,` |
+| [90](../modules/master_machine/master_process.c#L90) | 配置初值 | `.reload_count = 10,` |
+| [121](../modules/master_machine/master_process.c#L121) | 预处理 | `#endif // VISION_USE_UART` |
+| [123](../modules/master_machine/master_process.c#L123) | 预处理 | `#if defined(VISION_USE_VCP) && !USB_TELEMETRY_ENABLE` |
+| [139](../modules/master_machine/master_process.c#L139) | 配置初值 | `USB_Init_Config_s conf = {.rx_cbk = DecodeVision};` |
+| [143](../modules/master_machine/master_process.c#L143) | 配置初值 | `Daemon_Init_Config_s daemon_conf = {` |
+| [144](../modules/master_machine/master_process.c#L144) | 配置初值 | `.callback = VisionOfflineCallback, // 离线时调用的回调函数,会重启串口接收` |
+| [145](../modules/master_machine/master_process.c#L145) | 配置初值 | `.owner_id = NULL,` |
+| [146](../modules/master_machine/master_process.c#L146) | 配置初值 | `.reload_count = 5, // 50ms` |
+| [165](../modules/master_machine/master_process.c#L165) | 预处理 | `#endif // VISION_USE_VCP` |
+| [167](../modules/master_machine/master_process.c#L167) | 预处理 | `#if defined(VISION_USE_VCP) && USB_TELEMETRY_ENABLE && !defined(VISION_USE_UART)` |
+| [175](../modules/master_machine/master_process.c#L175) | 预处理 | `#endif` |
 
 ## modules/master_machine/master_process.h
 
-源文件：[打开 modules/master_machine/master_process.h](../modules/master_machine/master_process.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/master_machine/master_process.h:2](../modules/master_machine/master_process.h#L2) | `MASTER_PROCESS_H` | 空定义 | `#ifndef MASTER_PROCESS_H` |  |
-| [modules/master_machine/master_process.h:7](../modules/master_machine/master_process.h#L7) | `VISION_RECV_SIZE` | `18u` | `#ifndef MASTER_PROCESS_H` | 当前为固定值,36字节 |
-| [modules/master_machine/master_process.h:8](../modules/master_machine/master_process.h#L8) | `VISION_SEND_SIZE` | `36u` | `#ifndef MASTER_PROCESS_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/master_machine/master_process.h#L1) | 预处理 | `#ifndef MASTER_PROCESS_H` |
+| [2](../modules/master_machine/master_process.h#L2) | 预处理 | `#define MASTER_PROCESS_H` |
+| [7](../modules/master_machine/master_process.h#L7) | 预处理 | `#define VISION_RECV_SIZE 18u // 当前为固定值,36字节` |
+| [8](../modules/master_machine/master_process.h#L8) | 预处理 | `#define VISION_SEND_SIZE 36u` |
+| [114](../modules/master_machine/master_process.h#L114) | 预处理 | `#endif // !MASTER_PROCESS_H` |
 
 ## modules/master_machine/seasky_protocol.h
 
-源文件：[打开 modules/master_machine/seasky_protocol.h](../modules/master_machine/seasky_protocol.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/master_machine/seasky_protocol.h:2](../modules/master_machine/seasky_protocol.h#L2) | `__SEASKY_PROTOCOL_H` | 空定义 | `#ifndef __SEASKY_PROTOCOL_H` |  |
-| [modules/master_machine/seasky_protocol.h:7](../modules/master_machine/seasky_protocol.h#L7) | `PROTOCOL_CMD_ID` | `0XA5` | `#ifndef __SEASKY_PROTOCOL_H` |  |
-| [modules/master_machine/seasky_protocol.h:8](../modules/master_machine/seasky_protocol.h#L8) | `OFFSET_BYTE` | `8` | `#ifndef __SEASKY_PROTOCOL_H` | 出数据段外，其他部分所占字节数 |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/master_machine/seasky_protocol.h#L1) | 预处理 | `#ifndef __SEASKY_PROTOCOL_H` |
+| [2](../modules/master_machine/seasky_protocol.h#L2) | 预处理 | `#define __SEASKY_PROTOCOL_H` |
+| [7](../modules/master_machine/seasky_protocol.h#L7) | 预处理 | `#define PROTOCOL_CMD_ID 0XA5` |
+| [8](../modules/master_machine/seasky_protocol.h#L8) | 预处理 | `#define OFFSET_BYTE 8 // 出数据段外，其他部分所占字节数` |
+| [36](../modules/master_machine/seasky_protocol.h#L36) | 预处理 | `#endif` |
 
 ## modules/message_center/message_center.h
 
-源文件：[打开 modules/message_center/message_center.h](../modules/message_center/message_center.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/message_center/message_center.h:13](../modules/message_center/message_center.h#L13) | `PUBSUB_H` | 空定义 | `#ifndef PUBSUB_H` |  |
-| [modules/message_center/message_center.h:17](../modules/message_center/message_center.h#L17) | `MAX_TOPIC_NAME_LEN` | `32` | `#ifndef PUBSUB_H` | 最大的话题名长度,每个话题都有字符串来命名 |
-| [modules/message_center/message_center.h:18](../modules/message_center/message_center.h#L18) | `MAX_TOPIC_COUNT` | `12` | `#ifndef PUBSUB_H` | 最多支持的话题数量 |
-| [modules/message_center/message_center.h:19](../modules/message_center/message_center.h#L19) | `QUEUE_SIZE` | `1` | `#ifndef PUBSUB_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [12](../modules/message_center/message_center.h#L12) | 预处理 | `#ifndef PUBSUB_H` |
+| [13](../modules/message_center/message_center.h#L13) | 预处理 | `#define PUBSUB_H` |
+| [17](../modules/message_center/message_center.h#L17) | 预处理 | `#define MAX_TOPIC_NAME_LEN 32 // 最大的话题名长度,每个话题都有字符串来命名` |
+| [18](../modules/message_center/message_center.h#L18) | 预处理 | `#define MAX_TOPIC_COUNT 12    // 最多支持的话题数量` |
+| [19](../modules/message_center/message_center.h#L19) | 预处理 | `#define QUEUE_SIZE 1` |
+| [85](../modules/message_center/message_center.h#L85) | 预处理 | `#endif // !PUBSUB_H` |
 
 ## modules/motor/DJImotor/dji_motor.c
 
-源文件：[打开 modules/motor/DJImotor/dji_motor.c](../modules/motor/DJImotor/dji_motor.c)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/motor/DJImotor/dji_motor.c:20](../modules/motor/DJImotor/dji_motor.c#L20) | `CHASSIS_POWER_RTT_DIVIDER` | `40U` | 无外层条件 |  |
-
-### 配置结构体初值
-
-以下记录原始定义，不自动推断运行路径或后续覆盖。未填字段为零；指针/回调表示绑定关系。
-
-[modules/motor/DJImotor/dji_motor.c:221](../modules/motor/DJImotor/dji_motor.c#L221)
-
-```c
-Daemon_Init_Config_s daemon_config = {
-        .callback = DJIMotorLostCallback,
-        .owner_id = instance,
-        .reload_count = 2, // 20ms未收到数据则丢失
-    };
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [13](../modules/motor/DJImotor/dji_motor.c#L13) | 预处理 | `#if CHASSIS_POWER_CAPTURE_ENABLE` |
+| [16](../modules/motor/DJImotor/dji_motor.c#L16) | 预处理 | `#endif` |
+| [24](../modules/motor/DJImotor/dji_motor.c#L24) | 预处理 | `#define CHASSIS_POWER_RTT_DIVIDER 20U /* 40 ms at the A-board 2 ms motor period. */` |
+| [88](../modules/motor/DJImotor/dji_motor.c#L88) | 配置初值 | `PIDAutotuneFeedback f={.now_ms=now,.can_ok=true,.feedback_ok=true,` |
+| [89](../modules/motor/DJImotor/dji_motor.c#L89) | 配置初值 | `.permitted=VehicleSafetyAllowsAutotune(now) && cycle_control.autotune_permitted && cycle_control.control_enabled &&` |
+| [90](../modules/motor/DJImotor/dji_motor.c#L90) | 配置初值 | `(uint32_t)(now-cycle_control.tick_ms)<=10 && !autotune_inhibit};` |
+| [99](../modules/motor/DJImotor/dji_motor.c#L99) | 配置初值 | `AutotuneConfiguration config={.improve=pid->Improve,.coef_a=pid->CoefA,.coef_b=pid->CoefB,` |
+| [100](../modules/motor/DJImotor/dji_motor.c#L100) | 配置初值 | `.output_rc=pid->Output_LPF_RC,.derivative_rc=pid->Derivative_LPF_RC,` |
+| [101](../modules/motor/DJImotor/dji_motor.c#L101) | 配置初值 | `.speed_smooth=SPEED_SMOOTH_COEF,.current_smooth=CURRENT_SMOOTH_COEF,` |
+| [102](../modules/motor/DJImotor/dji_motor.c#L102) | 配置初值 | `.output_limit=fminf(pid->MaxOut,chassis_power->algorithm.max_current_command),` |
+| [103](../modules/motor/DJImotor/dji_motor.c#L103) | 配置初值 | `.motor_flags=(uint32_t)settings->close_loop_type &#124; ((uint32_t)settings->outer_loop_type<<8) &#124;` |
+| [104](../modules/motor/DJImotor/dji_motor.c#L104) | 配置初值 | `((uint32_t)settings->motor_reverse_flag<<16) &#124; ((uint32_t)settings->feedback_reverse_flag<<20) &#124;` |
+| [105](../modules/motor/DJImotor/dji_motor.c#L105) | 配置初值 | `((uint32_t)settings->speed_feedback_source<<24) &#124; ((uint32_t)settings->feedforward_flag<<28)};` |
+| [230](../modules/motor/DJImotor/dji_motor.c#L230) | 预处理 | `#if CHASSIS_POWER_CAPTURE_ENABLE` |
+| [232](../modules/motor/DJImotor/dji_motor.c#L232) | 预处理 | `#endif` |
+| [386](../modules/motor/DJImotor/dji_motor.c#L386) | 配置初值 | `Daemon_Init_Config_s daemon_config = {` |
+| [387](../modules/motor/DJImotor/dji_motor.c#L387) | 配置初值 | `.callback = DJIMotorLostCallback,` |
+| [388](../modules/motor/DJImotor/dji_motor.c#L388) | 配置初值 | `.owner_id = instance,` |
+| [389](../modules/motor/DJImotor/dji_motor.c#L389) | 配置初值 | `.reload_count = 2, // 20ms未收到数据则丢失` |
+| [485](../modules/motor/DJImotor/dji_motor.c#L485) | 预处理 | `#if CHASSIS_POWER_CAPTURE_ENABLE` |
+| [487](../modules/motor/DJImotor/dji_motor.c#L487) | 预处理 | `#endif` |
+| [562](../modules/motor/DJImotor/dji_motor.c#L562) | 预处理 | `#if POWER_METER_ENABLE` |
+| [564](../modules/motor/DJImotor/dji_motor.c#L564) | 预处理 | `#endif` |
+| [612](../modules/motor/DJImotor/dji_motor.c#L612) | 预处理 | `#if CHASSIS_POWER_CONTROL_STAGE >= 1` |
+| [614](../modules/motor/DJImotor/dji_motor.c#L614) | 预处理 | `#endif` |
+| [645](../modules/motor/DJImotor/dji_motor.c#L645) | 预处理 | `#if CHASSIS_POWER_CONTROL_STAGE >= 2` |
+| [647](../modules/motor/DJImotor/dji_motor.c#L647) | 预处理 | `#else` |
+| [652](../modules/motor/DJImotor/dji_motor.c#L652) | 预处理 | `#endif` |
+| [676](../modules/motor/DJImotor/dji_motor.c#L676) | 预处理 | `#if CHASSIS_POWER_CONTROL_STAGE >= 1` |
+| [679](../modules/motor/DJImotor/dji_motor.c#L679) | 预处理 | `#endif` |
+| [684](../modules/motor/DJImotor/dji_motor.c#L684) | 预处理 | `#if CHASSIS_POWER_CAPTURE_ENABLE` |
+| [708](../modules/motor/DJImotor/dji_motor.c#L708) | 预处理 | `#endif` |
+| [856](../modules/motor/DJImotor/dji_motor.c#L856) | 预处理 | `#if CHASSIS_POWER_CAPTURE_ENABLE && BOARD_LOG_UART_ENABLED` |
+| [871](../modules/motor/DJImotor/dji_motor.c#L871) | 预处理 | `#endif` |
 
 ## modules/motor/DJImotor/dji_motor.h
 
-源文件：[打开 modules/motor/DJImotor/dji_motor.h](../modules/motor/DJImotor/dji_motor.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/motor/DJImotor/dji_motor.h:16](../modules/motor/DJImotor/dji_motor.h#L16) | `DJI_MOTOR_H` | 空定义 | `#ifndef DJI_MOTOR_H` |  |
-| [modules/motor/DJImotor/dji_motor.h:29](../modules/motor/DJImotor/dji_motor.h#L29) | `DJI_MOTOR_CNT` | `12` | `#ifndef DJI_MOTOR_H` |  |
-| [modules/motor/DJImotor/dji_motor.h:32](../modules/motor/DJImotor/dji_motor.h#L32) | `SPEED_SMOOTH_COEF` | `0.85f` | `#ifndef DJI_MOTOR_H` | 最好大于0.85 |
-| [modules/motor/DJImotor/dji_motor.h:33](../modules/motor/DJImotor/dji_motor.h#L33) | `CURRENT_SMOOTH_COEF` | `0.9f` | `#ifndef DJI_MOTOR_H` | 必须大于0.9 |
-| [modules/motor/DJImotor/dji_motor.h:34](../modules/motor/DJImotor/dji_motor.h#L34) | `ECD_ANGLE_COEF_DJI` | `0.043945f` | `#ifndef DJI_MOTOR_H` | (360/8192),将编码器值转化为角度制 |
-
-### 可设置的结构体字段
-
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
-
-[modules/motor/DJImotor/dji_motor.h:75](../modules/motor/DJImotor/dji_motor.h#L75)
-
-```c
-typedef struct
-{
-    DJIMotorInstance *motors[POWER_MODEL_MOTOR_COUNT];
-    MotorPowerModelConfig_s models[POWER_MODEL_MOTOR_COUNT];
-    ChassisPowerAlgorithmConfig_s algorithm;
-} DJIChassisPowerConfig_s;
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [15](../modules/motor/DJImotor/dji_motor.h#L15) | 预处理 | `#ifndef DJI_MOTOR_H` |
+| [16](../modules/motor/DJImotor/dji_motor.h#L16) | 预处理 | `#define DJI_MOTOR_H` |
+| [29](../modules/motor/DJImotor/dji_motor.h#L29) | 预处理 | `#define DJI_MOTOR_CNT 12` |
+| [32](../modules/motor/DJImotor/dji_motor.h#L32) | 预处理 | `#define SPEED_SMOOTH_COEF 0.85f      // 最好大于0.85` |
+| [33](../modules/motor/DJImotor/dji_motor.h#L33) | 预处理 | `#define CURRENT_SMOOTH_COEF 0.9f     // 必须大于0.9` |
+| [34](../modules/motor/DJImotor/dji_motor.h#L34) | 预处理 | `#define ECD_ANGLE_COEF_DJI 0.043945f // (360/8192),将编码器值转化为角度制` |
+| [213](../modules/motor/DJImotor/dji_motor.h#L213) | 预处理 | `#endif // !DJI_MOTOR_H` |
 
 ## modules/motor/DMmotor/dmmotor.c
 
-源文件：[打开 modules/motor/DMmotor/dmmotor.c](../modules/motor/DMmotor/dmmotor.c)。
-
-### 配置结构体初值
-
-以下记录原始定义，不自动推断运行路径或后续覆盖。未填字段为零；指针/回调表示绑定关系。
-
-[modules/motor/DMmotor/dmmotor.c:82](../modules/motor/DMmotor/dmmotor.c#L82)
-
-```c
-Daemon_Init_Config_s conf = {
-        .callback = DMMotorLostCallback,
-        .owner_id = motor,
-        .reload_count = 10,
-    };
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [82](../modules/motor/DMmotor/dmmotor.c#L82) | 配置初值 | `Daemon_Init_Config_s conf = {` |
+| [83](../modules/motor/DMmotor/dmmotor.c#L83) | 配置初值 | `.callback = DMMotorLostCallback,` |
+| [84](../modules/motor/DMmotor/dmmotor.c#L84) | 配置初值 | `.owner_id = motor,` |
+| [85](../modules/motor/DMmotor/dmmotor.c#L85) | 配置初值 | `.reload_count = 10,` |
 
 ## modules/motor/DMmotor/dmmotor.h
 
-源文件：[打开 modules/motor/DMmotor/dmmotor.h](../modules/motor/DMmotor/dmmotor.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/motor/DMmotor/dmmotor.h:2](../modules/motor/DMmotor/dmmotor.h#L2) | `DMMOTOR_H` | 空定义 | `#ifndef DMMOTOR_H` |  |
-| [modules/motor/DMmotor/dmmotor.h:9](../modules/motor/DMmotor/dmmotor.h#L9) | `DM_MOTOR_CNT` | `4` | `#ifndef DMMOTOR_H` |  |
-| [modules/motor/DMmotor/dmmotor.h:11](../modules/motor/DMmotor/dmmotor.h#L11) | `DM_P_MIN` | `(-12.5f)` | `#ifndef DMMOTOR_H` |  |
-| [modules/motor/DMmotor/dmmotor.h:12](../modules/motor/DMmotor/dmmotor.h#L12) | `DM_P_MAX` | `12.5f` | `#ifndef DMMOTOR_H` |  |
-| [modules/motor/DMmotor/dmmotor.h:13](../modules/motor/DMmotor/dmmotor.h#L13) | `DM_V_MIN` | `(-45.0f)` | `#ifndef DMMOTOR_H` |  |
-| [modules/motor/DMmotor/dmmotor.h:14](../modules/motor/DMmotor/dmmotor.h#L14) | `DM_V_MAX` | `45.0f` | `#ifndef DMMOTOR_H` |  |
-| [modules/motor/DMmotor/dmmotor.h:15](../modules/motor/DMmotor/dmmotor.h#L15) | `DM_T_MIN` | `(-18.0f)` | `#ifndef DMMOTOR_H` |  |
-| [modules/motor/DMmotor/dmmotor.h:16](../modules/motor/DMmotor/dmmotor.h#L16) | `DM_T_MAX` | `18.0f` | `#ifndef DMMOTOR_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/motor/DMmotor/dmmotor.h#L1) | 预处理 | `#ifndef DMMOTOR_H` |
+| [2](../modules/motor/DMmotor/dmmotor.h#L2) | 预处理 | `#define DMMOTOR_H` |
+| [9](../modules/motor/DMmotor/dmmotor.h#L9) | 预处理 | `#define DM_MOTOR_CNT 4` |
+| [11](../modules/motor/DMmotor/dmmotor.h#L11) | 预处理 | `#define DM_P_MIN  (-12.5f)` |
+| [12](../modules/motor/DMmotor/dmmotor.h#L12) | 预处理 | `#define DM_P_MAX  12.5f` |
+| [13](../modules/motor/DMmotor/dmmotor.h#L13) | 预处理 | `#define DM_V_MIN  (-45.0f)` |
+| [14](../modules/motor/DMmotor/dmmotor.h#L14) | 预处理 | `#define DM_V_MAX  45.0f` |
+| [15](../modules/motor/DMmotor/dmmotor.h#L15) | 预处理 | `#define DM_T_MIN  (-18.0f)` |
+| [16](../modules/motor/DMmotor/dmmotor.h#L16) | 预处理 | `#define DM_T_MAX   18.0f` |
+| [76](../modules/motor/DMmotor/dmmotor.h#L76) | 预处理 | `#endif // !DMMOTOR` |
 
 ## modules/motor/HTmotor/HT04.c
 
-源文件：[打开 modules/motor/HTmotor/HT04.c](../modules/motor/HTmotor/HT04.c)。
-
-### 配置结构体初值
-
-以下记录原始定义，不自动推断运行路径或后续覆盖。未填字段为零；指针/回调表示绑定关系。
-
-[modules/motor/HTmotor/HT04.c:121](../modules/motor/HTmotor/HT04.c#L121)
-
-```c
-Daemon_Init_Config_s conf = {
-        .callback = HTMotorLostCallback,
-        .owner_id = motor,
-        .reload_count = 5, // 50ms
-    };
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [121](../modules/motor/HTmotor/HT04.c#L121) | 配置初值 | `Daemon_Init_Config_s conf = {` |
+| [122](../modules/motor/HTmotor/HT04.c#L122) | 配置初值 | `.callback = HTMotorLostCallback,` |
+| [123](../modules/motor/HTmotor/HT04.c#L123) | 配置初值 | `.owner_id = motor,` |
+| [124](../modules/motor/HTmotor/HT04.c#L124) | 配置初值 | `.reload_count = 5, // 50ms` |
 
 ## modules/motor/HTmotor/HT04.h
 
-源文件：[打开 modules/motor/HTmotor/HT04.h](../modules/motor/HTmotor/HT04.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/motor/HTmotor/HT04.h:2](../modules/motor/HTmotor/HT04.h#L2) | `HT04_H` | 空定义 | `#ifndef HT04_H` |  |
-| [modules/motor/HTmotor/HT04.h:10](../modules/motor/HTmotor/HT04.h#L10) | `HT_MOTOR_CNT` | `4` | `#ifndef HT04_H` |  |
-| [modules/motor/HTmotor/HT04.h:11](../modules/motor/HTmotor/HT04.h#L11) | `CURRENT_SMOOTH_COEF` | `0.9f` | `#ifndef HT04_H` |  |
-| [modules/motor/HTmotor/HT04.h:12](../modules/motor/HTmotor/HT04.h#L12) | `SPEED_BUFFER_SIZE` | `5` | `#ifndef HT04_H` |  |
-| [modules/motor/HTmotor/HT04.h:13](../modules/motor/HTmotor/HT04.h#L13) | `HT_SPEED_BIAS` | `-0.0109901428f` | `#ifndef HT04_H` | 电机速度偏差,单位rad/s |
-| [modules/motor/HTmotor/HT04.h:14](../modules/motor/HTmotor/HT04.h#L14) | `TORQUE_COEF_HT` | `3.5` | `#ifndef HT04_H` | 扭矩系数,单位N.m/A |
-| [modules/motor/HTmotor/HT04.h:16](../modules/motor/HTmotor/HT04.h#L16) | `P_MIN` | `-95.5f` | `#ifndef HT04_H` | Radians |
-| [modules/motor/HTmotor/HT04.h:17](../modules/motor/HTmotor/HT04.h#L17) | `P_MAX` | `95.5f` | `#ifndef HT04_H` |  |
-| [modules/motor/HTmotor/HT04.h:18](../modules/motor/HTmotor/HT04.h#L18) | `V_MIN` | `-45.0f` | `#ifndef HT04_H` | Rad/s |
-| [modules/motor/HTmotor/HT04.h:19](../modules/motor/HTmotor/HT04.h#L19) | `V_MAX` | `45.0f` | `#ifndef HT04_H` |  |
-| [modules/motor/HTmotor/HT04.h:20](../modules/motor/HTmotor/HT04.h#L20) | `T_MIN` | `-18.0f` | `#ifndef HT04_H` | N·m |
-| [modules/motor/HTmotor/HT04.h:21](../modules/motor/HTmotor/HT04.h#L21) | `T_MAX` | `18.0f` | `#ifndef HT04_H` |  |
-| [modules/motor/HTmotor/HT04.h:22](../modules/motor/HTmotor/HT04.h#L22) | `KP_MIN` | `0.0f` | `#ifndef HT04_H` | N-m/rad |
-| [modules/motor/HTmotor/HT04.h:23](../modules/motor/HTmotor/HT04.h#L23) | `KP_MAX` | `500.0f` | `#ifndef HT04_H` |  |
-| [modules/motor/HTmotor/HT04.h:24](../modules/motor/HTmotor/HT04.h#L24) | `KD_MIN` | `0.0f` | `#ifndef HT04_H` | N-m/rad/s |
-| [modules/motor/HTmotor/HT04.h:25](../modules/motor/HTmotor/HT04.h#L25) | `KD_MAX` | `5.0f` | `#ifndef HT04_H` |  |
-
-### 已注释的宏选项（当前不定义）
-
-| 行 | 原选项 |
-| --- | --- |
-| [modules/motor/HTmotor/HT04.h:124](../modules/motor/HTmotor/HT04.h#L124) | `#define HT04_H` |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/motor/HTmotor/HT04.h#L1) | 预处理 | `#ifndef HT04_H` |
+| [2](../modules/motor/HTmotor/HT04.h#L2) | 预处理 | `#define HT04_H` |
+| [10](../modules/motor/HTmotor/HT04.h#L10) | 预处理 | `#define HT_MOTOR_CNT 4` |
+| [11](../modules/motor/HTmotor/HT04.h#L11) | 预处理 | `#define CURRENT_SMOOTH_COEF 0.9f` |
+| [12](../modules/motor/HTmotor/HT04.h#L12) | 预处理 | `#define SPEED_BUFFER_SIZE 5` |
+| [13](../modules/motor/HTmotor/HT04.h#L13) | 预处理 | `#define HT_SPEED_BIAS -0.0109901428f // 电机速度偏差,单位rad/s` |
+| [14](../modules/motor/HTmotor/HT04.h#L14) | 预处理 | `#define TORQUE_COEF_HT 3.5  // 扭矩系数,单位N.m/A` |
+| [16](../modules/motor/HTmotor/HT04.h#L16) | 预处理 | `#define P_MIN -95.5f // Radians` |
+| [17](../modules/motor/HTmotor/HT04.h#L17) | 预处理 | `#define P_MAX 95.5f` |
+| [18](../modules/motor/HTmotor/HT04.h#L18) | 预处理 | `#define V_MIN -45.0f // Rad/s` |
+| [19](../modules/motor/HTmotor/HT04.h#L19) | 预处理 | `#define V_MAX 45.0f` |
+| [20](../modules/motor/HTmotor/HT04.h#L20) | 预处理 | `#define T_MIN -18.0f // N·m` |
+| [21](../modules/motor/HTmotor/HT04.h#L21) | 预处理 | `#define T_MAX 18.0f` |
+| [22](../modules/motor/HTmotor/HT04.h#L22) | 预处理 | `#define KP_MIN 0.0f // N-m/rad` |
+| [23](../modules/motor/HTmotor/HT04.h#L23) | 预处理 | `#define KP_MAX 500.0f` |
+| [24](../modules/motor/HTmotor/HT04.h#L24) | 预处理 | `#define KD_MIN 0.0f // N-m/rad/s` |
+| [25](../modules/motor/HTmotor/HT04.h#L25) | 预处理 | `#define KD_MAX 5.0f` |
+| [124](../modules/motor/HTmotor/HT04.h#L124) | 预处理 | `#endif // !HT04_H#define HT04_H` |
 
 ## modules/motor/LKmotor/LK9025.c
 
-源文件：[打开 modules/motor/LKmotor/LK9025.c](../modules/motor/LKmotor/LK9025.c)。
-
-### 配置结构体初值
-
-以下记录原始定义，不自动推断运行路径或后续覆盖。未填字段为零；指针/回调表示绑定关系。
-
-[modules/motor/LKmotor/LK9025.c:82](../modules/motor/LKmotor/LK9025.c#L82)
-
-```c
-Daemon_Init_Config_s daemon_config = {
-        .callback = LKMotorLostCallback,
-        .owner_id = motor,
-        .reload_count = 5, // 50ms
-    };
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [82](../modules/motor/LKmotor/LK9025.c#L82) | 配置初值 | `Daemon_Init_Config_s daemon_config = {` |
+| [83](../modules/motor/LKmotor/LK9025.c#L83) | 配置初值 | `.callback = LKMotorLostCallback,` |
+| [84](../modules/motor/LKmotor/LK9025.c#L84) | 配置初值 | `.owner_id = motor,` |
+| [85](../modules/motor/LKmotor/LK9025.c#L85) | 配置初值 | `.reload_count = 5, // 50ms` |
 
 ## modules/motor/LKmotor/LK9025.h
 
-源文件：[打开 modules/motor/LKmotor/LK9025.h](../modules/motor/LKmotor/LK9025.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/motor/LKmotor/LK9025.h:2](../modules/motor/LKmotor/LK9025.h#L2) | `LK9025_H` | 空定义 | `#ifndef LK9025_H` |  |
-| [modules/motor/LKmotor/LK9025.h:10](../modules/motor/LKmotor/LK9025.h#L10) | `LK_MOTOR_MX_CNT` | `4` | `#ifndef LK9025_H` | 最多允许4个LK电机使用多电机指令,挂载在一条总线上 |
-| [modules/motor/LKmotor/LK9025.h:12](../modules/motor/LKmotor/LK9025.h#L12) | `I_MIN` | `-2000` | `#ifndef LK9025_H` |  |
-| [modules/motor/LKmotor/LK9025.h:13](../modules/motor/LKmotor/LK9025.h#L13) | `I_MAX` | `2000` | `#ifndef LK9025_H` |  |
-| [modules/motor/LKmotor/LK9025.h:14](../modules/motor/LKmotor/LK9025.h#L14) | `CURRENT_SMOOTH_COEF` | `0.9f` | `#ifndef LK9025_H` |  |
-| [modules/motor/LKmotor/LK9025.h:15](../modules/motor/LKmotor/LK9025.h#L15) | `SPEED_SMOOTH_COEF` | `0.85f` | `#ifndef LK9025_H` |  |
-| [modules/motor/LKmotor/LK9025.h:16](../modules/motor/LKmotor/LK9025.h#L16) | `REDUCTION_RATIO_DRIVEN` | `1` | `#ifndef LK9025_H` |  |
-| [modules/motor/LKmotor/LK9025.h:17](../modules/motor/LKmotor/LK9025.h#L17) | `ECD_ANGLE_COEF_LK` | `(360.0f / 65536.0f)` | `#ifndef LK9025_H` |  |
-| [modules/motor/LKmotor/LK9025.h:18](../modules/motor/LKmotor/LK9025.h#L18) | `CURRENT_TORQUE_COEF_LK` | `0.00512f` | `#ifndef LK9025_H` | 电流设定值转换成扭矩的系数，这里对应的是16T |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/motor/LKmotor/LK9025.h#L1) | 预处理 | `#ifndef LK9025_H` |
+| [2](../modules/motor/LKmotor/LK9025.h#L2) | 预处理 | `#define LK9025_H` |
+| [10](../modules/motor/LKmotor/LK9025.h#L10) | 预处理 | `#define LK_MOTOR_MX_CNT 4 // 最多允许4个LK电机使用多电机指令,挂载在一条总线上` |
+| [12](../modules/motor/LKmotor/LK9025.h#L12) | 预处理 | `#define I_MIN -2000` |
+| [13](../modules/motor/LKmotor/LK9025.h#L13) | 预处理 | `#define I_MAX 2000` |
+| [14](../modules/motor/LKmotor/LK9025.h#L14) | 预处理 | `#define CURRENT_SMOOTH_COEF 0.9f` |
+| [15](../modules/motor/LKmotor/LK9025.h#L15) | 预处理 | `#define SPEED_SMOOTH_COEF 0.85f` |
+| [16](../modules/motor/LKmotor/LK9025.h#L16) | 预处理 | `#define REDUCTION_RATIO_DRIVEN 1` |
+| [17](../modules/motor/LKmotor/LK9025.h#L17) | 预处理 | `#define ECD_ANGLE_COEF_LK (360.0f / 65536.0f)` |
+| [18](../modules/motor/LKmotor/LK9025.h#L18) | 预处理 | `#define CURRENT_TORQUE_COEF_LK 0.00512f  // 电流设定值转换成扭矩的系数，这里对应的是16T` |
+| [98](../modules/motor/LKmotor/LK9025.h#L98) | 预处理 | `#endif // LK9025_H` |
 
 ## modules/motor/motor_def.h
 
-源文件：[打开 modules/motor/motor_def.h](../modules/motor/motor_def.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/motor/motor_def.h:13](../modules/motor/motor_def.h#L13) | `MOTOR_DEF_H` | 空定义 | `#ifndef MOTOR_DEF_H` |  |
-| [modules/motor/motor_def.h:18](../modules/motor/motor_def.h#L18) | `LIMIT_MIN_MAX(x, min, max)` | `(x) = (((x) <= (min)) ? (min) : (((x) >= (max)) ? (max) : (x)))` | `#ifndef MOTOR_DEF_H` |  |
-
-### 可设置的结构体字段
-
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
-
-[modules/motor/motor_def.h:73](../modules/motor/motor_def.h#L73)
-
-```c
-typedef struct
-{
-    Closeloop_Type_e outer_loop_type;              // 最外层的闭环,未设置时默认为最高级的闭环
-    Closeloop_Type_e close_loop_type;              // 使用几个闭环(串级)
-    Motor_Reverse_Flag_e motor_reverse_flag;       // 是否反转
-    Feedback_Reverse_Flag_e feedback_reverse_flag; // 反馈是否反向
-    Feedback_Source_e angle_feedback_source;       // 角度反馈类型
-    Feedback_Source_e speed_feedback_source;       // 速度反馈类型
-    Feedfoward_Type_e feedforward_flag;            // 前馈标志
-
-} Motor_Control_Setting_s;
-```
-
-[modules/motor/motor_def.h:117](../modules/motor/motor_def.h#L117)
-
-```c
-typedef struct
-{
-    float *other_angle_feedback_ptr; // 角度反馈数据指针,注意电机使用total_angle
-    float *other_speed_feedback_ptr; // 速度反馈数据指针,单位为angle per sec
-
-    float *speed_feedforward_ptr;   // 速度前馈数据指针
-    float *current_feedforward_ptr; // 电流前馈数据指针
-
-    PID_Init_Config_s current_PID;
-    PID_Init_Config_s speed_PID;
-    PID_Init_Config_s angle_PID;
-} Motor_Controller_Init_s;
-```
-
-[modules/motor/motor_def.h:131](../modules/motor/motor_def.h#L131)
-
-```c
-typedef struct
-{
-    Motor_Controller_Init_s controller_param_init_config;
-    Motor_Control_Setting_s controller_setting_init_config;
-    Motor_Type_e motor_type;
-    CAN_Init_Config_s can_init_config;
-} Motor_Init_Config_s;
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [12](../modules/motor/motor_def.h#L12) | 预处理 | `#ifndef MOTOR_DEF_H` |
+| [13](../modules/motor/motor_def.h#L13) | 预处理 | `#define MOTOR_DEF_H` |
+| [18](../modules/motor/motor_def.h#L18) | 预处理 | `#define LIMIT_MIN_MAX(x, min, max) (x) = (((x) <= (min)) ? (min) : (((x) >= (max)) ? (max) : (x)))` |
+| [139](../modules/motor/motor_def.h#L139) | 预处理 | `#endif // !MOTOR_DEF_H` |
 
 ## modules/motor/motor_task.h
 
-源文件：[打开 modules/motor/motor_task.h](../modules/motor/motor_task.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/motor/motor_task.h:12](../modules/motor/motor_task.h#L12) | `MOTOR_TASK_H` | 空定义 | `#ifndef MOTOR_TASK_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [11](../modules/motor/motor_task.h#L11) | 预处理 | `#ifndef MOTOR_TASK_H` |
+| [12](../modules/motor/motor_task.h#L12) | 预处理 | `#define MOTOR_TASK_H` |
+| [24](../modules/motor/motor_task.h#L24) | 预处理 | `#endif // !MOTOR_TASK_H` |
 
 ## modules/motor/power_control.c
 
-源文件：[打开 modules/motor/power_control.c](../modules/motor/power_control.c)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/motor/power_control.c:6](../modules/motor/power_control.c#L6) | `TORQUE_COEF` | `0.0003662109375f` | 无外层条件 | (20/16384)*(0.3), 电机转矩系数，与电流和转矩相关 |
-| [modules/motor/power_control.c:7](../modules/motor/power_control.c#L7) | `POWER_COEF` | `187.0f / 3591.0f / 9.55f` | 无外层条件 | 电机机械功率系数，与力矩和转速相关，注意框架中速度单位为aps |
-
-### 配置结构体初值
-
-以下记录原始定义，不自动推断运行路径或后续覆盖。未填字段为零；指针/回调表示绑定关系。
-
-[modules/motor/power_control.c:207](../modules/motor/power_control.c#L207)
-
-```c
-Daemon_Init_Config_s daemon_config = {
-        .callback = DJIMotorLostCallback,
-        .owner_id = instance,
-        .reload_count = 2, // 20ms未收到数据则丢失
-    };
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [6](../modules/motor/power_control.c#L6) | 预处理 | `#define TORQUE_COEF 0.0003662109375f        // (20/16384)*(0.3), 电机转矩系数，与电流和转矩相关` |
+| [7](../modules/motor/power_control.c#L7) | 预处理 | `#define POWER_COEF 187.0f / 3591.0f / 9.55f // 电机机械功率系数，与力矩和转速相关，注意框架中速度单位为aps` |
+| [207](../modules/motor/power_control.c#L207) | 配置初值 | `Daemon_Init_Config_s daemon_config = {` |
+| [208](../modules/motor/power_control.c#L208) | 配置初值 | `.callback = DJIMotorLostCallback,` |
+| [209](../modules/motor/power_control.c#L209) | 配置初值 | `.owner_id = instance,` |
+| [210](../modules/motor/power_control.c#L210) | 配置初值 | `.reload_count = 2, // 20ms未收到数据则丢失` |
 
 ## modules/motor/power_control.h
 
-源文件：[打开 modules/motor/power_control.h](../modules/motor/power_control.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/motor/power_control.h:16](../modules/motor/power_control.h#L16) | `POWER_CONTROL_H` | 空定义 | `#ifndef POWER_CONTROL_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [15](../modules/motor/power_control.h#L15) | 预处理 | `#ifndef POWER_CONTROL_H` |
+| [16](../modules/motor/power_control.h#L16) | 预处理 | `#define POWER_CONTROL_H` |
+| [42](../modules/motor/power_control.h#L42) | 预处理 | `#endif // !DJI_MOTOR_H` |
 
 ## modules/motor/servo_motor/servo_motor.h
 
-源文件：[打开 modules/motor/servo_motor/servo_motor.h](../modules/motor/servo_motor/servo_motor.h)。
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/motor/servo_motor/servo_motor.h#L1) | 预处理 | `#ifndef SERVO_MOTOR_H` |
+| [2](../modules/motor/servo_motor/servo_motor.h#L2) | 预处理 | `#define SERVO_MOTOR_H` |
+| [10](../modules/motor/servo_motor/servo_motor.h#L10) | 预处理 | `#define SERVO_MOTOR_CNT 7` |
+| [11](../modules/motor/servo_motor/servo_motor.h#L11) | 预处理 | `#define Servo_Frame_First 0x55` |
+| [12](../modules/motor/servo_motor/servo_motor.h#L12) | 预处理 | `#define Servo_Frame_Second 0x55` |
+| [13](../modules/motor/servo_motor/servo_motor.h#L13) | 预处理 | `#define Servo_MAX_BUFF 10` |
+| [14](../modules/motor/servo_motor/servo_motor.h#L14) | 预处理 | `#define SERVO_MOVE_CMD 0x03` |
+| [15](../modules/motor/servo_motor/servo_motor.h#L15) | 预处理 | `#define SERVO_UNLOAD_CMD 0x14` |
+| [16](../modules/motor/servo_motor/servo_motor.h#L16) | 预处理 | `#define SERVO_POS_READ_CMD 0x15` |
+| [45](../modules/motor/servo_motor/servo_motor.h#L45) | 预处理 | `#endif // SERVO_MOTOR_H` |
 
-### 宏定义
+## modules/mpu6500/imu_temperature.c
 
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/motor/servo_motor/servo_motor.h:2](../modules/motor/servo_motor/servo_motor.h#L2) | `SERVO_MOTOR_H` | 空定义 | `#ifndef SERVO_MOTOR_H` |  |
-| [modules/motor/servo_motor/servo_motor.h:10](../modules/motor/servo_motor/servo_motor.h#L10) | `SERVO_MOTOR_CNT` | `7` | `#ifndef SERVO_MOTOR_H` |  |
-| [modules/motor/servo_motor/servo_motor.h:11](../modules/motor/servo_motor/servo_motor.h#L11) | `Servo_Frame_First` | `0x55` | `#ifndef SERVO_MOTOR_H` |  |
-| [modules/motor/servo_motor/servo_motor.h:12](../modules/motor/servo_motor/servo_motor.h#L12) | `Servo_Frame_Second` | `0x55` | `#ifndef SERVO_MOTOR_H` |  |
-| [modules/motor/servo_motor/servo_motor.h:13](../modules/motor/servo_motor/servo_motor.h#L13) | `Servo_MAX_BUFF` | `10` | `#ifndef SERVO_MOTOR_H` |  |
-| [modules/motor/servo_motor/servo_motor.h:14](../modules/motor/servo_motor/servo_motor.h#L14) | `SERVO_MOVE_CMD` | `0x03` | `#ifndef SERVO_MOTOR_H` |  |
-| [modules/motor/servo_motor/servo_motor.h:15](../modules/motor/servo_motor/servo_motor.h#L15) | `SERVO_UNLOAD_CMD` | `0x14` | `#ifndef SERVO_MOTOR_H` |  |
-| [modules/motor/servo_motor/servo_motor.h:16](../modules/motor/servo_motor/servo_motor.h#L16) | `SERVO_POS_READ_CMD` | `0x15` | `#ifndef SERVO_MOTOR_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [6](../modules/mpu6500/imu_temperature.c#L6) | 配置初值 | `PWM_Init_Config_s imu_config = {` |
+| [7](../modules/mpu6500/imu_temperature.c#L7) | 配置初值 | `.htim = &htim3,` |
+| [8](../modules/mpu6500/imu_temperature.c#L8) | 配置初值 | `.channel = TIM_CHANNEL_2,` |
+| [9](../modules/mpu6500/imu_temperature.c#L9) | 配置初值 | `.period = 0.0001f,` |
+| [10](../modules/mpu6500/imu_temperature.c#L10) | 配置初值 | `.dutyratio = 0.5f,` |
 
-### 可设置的结构体字段
+## modules/mpu6500/imu_temperature.h
 
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/mpu6500/imu_temperature.h#L1) | 预处理 | `#ifndef IMU_TEMPERATURE_H` |
+| [2](../modules/mpu6500/imu_temperature.h#L2) | 预处理 | `#define IMU_TEMPERATURE_H` |
+| [6](../modules/mpu6500/imu_temperature.h#L6) | 预处理 | `#endif` |
 
-[modules/motor/servo_motor/servo_motor.h:26](../modules/motor/servo_motor/servo_motor.h#L26)
+## modules/mpu6500/ist8310_reg.h
 
-```c
-typedef struct
-{
-    PWM_Init_Config_s pwm_init_config;
-    ServoType_e servo_type;
-    UART_HandleTypeDef *_handle;
-    uint8_t servo_id;
-}Servo_Init_Config_s;
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/mpu6500/ist8310_reg.h#L1) | 预处理 | `#ifndef IST8310_REG_H` |
+| [2](../modules/mpu6500/ist8310_reg.h#L2) | 预处理 | `#define IST8310_REG_H` |
+| [5](../modules/mpu6500/ist8310_reg.h#L5) | 预处理 | `#define IST8310_ADDRESS 0x0E` |
+| [6](../modules/mpu6500/ist8310_reg.h#L6) | 预处理 | `#define IST8310_DEVICE_ID_A 0x10` |
+| [9](../modules/mpu6500/ist8310_reg.h#L9) | 预处理 | `#define IST8310_WHO_AM_I 0x00` |
+| [10](../modules/mpu6500/ist8310_reg.h#L10) | 预处理 | `#define IST8310_R_CONFA 0x0A` |
+| [11](../modules/mpu6500/ist8310_reg.h#L11) | 预处理 | `#define IST8310_R_CONFB 0x0B` |
+| [12](../modules/mpu6500/ist8310_reg.h#L12) | 预处理 | `#define IST8310_R_MODE 0x02` |
+| [14](../modules/mpu6500/ist8310_reg.h#L14) | 预处理 | `#define IST8310_R_XL 0x03` |
+| [15](../modules/mpu6500/ist8310_reg.h#L15) | 预处理 | `#define IST8310_R_XM 0x04` |
+| [16](../modules/mpu6500/ist8310_reg.h#L16) | 预处理 | `#define IST8310_R_YL 0x05` |
+| [17](../modules/mpu6500/ist8310_reg.h#L17) | 预处理 | `#define IST8310_R_YM 0x06` |
+| [18](../modules/mpu6500/ist8310_reg.h#L18) | 预处理 | `#define IST8310_R_ZL 0x07` |
+| [19](../modules/mpu6500/ist8310_reg.h#L19) | 预处理 | `#define IST8310_R_ZM 0x08` |
+| [21](../modules/mpu6500/ist8310_reg.h#L21) | 预处理 | `#define IST8310_AVGCNTL 0x41` |
+| [22](../modules/mpu6500/ist8310_reg.h#L22) | 预处理 | `#define IST8310_PDCNTL 0x42` |
+| [24](../modules/mpu6500/ist8310_reg.h#L24) | 预处理 | `#define IST8310_ODR_MODE 0x01 //sigle measure mode` |
+| [27](../modules/mpu6500/ist8310_reg.h#L27) | 预处理 | `#endif // !IST` |
+
+## modules/mpu6500/mpu6500.c
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [29](../modules/mpu6500/mpu6500.c#L29) | 预处理 | `#define BOARD_DOWN (1)` |
+| [30](../modules/mpu6500/mpu6500.c#L30) | 预处理 | `#define IST8310` |
+| [31](../modules/mpu6500/mpu6500.c#L31) | 预处理 | `#define GYRO_OFFSET_LIMIT_X 0.04f` |
+| [32](../modules/mpu6500/mpu6500.c#L32) | 预处理 | `#define GYRO_OFFSET_LIMIT_Y 0.04f` |
+| [33](../modules/mpu6500/mpu6500.c#L33) | 预处理 | `#define GYRO_OFFSET_LIMIT_Z 0.04f` |
+| [40](../modules/mpu6500/mpu6500.c#L40) | 配置初值 | `static PIDInstance TempCtrl = {0};` |
+| [145](../modules/mpu6500/mpu6500.c#L145) | 配置初值 | `PID_Init_Config_s config = {.MaxOut = 100,` |
+| [146](../modules/mpu6500/mpu6500.c#L146) | 配置初值 | `.IntegralLimit = 15,` |
+| [147](../modules/mpu6500/mpu6500.c#L147) | 配置初值 | `.DeadBand = 0,` |
+| [148](../modules/mpu6500/mpu6500.c#L148) | 配置初值 | `.Kp = 50,` |
+| [149](../modules/mpu6500/mpu6500.c#L149) | 配置初值 | `.Ki = 1,` |
+| [150](../modules/mpu6500/mpu6500.c#L150) | 配置初值 | `.Kd = 0,` |
+| [151](../modules/mpu6500/mpu6500.c#L151) | 配置初值 | `.Improve = 0x01}; // enable integratiaon limit` |
+
+## modules/mpu6500/mpu6500.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/mpu6500/mpu6500.h#L1) | 预处理 | `#ifndef _MPU6500_H_` |
+| [2](../modules/mpu6500/mpu6500.h#L2) | 预处理 | `#define _MPU6500_H_` |
+| [5](../modules/mpu6500/mpu6500.h#L5) | 预处理 | `#define MPU_DELAY(x) DWT_Delay_ms(x)` |
+| [7](../modules/mpu6500/mpu6500.h#L7) | 预处理 | `#define GxOFFSET 0.037452f` |
+| [8](../modules/mpu6500/mpu6500.h#L8) | 预处理 | `#define GyOFFSET 0.003360f` |
+| [9](../modules/mpu6500/mpu6500.h#L9) | 预处理 | `#define GzOFFSET 0.008532f` |
+| [10](../modules/mpu6500/mpu6500.h#L10) | 预处理 | `#define gNORM 9.605101f` |
+| [30](../modules/mpu6500/mpu6500.h#L30) | 预处理 | `#endif` |
+
+## modules/mpu6500/mpu6500_math.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/mpu6500/mpu6500_math.h#L1) | 预处理 | `#ifndef MPU6500_MATH_H` |
+| [2](../modules/mpu6500/mpu6500_math.h#L2) | 预处理 | `#define MPU6500_MATH_H` |
+| [9](../modules/mpu6500/mpu6500_math.h#L9) | 预处理 | `#endif` |
+
+## modules/mpu6500/mpu6500_reg.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/mpu6500/mpu6500_reg.h#L1) | 预处理 | `#ifndef MPU6500_REG_H` |
+| [2](../modules/mpu6500/mpu6500_reg.h#L2) | 预处理 | `#define MPU6500_REG_H` |
+| [5](../modules/mpu6500/mpu6500_reg.h#L5) | 预处理 | `#define MPU6500_SELF_TEST_XG        (0x00)` |
+| [6](../modules/mpu6500/mpu6500_reg.h#L6) | 预处理 | `#define MPU6500_SELF_TEST_YG        (0x01)` |
+| [7](../modules/mpu6500/mpu6500_reg.h#L7) | 预处理 | `#define MPU6500_SELF_TEST_ZG        (0x02)` |
+| [8](../modules/mpu6500/mpu6500_reg.h#L8) | 预处理 | `#define MPU6500_SELF_TEST_XA        (0x0D)` |
+| [9](../modules/mpu6500/mpu6500_reg.h#L9) | 预处理 | `#define MPU6500_SELF_TEST_YA        (0x0E)` |
+| [10](../modules/mpu6500/mpu6500_reg.h#L10) | 预处理 | `#define MPU6500_SELF_TEST_ZA        (0x0F)` |
+| [11](../modules/mpu6500/mpu6500_reg.h#L11) | 预处理 | `#define MPU6500_XG_OFFSET_H         (0x13)` |
+| [12](../modules/mpu6500/mpu6500_reg.h#L12) | 预处理 | `#define MPU6500_XG_OFFSET_L         (0x14)` |
+| [13](../modules/mpu6500/mpu6500_reg.h#L13) | 预处理 | `#define MPU6500_YG_OFFSET_H         (0x15)` |
+| [14](../modules/mpu6500/mpu6500_reg.h#L14) | 预处理 | `#define MPU6500_YG_OFFSET_L         (0x16)` |
+| [15](../modules/mpu6500/mpu6500_reg.h#L15) | 预处理 | `#define MPU6500_ZG_OFFSET_H         (0x17)` |
+| [16](../modules/mpu6500/mpu6500_reg.h#L16) | 预处理 | `#define MPU6500_ZG_OFFSET_L         (0x18)` |
+| [17](../modules/mpu6500/mpu6500_reg.h#L17) | 预处理 | `#define MPU6500_SMPLRT_DIV          (0x19)` |
+| [18](../modules/mpu6500/mpu6500_reg.h#L18) | 预处理 | `#define MPU6500_CONFIG              (0x1A)` |
+| [19](../modules/mpu6500/mpu6500_reg.h#L19) | 预处理 | `#define MPU6500_GYRO_CONFIG         (0x1B)` |
+| [20](../modules/mpu6500/mpu6500_reg.h#L20) | 预处理 | `#define MPU6500_ACCEL_CONFIG        (0x1C)` |
+| [21](../modules/mpu6500/mpu6500_reg.h#L21) | 预处理 | `#define MPU6500_ACCEL_CONFIG_2      (0x1D)` |
+| [22](../modules/mpu6500/mpu6500_reg.h#L22) | 预处理 | `#define MPU6500_LP_ACCEL_ODR        (0x1E)` |
+| [23](../modules/mpu6500/mpu6500_reg.h#L23) | 预处理 | `#define MPU6500_MOT_THR             (0x1F)` |
+| [24](../modules/mpu6500/mpu6500_reg.h#L24) | 预处理 | `#define MPU6500_FIFO_EN             (0x23)` |
+| [25](../modules/mpu6500/mpu6500_reg.h#L25) | 预处理 | `#define MPU6500_I2C_MST_CTRL        (0x24)` |
+| [26](../modules/mpu6500/mpu6500_reg.h#L26) | 预处理 | `#define MPU6500_I2C_SLV0_ADDR       (0x25)` |
+| [27](../modules/mpu6500/mpu6500_reg.h#L27) | 预处理 | `#define MPU6500_I2C_SLV0_REG        (0x26)` |
+| [28](../modules/mpu6500/mpu6500_reg.h#L28) | 预处理 | `#define MPU6500_I2C_SLV0_CTRL       (0x27)` |
+| [29](../modules/mpu6500/mpu6500_reg.h#L29) | 预处理 | `#define MPU6500_I2C_SLV1_ADDR       (0x28)` |
+| [30](../modules/mpu6500/mpu6500_reg.h#L30) | 预处理 | `#define MPU6500_I2C_SLV1_REG        (0x29)` |
+| [31](../modules/mpu6500/mpu6500_reg.h#L31) | 预处理 | `#define MPU6500_I2C_SLV1_CTRL       (0x2A)` |
+| [32](../modules/mpu6500/mpu6500_reg.h#L32) | 预处理 | `#define MPU6500_I2C_SLV2_ADDR       (0x2B)` |
+| [33](../modules/mpu6500/mpu6500_reg.h#L33) | 预处理 | `#define MPU6500_I2C_SLV2_REG        (0x2C)` |
+| [34](../modules/mpu6500/mpu6500_reg.h#L34) | 预处理 | `#define MPU6500_I2C_SLV2_CTRL       (0x2D)` |
+| [35](../modules/mpu6500/mpu6500_reg.h#L35) | 预处理 | `#define MPU6500_I2C_SLV3_ADDR       (0x2E)` |
+| [36](../modules/mpu6500/mpu6500_reg.h#L36) | 预处理 | `#define MPU6500_I2C_SLV3_REG        (0x2F)` |
+| [37](../modules/mpu6500/mpu6500_reg.h#L37) | 预处理 | `#define MPU6500_I2C_SLV3_CTRL       (0x30)` |
+| [38](../modules/mpu6500/mpu6500_reg.h#L38) | 预处理 | `#define MPU6500_I2C_SLV4_ADDR       (0x31)` |
+| [39](../modules/mpu6500/mpu6500_reg.h#L39) | 预处理 | `#define MPU6500_I2C_SLV4_REG        (0x32)` |
+| [40](../modules/mpu6500/mpu6500_reg.h#L40) | 预处理 | `#define MPU6500_I2C_SLV4_DO         (0x33)` |
+| [41](../modules/mpu6500/mpu6500_reg.h#L41) | 预处理 | `#define MPU6500_I2C_SLV4_CTRL       (0x34)` |
+| [42](../modules/mpu6500/mpu6500_reg.h#L42) | 预处理 | `#define MPU6500_I2C_SLV4_DI         (0x35)` |
+| [43](../modules/mpu6500/mpu6500_reg.h#L43) | 预处理 | `#define MPU6500_I2C_MST_STATUS      (0x36)` |
+| [44](../modules/mpu6500/mpu6500_reg.h#L44) | 预处理 | `#define MPU6500_INT_PIN_CFG         (0x37)` |
+| [45](../modules/mpu6500/mpu6500_reg.h#L45) | 预处理 | `#define MPU6500_INT_ENABLE          (0x38)` |
+| [46](../modules/mpu6500/mpu6500_reg.h#L46) | 预处理 | `#define MPU6500_INT_STATUS          (0x3A)` |
+| [47](../modules/mpu6500/mpu6500_reg.h#L47) | 预处理 | `#define MPU6500_ACCEL_XOUT_H        (0x3B)` |
+| [48](../modules/mpu6500/mpu6500_reg.h#L48) | 预处理 | `#define MPU6500_ACCEL_XOUT_L        (0x3C)` |
+| [49](../modules/mpu6500/mpu6500_reg.h#L49) | 预处理 | `#define MPU6500_ACCEL_YOUT_H        (0x3D)` |
+| [50](../modules/mpu6500/mpu6500_reg.h#L50) | 预处理 | `#define MPU6500_ACCEL_YOUT_L        (0x3E)` |
+| [51](../modules/mpu6500/mpu6500_reg.h#L51) | 预处理 | `#define MPU6500_ACCEL_ZOUT_H        (0x3F)` |
+| [52](../modules/mpu6500/mpu6500_reg.h#L52) | 预处理 | `#define MPU6500_ACCEL_ZOUT_L        (0x40)` |
+| [53](../modules/mpu6500/mpu6500_reg.h#L53) | 预处理 | `#define MPU6500_TEMP_OUT_H          (0x41)` |
+| [54](../modules/mpu6500/mpu6500_reg.h#L54) | 预处理 | `#define MPU6500_TEMP_OUT_L          (0x42)` |
+| [55](../modules/mpu6500/mpu6500_reg.h#L55) | 预处理 | `#define MPU6500_GYRO_XOUT_H         (0x43)` |
+| [56](../modules/mpu6500/mpu6500_reg.h#L56) | 预处理 | `#define MPU6500_GYRO_XOUT_L         (0x44)` |
+| [57](../modules/mpu6500/mpu6500_reg.h#L57) | 预处理 | `#define MPU6500_GYRO_YOUT_H         (0x45)` |
+| [58](../modules/mpu6500/mpu6500_reg.h#L58) | 预处理 | `#define MPU6500_GYRO_YOUT_L         (0x46)` |
+| [59](../modules/mpu6500/mpu6500_reg.h#L59) | 预处理 | `#define MPU6500_GYRO_ZOUT_H         (0x47)` |
+| [60](../modules/mpu6500/mpu6500_reg.h#L60) | 预处理 | `#define MPU6500_GYRO_ZOUT_L         (0x48)` |
+| [61](../modules/mpu6500/mpu6500_reg.h#L61) | 预处理 | `#define MPU6500_EXT_SENS_DATA_00    (0x49)` |
+| [62](../modules/mpu6500/mpu6500_reg.h#L62) | 预处理 | `#define MPU6500_EXT_SENS_DATA_01    (0x4A)` |
+| [63](../modules/mpu6500/mpu6500_reg.h#L63) | 预处理 | `#define MPU6500_EXT_SENS_DATA_02    (0x4B)` |
+| [64](../modules/mpu6500/mpu6500_reg.h#L64) | 预处理 | `#define MPU6500_EXT_SENS_DATA_03    (0x4C)` |
+| [65](../modules/mpu6500/mpu6500_reg.h#L65) | 预处理 | `#define MPU6500_EXT_SENS_DATA_04    (0x4D)` |
+| [66](../modules/mpu6500/mpu6500_reg.h#L66) | 预处理 | `#define MPU6500_EXT_SENS_DATA_05    (0x4E)` |
+| [67](../modules/mpu6500/mpu6500_reg.h#L67) | 预处理 | `#define MPU6500_EXT_SENS_DATA_06    (0x4F)` |
+| [68](../modules/mpu6500/mpu6500_reg.h#L68) | 预处理 | `#define MPU6500_EXT_SENS_DATA_07    (0x50)` |
+| [69](../modules/mpu6500/mpu6500_reg.h#L69) | 预处理 | `#define MPU6500_EXT_SENS_DATA_08    (0x51)` |
+| [70](../modules/mpu6500/mpu6500_reg.h#L70) | 预处理 | `#define MPU6500_EXT_SENS_DATA_09    (0x52)` |
+| [71](../modules/mpu6500/mpu6500_reg.h#L71) | 预处理 | `#define MPU6500_EXT_SENS_DATA_10    (0x53)` |
+| [72](../modules/mpu6500/mpu6500_reg.h#L72) | 预处理 | `#define MPU6500_EXT_SENS_DATA_11    (0x54)` |
+| [73](../modules/mpu6500/mpu6500_reg.h#L73) | 预处理 | `#define MPU6500_EXT_SENS_DATA_12    (0x55)` |
+| [74](../modules/mpu6500/mpu6500_reg.h#L74) | 预处理 | `#define MPU6500_EXT_SENS_DATA_13    (0x56)` |
+| [75](../modules/mpu6500/mpu6500_reg.h#L75) | 预处理 | `#define MPU6500_EXT_SENS_DATA_14    (0x57)` |
+| [76](../modules/mpu6500/mpu6500_reg.h#L76) | 预处理 | `#define MPU6500_EXT_SENS_DATA_15    (0x58)` |
+| [77](../modules/mpu6500/mpu6500_reg.h#L77) | 预处理 | `#define MPU6500_EXT_SENS_DATA_16    (0x59)` |
+| [78](../modules/mpu6500/mpu6500_reg.h#L78) | 预处理 | `#define MPU6500_EXT_SENS_DATA_17    (0x5A)` |
+| [79](../modules/mpu6500/mpu6500_reg.h#L79) | 预处理 | `#define MPU6500_EXT_SENS_DATA_18    (0x5B)` |
+| [80](../modules/mpu6500/mpu6500_reg.h#L80) | 预处理 | `#define MPU6500_EXT_SENS_DATA_19    (0x5C)` |
+| [81](../modules/mpu6500/mpu6500_reg.h#L81) | 预处理 | `#define MPU6500_EXT_SENS_DATA_20    (0x5D)` |
+| [82](../modules/mpu6500/mpu6500_reg.h#L82) | 预处理 | `#define MPU6500_EXT_SENS_DATA_21    (0x5E)` |
+| [83](../modules/mpu6500/mpu6500_reg.h#L83) | 预处理 | `#define MPU6500_EXT_SENS_DATA_22    (0x5F)` |
+| [84](../modules/mpu6500/mpu6500_reg.h#L84) | 预处理 | `#define MPU6500_EXT_SENS_DATA_23    (0x60)` |
+| [85](../modules/mpu6500/mpu6500_reg.h#L85) | 预处理 | `#define MPU6500_I2C_SLV0_DO         (0x63)` |
+| [86](../modules/mpu6500/mpu6500_reg.h#L86) | 预处理 | `#define MPU6500_I2C_SLV1_DO         (0x64)` |
+| [87](../modules/mpu6500/mpu6500_reg.h#L87) | 预处理 | `#define MPU6500_I2C_SLV2_DO         (0x65)` |
+| [88](../modules/mpu6500/mpu6500_reg.h#L88) | 预处理 | `#define MPU6500_I2C_SLV3_DO         (0x66)` |
+| [89](../modules/mpu6500/mpu6500_reg.h#L89) | 预处理 | `#define MPU6500_I2C_MST_DELAY_CTRL  (0x67)` |
+| [90](../modules/mpu6500/mpu6500_reg.h#L90) | 预处理 | `#define MPU6500_SIGNAL_PATH_RESET   (0x68)` |
+| [91](../modules/mpu6500/mpu6500_reg.h#L91) | 预处理 | `#define MPU6500_MOT_DETECT_CTRL     (0x69)` |
+| [92](../modules/mpu6500/mpu6500_reg.h#L92) | 预处理 | `#define MPU6500_USER_CTRL           (0x6A)` |
+| [93](../modules/mpu6500/mpu6500_reg.h#L93) | 预处理 | `#define MPU6500_PWR_MGMT_1          (0x6B)` |
+| [94](../modules/mpu6500/mpu6500_reg.h#L94) | 预处理 | `#define MPU6500_PWR_MGMT_2          (0x6C)` |
+| [95](../modules/mpu6500/mpu6500_reg.h#L95) | 预处理 | `#define MPU6500_FIFO_COUNTH         (0x72)` |
+| [96](../modules/mpu6500/mpu6500_reg.h#L96) | 预处理 | `#define MPU6500_FIFO_COUNTL         (0x73)` |
+| [97](../modules/mpu6500/mpu6500_reg.h#L97) | 预处理 | `#define MPU6500_FIFO_R_W            (0x74)` |
+| [98](../modules/mpu6500/mpu6500_reg.h#L98) | 预处理 | `#define MPU6500_WHO_AM_I            (0x74)` |
+| [99](../modules/mpu6500/mpu6500_reg.h#L99) | 预处理 | `#define MPU6500_XA_OFFSET_H         (0x77)` |
+| [100](../modules/mpu6500/mpu6500_reg.h#L100) | 预处理 | `#define MPU6500_XA_OFFSET_L         (0x78)` |
+| [101](../modules/mpu6500/mpu6500_reg.h#L101) | 预处理 | `#define MPU6500_YA_OFFSET_H         (0x7A)` |
+| [102](../modules/mpu6500/mpu6500_reg.h#L102) | 预处理 | `#define MPU6500_YA_OFFSET_L         (0x7B)` |
+| [103](../modules/mpu6500/mpu6500_reg.h#L103) | 预处理 | `#define MPU6500_ZA_OFFSET_H         (0x7D)` |
+| [104](../modules/mpu6500/mpu6500_reg.h#L104) | 预处理 | `#define MPU6500_ZA_OFFSET_L         (0x7E)` |
+| [106](../modules/mpu6500/mpu6500_reg.h#L106) | 预处理 | `#define MPU6050_ID									(0x68)` |
+| [107](../modules/mpu6500/mpu6500_reg.h#L107) | 预处理 | `#define MPU6500_ID									(0x70)// mpu6500 id = 0x70` |
+| [109](../modules/mpu6500/mpu6500_reg.h#L109) | 预处理 | `#define MPU_IIC_ADDR								0x68` |
+| [111](../modules/mpu6500/mpu6500_reg.h#L111) | 预处理 | `#endif // !MP` |
+
+## modules/mpu6500/mpu6500driver.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/mpu6500/mpu6500driver.h#L1) | 预处理 | `#ifndef MPU6500Driver_H` |
+| [2](../modules/mpu6500/mpu6500driver.h#L2) | 预处理 | `#define MPU6500Driver_H` |
+| [7](../modules/mpu6500/mpu6500driver.h#L7) | 预处理 | `#define MPU_HSPI hspi5` |
+| [8](../modules/mpu6500/mpu6500driver.h#L8) | 预处理 | `#define MPU_NSS_LOW HAL_GPIO_WritePin(GPIOF, GPIO_PIN_6, GPIO_PIN_RESET)` |
+| [9](../modules/mpu6500/mpu6500driver.h#L9) | 预处理 | `#define MPU_NSS_HIGH HAL_GPIO_WritePin(GPIOF, GPIO_PIN_6, GPIO_PIN_SET)` |
+| [10](../modules/mpu6500/mpu6500driver.h#L10) | 预处理 | `#define MPU_DELAY(x) DWT_Delay_ms(x)` |
+| [12](../modules/mpu6500/mpu6500driver.h#L12) | 预处理 | `#define MPU6500_ACCEL_2G_SEN 0.00059814453125f` |
+| [13](../modules/mpu6500/mpu6500driver.h#L13) | 预处理 | `#define MPU6500_ACCEL_4G_SEN 0.0011962890625f` |
+| [14](../modules/mpu6500/mpu6500driver.h#L14) | 预处理 | `#define MPU6500_ACCEL_8G_SEN 0.002392578125f` |
+| [15](../modules/mpu6500/mpu6500driver.h#L15) | 预处理 | `#define MPU6500_ACCEL_16G_SEN 0.00478515625f` |
+| [17](../modules/mpu6500/mpu6500driver.h#L17) | 预处理 | `#define MPU6500_GYRO_2000_SEN 0.00106422513550135501355013550136` |
+| [18](../modules/mpu6500/mpu6500driver.h#L18) | 预处理 | `#define MPU6500_GYRO_1000_SEN 5.3211256775067750677506775067751e-4` |
+| [19](../modules/mpu6500/mpu6500driver.h#L19) | 预处理 | `#define MPU6500_GYRO_500_SEN 2.6646247667514843087362171331637e-4` |
+| [20](../modules/mpu6500/mpu6500driver.h#L20) | 预处理 | `#define MPU6500_GYRO_250_SEN 1.3323123833757421543681085665818e-4` |
+| [29](../modules/mpu6500/mpu6500driver.h#L29) | 预处理 | `#endif // !MPU6500Driver_H` |
+
+## modules/oled/oled.c
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [2](../modules/oled/oled.c#L2) | 预处理 | `#if OLED_USE_I2C` |
+| [381](../modules/oled/oled.c#L381) | 预处理 | `#endif` |
 
 ## modules/oled/oled.h
 
-源文件：[打开 modules/oled/oled.h](../modules/oled/oled.h)。
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [2](../modules/oled/oled.h#L2) | 预处理 | `#if OLED_USE_I2C` |
+| [15](../modules/oled/oled.h#L15) | 预处理 | `#ifndef OLED_H` |
+| [16](../modules/oled/oled.h#L16) | 预处理 | `#define OLED_H` |
+| [20](../modules/oled/oled.h#L20) | 预处理 | `#define OLED_I2C_ADDRESS 0x78` |
+| [23](../modules/oled/oled.h#L23) | 预处理 | `#define MAX_COLUMN 128` |
+| [24](../modules/oled/oled.h#L24) | 预处理 | `#define MAX_ROW 64` |
+| [26](../modules/oled/oled.h#L26) | 预处理 | `#define X_WIDTH MAX_COLUMN` |
+| [27](../modules/oled/oled.h#L27) | 预处理 | `#define Y_WIDTH MAX_ROW` |
+| [29](../modules/oled/oled.h#L29) | 预处理 | `#define OLED_CMD 0x00` |
+| [30](../modules/oled/oled.h#L30) | 预处理 | `#define OLED_DATA 0x01` |
+| [32](../modules/oled/oled.h#L32) | 预处理 | `#define CHAR_SIZE_WIDTH 6` |
+| [33](../modules/oled/oled.h#L33) | 预处理 | `#define CHAR_SIZE_HIGHT 12` |
+| [147](../modules/oled/oled.h#L147) | 预处理 | `#endif` |
+| [149](../modules/oled/oled.h#L149) | 预处理 | `#else` |
+| [151](../modules/oled/oled.h#L151) | 预处理 | `#endif` |
 
-### 宏定义
+## modules/oled/oled_spi.c
 
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/oled/oled.h:14](../modules/oled/oled.h#L14) | `OLED_H` | 空定义 | `#ifndef OLED_H` |  |
-| [modules/oled/oled.h:18](../modules/oled/oled.h#L18) | `OLED_I2C_ADDRESS` | `0x78` | `#ifndef OLED_H` |  |
-| [modules/oled/oled.h:21](../modules/oled/oled.h#L21) | `MAX_COLUMN` | `128` | `#ifndef OLED_H` |  |
-| [modules/oled/oled.h:22](../modules/oled/oled.h#L22) | `MAX_ROW` | `64` | `#ifndef OLED_H` |  |
-| [modules/oled/oled.h:24](../modules/oled/oled.h#L24) | `X_WIDTH` | `MAX_COLUMN` | `#ifndef OLED_H` |  |
-| [modules/oled/oled.h:25](../modules/oled/oled.h#L25) | `Y_WIDTH` | `MAX_ROW` | `#ifndef OLED_H` |  |
-| [modules/oled/oled.h:27](../modules/oled/oled.h#L27) | `OLED_CMD` | `0x00` | `#ifndef OLED_H` |  |
-| [modules/oled/oled.h:28](../modules/oled/oled.h#L28) | `OLED_DATA` | `0x01` | `#ifndef OLED_H` |  |
-| [modules/oled/oled.h:30](../modules/oled/oled.h#L30) | `CHAR_SIZE_WIDTH` | `6` | `#ifndef OLED_H` |  |
-| [modules/oled/oled.h:31](../modules/oled/oled.h#L31) | `CHAR_SIZE_HIGHT` | `12` | `#ifndef OLED_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [2](../modules/oled/oled_spi.c#L2) | 预处理 | `#if !OLED_USE_I2C` |
+| [440](../modules/oled/oled_spi.c#L440) | 预处理 | `#endif` |
+
+## modules/oled/oled_spi.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [2](../modules/oled/oled_spi.h#L2) | 预处理 | `#ifndef OLED_H` |
+| [3](../modules/oled/oled_spi.h#L3) | 预处理 | `#define OLED_H` |
+| [7](../modules/oled/oled_spi.h#L7) | 预处理 | `#define Max_Column      128` |
+| [8](../modules/oled/oled_spi.h#L8) | 预处理 | `#define Max_Row         64` |
+| [10](../modules/oled/oled_spi.h#L10) | 预处理 | `#define X_WIDTH         128` |
+| [11](../modules/oled/oled_spi.h#L11) | 预处理 | `#define Y_WIDTH         64` |
+| [13](../modules/oled/oled_spi.h#L13) | 预处理 | `#define OLED_CMD        0x00` |
+| [14](../modules/oled/oled_spi.h#L14) | 预处理 | `#define OLED_DATA       0x01` |
+| [16](../modules/oled/oled_spi.h#L16) | 预处理 | `#define CHAR_SIZE_WIDTH     6` |
+| [17](../modules/oled/oled_spi.h#L17) | 预处理 | `#define VHAR_SIZE_HIGHT     12` |
+| [19](../modules/oled/oled_spi.h#L19) | 预处理 | `#define OLED_CMD_Set()      HAL_GPIO_WritePin(OLED_DC_GPIO_Port, OLED_DC_Pin, GPIO_PIN_SET)` |
+| [20](../modules/oled/oled_spi.h#L20) | 预处理 | `#define OLED_CMD_Clr()      HAL_GPIO_WritePin(OLED_DC_GPIO_Port, OLED_DC_Pin, GPIO_PIN_RESET)` |
+| [22](../modules/oled/oled_spi.h#L22) | 预处理 | `#define OLED_RST_Set()      HAL_GPIO_WritePin(OLED_RST_GPIO_Port, OLED_RST_Pin, GPIO_PIN_SET)` |
+| [23](../modules/oled/oled_spi.h#L23) | 预处理 | `#define OLED_RST_Clr()      HAL_GPIO_WritePin(OLED_RST_GPIO_Port, OLED_RST_Pin, GPIO_PIN_RESET)` |
+| [139](../modules/oled/oled_spi.h#L139) | 预处理 | `#endif` |
 
 ## modules/oled/oledfont.h
 
-源文件：[打开 modules/oled/oledfont.h](../modules/oled/oledfont.h)。
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [11](../modules/oled/oledfont.h#L11) | 预处理 | `#ifndef __OLED__FONT__H` |
+| [12](../modules/oled/oledfont.h#L12) | 预处理 | `#define __OLED__FONT__H` |
+| [247](../modules/oled/oledfont.h#L247) | 预处理 | `#endif` |
 
-### 宏定义
+## modules/oled/oledfont_spi.h
 
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/oled/oledfont.h:12](../modules/oled/oledfont.h#L12) | `__OLED__FONT__H` | 空定义 | `#ifndef __OLED__FONT__H` |  |
-
-## modules/power_meter/power_meter_protocol.h
-
-源文件：[打开 modules/power_meter/power_meter_protocol.h](../modules/power_meter/power_meter_protocol.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/power_meter/power_meter_protocol.h:2](../modules/power_meter/power_meter_protocol.h#L2) | `POWER_METER_PROTOCOL_H` | 空定义 | `#ifndef POWER_METER_PROTOCOL_H` |  |
-| [modules/power_meter/power_meter_protocol.h:7](../modules/power_meter/power_meter_protocol.h#L7) | `POWER_METER_STATUS_CAN_ID` | `0x605U` | `#ifndef POWER_METER_PROTOCOL_H` |  |
-| [modules/power_meter/power_meter_protocol.h:8](../modules/power_meter/power_meter_protocol.h#L8) | `POWER_METER_CAN_DLC` | `8U` | `#ifndef POWER_METER_PROTOCOL_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [11](../modules/oled/oledfont_spi.h#L11) | 预处理 | `#ifndef __OLED__FONT__H` |
+| [12](../modules/oled/oledfont_spi.h#L12) | 预处理 | `#define __OLED__FONT__H` |
+| [247](../modules/oled/oledfont_spi.h#L247) | 预处理 | `#endif` |
 
 ## modules/power_meter/power_meter.c
 
-源文件：[打开 modules/power_meter/power_meter.c](../modules/power_meter/power_meter.c)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/power_meter/power_meter.c:9](../modules/power_meter/power_meter.c#L9) | `POWER_METER_DEFAULT_OFFLINE_RELOAD_COUNT` | `10U` | 无外层条件 | 默认离线重载值,即100ms内没有接收到数据则认为离线 |
-| [modules/power_meter/power_meter.c:10](../modules/power_meter/power_meter.c#L10) | `POWER_METER_DAEMON_PERIOD_MS` | `10U` | 无外层条件 | 守护进程周期,即每10ms调用一次守护进程的回调函数 |
-
-### 配置结构体初值
-
-以下记录原始定义，不自动推断运行路径或后续覆盖。未填字段为零；指针/回调表示绑定关系。
-
-[modules/power_meter/power_meter.c:80](../modules/power_meter/power_meter.c#L80)
-
-```c
-Daemon_Init_Config_s daemon_config = {
-        .reload_count = reload_count,
-        .init_count = reload_count,
-        .callback = PowerMeterOffline,
-        .owner_id = instance,
-    };
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [9](../modules/power_meter/power_meter.c#L9) | 预处理 | `#define POWER_METER_DEFAULT_OFFLINE_RELOAD_COUNT 10U    // 默认离线重载值,即100ms内没有接收到数据则认为离线` |
+| [10](../modules/power_meter/power_meter.c#L10) | 预处理 | `#define POWER_METER_DAEMON_PERIOD_MS 10U    // 守护进程周期,即每10ms调用一次守护进程的回调函数` |
+| [80](../modules/power_meter/power_meter.c#L80) | 配置初值 | `Daemon_Init_Config_s daemon_config = {` |
+| [81](../modules/power_meter/power_meter.c#L81) | 配置初值 | `.reload_count = reload_count,` |
+| [82](../modules/power_meter/power_meter.c#L82) | 配置初值 | `.init_count = reload_count,` |
+| [83](../modules/power_meter/power_meter.c#L83) | 配置初值 | `.callback = PowerMeterOffline,` |
+| [84](../modules/power_meter/power_meter.c#L84) | 配置初值 | `.owner_id = instance,` |
 
 ## modules/power_meter/power_meter.h
 
-源文件：[打开 modules/power_meter/power_meter.h](../modules/power_meter/power_meter.h)。
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/power_meter/power_meter.h#L1) | 预处理 | `#ifndef POWER_METER_H` |
+| [2](../modules/power_meter/power_meter.h#L2) | 预处理 | `#define POWER_METER_H` |
+| [41](../modules/power_meter/power_meter.h#L41) | 预处理 | `#endif` |
 
-### 宏定义
+## modules/power_meter/power_meter_protocol.h
 
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/power_meter/power_meter.h:2](../modules/power_meter/power_meter.h#L2) | `POWER_METER_H` | 空定义 | `#ifndef POWER_METER_H` |  |
-
-### 可设置的结构体字段
-
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
-
-[modules/power_meter/power_meter.h:32](../modules/power_meter/power_meter.h#L32)
-
-```c
-typedef struct
-{
-    CAN_Init_Config_s can_config;
-    uint16_t offline_reload_count;
-} PowerMeter_Init_Config_s;
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/power_meter/power_meter_protocol.h#L1) | 预处理 | `#ifndef POWER_METER_PROTOCOL_H` |
+| [2](../modules/power_meter/power_meter_protocol.h#L2) | 预处理 | `#define POWER_METER_PROTOCOL_H` |
+| [7](../modules/power_meter/power_meter_protocol.h#L7) | 预处理 | `#define POWER_METER_STATUS_CAN_ID 0x605U` |
+| [8](../modules/power_meter/power_meter_protocol.h#L8) | 预处理 | `#define POWER_METER_CAN_DLC 8U` |
+| [22](../modules/power_meter/power_meter_protocol.h#L22) | 预处理 | `#endif` |
 
 ## modules/referee/crc_ref.h
 
-源文件：[打开 modules/referee/crc_ref.h](../modules/referee/crc_ref.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/referee/crc_ref.h:2](../modules/referee/crc_ref.h#L2) | `__CRC_H_` | 空定义 | `#ifndef __CRC_H_` |  |
-| [modules/referee/crc_ref.h:8](../modules/referee/crc_ref.h#L8) | `TRUE` | `1` | `#ifndef __CRC_H_` |  |
-| [modules/referee/crc_ref.h:9](../modules/referee/crc_ref.h#L9) | `FALSE` | `0` | `#ifndef __CRC_H_` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/referee/crc_ref.h#L1) | 预处理 | `#ifndef __CRC_H_` |
+| [2](../modules/referee/crc_ref.h#L2) | 预处理 | `#define __CRC_H_` |
+| [8](../modules/referee/crc_ref.h#L8) | 预处理 | `#define TRUE 1` |
+| [9](../modules/referee/crc_ref.h#L9) | 预处理 | `#define FALSE 0` |
+| [20](../modules/referee/crc_ref.h#L20) | 预处理 | `#endif` |
 
 ## modules/referee/referee_power.h
 
-源文件：[打开 modules/referee/referee_power.h](../modules/referee/referee_power.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/referee/referee_power.h:2](../modules/referee/referee_power.h#L2) | `REFEREE_POWER_H` | 空定义 | `#ifndef REFEREE_POWER_H` |  |
-| [modules/referee/referee_power.h:7](../modules/referee/referee_power.h#L7) | `REFEREE_ROBOT_STATE_COMMAND_ID` | `0x0201U` | `#ifndef REFEREE_POWER_H` |  |
-| [modules/referee/referee_power.h:8](../modules/referee/referee_power.h#L8) | `REFEREE_POWER_HEAT_COMMAND_ID` | `0x0202U` | `#ifndef REFEREE_POWER_H` |  |
-| [modules/referee/referee_power.h:9](../modules/referee/referee_power.h#L9) | `REFEREE_ROBOT_STATE_PAYLOAD_LENGTH` | `13U` | `#ifndef REFEREE_POWER_H` |  |
-| [modules/referee/referee_power.h:10](../modules/referee/referee_power.h#L10) | `REFEREE_ROBOT_STATE_EXTENDED_PAYLOAD_LENGTH` | `17U` | `#ifndef REFEREE_POWER_H` |  |
-| [modules/referee/referee_power.h:11](../modules/referee/referee_power.h#L11) | `REFEREE_POWER_HEAT_PAYLOAD_LENGTH` | `14U` | `#ifndef REFEREE_POWER_H` |  |
-| [modules/referee/referee_power.h:12](../modules/referee/referee_power.h#L12) | `REFEREE_POWER_HEAT_LEGACY_PAYLOAD_LENGTH` | `16U` | `#ifndef REFEREE_POWER_H` |  |
-| [modules/referee/referee_power.h:13](../modules/referee/referee_power.h#L13) | `REFEREE_POWER_DATA_TIMEOUT_MS` | `300U` | `#ifndef REFEREE_POWER_H` |  |
-| [modules/referee/referee_power.h:18](../modules/referee/referee_power.h#L18) | `REFEREE_LEGACY_POWER_FIELDS_ENABLED` | `0` | `#ifndef REFEREE_POWER_H；#ifndef REFEREE_LEGACY_POWER_FIELDS_ENABLED` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/referee/referee_power.h#L1) | 预处理 | `#ifndef REFEREE_POWER_H` |
+| [2](../modules/referee/referee_power.h#L2) | 预处理 | `#define REFEREE_POWER_H` |
+| [7](../modules/referee/referee_power.h#L7) | 预处理 | `#define REFEREE_ROBOT_STATE_COMMAND_ID 0x0201U` |
+| [8](../modules/referee/referee_power.h#L8) | 预处理 | `#define REFEREE_POWER_HEAT_COMMAND_ID 0x0202U` |
+| [9](../modules/referee/referee_power.h#L9) | 预处理 | `#define REFEREE_ROBOT_STATE_PAYLOAD_LENGTH 13U` |
+| [10](../modules/referee/referee_power.h#L10) | 预处理 | `#define REFEREE_ROBOT_STATE_EXTENDED_PAYLOAD_LENGTH 17U` |
+| [11](../modules/referee/referee_power.h#L11) | 预处理 | `#define REFEREE_POWER_HEAT_PAYLOAD_LENGTH 14U` |
+| [12](../modules/referee/referee_power.h#L12) | 预处理 | `#define REFEREE_POWER_HEAT_LEGACY_PAYLOAD_LENGTH 16U` |
+| [13](../modules/referee/referee_power.h#L13) | 预处理 | `#define REFEREE_POWER_DATA_TIMEOUT_MS 300U` |
+| [17](../modules/referee/referee_power.h#L17) | 预处理 | `#ifndef REFEREE_LEGACY_POWER_FIELDS_ENABLED` |
+| [18](../modules/referee/referee_power.h#L18) | 预处理 | `#define REFEREE_LEGACY_POWER_FIELDS_ENABLED 0` |
+| [19](../modules/referee/referee_power.h#L19) | 预处理 | `#endif` |
+| [21](../modules/referee/referee_power.h#L21) | 预处理 | `#if REFEREE_LEGACY_POWER_FIELDS_ENABLED != 0 && REFEREE_LEGACY_POWER_FIELDS_ENABLED != 1` |
+| [23](../modules/referee/referee_power.h#L23) | 预处理 | `#endif` |
+| [70](../modules/referee/referee_power.h#L70) | 预处理 | `#endif` |
 
 ## modules/referee/referee_protocol.h
 
-源文件：[打开 modules/referee/referee_protocol.h](../modules/referee/referee_protocol.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/referee/referee_protocol.h:12](../modules/referee/referee_protocol.h#L12) | `referee_protocol_H` | 空定义 | `#ifndef referee_protocol_H` |  |
-| [modules/referee/referee_protocol.h:18](../modules/referee/referee_protocol.h#L18) | `REFEREE_SOF` | `0xA5` | `#ifndef referee_protocol_H` | 起始字节,协议固定为0xA5 |
-| [modules/referee/referee_protocol.h:19](../modules/referee/referee_protocol.h#L19) | `Robot_Red` | `0` | `#ifndef referee_protocol_H` |  |
-| [modules/referee/referee_protocol.h:20](../modules/referee/referee_protocol.h#L20) | `Robot_Blue` | `1` | `#ifndef referee_protocol_H` |  |
-| [modules/referee/referee_protocol.h:21](../modules/referee/referee_protocol.h#L21) | `Communicate_Data_LEN` | `5` | `#ifndef referee_protocol_H` | 自定义交互数据长度，该长度决定了我方发送和他方接收，自定义交互数据协议更改时只需要更改此宏定义即可 |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [11](../modules/referee/referee_protocol.h#L11) | 预处理 | `#ifndef referee_protocol_H` |
+| [12](../modules/referee/referee_protocol.h#L12) | 预处理 | `#define referee_protocol_H` |
+| [18](../modules/referee/referee_protocol.h#L18) | 预处理 | `#define REFEREE_SOF 0xA5 // 起始字节,协议固定为0xA5` |
+| [19](../modules/referee/referee_protocol.h#L19) | 预处理 | `#define Robot_Red 0` |
+| [20](../modules/referee/referee_protocol.h#L20) | 预处理 | `#define Robot_Blue 1` |
+| [21](../modules/referee/referee_protocol.h#L21) | 预处理 | `#define Communicate_Data_LEN 5 // 自定义交互数据长度，该长度决定了我方发送和他方接收，自定义交互数据协议更改时只需要更改此宏定义即可` |
+| [396](../modules/referee/referee_protocol.h#L396) | 预处理 | `#endif` |
 
 ## modules/referee/referee_stream_parser.c
 
-源文件：[打开 modules/referee/referee_stream_parser.c](../modules/referee/referee_stream_parser.c)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/referee/referee_stream_parser.c:7](../modules/referee/referee_stream_parser.c#L7) | `REFEREE_SOF` | `0xA5U` | 无外层条件 |  |
-| [modules/referee/referee_stream_parser.c:8](../modules/referee/referee_stream_parser.c#L8) | `REFEREE_HEADER_LENGTH` | `5U` | 无外层条件 |  |
-| [modules/referee/referee_stream_parser.c:9](../modules/referee/referee_stream_parser.c#L9) | `REFEREE_COMMAND_LENGTH` | `2U` | 无外层条件 |  |
-| [modules/referee/referee_stream_parser.c:10](../modules/referee/referee_stream_parser.c#L10) | `REFEREE_TAIL_LENGTH` | `2U` | 无外层条件 |  |
-| [modules/referee/referee_stream_parser.c:11](../modules/referee/referee_stream_parser.c#L11) | `REFEREE_FRAME_OVERHEAD` | `(REFEREE_HEADER_LENGTH + REFEREE_COMMAND_LENGTH + REFEREE_TAIL_LENGTH)` | 无外层条件 |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [7](../modules/referee/referee_stream_parser.c#L7) | 预处理 | `#define REFEREE_SOF 0xA5U` |
+| [8](../modules/referee/referee_stream_parser.c#L8) | 预处理 | `#define REFEREE_HEADER_LENGTH 5U` |
+| [9](../modules/referee/referee_stream_parser.c#L9) | 预处理 | `#define REFEREE_COMMAND_LENGTH 2U` |
+| [10](../modules/referee/referee_stream_parser.c#L10) | 预处理 | `#define REFEREE_TAIL_LENGTH 2U` |
+| [11](../modules/referee/referee_stream_parser.c#L11) | 预处理 | `#define REFEREE_FRAME_OVERHEAD \` |
 
 ## modules/referee/referee_stream_parser.h
 
-源文件：[打开 modules/referee/referee_stream_parser.h](../modules/referee/referee_stream_parser.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/referee/referee_stream_parser.h:2](../modules/referee/referee_stream_parser.h#L2) | `REFEREE_STREAM_PARSER_H` | 空定义 | `#ifndef REFEREE_STREAM_PARSER_H` |  |
-| [modules/referee/referee_stream_parser.h:8](../modules/referee/referee_stream_parser.h#L8) | `REFEREE_STREAM_BUFFER_CAPACITY` | `256U` | `#ifndef REFEREE_STREAM_PARSER_H` |  |
-
-## modules/referee/referee_task.c
-
-源文件：[打开 modules/referee/referee_task.c](../modules/referee/referee_task.c)。
-
-### 已注释的宏选项（当前不定义）
-
-| 行 | 原选项 |
-| --- | --- |
-| [modules/referee/referee_task.c:31](../modules/referee/referee_task.c#L31) | `#define Robot_Red 0 #define Robot_Blue 1` |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/referee/referee_stream_parser.h#L1) | 预处理 | `#ifndef REFEREE_STREAM_PARSER_H` |
+| [2](../modules/referee/referee_stream_parser.h#L2) | 预处理 | `#define REFEREE_STREAM_PARSER_H` |
+| [8](../modules/referee/referee_stream_parser.h#L8) | 预处理 | `#define REFEREE_STREAM_BUFFER_CAPACITY 256U` |
+| [50](../modules/referee/referee_stream_parser.h#L50) | 预处理 | `#endif` |
 
 ## modules/referee/referee_task.h
 
-源文件：[打开 modules/referee/referee_task.h](../modules/referee/referee_task.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/referee/referee_task.h:2](../modules/referee/referee_task.h#L2) | `REFEREE_H` | 空定义 | `#ifndef REFEREE_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/referee/referee_task.h#L1) | 预处理 | `#ifndef REFEREE_H` |
+| [2](../modules/referee/referee_task.h#L2) | 预处理 | `#define REFEREE_H` |
+| [25](../modules/referee/referee_task.h#L25) | 预处理 | `#endif // REFEREE_H` |
 
 ## modules/referee/referee_UI.h
 
-源文件：[打开 modules/referee/referee_UI.h](../modules/referee/referee_UI.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/referee/referee_UI.h:2](../modules/referee/referee_UI.h#L2) | `REFEREE_UI_H` | 空定义 | `#ifndef REFEREE_UI_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/referee/referee_UI.h#L1) | 预处理 | `#ifndef REFEREE_UI_H` |
+| [2](../modules/referee/referee_UI.h#L2) | 预处理 | `#define REFEREE_UI_H` |
+| [72](../modules/referee/referee_UI.h#L72) | 预处理 | `#endif` |
 
 ## modules/referee/rm_referee.c
 
-源文件：[打开 modules/referee/rm_referee.c](../modules/referee/rm_referee.c)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/referee/rm_referee.c:21](../modules/referee/rm_referee.c#L21) | `RE_RX_BUFFER_SIZE` | `255u` | 无外层条件 | 裁判系统接收缓冲区大小 |
-
-### 配置结构体初值
-
-以下记录原始定义，不自动推断运行路径或后续覆盖。未填字段为零；指针/回调表示绑定关系。
-
-[modules/referee/rm_referee.c:223](../modules/referee/rm_referee.c#L223)
-
-```c
-Daemon_Init_Config_s daemon_conf = {
-		.callback = RefereeLostCallback,
-		.owner_id = referee_usart_instance,
-		.reload_count = 30, // 0.3s没有收到数据,则认为丢失,重启串口接收
-	};
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [21](../modules/referee/rm_referee.c#L21) | 预处理 | `#define RE_RX_BUFFER_SIZE 255u // 裁判系统接收缓冲区大小` |
+| [225](../modules/referee/rm_referee.c#L225) | 配置初值 | `Daemon_Init_Config_s daemon_conf = {` |
+| [226](../modules/referee/rm_referee.c#L226) | 配置初值 | `.callback = RefereeLostCallback,` |
+| [227](../modules/referee/rm_referee.c#L227) | 配置初值 | `.owner_id = referee_usart_instance,` |
+| [228](../modules/referee/rm_referee.c#L228) | 配置初值 | `.reload_count = 30, // 0.3s没有收到数据,则认为丢失,重启串口接收` |
 
 ## modules/referee/rm_referee.h
 
-源文件：[打开 modules/referee/rm_referee.h](../modules/referee/rm_referee.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/referee/rm_referee.h:2](../modules/referee/rm_referee.h#L2) | `RM_REFEREE_H` | 空定义 | `#ifndef RM_REFEREE_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/referee/rm_referee.h#L1) | 预处理 | `#ifndef RM_REFEREE_H` |
+| [2](../modules/referee/rm_referee.h#L2) | 预处理 | `#define RM_REFEREE_H` |
+| [121](../modules/referee/rm_referee.h#L121) | 预处理 | `#endif // !REFEREE_H` |
 
 ## modules/remote/remote_control.c
 
-源文件：[打开 modules/remote/remote_control.c](../modules/remote/remote_control.c)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/remote/remote_control.c:9](../modules/remote/remote_control.c#L9) | `REMOTE_CONTROL_FRAME_SIZE` | `18u` | 无外层条件 | 遥控器接收的buffer大小 |
-
-### 配置结构体初值
-
-以下记录原始定义，不自动推断运行路径或后续覆盖。未填字段为零；指针/回调表示绑定关系。
-
-[modules/remote/remote_control.c:120](../modules/remote/remote_control.c#L120)
-
-```c
-Daemon_Init_Config_s daemon_conf = {
-        .reload_count = 10, // 100ms未收到数据视为离线,遥控器的接收频率实际上是1000/14Hz(大约70Hz)
-        .callback = RCLostCallback,
-        .owner_id = NULL, // 只有1个遥控器,不需要owner_id
-    };
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [11](../modules/remote/remote_control.c#L11) | 预处理 | `#define REMOTE_CONTROL_FRAME_SIZE 18u // 遥控器接收的buffer大小` |
+| [135](../modules/remote/remote_control.c#L135) | 配置初值 | `Daemon_Init_Config_s daemon_conf = {` |
+| [136](../modules/remote/remote_control.c#L136) | 配置初值 | `.reload_count = 10, // 100ms未收到数据视为离线,遥控器的接收频率实际上是1000/14Hz(大约70Hz)` |
+| [137](../modules/remote/remote_control.c#L137) | 配置初值 | `.callback = RCLostCallback,` |
+| [138](../modules/remote/remote_control.c#L138) | 配置初值 | `.owner_id = NULL, // 只有1个遥控器,不需要owner_id` |
 
 ## modules/remote/remote_control.h
 
-源文件：[打开 modules/remote/remote_control.h](../modules/remote/remote_control.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/remote/remote_control.h:14](../modules/remote/remote_control.h#L14) | `REMOTE_CONTROL_H` | 空定义 | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:21](../modules/remote/remote_control.h#L21) | `LAST` | `1` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:22](../modules/remote/remote_control.h#L22) | `TEMP` | `0` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:25](../modules/remote/remote_control.h#L25) | `KEY_PRESS` | `0` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:26](../modules/remote/remote_control.h#L26) | `KEY_STATE` | `1` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:27](../modules/remote/remote_control.h#L27) | `KEY_PRESS_WITH_CTRL` | `1` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:28](../modules/remote/remote_control.h#L28) | `KEY_PRESS_WITH_SHIFT` | `2` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:31](../modules/remote/remote_control.h#L31) | `RC_CH_VALUE_MIN` | `((uint16_t)364)` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:32](../modules/remote/remote_control.h#L32) | `RC_CH_VALUE_OFFSET` | `((uint16_t)1024)` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:33](../modules/remote/remote_control.h#L33) | `RC_CH_VALUE_MAX` | `((uint16_t)1684)` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:36](../modules/remote/remote_control.h#L36) | `RC_SW_UP` | `((uint16_t)1)` | `#ifndef REMOTE_CONTROL_H` | 开关向上时的值 |
-| [modules/remote/remote_control.h:37](../modules/remote/remote_control.h#L37) | `RC_SW_MID` | `((uint16_t)3)` | `#ifndef REMOTE_CONTROL_H` | 开关中间时的值 |
-| [modules/remote/remote_control.h:38](../modules/remote/remote_control.h#L38) | `RC_SW_DOWN` | `((uint16_t)2)` | `#ifndef REMOTE_CONTROL_H` | 开关向下时的值 |
-| [modules/remote/remote_control.h:40](../modules/remote/remote_control.h#L40) | `switch_is_down(s)` | `(s == RC_SW_DOWN)` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:41](../modules/remote/remote_control.h#L41) | `switch_is_mid(s)` | `(s == RC_SW_MID)` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:42](../modules/remote/remote_control.h#L42) | `switch_is_up(s)` | `(s == RC_SW_UP)` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:46](../modules/remote/remote_control.h#L46) | `Key_W` | `0` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:47](../modules/remote/remote_control.h#L47) | `Key_S` | `1` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:48](../modules/remote/remote_control.h#L48) | `Key_D` | `2` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:49](../modules/remote/remote_control.h#L49) | `Key_A` | `3` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:50](../modules/remote/remote_control.h#L50) | `Key_Shift` | `4` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:51](../modules/remote/remote_control.h#L51) | `Key_Ctrl` | `5` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:52](../modules/remote/remote_control.h#L52) | `Key_Q` | `6` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:53](../modules/remote/remote_control.h#L53) | `Key_E` | `7` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:54](../modules/remote/remote_control.h#L54) | `Key_R` | `8` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:55](../modules/remote/remote_control.h#L55) | `Key_F` | `9` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:56](../modules/remote/remote_control.h#L56) | `Key_G` | `10` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:57](../modules/remote/remote_control.h#L57) | `Key_Z` | `11` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:58](../modules/remote/remote_control.h#L58) | `Key_X` | `12` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:59](../modules/remote/remote_control.h#L59) | `Key_C` | `13` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:60](../modules/remote/remote_control.h#L60) | `Key_V` | `14` | `#ifndef REMOTE_CONTROL_H` |  |
-| [modules/remote/remote_control.h:61](../modules/remote/remote_control.h#L61) | `Key_B` | `15` | `#ifndef REMOTE_CONTROL_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [13](../modules/remote/remote_control.h#L13) | 预处理 | `#ifndef REMOTE_CONTROL_H` |
+| [14](../modules/remote/remote_control.h#L14) | 预处理 | `#define REMOTE_CONTROL_H` |
+| [21](../modules/remote/remote_control.h#L21) | 预处理 | `#define LAST 1` |
+| [22](../modules/remote/remote_control.h#L22) | 预处理 | `#define TEMP 0` |
+| [25](../modules/remote/remote_control.h#L25) | 预处理 | `#define KEY_PRESS 0` |
+| [26](../modules/remote/remote_control.h#L26) | 预处理 | `#define KEY_STATE 1` |
+| [27](../modules/remote/remote_control.h#L27) | 预处理 | `#define KEY_PRESS_WITH_CTRL 1` |
+| [28](../modules/remote/remote_control.h#L28) | 预处理 | `#define KEY_PRESS_WITH_SHIFT 2` |
+| [31](../modules/remote/remote_control.h#L31) | 预处理 | `#define RC_CH_VALUE_MIN ((uint16_t)364)` |
+| [32](../modules/remote/remote_control.h#L32) | 预处理 | `#define RC_CH_VALUE_OFFSET ((uint16_t)1024)` |
+| [33](../modules/remote/remote_control.h#L33) | 预处理 | `#define RC_CH_VALUE_MAX ((uint16_t)1684)` |
+| [36](../modules/remote/remote_control.h#L36) | 预处理 | `#define RC_SW_UP ((uint16_t)1)   // 开关向上时的值` |
+| [37](../modules/remote/remote_control.h#L37) | 预处理 | `#define RC_SW_MID ((uint16_t)3)  // 开关中间时的值` |
+| [38](../modules/remote/remote_control.h#L38) | 预处理 | `#define RC_SW_DOWN ((uint16_t)2) // 开关向下时的值` |
+| [40](../modules/remote/remote_control.h#L40) | 预处理 | `#define switch_is_down(s) (s == RC_SW_DOWN)` |
+| [41](../modules/remote/remote_control.h#L41) | 预处理 | `#define switch_is_mid(s) (s == RC_SW_MID)` |
+| [42](../modules/remote/remote_control.h#L42) | 预处理 | `#define switch_is_up(s) (s == RC_SW_UP)` |
+| [46](../modules/remote/remote_control.h#L46) | 预处理 | `#define Key_W 0` |
+| [47](../modules/remote/remote_control.h#L47) | 预处理 | `#define Key_S 1` |
+| [48](../modules/remote/remote_control.h#L48) | 预处理 | `#define Key_D 2` |
+| [49](../modules/remote/remote_control.h#L49) | 预处理 | `#define Key_A 3` |
+| [50](../modules/remote/remote_control.h#L50) | 预处理 | `#define Key_Shift 4` |
+| [51](../modules/remote/remote_control.h#L51) | 预处理 | `#define Key_Ctrl 5` |
+| [52](../modules/remote/remote_control.h#L52) | 预处理 | `#define Key_Q 6` |
+| [53](../modules/remote/remote_control.h#L53) | 预处理 | `#define Key_E 7` |
+| [54](../modules/remote/remote_control.h#L54) | 预处理 | `#define Key_R 8` |
+| [55](../modules/remote/remote_control.h#L55) | 预处理 | `#define Key_F 9` |
+| [56](../modules/remote/remote_control.h#L56) | 预处理 | `#define Key_G 10` |
+| [57](../modules/remote/remote_control.h#L57) | 预处理 | `#define Key_Z 11` |
+| [58](../modules/remote/remote_control.h#L58) | 预处理 | `#define Key_X 12` |
+| [59](../modules/remote/remote_control.h#L59) | 预处理 | `#define Key_C 13` |
+| [60](../modules/remote/remote_control.h#L60) | 预处理 | `#define Key_V 14` |
+| [61](../modules/remote/remote_control.h#L61) | 预处理 | `#define Key_B 15` |
+| [142](../modules/remote/remote_control.h#L142) | 预处理 | `#endif` |
 
 ## modules/super_cap/chassis_power_link.h
 
-源文件：[打开 modules/super_cap/chassis_power_link.h](../modules/super_cap/chassis_power_link.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/super_cap/chassis_power_link.h:2](../modules/super_cap/chassis_power_link.h#L2) | `CHASSIS_POWER_LINK_H` | 空定义 | `#ifndef CHASSIS_POWER_LINK_H` |  |
-
-## modules/super_cap/super_cap_protocol.h
-
-源文件：[打开 modules/super_cap/super_cap_protocol.h](../modules/super_cap/super_cap_protocol.h)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/super_cap/super_cap_protocol.h:2](../modules/super_cap/super_cap_protocol.h#L2) | `SUPER_CAP_PROTOCOL_H` | 空定义 | `#ifndef SUPER_CAP_PROTOCOL_H` |  |
-| [modules/super_cap/super_cap_protocol.h:7](../modules/super_cap/super_cap_protocol.h#L7) | `SUPERCAP_COMMAND_CAN_ID` | `0x061U` | `#ifndef SUPER_CAP_PROTOCOL_H` |  |
-| [modules/super_cap/super_cap_protocol.h:8](../modules/super_cap/super_cap_protocol.h#L8) | `SUPERCAP_STATUS_CAN_ID` | `0x051U` | `#ifndef SUPER_CAP_PROTOCOL_H` |  |
-| [modules/super_cap/super_cap_protocol.h:9](../modules/super_cap/super_cap_protocol.h#L9) | `SUPERCAP_INPUT_POWER_CAN_ID` | `0x052U` | `#ifndef SUPER_CAP_PROTOCOL_H` |  |
-| [modules/super_cap/super_cap_protocol.h:10](../modules/super_cap/super_cap_protocol.h#L10) | `SUPERCAP_INPUT_COMMAND_TAG` | `0xA5U` | `#ifndef SUPER_CAP_PROTOCOL_H` |  |
-| [modules/super_cap/super_cap_protocol.h:11](../modules/super_cap/super_cap_protocol.h#L11) | `SUPERCAP_INPUT_FEEDBACK_VERSION` | `1U` | `#ifndef SUPER_CAP_PROTOCOL_H` |  |
-| [modules/super_cap/super_cap_protocol.h:12](../modules/super_cap/super_cap_protocol.h#L12) | `SUPERCAP_CAN_DLC` | `8U` | `#ifndef SUPER_CAP_PROTOCOL_H` |  |
-| [modules/super_cap/super_cap_protocol.h:14](../modules/super_cap/super_cap_protocol.h#L14) | `SUPERCAP_ERROR_UNDER_VOLTAGE` | `0x01U` | `#ifndef SUPER_CAP_PROTOCOL_H` |  |
-| [modules/super_cap/super_cap_protocol.h:15](../modules/super_cap/super_cap_protocol.h#L15) | `SUPERCAP_ERROR_OVER_VOLTAGE` | `0x02U` | `#ifndef SUPER_CAP_PROTOCOL_H` |  |
-| [modules/super_cap/super_cap_protocol.h:16](../modules/super_cap/super_cap_protocol.h#L16) | `SUPERCAP_ERROR_BUCK_BOOST` | `0x04U` | `#ifndef SUPER_CAP_PROTOCOL_H` |  |
-| [modules/super_cap/super_cap_protocol.h:17](../modules/super_cap/super_cap_protocol.h#L17) | `SUPERCAP_ERROR_SHORT_CIRCUIT` | `0x08U` | `#ifndef SUPER_CAP_PROTOCOL_H` |  |
-| [modules/super_cap/super_cap_protocol.h:18](../modules/super_cap/super_cap_protocol.h#L18) | `SUPERCAP_ERROR_HIGH_TEMPERATURE` | `0x10U` | `#ifndef SUPER_CAP_PROTOCOL_H` |  |
-| [modules/super_cap/super_cap_protocol.h:19](../modules/super_cap/super_cap_protocol.h#L19) | `SUPERCAP_ERROR_NO_POWER_INPUT` | `0x20U` | `#ifndef SUPER_CAP_PROTOCOL_H` |  |
-| [modules/super_cap/super_cap_protocol.h:20](../modules/super_cap/super_cap_protocol.h#L20) | `SUPERCAP_ERROR_CAPACITOR` | `0x40U` | `#ifndef SUPER_CAP_PROTOCOL_H` |  |
-| [modules/super_cap/super_cap_protocol.h:21](../modules/super_cap/super_cap_protocol.h#L21) | `SUPERCAP_OUTPUT_DISABLED_MASK` | `0x80U` | `#ifndef SUPER_CAP_PROTOCOL_H` |  |
-| [modules/super_cap/super_cap_protocol.h:22](../modules/super_cap/super_cap_protocol.h#L22) | `SUPERCAP_ERROR_MASK` | `0x7FU` | `#ifndef SUPER_CAP_PROTOCOL_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/super_cap/chassis_power_link.h#L1) | 预处理 | `#ifndef CHASSIS_POWER_LINK_H` |
+| [2](../modules/super_cap/chassis_power_link.h#L2) | 预处理 | `#define CHASSIS_POWER_LINK_H` |
+| [26](../modules/super_cap/chassis_power_link.h#L26) | 预处理 | `#endif` |
 
 ## modules/super_cap/super_cap.c
 
-源文件：[打开 modules/super_cap/super_cap.c](../modules/super_cap/super_cap.c)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/super_cap/super_cap.c:9](../modules/super_cap/super_cap.c#L9) | `SUPERCAP_DEFAULT_OFFLINE_RELOAD_COUNT` | `20U` | 无外层条件 |  |
-
-### 配置结构体初值
-
-以下记录原始定义，不自动推断运行路径或后续覆盖。未填字段为零；指针/回调表示绑定关系。
-
-[modules/super_cap/super_cap.c:77](../modules/super_cap/super_cap.c#L77)
-
-```c
-Daemon_Init_Config_s daemon_config = {
-        .reload_count = reload_count,
-        .init_count = reload_count,
-        .callback = SuperCapOffline,
-        .owner_id = instance,
-    };
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [9](../modules/super_cap/super_cap.c#L9) | 预处理 | `#define SUPERCAP_DEFAULT_OFFLINE_RELOAD_COUNT 20U` |
+| [77](../modules/super_cap/super_cap.c#L77) | 配置初值 | `Daemon_Init_Config_s daemon_config = {` |
+| [78](../modules/super_cap/super_cap.c#L78) | 配置初值 | `.reload_count = reload_count,` |
+| [79](../modules/super_cap/super_cap.c#L79) | 配置初值 | `.init_count = reload_count,` |
+| [80](../modules/super_cap/super_cap.c#L80) | 配置初值 | `.callback = SuperCapOffline,` |
+| [81](../modules/super_cap/super_cap.c#L81) | 配置初值 | `.owner_id = instance,` |
 
 ## modules/super_cap/super_cap.h
 
-源文件：[打开 modules/super_cap/super_cap.h](../modules/super_cap/super_cap.h)。
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/super_cap/super_cap.h#L1) | 预处理 | `#ifndef SUPER_CAP_H` |
+| [2](../modules/super_cap/super_cap.h#L2) | 预处理 | `#define SUPER_CAP_H` |
+| [35](../modules/super_cap/super_cap.h#L35) | 预处理 | `#endif` |
 
-### 宏定义
+## modules/super_cap/super_cap_protocol.h
 
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/super_cap/super_cap.h:2](../modules/super_cap/super_cap.h#L2) | `SUPER_CAP_H` | 空定义 | `#ifndef SUPER_CAP_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/super_cap/super_cap_protocol.h#L1) | 预处理 | `#ifndef SUPER_CAP_PROTOCOL_H` |
+| [2](../modules/super_cap/super_cap_protocol.h#L2) | 预处理 | `#define SUPER_CAP_PROTOCOL_H` |
+| [7](../modules/super_cap/super_cap_protocol.h#L7) | 预处理 | `#define SUPERCAP_COMMAND_CAN_ID 0x061U` |
+| [8](../modules/super_cap/super_cap_protocol.h#L8) | 预处理 | `#define SUPERCAP_STATUS_CAN_ID 0x051U` |
+| [9](../modules/super_cap/super_cap_protocol.h#L9) | 预处理 | `#define SUPERCAP_INPUT_POWER_CAN_ID 0x052U` |
+| [10](../modules/super_cap/super_cap_protocol.h#L10) | 预处理 | `#define SUPERCAP_INPUT_COMMAND_TAG 0xA5U` |
+| [11](../modules/super_cap/super_cap_protocol.h#L11) | 预处理 | `#define SUPERCAP_INPUT_FEEDBACK_VERSION 1U` |
+| [12](../modules/super_cap/super_cap_protocol.h#L12) | 预处理 | `#define SUPERCAP_CAN_DLC 8U` |
+| [14](../modules/super_cap/super_cap_protocol.h#L14) | 预处理 | `#define SUPERCAP_ERROR_UNDER_VOLTAGE 0x01U` |
+| [15](../modules/super_cap/super_cap_protocol.h#L15) | 预处理 | `#define SUPERCAP_ERROR_OVER_VOLTAGE 0x02U` |
+| [16](../modules/super_cap/super_cap_protocol.h#L16) | 预处理 | `#define SUPERCAP_ERROR_BUCK_BOOST 0x04U` |
+| [17](../modules/super_cap/super_cap_protocol.h#L17) | 预处理 | `#define SUPERCAP_ERROR_SHORT_CIRCUIT 0x08U` |
+| [18](../modules/super_cap/super_cap_protocol.h#L18) | 预处理 | `#define SUPERCAP_ERROR_HIGH_TEMPERATURE 0x10U` |
+| [19](../modules/super_cap/super_cap_protocol.h#L19) | 预处理 | `#define SUPERCAP_ERROR_NO_POWER_INPUT 0x20U` |
+| [20](../modules/super_cap/super_cap_protocol.h#L20) | 预处理 | `#define SUPERCAP_ERROR_CAPACITOR 0x40U` |
+| [21](../modules/super_cap/super_cap_protocol.h#L21) | 预处理 | `#define SUPERCAP_OUTPUT_DISABLED_MASK 0x80U` |
+| [22](../modules/super_cap/super_cap_protocol.h#L22) | 预处理 | `#define SUPERCAP_ERROR_MASK 0x7FU` |
+| [61](../modules/super_cap/super_cap_protocol.h#L61) | 预处理 | `#endif` |
 
-### 可设置的结构体字段
+## modules/telemetry/autotune_protocol.h
 
-这是配置接口的字段声明，不表示当前已创建该模块实例。字段对应类型、指针和原注释如下。
-
-[modules/super_cap/super_cap.h:23](../modules/super_cap/super_cap.h#L23)
-
-```c
-typedef struct
-{
-    CAN_Init_Config_s can_config;
-    uint16_t offline_reload_count;
-    bool input_power_feedback_enabled;
-} SuperCap_Init_Config_s;
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/telemetry/autotune_protocol.h#L1) | 预处理 | `#ifndef AUTOTUNE_PROTOCOL_H` |
+| [2](../modules/telemetry/autotune_protocol.h#L2) | 预处理 | `#define AUTOTUNE_PROTOCOL_H` |
+| [23](../modules/telemetry/autotune_protocol.h#L23) | 预处理 | `#endif` |
 
 ## modules/telemetry/chassis_power_capture.h
 
-源文件：[打开 modules/telemetry/chassis_power_capture.h](../modules/telemetry/chassis_power_capture.h)。
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/telemetry/chassis_power_capture.h#L1) | 预处理 | `#ifndef CHASSIS_POWER_CAPTURE_H` |
+| [2](../modules/telemetry/chassis_power_capture.h#L2) | 预处理 | `#define CHASSIS_POWER_CAPTURE_H` |
+| [7](../modules/telemetry/chassis_power_capture.h#L7) | 预处理 | `#define CHASSIS_POWER_CAPTURE_RECORDS 150U` |
+| [8](../modules/telemetry/chassis_power_capture.h#L8) | 预处理 | `#define CHASSIS_POWER_CAPTURE_RECORD_BYTES 96U` |
+| [9](../modules/telemetry/chassis_power_capture.h#L9) | 预处理 | `#define CHASSIS_POWER_CAPTURE_FRAME_BYTES 102U` |
+| [10](../modules/telemetry/chassis_power_capture.h#L10) | 预处理 | `#define CHASSIS_POWER_CAPTURE_QUANTIZED 0x80U` |
+| [51](../modules/telemetry/chassis_power_capture.h#L51) | 预处理 | `#endif` |
 
-### 宏定义
+## modules/telemetry/pid_autotune.h
 
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/telemetry/chassis_power_capture.h:2](../modules/telemetry/chassis_power_capture.h#L2) | `CHASSIS_POWER_CAPTURE_H` | 空定义 | `#ifndef CHASSIS_POWER_CAPTURE_H` |  |
-| [modules/telemetry/chassis_power_capture.h:7](../modules/telemetry/chassis_power_capture.h#L7) | `CHASSIS_POWER_CAPTURE_RECORDS` | `150U` | `#ifndef CHASSIS_POWER_CAPTURE_H` |  |
-| [modules/telemetry/chassis_power_capture.h:8](../modules/telemetry/chassis_power_capture.h#L8) | `CHASSIS_POWER_CAPTURE_RECORD_BYTES` | `96U` | `#ifndef CHASSIS_POWER_CAPTURE_H` |  |
-| [modules/telemetry/chassis_power_capture.h:9](../modules/telemetry/chassis_power_capture.h#L9) | `CHASSIS_POWER_CAPTURE_FRAME_BYTES` | `102U` | `#ifndef CHASSIS_POWER_CAPTURE_H` |  |
-| [modules/telemetry/chassis_power_capture.h:10](../modules/telemetry/chassis_power_capture.h#L10) | `CHASSIS_POWER_CAPTURE_QUANTIZED` | `0x80U` | `#ifndef CHASSIS_POWER_CAPTURE_H` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/telemetry/pid_autotune.h#L1) | 预处理 | `#ifndef PID_AUTOTUNE_H` |
+| [2](../modules/telemetry/pid_autotune.h#L2) | 预处理 | `#define PID_AUTOTUNE_H` |
+| [39](../modules/telemetry/pid_autotune.h#L39) | 预处理 | `#endif` |
+
+## modules/telemetry/rtt_telemetry.c
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [14](../modules/telemetry/rtt_telemetry.c#L14) | 预处理 | `#if CHASSIS_POWER_CALIBRATION_ENABLE` |
+| [17](../modules/telemetry/rtt_telemetry.c#L17) | 预处理 | `#endif` |
+| [147](../modules/telemetry/rtt_telemetry.c#L147) | 预处理 | `#if CHASSIS_POWER_CALIBRATION_ENABLE` |
+| [187](../modules/telemetry/rtt_telemetry.c#L187) | 预处理 | `#endif` |
+| [203](../modules/telemetry/rtt_telemetry.c#L203) | 预处理 | `#if CHASSIS_POWER_CALIBRATION_ENABLE` |
+| [205](../modules/telemetry/rtt_telemetry.c#L205) | 预处理 | `#else` |
+| [207](../modules/telemetry/rtt_telemetry.c#L207) | 预处理 | `#endif` |
 
 ## modules/telemetry/rtt_telemetry.h
 
-源文件：[打开 modules/telemetry/rtt_telemetry.h](../modules/telemetry/rtt_telemetry.h)。
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/telemetry/rtt_telemetry.h#L1) | 预处理 | `#ifndef RTT_TELEMETRY_H` |
+| [2](../modules/telemetry/rtt_telemetry.h#L2) | 预处理 | `#define RTT_TELEMETRY_H` |
+| [11](../modules/telemetry/rtt_telemetry.h#L11) | 预处理 | `#ifndef CHASSIS_POWER_CALIBRATION_ENABLE` |
+| [12](../modules/telemetry/rtt_telemetry.h#L12) | 预处理 | `#define CHASSIS_POWER_CALIBRATION_ENABLE 0` |
+| [13](../modules/telemetry/rtt_telemetry.h#L13) | 预处理 | `#endif` |
+| [15](../modules/telemetry/rtt_telemetry.h#L15) | 预处理 | `#if CHASSIS_POWER_CALIBRATION_ENABLE != 0 && CHASSIS_POWER_CALIBRATION_ENABLE != 1` |
+| [17](../modules/telemetry/rtt_telemetry.h#L17) | 预处理 | `#endif` |
+| [19](../modules/telemetry/rtt_telemetry.h#L19) | 预处理 | `#define RTT_TELEMETRY_CHASSIS_POWER_CSV_MAX_LENGTH 320U //预留的缓冲区大小` |
+| [55](../modules/telemetry/rtt_telemetry.h#L55) | 预处理 | `#endif // RTT_TELEMETRY_H` |
 
-### 宏定义
+## modules/telemetry/runtime_tuning.h
 
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/telemetry/rtt_telemetry.h:2](../modules/telemetry/rtt_telemetry.h#L2) | `RTT_TELEMETRY_H` | 空定义 | `#ifndef RTT_TELEMETRY_H` |  |
-| [modules/telemetry/rtt_telemetry.h:12](../modules/telemetry/rtt_telemetry.h#L12) | `CHASSIS_POWER_CALIBRATION_ENABLE` | `0` | `#ifndef RTT_TELEMETRY_H；#ifndef CHASSIS_POWER_CALIBRATION_ENABLE` |  |
-| [modules/telemetry/rtt_telemetry.h:19](../modules/telemetry/rtt_telemetry.h#L19) | `RTT_TELEMETRY_CHASSIS_POWER_CSV_MAX_LENGTH` | `320U` | `#ifndef RTT_TELEMETRY_H` | 预留的缓冲区大小 |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/telemetry/runtime_tuning.h#L1) | 预处理 | `#ifndef RUNTIME_TUNING_H` |
+| [2](../modules/telemetry/runtime_tuning.h#L2) | 预处理 | `#define RUNTIME_TUNING_H` |
+| [9](../modules/telemetry/runtime_tuning.h#L9) | 预处理 | `#define TUNING_MAX_VALUES 24U` |
+| [10](../modules/telemetry/runtime_tuning.h#L10) | 预处理 | `#define TUNING_LINE_SIZE 512U` |
+| [34](../modules/telemetry/runtime_tuning.h#L34) | 预处理 | `#endif` |
+
+## modules/telemetry/tuning_flash.c
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [12](../modules/telemetry/tuning_flash.c#L12) | 预处理 | `#define BANK_WORDS (128U * 1024U / sizeof(uint32_t))` |
+| [64](../modules/telemetry/tuning_flash.c#L64) | 预处理 | `#if defined(CHASSIS_BOARD)` |
+| [66](../modules/telemetry/tuning_flash.c#L66) | 预处理 | `#endif` |
+
+## modules/telemetry/tuning_flash.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/telemetry/tuning_flash.h#L1) | 预处理 | `#ifndef TUNING_FLASH_H` |
+| [2](../modules/telemetry/tuning_flash.h#L2) | 预处理 | `#define TUNING_FLASH_H` |
+| [6](../modules/telemetry/tuning_flash.h#L6) | 预处理 | `#endif` |
+
+## modules/telemetry/tuning_overrides.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/telemetry/tuning_overrides.h#L1) | 预处理 | `#ifndef TUNING_OVERRIDES_H` |
+| [2](../modules/telemetry/tuning_overrides.h#L2) | 预处理 | `#define TUNING_OVERRIDES_H` |
+| [8](../modules/telemetry/tuning_overrides.h#L8) | 预处理 | `#define TUNING_PID_OVERRIDE 0` |
+| [9](../modules/telemetry/tuning_overrides.h#L9) | 预处理 | `#define TUNING_PID_MODE 0` |
+| [10](../modules/telemetry/tuning_overrides.h#L10) | 预处理 | `#define TUNING_PID_VALUES {0.75f, 0.0f, 0.0f, 15000.0f, 3000.0f, 0.0f, 0.75f, 0.0f, 0.0f, 15000.0f, 3000.0f, 0.0f, 0.75f, 0.0f, 0.0f, 15000.0f, 3000.0f, 0.0f, 0.75f, 0.0f, 0.0f, 15000.0f, 3000.0f, 0.0f}` |
+| [11](../modules/telemetry/tuning_overrides.h#L11) | 预处理 | `#define TUNING_POWER_OVERRIDE 0` |
+| [12](../modules/telemetry/tuning_overrides.h#L12) | 预处理 | `#define TUNING_POWER_MODE 3` |
+| [13](../modules/telemetry/tuning_overrides.h#L13) | 预处理 | `#define TUNING_POWER_VALUES {0}` |
+| [14](../modules/telemetry/tuning_overrides.h#L14) | 预处理 | `#define TUNING_SPIN_OVERRIDE 0` |
+| [15](../modules/telemetry/tuning_overrides.h#L15) | 预处理 | `#define TUNING_SPIN_MODE 2` |
+| [16](../modules/telemetry/tuning_overrides.h#L16) | 预处理 | `#define TUNING_SPIN_VALUES {0}` |
+| [17](../modules/telemetry/tuning_overrides.h#L17) | 预处理 | `#endif` |
+
+## modules/telemetry/tuning_storage.c
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [3](../modules/telemetry/tuning_storage.c#L3) | 预处理 | `#define MAGIC 0x54554e45U` |
+| [4](../modules/telemetry/tuning_storage.c#L4) | 预处理 | `#define SCHEMA 2U /* A-board vehicle; intentionally rejects C-board records. */` |
+| [5](../modules/telemetry/tuning_storage.c#L5) | 预处理 | `#define COMMIT 0x434f4d4dU` |
+| [6](../modules/telemetry/tuning_storage.c#L6) | 预处理 | `#define CRC_WORD (TUNING_RECORD_WORDS - 2U)` |
+| [7](../modules/telemetry/tuning_storage.c#L7) | 预处理 | `#define COMMIT_WORD (TUNING_RECORD_WORDS - 1U)` |
+
+## modules/telemetry/tuning_storage.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/telemetry/tuning_storage.h#L1) | 预处理 | `#ifndef TUNING_STORAGE_H` |
+| [2](../modules/telemetry/tuning_storage.h#L2) | 预处理 | `#define TUNING_STORAGE_H` |
+| [5](../modules/telemetry/tuning_storage.h#L5) | 预处理 | `#define TUNING_RECORD_WORDS 128U` |
+| [6](../modules/telemetry/tuning_storage.h#L6) | 预处理 | `#define TUNING_STORED_GROUPS 3U` |
+| [7](../modules/telemetry/tuning_storage.h#L7) | 预处理 | `#define TUNING_STORED_VALUES 24U` |
+| [28](../modules/telemetry/tuning_storage.h#L28) | 预处理 | `#endif` |
+
+## modules/telemetry/usb_telemetry.c
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [4](../modules/telemetry/usb_telemetry.c#L4) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
+| [147](../modules/telemetry/usb_telemetry.c#L147) | 预处理 | `#endif` |
+| [151](../modules/telemetry/usb_telemetry.c#L151) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
+| [153](../modules/telemetry/usb_telemetry.c#L153) | 预处理 | `#endif` |
+| [158](../modules/telemetry/usb_telemetry.c#L158) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
+| [164](../modules/telemetry/usb_telemetry.c#L164) | 预处理 | `#endif` |
+
+## modules/telemetry/usb_telemetry.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/telemetry/usb_telemetry.h#L1) | 预处理 | `#ifndef USB_TELEMETRY_H` |
+| [2](../modules/telemetry/usb_telemetry.h#L2) | 预处理 | `#define USB_TELEMETRY_H` |
+| [13](../modules/telemetry/usb_telemetry.h#L13) | 预处理 | `#endif` |
+
+## modules/telemetry/usb_telemetry_config.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/telemetry/usb_telemetry_config.h#L1) | 预处理 | `#ifndef USB_TELEMETRY_CONFIG_H` |
+| [2](../modules/telemetry/usb_telemetry_config.h#L2) | 预处理 | `#define USB_TELEMETRY_CONFIG_H` |
+| [5](../modules/telemetry/usb_telemetry_config.h#L5) | 预处理 | `#ifndef USB_TELEMETRY_ENABLE` |
+| [6](../modules/telemetry/usb_telemetry_config.h#L6) | 预处理 | `#define USB_TELEMETRY_ENABLE 1` |
+| [7](../modules/telemetry/usb_telemetry_config.h#L7) | 预处理 | `#endif` |
+| [8](../modules/telemetry/usb_telemetry_config.h#L8) | 预处理 | `#if USB_TELEMETRY_ENABLE != 0 && USB_TELEMETRY_ENABLE != 1` |
+| [10](../modules/telemetry/usb_telemetry_config.h#L10) | 预处理 | `#endif` |
+| [11](../modules/telemetry/usb_telemetry_config.h#L11) | 预处理 | `#ifndef USB_TELEMETRY_PERIOD_MS` |
+| [12](../modules/telemetry/usb_telemetry_config.h#L12) | 预处理 | `#define USB_TELEMETRY_PERIOD_MS 20U` |
+| [13](../modules/telemetry/usb_telemetry_config.h#L13) | 预处理 | `#endif` |
+| [14](../modules/telemetry/usb_telemetry_config.h#L14) | 预处理 | `#ifndef USB_TELEMETRY_HEADER_PERIOD_MS` |
+| [15](../modules/telemetry/usb_telemetry_config.h#L15) | 预处理 | `#define USB_TELEMETRY_HEADER_PERIOD_MS 1000U` |
+| [16](../modules/telemetry/usb_telemetry_config.h#L16) | 预处理 | `#endif` |
+| [17](../modules/telemetry/usb_telemetry_config.h#L17) | 预处理 | `#ifndef USB_TELEMETRY_BUFFER_SIZE` |
+| [18](../modules/telemetry/usb_telemetry_config.h#L18) | 预处理 | `#define USB_TELEMETRY_BUFFER_SIZE 2048U` |
+| [19](../modules/telemetry/usb_telemetry_config.h#L19) | 预处理 | `#endif` |
+| [21](../modules/telemetry/usb_telemetry_config.h#L21) | 预处理 | `#endif` |
+
+## modules/telemetry/usb_telemetry_format.c
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [8](../modules/telemetry/usb_telemetry_format.c#L8) | 预处理 | `#define USB_HEADER_FIELD(name) #name ","` |
+| [62](../modules/telemetry/usb_telemetry_format.c#L62) | 预处理 | `#define USB_ROW_U(name) \` |
+| [66](../modules/telemetry/usb_telemetry_format.c#L66) | 预处理 | `#define USB_ROW_I(name) \` |
+
+## modules/telemetry/usb_telemetry_format.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/telemetry/usb_telemetry_format.h#L1) | 预处理 | `#ifndef USB_TELEMETRY_FORMAT_H` |
+| [2](../modules/telemetry/usb_telemetry_format.h#L2) | 预处理 | `#define USB_TELEMETRY_FORMAT_H` |
+| [8](../modules/telemetry/usb_telemetry_format.h#L8) | 预处理 | `#define USB_TELEMETRY_FIELDS(U, I) \` |
+| [31](../modules/telemetry/usb_telemetry_format.h#L31) | 预处理 | `#define USB_FIELD_U(name) uint32_t name;` |
+| [32](../modules/telemetry/usb_telemetry_format.h#L32) | 预处理 | `#define USB_FIELD_I(name) int32_t name;` |
+| [47](../modules/telemetry/usb_telemetry_format.h#L47) | 预处理 | `#endif` |
+
+## modules/telemetry/usb_telemetry_stream.c
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [70](../modules/telemetry/usb_telemetry_stream.c#L70) | 配置初值 | `USB_Init_Config_s config = {.rx_cbk = Receive};` |
 
 ## modules/TFminiPlus/tfminiplus.c
 
-源文件：[打开 modules/TFminiPlus/tfminiplus.c](../modules/TFminiPlus/tfminiplus.c)。
-
-### 配置结构体初值
-
-以下记录原始定义，不自动推断运行路径或后续覆盖。未填字段为零；指针/回调表示绑定关系。
-
-[modules/TFminiPlus/tfminiplus.c:10](../modules/TFminiPlus/tfminiplus.c#L10)
-
-```c
-IIC_Init_Config_s conf = {
-		.handle = hi2c,
-		.dev_address = 0x10,
-		.id = tfmini,
-		.work_mode = IIC_BLOCK_MODE,
-	};
-```
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [45](../modules/TFminiPlus/tfminiplus.c#L45) | 配置初值 | `Daemon_Init_Config_s daemon_conf = {` |
+| [46](../modules/TFminiPlus/tfminiplus.c#L46) | 配置初值 | `.callback = TFminiPlusOffineCallback,` |
+| [47](../modules/TFminiPlus/tfminiplus.c#L47) | 配置初值 | `.owner_id = tfminiplus_usart_instance,` |
+| [48](../modules/TFminiPlus/tfminiplus.c#L48) | 配置初值 | `.reload_count = 10,` |
 
 ## modules/TFminiPlus/tfminiplus.h
 
-源文件：[打开 modules/TFminiPlus/tfminiplus.h](../modules/TFminiPlus/tfminiplus.h)。
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/TFminiPlus/tfminiplus.h#L1) | 预处理 | `#ifndef TFMINIPLUS_H` |
+| [2](../modules/TFminiPlus/tfminiplus.h#L2) | 预处理 | `#define TFMINIPLUS_H` |
+| [6](../modules/TFminiPlus/tfminiplus.h#L6) | 预处理 | `#define TFMINIPLUS_FRAME_HEAD_1 0x59` |
+| [7](../modules/TFminiPlus/tfminiplus.h#L7) | 预处理 | `#define TFMINIPLUS_FRAME_HEAD_2 0x59` |
+| [8](../modules/TFminiPlus/tfminiplus.h#L8) | 预处理 | `#define TFMINIPLUS_RECV_SIZE 9u` |
+| [20](../modules/TFminiPlus/tfminiplus.h#L20) | 预处理 | `#endif // !TFMINIPLUS_H` |
 
-### 宏定义
+## modules/vtx/vt02_control.c
 
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [modules/TFminiPlus/tfminiplus.h:2](../modules/TFminiPlus/tfminiplus.h#L2) | `__TFMINIPLUS_H__` | 空定义 | `#ifndef __TFMINIPLUS_H__` |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [11](../modules/vtx/vt02_control.c#L11) | 预处理 | `#define VT02_RX_BUFFER_SIZE 256u` |
+| [12](../modules/vtx/vt02_control.c#L12) | 预处理 | `#define VT02_DAEMON_RELOAD 10 // 约330ms未收到数据视为离线(30Hz)` |
+| [14](../modules/vtx/vt02_control.c#L14) | 预处理 | `#define VT02_SOF 0xA5u` |
+| [15](../modules/vtx/vt02_control.c#L15) | 预处理 | `#define VT02_HEADER_SIZE 5u` |
+| [16](../modules/vtx/vt02_control.c#L16) | 预处理 | `#define VT02_CMD_ID_SIZE 2u` |
+| [17](../modules/vtx/vt02_control.c#L17) | 预处理 | `#define VT02_CRC16_SIZE 2u` |
+| [18](../modules/vtx/vt02_control.c#L18) | 预处理 | `#define VT02_DATA_OFFSET (VT02_HEADER_SIZE + VT02_CMD_ID_SIZE)` |
+| [19](../modules/vtx/vt02_control.c#L19) | 预处理 | `#define VT02_CONTROL_CMD_ID 0x0304u` |
+| [20](../modules/vtx/vt02_control.c#L20) | 预处理 | `#define VT02_CONTROL_DATA_SIZE 12u` |
+| [21](../modules/vtx/vt02_control.c#L21) | 预处理 | `#define VT02_MIN_FRAME_SIZE (VT02_HEADER_SIZE + VT02_CMD_ID_SIZE + VT02_CRC16_SIZE)` |
+| [22](../modules/vtx/vt02_control.c#L22) | 预处理 | `#define VT02_DEBUG_DATA_SIZE 32u` |
+| [322](../modules/vtx/vt02_control.c#L322) | 配置初值 | `USART_Init_Config_s usart_conf = {` |
+| [323](../modules/vtx/vt02_control.c#L323) | 配置初值 | `.module_callback = Vt02RxCallback,` |
+| [324](../modules/vtx/vt02_control.c#L324) | 配置初值 | `.usart_handle = vt02_usart_handle,` |
+| [325](../modules/vtx/vt02_control.c#L325) | 配置初值 | `.recv_buff_size = (uint8_t)(VT02_RX_BUFFER_SIZE - 1u),` |
+| [329](../modules/vtx/vt02_control.c#L329) | 配置初值 | `Daemon_Init_Config_s daemon_conf = {` |
+| [330](../modules/vtx/vt02_control.c#L330) | 配置初值 | `.reload_count = VT02_DAEMON_RELOAD,` |
+| [331](../modules/vtx/vt02_control.c#L331) | 配置初值 | `.callback = Vt02LostCallback,` |
+| [332](../modules/vtx/vt02_control.c#L332) | 配置初值 | `.owner_id = NULL,` |
+
+## modules/vtx/vt02_control.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [12](../modules/vtx/vt02_control.h#L12) | 预处理 | `#ifndef VT02_CONTROL_H` |
+| [13](../modules/vtx/vt02_control.h#L13) | 预处理 | `#define VT02_CONTROL_H` |
+| [65](../modules/vtx/vt02_control.h#L65) | 预处理 | `#endif` |
 
 ## Src/adc.c
 
-源文件：[打开 Src/adc.c](../Src/adc.c)。
-
-### HAL 设置赋值与中断优先级
-
-同一变量可能在不同外设初始化中重复使用，按源代码行区分。
-
-| 行 | 设置 |
-| --- | --- |
-| [Src/adc.c:45](../Src/adc.c#L45) | `hadc1.Instance = ADC1;` |
-| [Src/adc.c:46](../Src/adc.c#L46) | `hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV6;` |
-| [Src/adc.c:47](../Src/adc.c#L47) | `hadc1.Init.Resolution = ADC_RESOLUTION_12B;` |
-| [Src/adc.c:48](../Src/adc.c#L48) | `hadc1.Init.ScanConvMode = DISABLE;` |
-| [Src/adc.c:49](../Src/adc.c#L49) | `hadc1.Init.ContinuousConvMode = DISABLE;` |
-| [Src/adc.c:50](../Src/adc.c#L50) | `hadc1.Init.DiscontinuousConvMode = DISABLE;` |
-| [Src/adc.c:51](../Src/adc.c#L51) | `hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;` |
-| [Src/adc.c:52](../Src/adc.c#L52) | `hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;` |
-| [Src/adc.c:53](../Src/adc.c#L53) | `hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;` |
-| [Src/adc.c:54](../Src/adc.c#L54) | `hadc1.Init.NbrOfConversion = 1;` |
-| [Src/adc.c:55](../Src/adc.c#L55) | `hadc1.Init.DMAContinuousRequests = DISABLE;` |
-| [Src/adc.c:56](../Src/adc.c#L56) | `hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;` |
-| [Src/adc.c:64](../Src/adc.c#L64) | `sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;` |
-| [Src/adc.c:65](../Src/adc.c#L65) | `sConfig.Rank = 1;` |
-| [Src/adc.c:66](../Src/adc.c#L66) | `sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;` |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [46](../Src/adc.c#L46) | HAL/NVIC | `hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;` |
+| [47](../Src/adc.c#L47) | HAL/NVIC | `hadc1.Init.Resolution = ADC_RESOLUTION_12B;` |
+| [48](../Src/adc.c#L48) | HAL/NVIC | `hadc1.Init.ScanConvMode = DISABLE;` |
+| [49](../Src/adc.c#L49) | HAL/NVIC | `hadc1.Init.ContinuousConvMode = DISABLE;` |
+| [50](../Src/adc.c#L50) | HAL/NVIC | `hadc1.Init.DiscontinuousConvMode = DISABLE;` |
+| [51](../Src/adc.c#L51) | HAL/NVIC | `hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;` |
+| [52](../Src/adc.c#L52) | HAL/NVIC | `hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;` |
+| [53](../Src/adc.c#L53) | HAL/NVIC | `hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;` |
+| [54](../Src/adc.c#L54) | HAL/NVIC | `hadc1.Init.NbrOfConversion = 1;` |
+| [55](../Src/adc.c#L55) | HAL/NVIC | `hadc1.Init.DMAContinuousRequests = DISABLE;` |
+| [56](../Src/adc.c#L56) | HAL/NVIC | `hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;` |
 
 ## Src/can.c
 
-源文件：[打开 Src/can.c](../Src/can.c)。
-
-### HAL 设置赋值与中断优先级
-
-同一变量可能在不同外设初始化中重复使用，按源代码行区分。
-
-| 行 | 设置 |
-| --- | --- |
-| [Src/can.c:41](../Src/can.c#L41) | `hcan1.Instance = CAN1;` |
-| [Src/can.c:42](../Src/can.c#L42) | `hcan1.Init.Prescaler = 3;` |
-| [Src/can.c:43](../Src/can.c#L43) | `hcan1.Init.Mode = CAN_MODE_NORMAL;` |
-| [Src/can.c:44](../Src/can.c#L44) | `hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;` |
-| [Src/can.c:45](../Src/can.c#L45) | `hcan1.Init.TimeSeg1 = CAN_BS1_10TQ;` |
-| [Src/can.c:46](../Src/can.c#L46) | `hcan1.Init.TimeSeg2 = CAN_BS2_3TQ;` |
-| [Src/can.c:47](../Src/can.c#L47) | `hcan1.Init.TimeTriggeredMode = DISABLE;` |
-| [Src/can.c:48](../Src/can.c#L48) | `hcan1.Init.AutoBusOff = DISABLE;` |
-| [Src/can.c:49](../Src/can.c#L49) | `hcan1.Init.AutoWakeUp = DISABLE;` |
-| [Src/can.c:50](../Src/can.c#L50) | `hcan1.Init.AutoRetransmission = ENABLE;` |
-| [Src/can.c:51](../Src/can.c#L51) | `hcan1.Init.ReceiveFifoLocked = DISABLE;` |
-| [Src/can.c:52](../Src/can.c#L52) | `hcan1.Init.TransmitFifoPriority = ENABLE;` |
-| [Src/can.c:73](../Src/can.c#L73) | `hcan2.Instance = CAN2;` |
-| [Src/can.c:74](../Src/can.c#L74) | `hcan2.Init.Prescaler = 3;` |
-| [Src/can.c:75](../Src/can.c#L75) | `hcan2.Init.Mode = CAN_MODE_NORMAL;` |
-| [Src/can.c:76](../Src/can.c#L76) | `hcan2.Init.SyncJumpWidth = CAN_SJW_1TQ;` |
-| [Src/can.c:77](../Src/can.c#L77) | `hcan2.Init.TimeSeg1 = CAN_BS1_10TQ;` |
-| [Src/can.c:78](../Src/can.c#L78) | `hcan2.Init.TimeSeg2 = CAN_BS2_3TQ;` |
-| [Src/can.c:79](../Src/can.c#L79) | `hcan2.Init.TimeTriggeredMode = DISABLE;` |
-| [Src/can.c:80](../Src/can.c#L80) | `hcan2.Init.AutoBusOff = DISABLE;` |
-| [Src/can.c:81](../Src/can.c#L81) | `hcan2.Init.AutoWakeUp = DISABLE;` |
-| [Src/can.c:82](../Src/can.c#L82) | `hcan2.Init.AutoRetransmission = ENABLE;` |
-| [Src/can.c:83](../Src/can.c#L83) | `hcan2.Init.ReceiveFifoLocked = DISABLE;` |
-| [Src/can.c:84](../Src/can.c#L84) | `hcan2.Init.TransmitFifoPriority = ENABLE;` |
-| [Src/can.c:117](../Src/can.c#L117) | `GPIO_InitStruct.Pin = GPIO_PIN_0\|GPIO_PIN_1;` |
-| [Src/can.c:118](../Src/can.c#L118) | `GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;` |
-| [Src/can.c:119](../Src/can.c#L119) | `GPIO_InitStruct.Pull = GPIO_NOPULL;` |
-| [Src/can.c:120](../Src/can.c#L120) | `GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;` |
-| [Src/can.c:121](../Src/can.c#L121) | `GPIO_InitStruct.Alternate = GPIO_AF9_CAN1;` |
-| [Src/can.c:125](../Src/can.c#L125) | `HAL_NVIC_SetPriority(CAN1_RX0_IRQn, 5, 0);` |
-| [Src/can.c:127](../Src/can.c#L127) | `HAL_NVIC_SetPriority(CAN1_RX1_IRQn, 5, 0);` |
-| [Src/can.c:150](../Src/can.c#L150) | `GPIO_InitStruct.Pin = GPIO_PIN_5\|GPIO_PIN_6;` |
-| [Src/can.c:151](../Src/can.c#L151) | `GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;` |
-| [Src/can.c:152](../Src/can.c#L152) | `GPIO_InitStruct.Pull = GPIO_NOPULL;` |
-| [Src/can.c:153](../Src/can.c#L153) | `GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;` |
-| [Src/can.c:154](../Src/can.c#L154) | `GPIO_InitStruct.Alternate = GPIO_AF9_CAN2;` |
-| [Src/can.c:158](../Src/can.c#L158) | `HAL_NVIC_SetPriority(CAN2_RX0_IRQn, 5, 0);` |
-| [Src/can.c:160](../Src/can.c#L160) | `HAL_NVIC_SetPriority(CAN2_RX1_IRQn, 5, 0);` |
-
-## Src/crc.c
-
-源文件：[打开 Src/crc.c](../Src/crc.c)。
-
-### HAL 设置赋值与中断优先级
-
-同一变量可能在不同外设初始化中重复使用，按源代码行区分。
-
-| 行 | 设置 |
-| --- | --- |
-| [Src/crc.c:40](../Src/crc.c#L40) | `hcrc.Instance = CRC;` |
-
-## Src/dac.c
-
-源文件：[打开 Src/dac.c](../Src/dac.c)。
-
-### HAL 设置赋值与中断优先级
-
-同一变量可能在不同外设初始化中重复使用，按源代码行区分。
-
-| 行 | 设置 |
-| --- | --- |
-| [Src/dac.c:45](../Src/dac.c#L45) | `hdac.Instance = DAC;` |
-| [Src/dac.c:53](../Src/dac.c#L53) | `sConfig.DAC_Trigger = DAC_TRIGGER_NONE;` |
-| [Src/dac.c:54](../Src/dac.c#L54) | `sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_ENABLE;` |
-| [Src/dac.c:81](../Src/dac.c#L81) | `GPIO_InitStruct.Pin = GPIO_PIN_5;` |
-| [Src/dac.c:82](../Src/dac.c#L82) | `GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;` |
-| [Src/dac.c:83](../Src/dac.c#L83) | `GPIO_InitStruct.Pull = GPIO_NOPULL;` |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [42](../Src/can.c#L42) | HAL/NVIC | `hcan1.Init.Prescaler = 3;` |
+| [43](../Src/can.c#L43) | HAL/NVIC | `hcan1.Init.Mode = CAN_MODE_NORMAL;` |
+| [44](../Src/can.c#L44) | HAL/NVIC | `hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;` |
+| [45](../Src/can.c#L45) | HAL/NVIC | `hcan1.Init.TimeSeg1 = CAN_BS1_10TQ;` |
+| [46](../Src/can.c#L46) | HAL/NVIC | `hcan1.Init.TimeSeg2 = CAN_BS2_3TQ;` |
+| [47](../Src/can.c#L47) | HAL/NVIC | `hcan1.Init.TimeTriggeredMode = DISABLE;` |
+| [48](../Src/can.c#L48) | HAL/NVIC | `hcan1.Init.AutoBusOff = DISABLE;` |
+| [49](../Src/can.c#L49) | HAL/NVIC | `hcan1.Init.AutoWakeUp = DISABLE;` |
+| [50](../Src/can.c#L50) | HAL/NVIC | `hcan1.Init.AutoRetransmission = ENABLE;` |
+| [51](../Src/can.c#L51) | HAL/NVIC | `hcan1.Init.ReceiveFifoLocked = DISABLE;` |
+| [52](../Src/can.c#L52) | HAL/NVIC | `hcan1.Init.TransmitFifoPriority = ENABLE;` |
+| [74](../Src/can.c#L74) | HAL/NVIC | `hcan2.Init.Prescaler = 3;` |
+| [75](../Src/can.c#L75) | HAL/NVIC | `hcan2.Init.Mode = CAN_MODE_NORMAL;` |
+| [76](../Src/can.c#L76) | HAL/NVIC | `hcan2.Init.SyncJumpWidth = CAN_SJW_1TQ;` |
+| [77](../Src/can.c#L77) | HAL/NVIC | `hcan2.Init.TimeSeg1 = CAN_BS1_10TQ;` |
+| [78](../Src/can.c#L78) | HAL/NVIC | `hcan2.Init.TimeSeg2 = CAN_BS2_3TQ;` |
+| [79](../Src/can.c#L79) | HAL/NVIC | `hcan2.Init.TimeTriggeredMode = DISABLE;` |
+| [80](../Src/can.c#L80) | HAL/NVIC | `hcan2.Init.AutoBusOff = DISABLE;` |
+| [81](../Src/can.c#L81) | HAL/NVIC | `hcan2.Init.AutoWakeUp = DISABLE;` |
+| [82](../Src/can.c#L82) | HAL/NVIC | `hcan2.Init.AutoRetransmission = ENABLE;` |
+| [83](../Src/can.c#L83) | HAL/NVIC | `hcan2.Init.ReceiveFifoLocked = DISABLE;` |
+| [84](../Src/can.c#L84) | HAL/NVIC | `hcan2.Init.TransmitFifoPriority = ENABLE;` |
+| [125](../Src/can.c#L125) | HAL/NVIC | `HAL_NVIC_SetPriority(CAN1_RX0_IRQn, 5, 0);` |
+| [126](../Src/can.c#L126) | HAL/NVIC | `HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);` |
+| [127](../Src/can.c#L127) | HAL/NVIC | `HAL_NVIC_SetPriority(CAN1_RX1_IRQn, 5, 0);` |
+| [128](../Src/can.c#L128) | HAL/NVIC | `HAL_NVIC_EnableIRQ(CAN1_RX1_IRQn);` |
+| [158](../Src/can.c#L158) | HAL/NVIC | `HAL_NVIC_SetPriority(CAN2_RX0_IRQn, 5, 0);` |
+| [159](../Src/can.c#L159) | HAL/NVIC | `HAL_NVIC_EnableIRQ(CAN2_RX0_IRQn);` |
+| [160](../Src/can.c#L160) | HAL/NVIC | `HAL_NVIC_SetPriority(CAN2_RX1_IRQn, 5, 0);` |
+| [161](../Src/can.c#L161) | HAL/NVIC | `HAL_NVIC_EnableIRQ(CAN2_RX1_IRQn);` |
+| [189](../Src/can.c#L189) | HAL/NVIC | `HAL_NVIC_DisableIRQ(CAN1_RX0_IRQn);` |
+| [190](../Src/can.c#L190) | HAL/NVIC | `HAL_NVIC_DisableIRQ(CAN1_RX1_IRQn);` |
+| [214](../Src/can.c#L214) | HAL/NVIC | `HAL_NVIC_DisableIRQ(CAN2_RX0_IRQn);` |
+| [215](../Src/can.c#L215) | HAL/NVIC | `HAL_NVIC_DisableIRQ(CAN2_RX1_IRQn);` |
 
 ## Src/dma.c
 
-源文件：[打开 Src/dma.c](../Src/dma.c)。
-
-### HAL 设置赋值与中断优先级
-
-同一变量可能在不同外设初始化中重复使用，按源代码行区分。
-
-| 行 | 设置 |
-| --- | --- |
-| [Src/dma.c:48](../Src/dma.c#L48) | `HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 5, 0);` |
-| [Src/dma.c:51](../Src/dma.c#L51) | `HAL_NVIC_SetPriority(DMA1_Stream2_IRQn, 5, 0);` |
-| [Src/dma.c:54](../Src/dma.c#L54) | `HAL_NVIC_SetPriority(DMA1_Stream7_IRQn, 5, 0);` |
-| [Src/dma.c:57](../Src/dma.c#L57) | `HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);` |
-| [Src/dma.c:60](../Src/dma.c#L60) | `HAL_NVIC_SetPriority(DMA2_Stream2_IRQn, 5, 0);` |
-| [Src/dma.c:63](../Src/dma.c#L63) | `HAL_NVIC_SetPriority(DMA2_Stream3_IRQn, 0, 0);` |
-| [Src/dma.c:66](../Src/dma.c#L66) | `HAL_NVIC_SetPriority(DMA2_Stream5_IRQn, 0, 0);` |
-| [Src/dma.c:69](../Src/dma.c#L69) | `HAL_NVIC_SetPriority(DMA2_Stream6_IRQn, 5, 0);` |
-| [Src/dma.c:72](../Src/dma.c#L72) | `HAL_NVIC_SetPriority(DMA2_Stream7_IRQn, 5, 0);` |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [48](../Src/dma.c#L48) | HAL/NVIC | `HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 5, 0);` |
+| [49](../Src/dma.c#L49) | HAL/NVIC | `HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);` |
+| [51](../Src/dma.c#L51) | HAL/NVIC | `HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 5, 0);` |
+| [52](../Src/dma.c#L52) | HAL/NVIC | `HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);` |
+| [54](../Src/dma.c#L54) | HAL/NVIC | `HAL_NVIC_SetPriority(DMA1_Stream3_IRQn, 5, 0);` |
+| [55](../Src/dma.c#L55) | HAL/NVIC | `HAL_NVIC_EnableIRQ(DMA1_Stream3_IRQn);` |
+| [57](../Src/dma.c#L57) | HAL/NVIC | `HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 5, 0);` |
+| [58](../Src/dma.c#L58) | HAL/NVIC | `HAL_NVIC_EnableIRQ(DMA1_Stream4_IRQn);` |
+| [60](../Src/dma.c#L60) | HAL/NVIC | `HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 5, 0);` |
+| [61](../Src/dma.c#L61) | HAL/NVIC | `HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);` |
+| [63](../Src/dma.c#L63) | HAL/NVIC | `HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 5, 0);` |
+| [64](../Src/dma.c#L64) | HAL/NVIC | `HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);` |
+| [66](../Src/dma.c#L66) | HAL/NVIC | `HAL_NVIC_SetPriority(DMA2_Stream1_IRQn, 5, 0);` |
+| [67](../Src/dma.c#L67) | HAL/NVIC | `HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);` |
+| [69](../Src/dma.c#L69) | HAL/NVIC | `HAL_NVIC_SetPriority(DMA2_Stream2_IRQn, 5, 0);` |
+| [70](../Src/dma.c#L70) | HAL/NVIC | `HAL_NVIC_EnableIRQ(DMA2_Stream2_IRQn);` |
+| [72](../Src/dma.c#L72) | HAL/NVIC | `HAL_NVIC_SetPriority(DMA2_Stream6_IRQn, 5, 0);` |
+| [73](../Src/dma.c#L73) | HAL/NVIC | `HAL_NVIC_EnableIRQ(DMA2_Stream6_IRQn);` |
 
 ## Src/gpio.c
 
-源文件：[打开 Src/gpio.c](../Src/gpio.c)。
-
-### HAL 设置赋值与中断优先级
-
-同一变量可能在不同外设初始化中重复使用，按源代码行区分。
-
-| 行 | 设置 |
-| --- | --- |
-| [Src/gpio.c:68](../Src/gpio.c#L68) | `GPIO_InitStruct.Pin = MAG_RST_Pin;` |
-| [Src/gpio.c:69](../Src/gpio.c#L69) | `GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;` |
-| [Src/gpio.c:70](../Src/gpio.c#L70) | `GPIO_InitStruct.Pull = GPIO_NOPULL;` |
-| [Src/gpio.c:71](../Src/gpio.c#L71) | `GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;` |
-| [Src/gpio.c:75](../Src/gpio.c#L75) | `GPIO_InitStruct.Pin = INT_MAG_Pin;` |
-| [Src/gpio.c:76](../Src/gpio.c#L76) | `GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;` |
-| [Src/gpio.c:77](../Src/gpio.c#L77) | `GPIO_InitStruct.Pull = GPIO_PULLUP;` |
-| [Src/gpio.c:81](../Src/gpio.c#L81) | `GPIO_InitStruct.Pin = KEY_Pin;` |
-| [Src/gpio.c:82](../Src/gpio.c#L82) | `GPIO_InitStruct.Mode = GPIO_MODE_INPUT;` |
-| [Src/gpio.c:83](../Src/gpio.c#L83) | `GPIO_InitStruct.Pull = GPIO_PULLUP;` |
-| [Src/gpio.c:87](../Src/gpio.c#L87) | `GPIO_InitStruct.Pin = CS1_ACCEL_Pin;` |
-| [Src/gpio.c:88](../Src/gpio.c#L88) | `GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;` |
-| [Src/gpio.c:89](../Src/gpio.c#L89) | `GPIO_InitStruct.Pull = GPIO_PULLUP;` |
-| [Src/gpio.c:90](../Src/gpio.c#L90) | `GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;` |
-| [Src/gpio.c:94](../Src/gpio.c#L94) | `GPIO_InitStruct.Pin = INT_ACC_Pin\|INT_GYRO_Pin;` |
-| [Src/gpio.c:95](../Src/gpio.c#L95) | `GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;` |
-| [Src/gpio.c:96](../Src/gpio.c#L96) | `GPIO_InitStruct.Pull = GPIO_NOPULL;` |
-| [Src/gpio.c:100](../Src/gpio.c#L100) | `GPIO_InitStruct.Pin = CS1_GYRO_Pin;` |
-| [Src/gpio.c:101](../Src/gpio.c#L101) | `GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;` |
-| [Src/gpio.c:102](../Src/gpio.c#L102) | `GPIO_InitStruct.Pull = GPIO_PULLUP;` |
-| [Src/gpio.c:103](../Src/gpio.c#L103) | `GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;` |
-| [Src/gpio.c:107](../Src/gpio.c#L107) | `HAL_NVIC_SetPriority(EXTI3_IRQn, 5, 0);` |
-| [Src/gpio.c:110](../Src/gpio.c#L110) | `HAL_NVIC_SetPriority(EXTI4_IRQn, 5, 0);` |
-| [Src/gpio.c:113](../Src/gpio.c#L113) | `HAL_NVIC_SetPriority(EXTI9_5_IRQn, 5, 0);` |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [173](../Src/gpio.c#L173) | HAL/NVIC | `HAL_NVIC_SetPriority(EXTI2_IRQn, 5, 0);` |
+| [174](../Src/gpio.c#L174) | HAL/NVIC | `HAL_NVIC_EnableIRQ(EXTI2_IRQn);` |
 
 ## Src/i2c.c
 
-源文件：[打开 Src/i2c.c](../Src/i2c.c)。
-
-### HAL 设置赋值与中断优先级
-
-同一变量可能在不同外设初始化中重复使用，按源代码行区分。
-
-| 行 | 设置 |
-| --- | --- |
-| [Src/i2c.c:43](../Src/i2c.c#L43) | `hi2c2.Instance = I2C2;` |
-| [Src/i2c.c:44](../Src/i2c.c#L44) | `hi2c2.Init.ClockSpeed = 400000;` |
-| [Src/i2c.c:45](../Src/i2c.c#L45) | `hi2c2.Init.DutyCycle = I2C_DUTYCYCLE_2;` |
-| [Src/i2c.c:46](../Src/i2c.c#L46) | `hi2c2.Init.OwnAddress1 = 0;` |
-| [Src/i2c.c:47](../Src/i2c.c#L47) | `hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;` |
-| [Src/i2c.c:48](../Src/i2c.c#L48) | `hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;` |
-| [Src/i2c.c:49](../Src/i2c.c#L49) | `hi2c2.Init.OwnAddress2 = 0;` |
-| [Src/i2c.c:50](../Src/i2c.c#L50) | `hi2c2.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;` |
-| [Src/i2c.c:51](../Src/i2c.c#L51) | `hi2c2.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;` |
-| [Src/i2c.c:72](../Src/i2c.c#L72) | `hi2c3.Instance = I2C3;` |
-| [Src/i2c.c:73](../Src/i2c.c#L73) | `hi2c3.Init.ClockSpeed = 400000;` |
-| [Src/i2c.c:74](../Src/i2c.c#L74) | `hi2c3.Init.DutyCycle = I2C_DUTYCYCLE_2;` |
-| [Src/i2c.c:75](../Src/i2c.c#L75) | `hi2c3.Init.OwnAddress1 = 0;` |
-| [Src/i2c.c:76](../Src/i2c.c#L76) | `hi2c3.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;` |
-| [Src/i2c.c:77](../Src/i2c.c#L77) | `hi2c3.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;` |
-| [Src/i2c.c:78](../Src/i2c.c#L78) | `hi2c3.Init.OwnAddress2 = 0;` |
-| [Src/i2c.c:79](../Src/i2c.c#L79) | `hi2c3.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;` |
-| [Src/i2c.c:80](../Src/i2c.c#L80) | `hi2c3.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;` |
-| [Src/i2c.c:106](../Src/i2c.c#L106) | `GPIO_InitStruct.Pin = GPIO_PIN_0\|GPIO_PIN_1;` |
-| [Src/i2c.c:107](../Src/i2c.c#L107) | `GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;` |
-| [Src/i2c.c:108](../Src/i2c.c#L108) | `GPIO_InitStruct.Pull = GPIO_NOPULL;` |
-| [Src/i2c.c:109](../Src/i2c.c#L109) | `GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;` |
-| [Src/i2c.c:110](../Src/i2c.c#L110) | `GPIO_InitStruct.Alternate = GPIO_AF4_I2C2;` |
-| [Src/i2c.c:118](../Src/i2c.c#L118) | `hdma_i2c2_rx.Instance = DMA1_Stream2;` |
-| [Src/i2c.c:119](../Src/i2c.c#L119) | `hdma_i2c2_rx.Init.Channel = DMA_CHANNEL_7;` |
-| [Src/i2c.c:120](../Src/i2c.c#L120) | `hdma_i2c2_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
-| [Src/i2c.c:121](../Src/i2c.c#L121) | `hdma_i2c2_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
-| [Src/i2c.c:122](../Src/i2c.c#L122) | `hdma_i2c2_rx.Init.MemInc = DMA_MINC_ENABLE;` |
-| [Src/i2c.c:123](../Src/i2c.c#L123) | `hdma_i2c2_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
-| [Src/i2c.c:124](../Src/i2c.c#L124) | `hdma_i2c2_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
-| [Src/i2c.c:125](../Src/i2c.c#L125) | `hdma_i2c2_rx.Init.Mode = DMA_NORMAL;` |
-| [Src/i2c.c:126](../Src/i2c.c#L126) | `hdma_i2c2_rx.Init.Priority = DMA_PRIORITY_LOW;` |
-| [Src/i2c.c:127](../Src/i2c.c#L127) | `hdma_i2c2_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
-| [Src/i2c.c:136](../Src/i2c.c#L136) | `hdma_i2c2_tx.Instance = DMA1_Stream7;` |
-| [Src/i2c.c:137](../Src/i2c.c#L137) | `hdma_i2c2_tx.Init.Channel = DMA_CHANNEL_7;` |
-| [Src/i2c.c:138](../Src/i2c.c#L138) | `hdma_i2c2_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;` |
-| [Src/i2c.c:139](../Src/i2c.c#L139) | `hdma_i2c2_tx.Init.PeriphInc = DMA_PINC_DISABLE;` |
-| [Src/i2c.c:140](../Src/i2c.c#L140) | `hdma_i2c2_tx.Init.MemInc = DMA_MINC_ENABLE;` |
-| [Src/i2c.c:141](../Src/i2c.c#L141) | `hdma_i2c2_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
-| [Src/i2c.c:142](../Src/i2c.c#L142) | `hdma_i2c2_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
-| [Src/i2c.c:143](../Src/i2c.c#L143) | `hdma_i2c2_tx.Init.Mode = DMA_NORMAL;` |
-| [Src/i2c.c:144](../Src/i2c.c#L144) | `hdma_i2c2_tx.Init.Priority = DMA_PRIORITY_LOW;` |
-| [Src/i2c.c:145](../Src/i2c.c#L145) | `hdma_i2c2_tx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
-| [Src/i2c.c:154](../Src/i2c.c#L154) | `HAL_NVIC_SetPriority(I2C2_EV_IRQn, 5, 0);` |
-| [Src/i2c.c:156](../Src/i2c.c#L156) | `HAL_NVIC_SetPriority(I2C2_ER_IRQn, 5, 0);` |
-| [Src/i2c.c:174](../Src/i2c.c#L174) | `GPIO_InitStruct.Pin = GPIO_PIN_9;` |
-| [Src/i2c.c:175](../Src/i2c.c#L175) | `GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;` |
-| [Src/i2c.c:176](../Src/i2c.c#L176) | `GPIO_InitStruct.Pull = GPIO_NOPULL;` |
-| [Src/i2c.c:177](../Src/i2c.c#L177) | `GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;` |
-| [Src/i2c.c:178](../Src/i2c.c#L178) | `GPIO_InitStruct.Alternate = GPIO_AF4_I2C3;` |
-| [Src/i2c.c:181](../Src/i2c.c#L181) | `GPIO_InitStruct.Pin = GPIO_PIN_8;` |
-| [Src/i2c.c:182](../Src/i2c.c#L182) | `GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;` |
-| [Src/i2c.c:183](../Src/i2c.c#L183) | `GPIO_InitStruct.Pull = GPIO_NOPULL;` |
-| [Src/i2c.c:184](../Src/i2c.c#L184) | `GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;` |
-| [Src/i2c.c:185](../Src/i2c.c#L185) | `GPIO_InitStruct.Alternate = GPIO_AF4_I2C3;` |
-| [Src/i2c.c:192](../Src/i2c.c#L192) | `HAL_NVIC_SetPriority(I2C3_EV_IRQn, 5, 0);` |
-| [Src/i2c.c:194](../Src/i2c.c#L194) | `HAL_NVIC_SetPriority(I2C3_ER_IRQn, 5, 0);` |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [41](../Src/i2c.c#L41) | HAL/NVIC | `hi2c2.Init.ClockSpeed = 100000;` |
+| [42](../Src/i2c.c#L42) | HAL/NVIC | `hi2c2.Init.DutyCycle = I2C_DUTYCYCLE_2;` |
+| [43](../Src/i2c.c#L43) | HAL/NVIC | `hi2c2.Init.OwnAddress1 = 0;` |
+| [44](../Src/i2c.c#L44) | HAL/NVIC | `hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;` |
+| [45](../Src/i2c.c#L45) | HAL/NVIC | `hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;` |
+| [46](../Src/i2c.c#L46) | HAL/NVIC | `hi2c2.Init.OwnAddress2 = 0;` |
+| [47](../Src/i2c.c#L47) | HAL/NVIC | `hi2c2.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;` |
+| [48](../Src/i2c.c#L48) | HAL/NVIC | `hi2c2.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;` |
 
 ## Src/main.c
 
-源文件：[打开 Src/main.c](../Src/main.c)。
-
-### HAL 设置赋值与中断优先级
-
-同一变量可能在不同外设初始化中重复使用，按源代码行区分。
-
-| 行 | 设置 |
-| --- | --- |
-| [Src/main.c:162](../Src/main.c#L162) | `RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;` |
-| [Src/main.c:163](../Src/main.c#L163) | `RCC_OscInitStruct.HSEState = RCC_HSE_ON;` |
-| [Src/main.c:164](../Src/main.c#L164) | `RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;` |
-| [Src/main.c:165](../Src/main.c#L165) | `RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;` |
-| [Src/main.c:166](../Src/main.c#L166) | `RCC_OscInitStruct.PLL.PLLM = 6;` |
-| [Src/main.c:167](../Src/main.c#L167) | `RCC_OscInitStruct.PLL.PLLN = 168;` |
-| [Src/main.c:168](../Src/main.c#L168) | `RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;` |
-| [Src/main.c:169](../Src/main.c#L169) | `RCC_OscInitStruct.PLL.PLLQ = 7;` |
-| [Src/main.c:177](../Src/main.c#L177) | `RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK\|RCC_CLOCKTYPE_SYSCLK \|RCC_CLOCKTYPE_PCLK1\|RCC_CLOCKTYPE_PCLK2;` |
-| [Src/main.c:179](../Src/main.c#L179) | `RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;` |
-| [Src/main.c:180](../Src/main.c#L180) | `RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;` |
-| [Src/main.c:181](../Src/main.c#L181) | `RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;` |
-| [Src/main.c:182](../Src/main.c#L182) | `RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;` |
-
-## Src/rng.c
-
-源文件：[打开 Src/rng.c](../Src/rng.c)。
-
-### HAL 设置赋值与中断优先级
-
-同一变量可能在不同外设初始化中重复使用，按源代码行区分。
-
-| 行 | 设置 |
-| --- | --- |
-| [Src/rng.c:40](../Src/rng.c#L40) | `hrng.Instance = RNG;` |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [231](../Src/main.c#L231) | 预处理 | `#ifdef  USE_FULL_ASSERT` |
+| [246](../Src/main.c#L246) | 预处理 | `#endif /* USE_FULL_ASSERT */` |
 
 ## Src/rtc.c
 
-源文件：[打开 Src/rtc.c](../Src/rtc.c)。
-
-### HAL 设置赋值与中断优先级
-
-同一变量可能在不同外设初始化中重复使用，按源代码行区分。
-
-| 行 | 设置 |
-| --- | --- |
-| [Src/rtc.c:43](../Src/rtc.c#L43) | `hrtc.Instance = RTC;` |
-| [Src/rtc.c:44](../Src/rtc.c#L44) | `hrtc.Init.HourFormat = RTC_HOURFORMAT_24;` |
-| [Src/rtc.c:45](../Src/rtc.c#L45) | `hrtc.Init.AsynchPrediv = 124;` |
-| [Src/rtc.c:46](../Src/rtc.c#L46) | `hrtc.Init.SynchPrediv = 3199;` |
-| [Src/rtc.c:47](../Src/rtc.c#L47) | `hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;` |
-| [Src/rtc.c:48](../Src/rtc.c#L48) | `hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;` |
-| [Src/rtc.c:49](../Src/rtc.c#L49) | `hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;` |
-| [Src/rtc.c:72](../Src/rtc.c#L72) | `PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC;` |
-| [Src/rtc.c:73](../Src/rtc.c#L73) | `PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_HSE_DIV30;` |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [44](../Src/rtc.c#L44) | HAL/NVIC | `hrtc.Init.HourFormat = RTC_HOURFORMAT_24;` |
+| [45](../Src/rtc.c#L45) | HAL/NVIC | `hrtc.Init.AsynchPrediv = 124;` |
+| [46](../Src/rtc.c#L46) | HAL/NVIC | `hrtc.Init.SynchPrediv = 3199;` |
+| [47](../Src/rtc.c#L47) | HAL/NVIC | `hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;` |
+| [48](../Src/rtc.c#L48) | HAL/NVIC | `hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;` |
+| [49](../Src/rtc.c#L49) | HAL/NVIC | `hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;` |
 
 ## Src/spi.c
 
-源文件：[打开 Src/spi.c](../Src/spi.c)。
-
-### HAL 设置赋值与中断优先级
-
-同一变量可能在不同外设初始化中重复使用，按源代码行区分。
-
-| 行 | 设置 |
-| --- | --- |
-| [Src/spi.c:43](../Src/spi.c#L43) | `hspi1.Instance = SPI1;` |
-| [Src/spi.c:44](../Src/spi.c#L44) | `hspi1.Init.Mode = SPI_MODE_MASTER;` |
-| [Src/spi.c:45](../Src/spi.c#L45) | `hspi1.Init.Direction = SPI_DIRECTION_2LINES;` |
-| [Src/spi.c:46](../Src/spi.c#L46) | `hspi1.Init.DataSize = SPI_DATASIZE_8BIT;` |
-| [Src/spi.c:47](../Src/spi.c#L47) | `hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;` |
-| [Src/spi.c:48](../Src/spi.c#L48) | `hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;` |
-| [Src/spi.c:49](../Src/spi.c#L49) | `hspi1.Init.NSS = SPI_NSS_SOFT;` |
-| [Src/spi.c:50](../Src/spi.c#L50) | `hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;` |
-| [Src/spi.c:51](../Src/spi.c#L51) | `hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;` |
-| [Src/spi.c:52](../Src/spi.c#L52) | `hspi1.Init.TIMode = SPI_TIMODE_DISABLE;` |
-| [Src/spi.c:53](../Src/spi.c#L53) | `hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;` |
-| [Src/spi.c:54](../Src/spi.c#L54) | `hspi1.Init.CRCPolynomial = 10;` |
-| [Src/spi.c:75](../Src/spi.c#L75) | `hspi2.Instance = SPI2;` |
-| [Src/spi.c:76](../Src/spi.c#L76) | `hspi2.Init.Mode = SPI_MODE_MASTER;` |
-| [Src/spi.c:77](../Src/spi.c#L77) | `hspi2.Init.Direction = SPI_DIRECTION_2LINES;` |
-| [Src/spi.c:78](../Src/spi.c#L78) | `hspi2.Init.DataSize = SPI_DATASIZE_8BIT;` |
-| [Src/spi.c:79](../Src/spi.c#L79) | `hspi2.Init.CLKPolarity = SPI_POLARITY_HIGH;` |
-| [Src/spi.c:80](../Src/spi.c#L80) | `hspi2.Init.CLKPhase = SPI_PHASE_2EDGE;` |
-| [Src/spi.c:81](../Src/spi.c#L81) | `hspi2.Init.NSS = SPI_NSS_SOFT;` |
-| [Src/spi.c:82](../Src/spi.c#L82) | `hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;` |
-| [Src/spi.c:83](../Src/spi.c#L83) | `hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;` |
-| [Src/spi.c:84](../Src/spi.c#L84) | `hspi2.Init.TIMode = SPI_TIMODE_DISABLE;` |
-| [Src/spi.c:85](../Src/spi.c#L85) | `hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;` |
-| [Src/spi.c:86](../Src/spi.c#L86) | `hspi2.Init.CRCPolynomial = 10;` |
-| [Src/spi.c:116](../Src/spi.c#L116) | `GPIO_InitStruct.Pin = GPIO_PIN_4\|GPIO_PIN_3;` |
-| [Src/spi.c:117](../Src/spi.c#L117) | `GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;` |
-| [Src/spi.c:118](../Src/spi.c#L118) | `GPIO_InitStruct.Pull = GPIO_PULLUP;` |
-| [Src/spi.c:119](../Src/spi.c#L119) | `GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;` |
-| [Src/spi.c:120](../Src/spi.c#L120) | `GPIO_InitStruct.Alternate = GPIO_AF5_SPI1;` |
-| [Src/spi.c:123](../Src/spi.c#L123) | `GPIO_InitStruct.Pin = GPIO_PIN_7;` |
-| [Src/spi.c:124](../Src/spi.c#L124) | `GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;` |
-| [Src/spi.c:125](../Src/spi.c#L125) | `GPIO_InitStruct.Pull = GPIO_PULLUP;` |
-| [Src/spi.c:126](../Src/spi.c#L126) | `GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;` |
-| [Src/spi.c:127](../Src/spi.c#L127) | `GPIO_InitStruct.Alternate = GPIO_AF5_SPI1;` |
-| [Src/spi.c:132](../Src/spi.c#L132) | `hdma_spi1_rx.Instance = DMA2_Stream0;` |
-| [Src/spi.c:133](../Src/spi.c#L133) | `hdma_spi1_rx.Init.Channel = DMA_CHANNEL_3;` |
-| [Src/spi.c:134](../Src/spi.c#L134) | `hdma_spi1_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
-| [Src/spi.c:135](../Src/spi.c#L135) | `hdma_spi1_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
-| [Src/spi.c:136](../Src/spi.c#L136) | `hdma_spi1_rx.Init.MemInc = DMA_MINC_ENABLE;` |
-| [Src/spi.c:137](../Src/spi.c#L137) | `hdma_spi1_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
-| [Src/spi.c:138](../Src/spi.c#L138) | `hdma_spi1_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
-| [Src/spi.c:139](../Src/spi.c#L139) | `hdma_spi1_rx.Init.Mode = DMA_NORMAL;` |
-| [Src/spi.c:140](../Src/spi.c#L140) | `hdma_spi1_rx.Init.Priority = DMA_PRIORITY_VERY_HIGH;` |
-| [Src/spi.c:141](../Src/spi.c#L141) | `hdma_spi1_rx.Init.FIFOMode = DMA_FIFOMODE_ENABLE;` |
-| [Src/spi.c:142](../Src/spi.c#L142) | `hdma_spi1_rx.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;` |
-| [Src/spi.c:143](../Src/spi.c#L143) | `hdma_spi1_rx.Init.MemBurst = DMA_MBURST_SINGLE;` |
-| [Src/spi.c:144](../Src/spi.c#L144) | `hdma_spi1_rx.Init.PeriphBurst = DMA_PBURST_SINGLE;` |
-| [Src/spi.c:153](../Src/spi.c#L153) | `hdma_spi1_tx.Instance = DMA2_Stream3;` |
-| [Src/spi.c:154](../Src/spi.c#L154) | `hdma_spi1_tx.Init.Channel = DMA_CHANNEL_3;` |
-| [Src/spi.c:155](../Src/spi.c#L155) | `hdma_spi1_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;` |
-| [Src/spi.c:156](../Src/spi.c#L156) | `hdma_spi1_tx.Init.PeriphInc = DMA_PINC_DISABLE;` |
-| [Src/spi.c:157](../Src/spi.c#L157) | `hdma_spi1_tx.Init.MemInc = DMA_MINC_ENABLE;` |
-| [Src/spi.c:158](../Src/spi.c#L158) | `hdma_spi1_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
-| [Src/spi.c:159](../Src/spi.c#L159) | `hdma_spi1_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
-| [Src/spi.c:160](../Src/spi.c#L160) | `hdma_spi1_tx.Init.Mode = DMA_NORMAL;` |
-| [Src/spi.c:161](../Src/spi.c#L161) | `hdma_spi1_tx.Init.Priority = DMA_PRIORITY_VERY_HIGH;` |
-| [Src/spi.c:162](../Src/spi.c#L162) | `hdma_spi1_tx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
-| [Src/spi.c:171](../Src/spi.c#L171) | `HAL_NVIC_SetPriority(SPI1_IRQn, 5, 0);` |
-| [Src/spi.c:191](../Src/spi.c#L191) | `GPIO_InitStruct.Pin = GPIO_PIN_13\|GPIO_PIN_14\|GPIO_PIN_15;` |
-| [Src/spi.c:192](../Src/spi.c#L192) | `GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;` |
-| [Src/spi.c:193](../Src/spi.c#L193) | `GPIO_InitStruct.Pull = GPIO_NOPULL;` |
-| [Src/spi.c:194](../Src/spi.c#L194) | `GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;` |
-| [Src/spi.c:195](../Src/spi.c#L195) | `GPIO_InitStruct.Alternate = GPIO_AF5_SPI2;` |
-| [Src/spi.c:199](../Src/spi.c#L199) | `HAL_NVIC_SetPriority(SPI2_IRQn, 5, 0);` |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [42](../Src/spi.c#L42) | HAL/NVIC | `hspi1.Init.Mode = SPI_MODE_MASTER;` |
+| [43](../Src/spi.c#L43) | HAL/NVIC | `hspi1.Init.Direction = SPI_DIRECTION_2LINES;` |
+| [44](../Src/spi.c#L44) | HAL/NVIC | `hspi1.Init.DataSize = SPI_DATASIZE_8BIT;` |
+| [45](../Src/spi.c#L45) | HAL/NVIC | `hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;` |
+| [46](../Src/spi.c#L46) | HAL/NVIC | `hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;` |
+| [47](../Src/spi.c#L47) | HAL/NVIC | `hspi1.Init.NSS = SPI_NSS_SOFT;` |
+| [48](../Src/spi.c#L48) | HAL/NVIC | `hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;` |
+| [49](../Src/spi.c#L49) | HAL/NVIC | `hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;` |
+| [50](../Src/spi.c#L50) | HAL/NVIC | `hspi1.Init.TIMode = SPI_TIMODE_DISABLE;` |
+| [51](../Src/spi.c#L51) | HAL/NVIC | `hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;` |
+| [52](../Src/spi.c#L52) | HAL/NVIC | `hspi1.Init.CRCPolynomial = 10;` |
+| [74](../Src/spi.c#L74) | HAL/NVIC | `hspi5.Init.Mode = SPI_MODE_MASTER;` |
+| [75](../Src/spi.c#L75) | HAL/NVIC | `hspi5.Init.Direction = SPI_DIRECTION_2LINES;` |
+| [76](../Src/spi.c#L76) | HAL/NVIC | `hspi5.Init.DataSize = SPI_DATASIZE_8BIT;` |
+| [77](../Src/spi.c#L77) | HAL/NVIC | `hspi5.Init.CLKPolarity = SPI_POLARITY_HIGH;` |
+| [78](../Src/spi.c#L78) | HAL/NVIC | `hspi5.Init.CLKPhase = SPI_PHASE_2EDGE;` |
+| [79](../Src/spi.c#L79) | HAL/NVIC | `hspi5.Init.NSS = SPI_NSS_SOFT;` |
+| [80](../Src/spi.c#L80) | HAL/NVIC | `hspi5.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;` |
+| [81](../Src/spi.c#L81) | HAL/NVIC | `hspi5.Init.FirstBit = SPI_FIRSTBIT_MSB;` |
+| [82](../Src/spi.c#L82) | HAL/NVIC | `hspi5.Init.TIMode = SPI_TIMODE_DISABLE;` |
+| [83](../Src/spi.c#L83) | HAL/NVIC | `hspi5.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;` |
+| [84](../Src/spi.c#L84) | HAL/NVIC | `hspi5.Init.CRCPolynomial = 10;` |
+| [154](../Src/spi.c#L154) | HAL/NVIC | `HAL_NVIC_SetPriority(SPI5_IRQn, 5, 0);` |
+| [155](../Src/spi.c#L155) | HAL/NVIC | `HAL_NVIC_EnableIRQ(SPI5_IRQn);` |
+| [202](../Src/spi.c#L202) | HAL/NVIC | `HAL_NVIC_DisableIRQ(SPI5_IRQn);` |
 
 ## Src/stm32f4xx_hal_msp.c
 
-源文件：[打开 Src/stm32f4xx_hal_msp.c](../Src/stm32f4xx_hal_msp.c)。
-
-### HAL 设置赋值与中断优先级
-
-同一变量可能在不同外设初始化中重复使用，按源代码行区分。
-
-| 行 | 设置 |
-| --- | --- |
-| [Src/stm32f4xx_hal_msp.c:74](../Src/stm32f4xx_hal_msp.c#L74) | `HAL_NVIC_SetPriority(PendSV_IRQn, 15, 0);` |
-| [Src/stm32f4xx_hal_msp.c:78](../Src/stm32f4xx_hal_msp.c#L78) | `HAL_NVIC_SetPriority(FLASH_IRQn, 6, 0);` |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [75](../Src/stm32f4xx_hal_msp.c#L75) | HAL/NVIC | `HAL_NVIC_SetPriority(PendSV_IRQn, 15, 0);` |
 
 ## Src/stm32f4xx_hal_timebase_tim.c
 
-源文件：[打开 Src/stm32f4xx_hal_timebase_tim.c](../Src/stm32f4xx_hal_timebase_tim.c)。
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [81](../Src/stm32f4xx_hal_timebase_tim.c#L81) | HAL/NVIC | `htim14.Init.Period = (1000000U / 1000U) - 1U;` |
+| [82](../Src/stm32f4xx_hal_timebase_tim.c#L82) | HAL/NVIC | `htim14.Init.Prescaler = uwPrescalerValue;` |
+| [83](../Src/stm32f4xx_hal_timebase_tim.c#L83) | HAL/NVIC | `htim14.Init.ClockDivision = 0;` |
+| [84](../Src/stm32f4xx_hal_timebase_tim.c#L84) | HAL/NVIC | `htim14.Init.CounterMode = TIM_COUNTERMODE_UP;` |
+| [85](../Src/stm32f4xx_hal_timebase_tim.c#L85) | HAL/NVIC | `htim14.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;` |
+| [95](../Src/stm32f4xx_hal_timebase_tim.c#L95) | HAL/NVIC | `HAL_NVIC_EnableIRQ(TIM8_TRG_COM_TIM14_IRQn);` |
+| [100](../Src/stm32f4xx_hal_timebase_tim.c#L100) | HAL/NVIC | `HAL_NVIC_SetPriority(TIM8_TRG_COM_TIM14_IRQn, TickPriority, 0U);` |
 
-### HAL 设置赋值与中断优先级
+## Src/syscalls.c
 
-同一变量可能在不同外设初始化中重复使用，按源代码行区分。
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [179](../Src/syscalls.c#L179) | 预处理 | `#if defined(__PICOLIBC__)` |
+| [244](../Src/syscalls.c#L244) | 预处理 | `#endif //__PICOLIBC__` |
 
-| 行 | 设置 |
-| --- | --- |
-| [Src/stm32f4xx_hal_timebase_tim.c:72](../Src/stm32f4xx_hal_timebase_tim.c#L72) | `htim14.Instance = TIM14;` |
-| [Src/stm32f4xx_hal_timebase_tim.c:80](../Src/stm32f4xx_hal_timebase_tim.c#L80) | `htim14.Init.Period = (1000000U / 1000U) - 1U;` |
-| [Src/stm32f4xx_hal_timebase_tim.c:81](../Src/stm32f4xx_hal_timebase_tim.c#L81) | `htim14.Init.Prescaler = uwPrescalerValue;` |
-| [Src/stm32f4xx_hal_timebase_tim.c:82](../Src/stm32f4xx_hal_timebase_tim.c#L82) | `htim14.Init.ClockDivision = 0;` |
-| [Src/stm32f4xx_hal_timebase_tim.c:83](../Src/stm32f4xx_hal_timebase_tim.c#L83) | `htim14.Init.CounterMode = TIM_COUNTERMODE_UP;` |
-| [Src/stm32f4xx_hal_timebase_tim.c:84](../Src/stm32f4xx_hal_timebase_tim.c#L84) | `htim14.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;` |
-| [Src/stm32f4xx_hal_timebase_tim.c:99](../Src/stm32f4xx_hal_timebase_tim.c#L99) | `HAL_NVIC_SetPriority(TIM8_TRG_COM_TIM14_IRQn, TickPriority, 0U);` |
+## Src/sysmem.c
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [82](../Src/sysmem.c#L82) | 预处理 | `#if defined(__PICOLIBC__)` |
+| [87](../Src/sysmem.c#L87) | 预处理 | `#endif` |
 
 ## Src/system_stm32f4xx.c
 
-源文件：[打开 Src/system_stm32f4xx.c](../Src/system_stm32f4xx.c)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Src/system_stm32f4xx.c:51](../Src/system_stm32f4xx.c#L51) | `HSE_VALUE` | `((uint32_t)25000000)` | `#if !defined (HSE_VALUE)` | !< Default value of the External oscillator in Hz |
-| [Src/system_stm32f4xx.c:55](../Src/system_stm32f4xx.c#L55) | `HSI_VALUE` | `((uint32_t)16000000)` | `#if !defined (HSI_VALUE)` | !< Value of the Internal oscillator in Hz |
-| [Src/system_stm32f4xx.c:101](../Src/system_stm32f4xx.c#L101) | `VECT_TAB_BASE_ADDRESS` | `SRAM_BASE` | `#if defined(USER_VECT_TAB_ADDRESS)；#if defined(VECT_TAB_SRAM)` |  |
-| [Src/system_stm32f4xx.c:103](../Src/system_stm32f4xx.c#L103) | `VECT_TAB_OFFSET` | `0x00000000U` | `#if defined(USER_VECT_TAB_ADDRESS)；#if defined(VECT_TAB_SRAM)` |  |
-| [Src/system_stm32f4xx.c:106](../Src/system_stm32f4xx.c#L106) | `VECT_TAB_BASE_ADDRESS` | `FLASH_BASE` | `#if defined(USER_VECT_TAB_ADDRESS)；#if defined(VECT_TAB_SRAM) → #else` |  |
-| [Src/system_stm32f4xx.c:108](../Src/system_stm32f4xx.c#L108) | `VECT_TAB_OFFSET` | `0x00000000U` | `#if defined(USER_VECT_TAB_ADDRESS)；#if defined(VECT_TAB_SRAM) → #else` |  |
-
-### 已注释的宏选项（当前不定义）
-
-| 行 | 原选项 |
-| --- | --- |
-| [Src/system_stm32f4xx.c:79](../Src/system_stm32f4xx.c#L79) | `#define DATA_IN_ExtSRAM` |
-| [Src/system_stm32f4xx.c:85](../Src/system_stm32f4xx.c#L85) | `#define DATA_IN_ExtSDRAM` |
-| [Src/system_stm32f4xx.c:94](../Src/system_stm32f4xx.c#L94) | `#define USER_VECT_TAB_ADDRESS` |
-| [Src/system_stm32f4xx.c:99](../Src/system_stm32f4xx.c#L99) | `#define VECT_TAB_SRAM` |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [50](../Src/system_stm32f4xx.c#L50) | 预处理 | `#if !defined  (HSE_VALUE)` |
+| [51](../Src/system_stm32f4xx.c#L51) | 预处理 | `#define HSE_VALUE    ((uint32_t)25000000) /*!< Default value of the External oscillator in Hz */` |
+| [52](../Src/system_stm32f4xx.c#L52) | 预处理 | `#endif /* HSE_VALUE */` |
+| [54](../Src/system_stm32f4xx.c#L54) | 预处理 | `#if !defined  (HSI_VALUE)` |
+| [55](../Src/system_stm32f4xx.c#L55) | 预处理 | `#define HSI_VALUE    ((uint32_t)16000000) /*!< Value of the Internal oscillator in Hz*/` |
+| [56](../Src/system_stm32f4xx.c#L56) | 预处理 | `#endif /* HSI_VALUE */` |
+| [76](../Src/system_stm32f4xx.c#L76) | 预处理 | `#if defined(STM32F405xx) &#124;&#124; defined(STM32F415xx) &#124;&#124; defined(STM32F407xx) &#124;&#124; defined(STM32F417xx)\` |
+| [80](../Src/system_stm32f4xx.c#L80) | 预处理 | `#endif /* STM32F40xxx &#124;&#124; STM32F41xxx &#124;&#124; STM32F42xxx &#124;&#124; STM32F43xxx &#124;&#124; STM32F469xx &#124;&#124; STM32F479xx &#124;&#124;\` |
+| [83](../Src/system_stm32f4xx.c#L83) | 预处理 | `#if defined(STM32F427xx) &#124;&#124; defined(STM32F437xx) &#124;&#124; defined(STM32F429xx) &#124;&#124; defined(STM32F439xx)\` |
+| [86](../Src/system_stm32f4xx.c#L86) | 预处理 | `#endif /* STM32F427xx &#124;&#124; STM32F437xx &#124;&#124; STM32F429xx &#124;&#124; STM32F439xx &#124;&#124; STM32F446xx &#124;&#124; STM32F469xx &#124;&#124;\` |
+| [96](../Src/system_stm32f4xx.c#L96) | 预处理 | `#if defined(USER_VECT_TAB_ADDRESS)` |
+| [100](../Src/system_stm32f4xx.c#L100) | 预处理 | `#if defined(VECT_TAB_SRAM)` |
+| [101](../Src/system_stm32f4xx.c#L101) | 预处理 | `#define VECT_TAB_BASE_ADDRESS   SRAM_BASE       /*!< Vector Table base address field.` |
+| [103](../Src/system_stm32f4xx.c#L103) | 预处理 | `#define VECT_TAB_OFFSET         0x00000000U     /*!< Vector Table base offset field.` |
+| [105](../Src/system_stm32f4xx.c#L105) | 预处理 | `#else` |
+| [106](../Src/system_stm32f4xx.c#L106) | 预处理 | `#define VECT_TAB_BASE_ADDRESS   FLASH_BASE      /*!< Vector Table base address field.` |
+| [108](../Src/system_stm32f4xx.c#L108) | 预处理 | `#define VECT_TAB_OFFSET         0x00000000U     /*!< Vector Table base offset field.` |
+| [110](../Src/system_stm32f4xx.c#L110) | 预处理 | `#endif /* VECT_TAB_SRAM */` |
+| [111](../Src/system_stm32f4xx.c#L111) | 预处理 | `#endif /* USER_VECT_TAB_ADDRESS */` |
+| [148](../Src/system_stm32f4xx.c#L148) | 预处理 | `#if defined (DATA_IN_ExtSRAM) &#124;&#124; defined (DATA_IN_ExtSDRAM)` |
+| [150](../Src/system_stm32f4xx.c#L150) | 预处理 | `#endif /* DATA_IN_ExtSRAM &#124;&#124; DATA_IN_ExtSDRAM */` |
+| [170](../Src/system_stm32f4xx.c#L170) | 预处理 | `#if (__FPU_PRESENT == 1) && (__FPU_USED == 1)` |
+| [172](../Src/system_stm32f4xx.c#L172) | 预处理 | `#endif` |
+| [174](../Src/system_stm32f4xx.c#L174) | 预处理 | `#if defined (DATA_IN_ExtSRAM) &#124;&#124; defined (DATA_IN_ExtSDRAM)` |
+| [176](../Src/system_stm32f4xx.c#L176) | 预处理 | `#endif /* DATA_IN_ExtSRAM &#124;&#124; DATA_IN_ExtSDRAM */` |
+| [179](../Src/system_stm32f4xx.c#L179) | 预处理 | `#if defined(USER_VECT_TAB_ADDRESS)` |
+| [181](../Src/system_stm32f4xx.c#L181) | 预处理 | `#endif /* USER_VECT_TAB_ADDRESS */` |
+| [268](../Src/system_stm32f4xx.c#L268) | 预处理 | `#if defined (DATA_IN_ExtSRAM) && defined (DATA_IN_ExtSDRAM)` |
+| [269](../Src/system_stm32f4xx.c#L269) | 预处理 | `#if defined(STM32F427xx) &#124;&#124; defined(STM32F437xx) &#124;&#124; defined(STM32F429xx) &#124;&#124; defined(STM32F439xx)\` |
+| [420](../Src/system_stm32f4xx.c#L420) | 预处理 | `#if defined(STM32F427xx) &#124;&#124; defined(STM32F437xx) &#124;&#124; defined(STM32F429xx) &#124;&#124; defined(STM32F439xx)` |
+| [425](../Src/system_stm32f4xx.c#L425) | 预处理 | `#endif /* STM32F427xx &#124;&#124; STM32F437xx &#124;&#124; STM32F429xx &#124;&#124; STM32F439xx */` |
+| [426](../Src/system_stm32f4xx.c#L426) | 预处理 | `#if defined(STM32F469xx) &#124;&#124; defined(STM32F479xx)` |
+| [431](../Src/system_stm32f4xx.c#L431) | 预处理 | `#endif /* STM32F469xx &#124;&#124; STM32F479xx */` |
+| [435](../Src/system_stm32f4xx.c#L435) | 预处理 | `#endif /* STM32F427xx &#124;&#124; STM32F437xx &#124;&#124; STM32F429xx &#124;&#124; STM32F439xx &#124;&#124; STM32F469xx &#124;&#124; STM32F479xx */` |
+| [436](../Src/system_stm32f4xx.c#L436) | 预处理 | `#elif defined (DATA_IN_ExtSRAM) &#124;&#124; defined (DATA_IN_ExtSDRAM)` |
+| [448](../Src/system_stm32f4xx.c#L448) | 预处理 | `#if defined(STM32F427xx) &#124;&#124; defined(STM32F437xx) &#124;&#124; defined(STM32F429xx) &#124;&#124; defined(STM32F439xx)\` |
+| [450](../Src/system_stm32f4xx.c#L450) | 预处理 | `#if defined (DATA_IN_ExtSDRAM)` |
+| [454](../Src/system_stm32f4xx.c#L454) | 预处理 | `#if defined(STM32F446xx)` |
+| [458](../Src/system_stm32f4xx.c#L458) | 预处理 | `#else` |
+| [462](../Src/system_stm32f4xx.c#L462) | 预处理 | `#endif /* STM32F446xx */` |
+| [466](../Src/system_stm32f4xx.c#L466) | 预处理 | `#if defined(STM32F446xx)` |
+| [490](../Src/system_stm32f4xx.c#L490) | 预处理 | `#endif /* STM32F446xx */` |
+| [540](../Src/system_stm32f4xx.c#L540) | 预处理 | `#if defined(STM32F427xx) &#124;&#124; defined(STM32F437xx) &#124;&#124; defined(STM32F429xx) &#124;&#124; defined(STM32F439xx)\` |
+| [565](../Src/system_stm32f4xx.c#L565) | 预处理 | `#endif /* STM32F427xx &#124;&#124; STM32F437xx &#124;&#124; STM32F429xx &#124;&#124; STM32F439xx &#124;&#124; STM32F469xx &#124;&#124; STM32F479xx */` |
+| [574](../Src/system_stm32f4xx.c#L574) | 预处理 | `#if defined(STM32F446xx)` |
+| [576](../Src/system_stm32f4xx.c#L576) | 预处理 | `#else` |
+| [578](../Src/system_stm32f4xx.c#L578) | 预处理 | `#endif /* STM32F446xx */` |
+| [603](../Src/system_stm32f4xx.c#L603) | 预处理 | `#if defined(STM32F446xx)` |
+| [605](../Src/system_stm32f4xx.c#L605) | 预处理 | `#else` |
+| [607](../Src/system_stm32f4xx.c#L607) | 预处理 | `#endif /* STM32F446xx */` |
+| [616](../Src/system_stm32f4xx.c#L616) | 预处理 | `#if defined(STM32F446xx)` |
+| [618](../Src/system_stm32f4xx.c#L618) | 预处理 | `#else` |
+| [620](../Src/system_stm32f4xx.c#L620) | 预处理 | `#endif /* STM32F446xx */` |
+| [630](../Src/system_stm32f4xx.c#L630) | 预处理 | `#if defined(STM32F446xx)` |
+| [632](../Src/system_stm32f4xx.c#L632) | 预处理 | `#else` |
+| [634](../Src/system_stm32f4xx.c#L634) | 预处理 | `#endif /* STM32F446xx */` |
+| [639](../Src/system_stm32f4xx.c#L639) | 预处理 | `#endif /* DATA_IN_ExtSDRAM */` |
+| [640](../Src/system_stm32f4xx.c#L640) | 预处理 | `#endif /* STM32F427xx &#124;&#124; STM32F437xx &#124;&#124; STM32F429xx &#124;&#124; STM32F439xx &#124;&#124; STM32F446xx &#124;&#124; STM32F469xx &#124;&#124; STM32F479xx */` |
+| [642](../Src/system_stm32f4xx.c#L642) | 预处理 | `#if defined(STM32F405xx) &#124;&#124; defined(STM32F415xx) &#124;&#124; defined(STM32F407xx) &#124;&#124; defined(STM32F417xx)\` |
+| [646](../Src/system_stm32f4xx.c#L646) | 预处理 | `#if defined(DATA_IN_ExtSRAM)` |
+| [705](../Src/system_stm32f4xx.c#L705) | 预处理 | `#if defined(STM32F427xx) &#124;&#124; defined(STM32F437xx) &#124;&#124; defined(STM32F429xx) &#124;&#124; defined(STM32F439xx)` |
+| [712](../Src/system_stm32f4xx.c#L712) | 预处理 | `#endif /* STM32F427xx &#124;&#124; STM32F437xx &#124;&#124; STM32F429xx &#124;&#124; STM32F439xx */` |
+| [713](../Src/system_stm32f4xx.c#L713) | 预处理 | `#if defined(STM32F469xx) &#124;&#124; defined(STM32F479xx)` |
+| [720](../Src/system_stm32f4xx.c#L720) | 预处理 | `#endif /* STM32F469xx &#124;&#124; STM32F479xx */` |
+| [721](../Src/system_stm32f4xx.c#L721) | 预处理 | `#if defined(STM32F405xx) &#124;&#124; defined(STM32F415xx) &#124;&#124; defined(STM32F407xx)&#124;&#124; defined(STM32F417xx)\` |
+| [729](../Src/system_stm32f4xx.c#L729) | 预处理 | `#endif /* STM32F405xx &#124;&#124; STM32F415xx &#124;&#124; STM32F407xx &#124;&#124; STM32F417xx &#124;&#124; STM32F412Zx &#124;&#124; STM32F412Vx */` |
+| [731](../Src/system_stm32f4xx.c#L731) | 预处理 | `#endif /* DATA_IN_ExtSRAM */` |
+| [732](../Src/system_stm32f4xx.c#L732) | 预处理 | `#endif /* STM32F405xx &#124;&#124; STM32F415xx &#124;&#124; STM32F407xx &#124;&#124; STM32F417xx &#124;&#124; STM32F427xx &#124;&#124; STM32F437xx &#124;&#124;\` |
+| [736](../Src/system_stm32f4xx.c#L736) | 预处理 | `#endif /* DATA_IN_ExtSRAM && DATA_IN_ExtSDRAM */` |
 
 ## Src/tim.c
 
-源文件：[打开 Src/tim.c](../Src/tim.c)。
-
-### HAL 设置赋值与中断优先级
-
-同一变量可能在不同外设初始化中重复使用，按源代码行区分。
-
-| 行 | 设置 |
-| --- | --- |
-| [Src/tim.c:49](../Src/tim.c#L49) | `htim1.Instance = TIM1;` |
-| [Src/tim.c:50](../Src/tim.c#L50) | `htim1.Init.Prescaler = 167;` |
-| [Src/tim.c:51](../Src/tim.c#L51) | `htim1.Init.CounterMode = TIM_COUNTERMODE_UP;` |
-| [Src/tim.c:52](../Src/tim.c#L52) | `htim1.Init.Period = 19999;` |
-| [Src/tim.c:53](../Src/tim.c#L53) | `htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;` |
-| [Src/tim.c:54](../Src/tim.c#L54) | `htim1.Init.RepetitionCounter = 0;` |
-| [Src/tim.c:55](../Src/tim.c#L55) | `htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;` |
-| [Src/tim.c:60](../Src/tim.c#L60) | `sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;` |
-| [Src/tim.c:69](../Src/tim.c#L69) | `sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;` |
-| [Src/tim.c:70](../Src/tim.c#L70) | `sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;` |
-| [Src/tim.c:75](../Src/tim.c#L75) | `sConfigOC.OCMode = TIM_OCMODE_PWM1;` |
-| [Src/tim.c:76](../Src/tim.c#L76) | `sConfigOC.Pulse = 0;` |
-| [Src/tim.c:77](../Src/tim.c#L77) | `sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;` |
-| [Src/tim.c:78](../Src/tim.c#L78) | `sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;` |
-| [Src/tim.c:79](../Src/tim.c#L79) | `sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;` |
-| [Src/tim.c:80](../Src/tim.c#L80) | `sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;` |
-| [Src/tim.c:81](../Src/tim.c#L81) | `sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;` |
-| [Src/tim.c:98](../Src/tim.c#L98) | `sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;` |
-| [Src/tim.c:99](../Src/tim.c#L99) | `sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;` |
-| [Src/tim.c:100](../Src/tim.c#L100) | `sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;` |
-| [Src/tim.c:101](../Src/tim.c#L101) | `sBreakDeadTimeConfig.DeadTime = 0;` |
-| [Src/tim.c:102](../Src/tim.c#L102) | `sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;` |
-| [Src/tim.c:103](../Src/tim.c#L103) | `sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;` |
-| [Src/tim.c:104](../Src/tim.c#L104) | `sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;` |
-| [Src/tim.c:130](../Src/tim.c#L130) | `htim4.Instance = TIM4;` |
-| [Src/tim.c:131](../Src/tim.c#L131) | `htim4.Init.Prescaler = 167;` |
-| [Src/tim.c:132](../Src/tim.c#L132) | `htim4.Init.CounterMode = TIM_COUNTERMODE_UP;` |
-| [Src/tim.c:133](../Src/tim.c#L133) | `htim4.Init.Period = 65535;` |
-| [Src/tim.c:134](../Src/tim.c#L134) | `htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;` |
-| [Src/tim.c:135](../Src/tim.c#L135) | `htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;` |
-| [Src/tim.c:140](../Src/tim.c#L140) | `sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;` |
-| [Src/tim.c:149](../Src/tim.c#L149) | `sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;` |
-| [Src/tim.c:150](../Src/tim.c#L150) | `sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;` |
-| [Src/tim.c:155](../Src/tim.c#L155) | `sConfigOC.OCMode = TIM_OCMODE_PWM1;` |
-| [Src/tim.c:156](../Src/tim.c#L156) | `sConfigOC.Pulse = 0;` |
-| [Src/tim.c:157](../Src/tim.c#L157) | `sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;` |
-| [Src/tim.c:158](../Src/tim.c#L158) | `sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;` |
-| [Src/tim.c:184](../Src/tim.c#L184) | `htim5.Instance = TIM5;` |
-| [Src/tim.c:185](../Src/tim.c#L185) | `htim5.Init.Prescaler = 0;` |
-| [Src/tim.c:186](../Src/tim.c#L186) | `htim5.Init.CounterMode = TIM_COUNTERMODE_UP;` |
-| [Src/tim.c:187](../Src/tim.c#L187) | `htim5.Init.Period = 65535;` |
-| [Src/tim.c:188](../Src/tim.c#L188) | `htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;` |
-| [Src/tim.c:189](../Src/tim.c#L189) | `htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;` |
-| [Src/tim.c:194](../Src/tim.c#L194) | `sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;` |
-| [Src/tim.c:203](../Src/tim.c#L203) | `sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;` |
-| [Src/tim.c:204](../Src/tim.c#L204) | `sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;` |
-| [Src/tim.c:209](../Src/tim.c#L209) | `sConfigOC.OCMode = TIM_OCMODE_PWM1;` |
-| [Src/tim.c:210](../Src/tim.c#L210) | `sConfigOC.Pulse = 0;` |
-| [Src/tim.c:211](../Src/tim.c#L211) | `sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;` |
-| [Src/tim.c:212](../Src/tim.c#L212) | `sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;` |
-| [Src/tim.c:247](../Src/tim.c#L247) | `htim8.Instance = TIM8;` |
-| [Src/tim.c:248](../Src/tim.c#L248) | `htim8.Init.Prescaler = 167;` |
-| [Src/tim.c:249](../Src/tim.c#L249) | `htim8.Init.CounterMode = TIM_COUNTERMODE_UP;` |
-| [Src/tim.c:250](../Src/tim.c#L250) | `htim8.Init.Period = 19999;` |
-| [Src/tim.c:251](../Src/tim.c#L251) | `htim8.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;` |
-| [Src/tim.c:252](../Src/tim.c#L252) | `htim8.Init.RepetitionCounter = 0;` |
-| [Src/tim.c:253](../Src/tim.c#L253) | `htim8.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;` |
-| [Src/tim.c:258](../Src/tim.c#L258) | `sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;` |
-| [Src/tim.c:267](../Src/tim.c#L267) | `sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;` |
-| [Src/tim.c:268](../Src/tim.c#L268) | `sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;` |
-| [Src/tim.c:273](../Src/tim.c#L273) | `sConfigOC.OCMode = TIM_OCMODE_TIMING;` |
-| [Src/tim.c:274](../Src/tim.c#L274) | `sConfigOC.Pulse = 0;` |
-| [Src/tim.c:275](../Src/tim.c#L275) | `sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;` |
-| [Src/tim.c:276](../Src/tim.c#L276) | `sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;` |
-| [Src/tim.c:277](../Src/tim.c#L277) | `sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;` |
-| [Src/tim.c:278](../Src/tim.c#L278) | `sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;` |
-| [Src/tim.c:279](../Src/tim.c#L279) | `sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;` |
-| [Src/tim.c:292](../Src/tim.c#L292) | `sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;` |
-| [Src/tim.c:293](../Src/tim.c#L293) | `sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;` |
-| [Src/tim.c:294](../Src/tim.c#L294) | `sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;` |
-| [Src/tim.c:295](../Src/tim.c#L295) | `sBreakDeadTimeConfig.DeadTime = 0;` |
-| [Src/tim.c:296](../Src/tim.c#L296) | `sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;` |
-| [Src/tim.c:297](../Src/tim.c#L297) | `sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;` |
-| [Src/tim.c:298](../Src/tim.c#L298) | `sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;` |
-| [Src/tim.c:322](../Src/tim.c#L322) | `htim10.Instance = TIM10;` |
-| [Src/tim.c:323](../Src/tim.c#L323) | `htim10.Init.Prescaler = 167;` |
-| [Src/tim.c:324](../Src/tim.c#L324) | `htim10.Init.CounterMode = TIM_COUNTERMODE_UP;` |
-| [Src/tim.c:325](../Src/tim.c#L325) | `htim10.Init.Period = 5000-1;` |
-| [Src/tim.c:326](../Src/tim.c#L326) | `htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;` |
-| [Src/tim.c:327](../Src/tim.c#L327) | `htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;` |
-| [Src/tim.c:336](../Src/tim.c#L336) | `sConfigOC.OCMode = TIM_OCMODE_PWM1;` |
-| [Src/tim.c:337](../Src/tim.c#L337) | `sConfigOC.Pulse = 0;` |
-| [Src/tim.c:338](../Src/tim.c#L338) | `sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;` |
-| [Src/tim.c:339](../Src/tim.c#L339) | `sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;` |
-| [Src/tim.c:396](../Src/tim.c#L396) | `HAL_NVIC_SetPriority(TIM8_TRG_COM_TIM14_IRQn, 15, 0);` |
-| [Src/tim.c:430](../Src/tim.c#L430) | `GPIO_InitStruct.Pin = GPIO_PIN_13\|SERVO_Pin\|GPIO_PIN_11\|GPIO_PIN_14;` |
-| [Src/tim.c:431](../Src/tim.c#L431) | `GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;` |
-| [Src/tim.c:432](../Src/tim.c#L432) | `GPIO_InitStruct.Pull = GPIO_NOPULL;` |
-| [Src/tim.c:433](../Src/tim.c#L433) | `GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;` |
-| [Src/tim.c:434](../Src/tim.c#L434) | `GPIO_InitStruct.Alternate = GPIO_AF1_TIM1;` |
-| [Src/tim.c:451](../Src/tim.c#L451) | `GPIO_InitStruct.Pin = BUZZER_Pin;` |
-| [Src/tim.c:452](../Src/tim.c#L452) | `GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;` |
-| [Src/tim.c:453](../Src/tim.c#L453) | `GPIO_InitStruct.Pull = GPIO_PULLUP;` |
-| [Src/tim.c:454](../Src/tim.c#L454) | `GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;` |
-| [Src/tim.c:455](../Src/tim.c#L455) | `GPIO_InitStruct.Alternate = GPIO_AF2_TIM4;` |
-| [Src/tim.c:474](../Src/tim.c#L474) | `GPIO_InitStruct.Pin = LED_R_Pin\|LED_G_Pin\|LED_B_Pin;` |
-| [Src/tim.c:475](../Src/tim.c#L475) | `GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;` |
-| [Src/tim.c:476](../Src/tim.c#L476) | `GPIO_InitStruct.Pull = GPIO_PULLUP;` |
-| [Src/tim.c:477](../Src/tim.c#L477) | `GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;` |
-| [Src/tim.c:478](../Src/tim.c#L478) | `GPIO_InitStruct.Alternate = GPIO_AF2_TIM5;` |
-| [Src/tim.c:498](../Src/tim.c#L498) | `GPIO_InitStruct.Pin = GPIO_PIN_7\|GPIO_PIN_6;` |
-| [Src/tim.c:499](../Src/tim.c#L499) | `GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;` |
-| [Src/tim.c:500](../Src/tim.c#L500) | `GPIO_InitStruct.Pull = GPIO_NOPULL;` |
-| [Src/tim.c:501](../Src/tim.c#L501) | `GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;` |
-| [Src/tim.c:502](../Src/tim.c#L502) | `GPIO_InitStruct.Alternate = GPIO_AF3_TIM8;` |
-| [Src/tim.c:505](../Src/tim.c#L505) | `GPIO_InitStruct.Pin = GPIO_PIN_6;` |
-| [Src/tim.c:506](../Src/tim.c#L506) | `GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;` |
-| [Src/tim.c:507](../Src/tim.c#L507) | `GPIO_InitStruct.Pull = GPIO_NOPULL;` |
-| [Src/tim.c:508](../Src/tim.c#L508) | `GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;` |
-| [Src/tim.c:509](../Src/tim.c#L509) | `GPIO_InitStruct.Alternate = GPIO_AF3_TIM8;` |
-| [Src/tim.c:526](../Src/tim.c#L526) | `GPIO_InitStruct.Pin = IMU_TEMP_Pin;` |
-| [Src/tim.c:527](../Src/tim.c#L527) | `GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;` |
-| [Src/tim.c:528](../Src/tim.c#L528) | `GPIO_InitStruct.Pull = GPIO_PULLUP;` |
-| [Src/tim.c:529](../Src/tim.c#L529) | `GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;` |
-| [Src/tim.c:530](../Src/tim.c#L530) | `GPIO_InitStruct.Alternate = GPIO_AF3_TIM10;` |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [43](../Src/tim.c#L43) | 配置初值 | `TIM_ClockConfigTypeDef sClockSourceConfig = {0};` |
+| [44](../Src/tim.c#L44) | 配置初值 | `TIM_MasterConfigTypeDef sMasterConfig = {0};` |
+| [46](../Src/tim.c#L46) | 配置初值 | `TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};` |
+| [52](../Src/tim.c#L52) | HAL/NVIC | `htim1.Init.Prescaler = 168-1;` |
+| [53](../Src/tim.c#L53) | HAL/NVIC | `htim1.Init.CounterMode = TIM_COUNTERMODE_UP;` |
+| [54](../Src/tim.c#L54) | HAL/NVIC | `htim1.Init.Period = 20000-1;` |
+| [55](../Src/tim.c#L55) | HAL/NVIC | `htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;` |
+| [56](../Src/tim.c#L56) | HAL/NVIC | `htim1.Init.RepetitionCounter = 0;` |
+| [57](../Src/tim.c#L57) | HAL/NVIC | `htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;` |
+| [125](../Src/tim.c#L125) | 配置初值 | `TIM_ClockConfigTypeDef sClockSourceConfig = {0};` |
+| [126](../Src/tim.c#L126) | 配置初值 | `TIM_MasterConfigTypeDef sMasterConfig = {0};` |
+| [133](../Src/tim.c#L133) | HAL/NVIC | `htim2.Init.Prescaler = 0;` |
+| [134](../Src/tim.c#L134) | HAL/NVIC | `htim2.Init.CounterMode = TIM_COUNTERMODE_UP;` |
+| [135](../Src/tim.c#L135) | HAL/NVIC | `htim2.Init.Period = 65535;` |
+| [136](../Src/tim.c#L136) | HAL/NVIC | `htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;` |
+| [137](../Src/tim.c#L137) | HAL/NVIC | `htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;` |
+| [191](../Src/tim.c#L191) | 配置初值 | `TIM_ClockConfigTypeDef sClockSourceConfig = {0};` |
+| [192](../Src/tim.c#L192) | 配置初值 | `TIM_MasterConfigTypeDef sMasterConfig = {0};` |
+| [199](../Src/tim.c#L199) | HAL/NVIC | `htim3.Init.Prescaler = 84-1;` |
+| [200](../Src/tim.c#L200) | HAL/NVIC | `htim3.Init.CounterMode = TIM_COUNTERMODE_UP;` |
+| [201](../Src/tim.c#L201) | HAL/NVIC | `htim3.Init.Period = 10000-1;` |
+| [202](../Src/tim.c#L202) | HAL/NVIC | `htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;` |
+| [203](../Src/tim.c#L203) | HAL/NVIC | `htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;` |
+| [245](../Src/tim.c#L245) | 配置初值 | `TIM_ClockConfigTypeDef sClockSourceConfig = {0};` |
+| [246](../Src/tim.c#L246) | 配置初值 | `TIM_MasterConfigTypeDef sMasterConfig = {0};` |
+| [253](../Src/tim.c#L253) | HAL/NVIC | `htim4.Init.Prescaler = 0;` |
+| [254](../Src/tim.c#L254) | HAL/NVIC | `htim4.Init.CounterMode = TIM_COUNTERMODE_UP;` |
+| [255](../Src/tim.c#L255) | HAL/NVIC | `htim4.Init.Period = 65535;` |
+| [256](../Src/tim.c#L256) | HAL/NVIC | `htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;` |
+| [257](../Src/tim.c#L257) | HAL/NVIC | `htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;` |
+| [312](../Src/tim.c#L312) | 配置初值 | `TIM_MasterConfigTypeDef sMasterConfig = {0};` |
+| [318](../Src/tim.c#L318) | HAL/NVIC | `htim5.Init.Prescaler = 0;` |
+| [319](../Src/tim.c#L319) | HAL/NVIC | `htim5.Init.CounterMode = TIM_COUNTERMODE_UP;` |
+| [320](../Src/tim.c#L320) | HAL/NVIC | `htim5.Init.Period = 4294967295;` |
+| [321](../Src/tim.c#L321) | HAL/NVIC | `htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;` |
+| [322](../Src/tim.c#L322) | HAL/NVIC | `htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;` |
+| [357](../Src/tim.c#L357) | 配置初值 | `TIM_MasterConfigTypeDef sMasterConfig = {0};` |
+| [363](../Src/tim.c#L363) | HAL/NVIC | `htim8.Init.Prescaler = 0;` |
+| [364](../Src/tim.c#L364) | HAL/NVIC | `htim8.Init.CounterMode = TIM_COUNTERMODE_UP;` |
+| [365](../Src/tim.c#L365) | HAL/NVIC | `htim8.Init.Period = 65535;` |
+| [366](../Src/tim.c#L366) | HAL/NVIC | `htim8.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;` |
+| [367](../Src/tim.c#L367) | HAL/NVIC | `htim8.Init.RepetitionCounter = 0;` |
+| [368](../Src/tim.c#L368) | HAL/NVIC | `htim8.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;` |
+| [402](../Src/tim.c#L402) | 配置初值 | `TIM_ClockConfigTypeDef sClockSourceConfig = {0};` |
+| [409](../Src/tim.c#L409) | HAL/NVIC | `htim12.Init.Prescaler = 84-1;` |
+| [410](../Src/tim.c#L410) | HAL/NVIC | `htim12.Init.CounterMode = TIM_COUNTERMODE_UP;` |
+| [411](../Src/tim.c#L411) | HAL/NVIC | `htim12.Init.Period = 10000-1;` |
+| [412](../Src/tim.c#L412) | HAL/NVIC | `htim12.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;` |
+| [413](../Src/tim.c#L413) | HAL/NVIC | `htim12.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;` |
+| [551](../Src/tim.c#L551) | HAL/NVIC | `HAL_NVIC_SetPriority(TIM8_TRG_COM_TIM14_IRQn, 15, 0);` |
+| [552](../Src/tim.c#L552) | HAL/NVIC | `HAL_NVIC_EnableIRQ(TIM8_TRG_COM_TIM14_IRQn);` |
+| [782](../Src/tim.c#L782) | HAL/NVIC | `HAL_NVIC_DisableIRQ(TIM8_TRG_COM_TIM14_IRQn);` |
 
 ## Src/usart.c
 
-源文件：[打开 Src/usart.c](../Src/usart.c)。
-
-### HAL 设置赋值与中断优先级
-
-同一变量可能在不同外设初始化中重复使用，按源代码行区分。
-
-| 行 | 设置 |
-| --- | --- |
-| [Src/usart.c:48](../Src/usart.c#L48) | `huart1.Instance = USART1;` |
-| [Src/usart.c:49](../Src/usart.c#L49) | `huart1.Init.BaudRate = 115200;` |
-| [Src/usart.c:50](../Src/usart.c#L50) | `huart1.Init.WordLength = UART_WORDLENGTH_8B;` |
-| [Src/usart.c:51](../Src/usart.c#L51) | `huart1.Init.StopBits = UART_STOPBITS_1;` |
-| [Src/usart.c:52](../Src/usart.c#L52) | `huart1.Init.Parity = UART_PARITY_NONE;` |
-| [Src/usart.c:53](../Src/usart.c#L53) | `huart1.Init.Mode = UART_MODE_TX_RX;` |
-| [Src/usart.c:54](../Src/usart.c#L54) | `huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;` |
-| [Src/usart.c:55](../Src/usart.c#L55) | `huart1.Init.OverSampling = UART_OVERSAMPLING_16;` |
-| [Src/usart.c:77](../Src/usart.c#L77) | `huart3.Instance = USART3;` |
-| [Src/usart.c:78](../Src/usart.c#L78) | `huart3.Init.BaudRate = 100000;` |
-| [Src/usart.c:79](../Src/usart.c#L79) | `huart3.Init.WordLength = UART_WORDLENGTH_9B;` |
-| [Src/usart.c:80](../Src/usart.c#L80) | `huart3.Init.StopBits = UART_STOPBITS_1;` |
-| [Src/usart.c:81](../Src/usart.c#L81) | `huart3.Init.Parity = UART_PARITY_EVEN;` |
-| [Src/usart.c:82](../Src/usart.c#L82) | `huart3.Init.Mode = UART_MODE_TX_RX;` |
-| [Src/usart.c:83](../Src/usart.c#L83) | `huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;` |
-| [Src/usart.c:84](../Src/usart.c#L84) | `huart3.Init.OverSampling = UART_OVERSAMPLING_16;` |
-| [Src/usart.c:106](../Src/usart.c#L106) | `huart6.Instance = USART6;` |
-| [Src/usart.c:107](../Src/usart.c#L107) | `huart6.Init.BaudRate = 115200;` |
-| [Src/usart.c:108](../Src/usart.c#L108) | `huart6.Init.WordLength = UART_WORDLENGTH_8B;` |
-| [Src/usart.c:109](../Src/usart.c#L109) | `huart6.Init.StopBits = UART_STOPBITS_1;` |
-| [Src/usart.c:110](../Src/usart.c#L110) | `huart6.Init.Parity = UART_PARITY_NONE;` |
-| [Src/usart.c:111](../Src/usart.c#L111) | `huart6.Init.Mode = UART_MODE_TX_RX;` |
-| [Src/usart.c:112](../Src/usart.c#L112) | `huart6.Init.HwFlowCtl = UART_HWCONTROL_NONE;` |
-| [Src/usart.c:113](../Src/usart.c#L113) | `huart6.Init.OverSampling = UART_OVERSAMPLING_16;` |
-| [Src/usart.c:142](../Src/usart.c#L142) | `GPIO_InitStruct.Pin = GPIO_PIN_7;` |
-| [Src/usart.c:143](../Src/usart.c#L143) | `GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;` |
-| [Src/usart.c:144](../Src/usart.c#L144) | `GPIO_InitStruct.Pull = GPIO_NOPULL;` |
-| [Src/usart.c:145](../Src/usart.c#L145) | `GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;` |
-| [Src/usart.c:146](../Src/usart.c#L146) | `GPIO_InitStruct.Alternate = GPIO_AF7_USART1;` |
-| [Src/usart.c:149](../Src/usart.c#L149) | `GPIO_InitStruct.Pin = GPIO_PIN_9;` |
-| [Src/usart.c:150](../Src/usart.c#L150) | `GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;` |
-| [Src/usart.c:151](../Src/usart.c#L151) | `GPIO_InitStruct.Pull = GPIO_NOPULL;` |
-| [Src/usart.c:152](../Src/usart.c#L152) | `GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;` |
-| [Src/usart.c:153](../Src/usart.c#L153) | `GPIO_InitStruct.Alternate = GPIO_AF7_USART1;` |
-| [Src/usart.c:158](../Src/usart.c#L158) | `hdma_usart1_tx.Instance = DMA2_Stream7;` |
-| [Src/usart.c:159](../Src/usart.c#L159) | `hdma_usart1_tx.Init.Channel = DMA_CHANNEL_4;` |
-| [Src/usart.c:160](../Src/usart.c#L160) | `hdma_usart1_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;` |
-| [Src/usart.c:161](../Src/usart.c#L161) | `hdma_usart1_tx.Init.PeriphInc = DMA_PINC_DISABLE;` |
-| [Src/usart.c:162](../Src/usart.c#L162) | `hdma_usart1_tx.Init.MemInc = DMA_MINC_ENABLE;` |
-| [Src/usart.c:163](../Src/usart.c#L163) | `hdma_usart1_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
-| [Src/usart.c:164](../Src/usart.c#L164) | `hdma_usart1_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
-| [Src/usart.c:165](../Src/usart.c#L165) | `hdma_usart1_tx.Init.Mode = DMA_NORMAL;` |
-| [Src/usart.c:166](../Src/usart.c#L166) | `hdma_usart1_tx.Init.Priority = DMA_PRIORITY_VERY_HIGH;` |
-| [Src/usart.c:167](../Src/usart.c#L167) | `hdma_usart1_tx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
-| [Src/usart.c:176](../Src/usart.c#L176) | `hdma_usart1_rx.Instance = DMA2_Stream5;` |
-| [Src/usart.c:177](../Src/usart.c#L177) | `hdma_usart1_rx.Init.Channel = DMA_CHANNEL_4;` |
-| [Src/usart.c:178](../Src/usart.c#L178) | `hdma_usart1_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
-| [Src/usart.c:179](../Src/usart.c#L179) | `hdma_usart1_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
-| [Src/usart.c:180](../Src/usart.c#L180) | `hdma_usart1_rx.Init.MemInc = DMA_MINC_ENABLE;` |
-| [Src/usart.c:181](../Src/usart.c#L181) | `hdma_usart1_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
-| [Src/usart.c:182](../Src/usart.c#L182) | `hdma_usart1_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
-| [Src/usart.c:183](../Src/usart.c#L183) | `hdma_usart1_rx.Init.Mode = DMA_NORMAL;` |
-| [Src/usart.c:184](../Src/usart.c#L184) | `hdma_usart1_rx.Init.Priority = DMA_PRIORITY_VERY_HIGH;` |
-| [Src/usart.c:185](../Src/usart.c#L185) | `hdma_usart1_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
-| [Src/usart.c:194](../Src/usart.c#L194) | `HAL_NVIC_SetPriority(USART1_IRQn, 5, 0);` |
-| [Src/usart.c:213](../Src/usart.c#L213) | `GPIO_InitStruct.Pin = GPIO_PIN_11\|GPIO_PIN_10;` |
-| [Src/usart.c:214](../Src/usart.c#L214) | `GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;` |
-| [Src/usart.c:215](../Src/usart.c#L215) | `GPIO_InitStruct.Pull = GPIO_NOPULL;` |
-| [Src/usart.c:216](../Src/usart.c#L216) | `GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;` |
-| [Src/usart.c:217](../Src/usart.c#L217) | `GPIO_InitStruct.Alternate = GPIO_AF7_USART3;` |
-| [Src/usart.c:222](../Src/usart.c#L222) | `hdma_usart3_rx.Instance = DMA1_Stream1;` |
-| [Src/usart.c:223](../Src/usart.c#L223) | `hdma_usart3_rx.Init.Channel = DMA_CHANNEL_4;` |
-| [Src/usart.c:224](../Src/usart.c#L224) | `hdma_usart3_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
-| [Src/usart.c:225](../Src/usart.c#L225) | `hdma_usart3_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
-| [Src/usart.c:226](../Src/usart.c#L226) | `hdma_usart3_rx.Init.MemInc = DMA_MINC_ENABLE;` |
-| [Src/usart.c:227](../Src/usart.c#L227) | `hdma_usart3_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
-| [Src/usart.c:228](../Src/usart.c#L228) | `hdma_usart3_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
-| [Src/usart.c:229](../Src/usart.c#L229) | `hdma_usart3_rx.Init.Mode = DMA_NORMAL;` |
-| [Src/usart.c:230](../Src/usart.c#L230) | `hdma_usart3_rx.Init.Priority = DMA_PRIORITY_LOW;` |
-| [Src/usart.c:231](../Src/usart.c#L231) | `hdma_usart3_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
-| [Src/usart.c:240](../Src/usart.c#L240) | `HAL_NVIC_SetPriority(USART3_IRQn, 5, 0);` |
-| [Src/usart.c:259](../Src/usart.c#L259) | `GPIO_InitStruct.Pin = GPIO_PIN_14\|GPIO_PIN_9;` |
-| [Src/usart.c:260](../Src/usart.c#L260) | `GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;` |
-| [Src/usart.c:261](../Src/usart.c#L261) | `GPIO_InitStruct.Pull = GPIO_NOPULL;` |
-| [Src/usart.c:262](../Src/usart.c#L262) | `GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;` |
-| [Src/usart.c:263](../Src/usart.c#L263) | `GPIO_InitStruct.Alternate = GPIO_AF8_USART6;` |
-| [Src/usart.c:268](../Src/usart.c#L268) | `hdma_usart6_rx.Instance = DMA2_Stream2;` |
-| [Src/usart.c:269](../Src/usart.c#L269) | `hdma_usart6_rx.Init.Channel = DMA_CHANNEL_5;` |
-| [Src/usart.c:270](../Src/usart.c#L270) | `hdma_usart6_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
-| [Src/usart.c:271](../Src/usart.c#L271) | `hdma_usart6_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
-| [Src/usart.c:272](../Src/usart.c#L272) | `hdma_usart6_rx.Init.MemInc = DMA_MINC_ENABLE;` |
-| [Src/usart.c:273](../Src/usart.c#L273) | `hdma_usart6_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
-| [Src/usart.c:274](../Src/usart.c#L274) | `hdma_usart6_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
-| [Src/usart.c:275](../Src/usart.c#L275) | `hdma_usart6_rx.Init.Mode = DMA_NORMAL;` |
-| [Src/usart.c:276](../Src/usart.c#L276) | `hdma_usart6_rx.Init.Priority = DMA_PRIORITY_HIGH;` |
-| [Src/usart.c:277](../Src/usart.c#L277) | `hdma_usart6_rx.Init.FIFOMode = DMA_FIFOMODE_ENABLE;` |
-| [Src/usart.c:278](../Src/usart.c#L278) | `hdma_usart6_rx.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;` |
-| [Src/usart.c:279](../Src/usart.c#L279) | `hdma_usart6_rx.Init.MemBurst = DMA_MBURST_SINGLE;` |
-| [Src/usart.c:280](../Src/usart.c#L280) | `hdma_usart6_rx.Init.PeriphBurst = DMA_PBURST_SINGLE;` |
-| [Src/usart.c:289](../Src/usart.c#L289) | `hdma_usart6_tx.Instance = DMA2_Stream6;` |
-| [Src/usart.c:290](../Src/usart.c#L290) | `hdma_usart6_tx.Init.Channel = DMA_CHANNEL_5;` |
-| [Src/usart.c:291](../Src/usart.c#L291) | `hdma_usart6_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;` |
-| [Src/usart.c:292](../Src/usart.c#L292) | `hdma_usart6_tx.Init.PeriphInc = DMA_PINC_DISABLE;` |
-| [Src/usart.c:293](../Src/usart.c#L293) | `hdma_usart6_tx.Init.MemInc = DMA_MINC_ENABLE;` |
-| [Src/usart.c:294](../Src/usart.c#L294) | `hdma_usart6_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
-| [Src/usart.c:295](../Src/usart.c#L295) | `hdma_usart6_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
-| [Src/usart.c:296](../Src/usart.c#L296) | `hdma_usart6_tx.Init.Mode = DMA_NORMAL;` |
-| [Src/usart.c:297](../Src/usart.c#L297) | `hdma_usart6_tx.Init.Priority = DMA_PRIORITY_HIGH;` |
-| [Src/usart.c:298](../Src/usart.c#L298) | `hdma_usart6_tx.Init.FIFOMode = DMA_FIFOMODE_ENABLE;` |
-| [Src/usart.c:299](../Src/usart.c#L299) | `hdma_usart6_tx.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;` |
-| [Src/usart.c:300](../Src/usart.c#L300) | `hdma_usart6_tx.Init.MemBurst = DMA_MBURST_SINGLE;` |
-| [Src/usart.c:301](../Src/usart.c#L301) | `hdma_usart6_tx.Init.PeriphBurst = DMA_PBURST_SINGLE;` |
-| [Src/usart.c:310](../Src/usart.c#L310) | `HAL_NVIC_SetPriority(USART6_IRQn, 5, 0);` |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [55](../Src/usart.c#L55) | HAL/NVIC | `huart7.Init.BaudRate = 115200;` |
+| [56](../Src/usart.c#L56) | HAL/NVIC | `huart7.Init.WordLength = UART_WORDLENGTH_8B;` |
+| [57](../Src/usart.c#L57) | HAL/NVIC | `huart7.Init.StopBits = UART_STOPBITS_1;` |
+| [58](../Src/usart.c#L58) | HAL/NVIC | `huart7.Init.Parity = UART_PARITY_NONE;` |
+| [59](../Src/usart.c#L59) | HAL/NVIC | `huart7.Init.Mode = UART_MODE_TX_RX;` |
+| [60](../Src/usart.c#L60) | HAL/NVIC | `huart7.Init.HwFlowCtl = UART_HWCONTROL_NONE;` |
+| [61](../Src/usart.c#L61) | HAL/NVIC | `huart7.Init.OverSampling = UART_OVERSAMPLING_16;` |
+| [83](../Src/usart.c#L83) | HAL/NVIC | `huart8.Init.BaudRate = 115200;` |
+| [84](../Src/usart.c#L84) | HAL/NVIC | `huart8.Init.WordLength = UART_WORDLENGTH_8B;` |
+| [85](../Src/usart.c#L85) | HAL/NVIC | `huart8.Init.StopBits = UART_STOPBITS_1;` |
+| [86](../Src/usart.c#L86) | HAL/NVIC | `huart8.Init.Parity = UART_PARITY_NONE;` |
+| [87](../Src/usart.c#L87) | HAL/NVIC | `huart8.Init.Mode = UART_MODE_TX_RX;` |
+| [88](../Src/usart.c#L88) | HAL/NVIC | `huart8.Init.HwFlowCtl = UART_HWCONTROL_NONE;` |
+| [89](../Src/usart.c#L89) | HAL/NVIC | `huart8.Init.OverSampling = UART_OVERSAMPLING_16;` |
+| [112](../Src/usart.c#L112) | HAL/NVIC | `huart1.Init.BaudRate = 100000;` |
+| [113](../Src/usart.c#L113) | HAL/NVIC | `huart1.Init.WordLength = UART_WORDLENGTH_9B;` |
+| [114](../Src/usart.c#L114) | HAL/NVIC | `huart1.Init.StopBits = UART_STOPBITS_1;` |
+| [115](../Src/usart.c#L115) | HAL/NVIC | `huart1.Init.Parity = UART_PARITY_EVEN;` |
+| [116](../Src/usart.c#L116) | HAL/NVIC | `huart1.Init.Mode = UART_MODE_TX_RX;` |
+| [117](../Src/usart.c#L117) | HAL/NVIC | `huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;` |
+| [118](../Src/usart.c#L118) | HAL/NVIC | `huart1.Init.OverSampling = UART_OVERSAMPLING_16;` |
+| [141](../Src/usart.c#L141) | HAL/NVIC | `huart2.Init.BaudRate = 115200;` |
+| [142](../Src/usart.c#L142) | HAL/NVIC | `huart2.Init.WordLength = UART_WORDLENGTH_8B;` |
+| [143](../Src/usart.c#L143) | HAL/NVIC | `huart2.Init.StopBits = UART_STOPBITS_1;` |
+| [144](../Src/usart.c#L144) | HAL/NVIC | `huart2.Init.Parity = UART_PARITY_NONE;` |
+| [145](../Src/usart.c#L145) | HAL/NVIC | `huart2.Init.Mode = UART_MODE_TX_RX;` |
+| [146](../Src/usart.c#L146) | HAL/NVIC | `huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;` |
+| [147](../Src/usart.c#L147) | HAL/NVIC | `huart2.Init.OverSampling = UART_OVERSAMPLING_16;` |
+| [170](../Src/usart.c#L170) | HAL/NVIC | `huart3.Init.BaudRate = 9600;` |
+| [171](../Src/usart.c#L171) | HAL/NVIC | `huart3.Init.WordLength = UART_WORDLENGTH_8B;` |
+| [172](../Src/usart.c#L172) | HAL/NVIC | `huart3.Init.StopBits = UART_STOPBITS_1;` |
+| [173](../Src/usart.c#L173) | HAL/NVIC | `huart3.Init.Parity = UART_PARITY_NONE;` |
+| [174](../Src/usart.c#L174) | HAL/NVIC | `huart3.Init.Mode = UART_MODE_TX_RX;` |
+| [175](../Src/usart.c#L175) | HAL/NVIC | `huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;` |
+| [176](../Src/usart.c#L176) | HAL/NVIC | `huart3.Init.OverSampling = UART_OVERSAMPLING_16;` |
+| [199](../Src/usart.c#L199) | HAL/NVIC | `huart6.Init.BaudRate = 115200;` |
+| [200](../Src/usart.c#L200) | HAL/NVIC | `huart6.Init.WordLength = UART_WORDLENGTH_8B;` |
+| [201](../Src/usart.c#L201) | HAL/NVIC | `huart6.Init.StopBits = UART_STOPBITS_1;` |
+| [202](../Src/usart.c#L202) | HAL/NVIC | `huart6.Init.Parity = UART_PARITY_NONE;` |
+| [203](../Src/usart.c#L203) | HAL/NVIC | `huart6.Init.Mode = UART_MODE_TX_RX;` |
+| [204](../Src/usart.c#L204) | HAL/NVIC | `huart6.Init.HwFlowCtl = UART_HWCONTROL_NONE;` |
+| [205](../Src/usart.c#L205) | HAL/NVIC | `huart6.Init.OverSampling = UART_OVERSAMPLING_16;` |
+| [243](../Src/usart.c#L243) | HAL/NVIC | `hdma_uart7_rx.Init.Channel = DMA_CHANNEL_5;` |
+| [244](../Src/usart.c#L244) | HAL/NVIC | `hdma_uart7_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
+| [245](../Src/usart.c#L245) | HAL/NVIC | `hdma_uart7_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
+| [246](../Src/usart.c#L246) | HAL/NVIC | `hdma_uart7_rx.Init.MemInc = DMA_MINC_ENABLE;` |
+| [247](../Src/usart.c#L247) | HAL/NVIC | `hdma_uart7_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
+| [248](../Src/usart.c#L248) | HAL/NVIC | `hdma_uart7_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
+| [249](../Src/usart.c#L249) | HAL/NVIC | `hdma_uart7_rx.Init.Mode = DMA_NORMAL;` |
+| [250](../Src/usart.c#L250) | HAL/NVIC | `hdma_uart7_rx.Init.Priority = DMA_PRIORITY_LOW;` |
+| [251](../Src/usart.c#L251) | HAL/NVIC | `hdma_uart7_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
+| [252](../Src/usart.c#L252) | HAL/NVIC | `hdma_uart7_rx.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;` |
+| [253](../Src/usart.c#L253) | HAL/NVIC | `hdma_uart7_rx.Init.MemBurst = DMA_MBURST_SINGLE;` |
+| [254](../Src/usart.c#L254) | HAL/NVIC | `hdma_uart7_rx.Init.PeriphBurst = DMA_PBURST_SINGLE;` |
+| [263](../Src/usart.c#L263) | HAL/NVIC | `HAL_NVIC_SetPriority(UART7_IRQn, 5, 0);` |
+| [264](../Src/usart.c#L264) | HAL/NVIC | `HAL_NVIC_EnableIRQ(UART7_IRQn);` |
+| [292](../Src/usart.c#L292) | HAL/NVIC | `hdma_uart8_rx.Init.Channel = DMA_CHANNEL_5;` |
+| [293](../Src/usart.c#L293) | HAL/NVIC | `hdma_uart8_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
+| [294](../Src/usart.c#L294) | HAL/NVIC | `hdma_uart8_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
+| [295](../Src/usart.c#L295) | HAL/NVIC | `hdma_uart8_rx.Init.MemInc = DMA_MINC_ENABLE;` |
+| [296](../Src/usart.c#L296) | HAL/NVIC | `hdma_uart8_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
+| [297](../Src/usart.c#L297) | HAL/NVIC | `hdma_uart8_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
+| [298](../Src/usart.c#L298) | HAL/NVIC | `hdma_uart8_rx.Init.Mode = DMA_NORMAL;` |
+| [299](../Src/usart.c#L299) | HAL/NVIC | `hdma_uart8_rx.Init.Priority = DMA_PRIORITY_LOW;` |
+| [300](../Src/usart.c#L300) | HAL/NVIC | `hdma_uart8_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
+| [301](../Src/usart.c#L301) | HAL/NVIC | `hdma_uart8_rx.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;` |
+| [302](../Src/usart.c#L302) | HAL/NVIC | `hdma_uart8_rx.Init.MemBurst = DMA_MBURST_SINGLE;` |
+| [303](../Src/usart.c#L303) | HAL/NVIC | `hdma_uart8_rx.Init.PeriphBurst = DMA_PBURST_SINGLE;` |
+| [313](../Src/usart.c#L313) | HAL/NVIC | `hdma_uart8_tx.Init.Channel = DMA_CHANNEL_5;` |
+| [314](../Src/usart.c#L314) | HAL/NVIC | `hdma_uart8_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;` |
+| [315](../Src/usart.c#L315) | HAL/NVIC | `hdma_uart8_tx.Init.PeriphInc = DMA_PINC_DISABLE;` |
+| [316](../Src/usart.c#L316) | HAL/NVIC | `hdma_uart8_tx.Init.MemInc = DMA_MINC_ENABLE;` |
+| [317](../Src/usart.c#L317) | HAL/NVIC | `hdma_uart8_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
+| [318](../Src/usart.c#L318) | HAL/NVIC | `hdma_uart8_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
+| [319](../Src/usart.c#L319) | HAL/NVIC | `hdma_uart8_tx.Init.Mode = DMA_NORMAL;` |
+| [320](../Src/usart.c#L320) | HAL/NVIC | `hdma_uart8_tx.Init.Priority = DMA_PRIORITY_LOW;` |
+| [321](../Src/usart.c#L321) | HAL/NVIC | `hdma_uart8_tx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
+| [330](../Src/usart.c#L330) | HAL/NVIC | `HAL_NVIC_SetPriority(UART8_IRQn, 5, 0);` |
+| [331](../Src/usart.c#L331) | HAL/NVIC | `HAL_NVIC_EnableIRQ(UART8_IRQn);` |
+| [359](../Src/usart.c#L359) | HAL/NVIC | `hdma_usart1_rx.Init.Channel = DMA_CHANNEL_4;` |
+| [360](../Src/usart.c#L360) | HAL/NVIC | `hdma_usart1_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
+| [361](../Src/usart.c#L361) | HAL/NVIC | `hdma_usart1_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
+| [362](../Src/usart.c#L362) | HAL/NVIC | `hdma_usart1_rx.Init.MemInc = DMA_MINC_ENABLE;` |
+| [363](../Src/usart.c#L363) | HAL/NVIC | `hdma_usart1_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
+| [364](../Src/usart.c#L364) | HAL/NVIC | `hdma_usart1_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
+| [365](../Src/usart.c#L365) | HAL/NVIC | `hdma_usart1_rx.Init.Mode = DMA_NORMAL;` |
+| [366](../Src/usart.c#L366) | HAL/NVIC | `hdma_usart1_rx.Init.Priority = DMA_PRIORITY_LOW;` |
+| [367](../Src/usart.c#L367) | HAL/NVIC | `hdma_usart1_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
+| [376](../Src/usart.c#L376) | HAL/NVIC | `HAL_NVIC_SetPriority(USART1_IRQn, 5, 0);` |
+| [377](../Src/usart.c#L377) | HAL/NVIC | `HAL_NVIC_EnableIRQ(USART1_IRQn);` |
+| [405](../Src/usart.c#L405) | HAL/NVIC | `hdma_usart2_rx.Init.Channel = DMA_CHANNEL_4;` |
+| [406](../Src/usart.c#L406) | HAL/NVIC | `hdma_usart2_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
+| [407](../Src/usart.c#L407) | HAL/NVIC | `hdma_usart2_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
+| [408](../Src/usart.c#L408) | HAL/NVIC | `hdma_usart2_rx.Init.MemInc = DMA_MINC_ENABLE;` |
+| [409](../Src/usart.c#L409) | HAL/NVIC | `hdma_usart2_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
+| [410](../Src/usart.c#L410) | HAL/NVIC | `hdma_usart2_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
+| [411](../Src/usart.c#L411) | HAL/NVIC | `hdma_usart2_rx.Init.Mode = DMA_NORMAL;` |
+| [412](../Src/usart.c#L412) | HAL/NVIC | `hdma_usart2_rx.Init.Priority = DMA_PRIORITY_HIGH;` |
+| [413](../Src/usart.c#L413) | HAL/NVIC | `hdma_usart2_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
+| [422](../Src/usart.c#L422) | HAL/NVIC | `HAL_NVIC_SetPriority(USART2_IRQn, 5, 0);` |
+| [423](../Src/usart.c#L423) | HAL/NVIC | `HAL_NVIC_EnableIRQ(USART2_IRQn);` |
+| [451](../Src/usart.c#L451) | HAL/NVIC | `hdma_usart3_rx.Init.Channel = DMA_CHANNEL_4;` |
+| [452](../Src/usart.c#L452) | HAL/NVIC | `hdma_usart3_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
+| [453](../Src/usart.c#L453) | HAL/NVIC | `hdma_usart3_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
+| [454](../Src/usart.c#L454) | HAL/NVIC | `hdma_usart3_rx.Init.MemInc = DMA_MINC_ENABLE;` |
+| [455](../Src/usart.c#L455) | HAL/NVIC | `hdma_usart3_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
+| [456](../Src/usart.c#L456) | HAL/NVIC | `hdma_usart3_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
+| [457](../Src/usart.c#L457) | HAL/NVIC | `hdma_usart3_rx.Init.Mode = DMA_NORMAL;` |
+| [458](../Src/usart.c#L458) | HAL/NVIC | `hdma_usart3_rx.Init.Priority = DMA_PRIORITY_VERY_HIGH;` |
+| [459](../Src/usart.c#L459) | HAL/NVIC | `hdma_usart3_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
+| [469](../Src/usart.c#L469) | HAL/NVIC | `hdma_usart3_tx.Init.Channel = DMA_CHANNEL_7;` |
+| [470](../Src/usart.c#L470) | HAL/NVIC | `hdma_usart3_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;` |
+| [471](../Src/usart.c#L471) | HAL/NVIC | `hdma_usart3_tx.Init.PeriphInc = DMA_PINC_DISABLE;` |
+| [472](../Src/usart.c#L472) | HAL/NVIC | `hdma_usart3_tx.Init.MemInc = DMA_MINC_ENABLE;` |
+| [473](../Src/usart.c#L473) | HAL/NVIC | `hdma_usart3_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
+| [474](../Src/usart.c#L474) | HAL/NVIC | `hdma_usart3_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
+| [475](../Src/usart.c#L475) | HAL/NVIC | `hdma_usart3_tx.Init.Mode = DMA_NORMAL;` |
+| [476](../Src/usart.c#L476) | HAL/NVIC | `hdma_usart3_tx.Init.Priority = DMA_PRIORITY_VERY_HIGH;` |
+| [477](../Src/usart.c#L477) | HAL/NVIC | `hdma_usart3_tx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
+| [486](../Src/usart.c#L486) | HAL/NVIC | `HAL_NVIC_SetPriority(USART3_IRQn, 5, 0);` |
+| [487](../Src/usart.c#L487) | HAL/NVIC | `HAL_NVIC_EnableIRQ(USART3_IRQn);` |
+| [515](../Src/usart.c#L515) | HAL/NVIC | `hdma_usart6_rx.Init.Channel = DMA_CHANNEL_5;` |
+| [516](../Src/usart.c#L516) | HAL/NVIC | `hdma_usart6_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
+| [517](../Src/usart.c#L517) | HAL/NVIC | `hdma_usart6_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
+| [518](../Src/usart.c#L518) | HAL/NVIC | `hdma_usart6_rx.Init.MemInc = DMA_MINC_ENABLE;` |
+| [519](../Src/usart.c#L519) | HAL/NVIC | `hdma_usart6_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
+| [520](../Src/usart.c#L520) | HAL/NVIC | `hdma_usart6_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
+| [521](../Src/usart.c#L521) | HAL/NVIC | `hdma_usart6_rx.Init.Mode = DMA_NORMAL;` |
+| [522](../Src/usart.c#L522) | HAL/NVIC | `hdma_usart6_rx.Init.Priority = DMA_PRIORITY_HIGH;` |
+| [523](../Src/usart.c#L523) | HAL/NVIC | `hdma_usart6_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
+| [533](../Src/usart.c#L533) | HAL/NVIC | `hdma_usart6_tx.Init.Channel = DMA_CHANNEL_5;` |
+| [534](../Src/usart.c#L534) | HAL/NVIC | `hdma_usart6_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;` |
+| [535](../Src/usart.c#L535) | HAL/NVIC | `hdma_usart6_tx.Init.PeriphInc = DMA_PINC_DISABLE;` |
+| [536](../Src/usart.c#L536) | HAL/NVIC | `hdma_usart6_tx.Init.MemInc = DMA_MINC_ENABLE;` |
+| [537](../Src/usart.c#L537) | HAL/NVIC | `hdma_usart6_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
+| [538](../Src/usart.c#L538) | HAL/NVIC | `hdma_usart6_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
+| [539](../Src/usart.c#L539) | HAL/NVIC | `hdma_usart6_tx.Init.Mode = DMA_NORMAL;` |
+| [540](../Src/usart.c#L540) | HAL/NVIC | `hdma_usart6_tx.Init.Priority = DMA_PRIORITY_HIGH;` |
+| [541](../Src/usart.c#L541) | HAL/NVIC | `hdma_usart6_tx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
+| [550](../Src/usart.c#L550) | HAL/NVIC | `HAL_NVIC_SetPriority(USART6_IRQn, 5, 0);` |
+| [551](../Src/usart.c#L551) | HAL/NVIC | `HAL_NVIC_EnableIRQ(USART6_IRQn);` |
+| [579](../Src/usart.c#L579) | HAL/NVIC | `HAL_NVIC_DisableIRQ(UART7_IRQn);` |
+| [603](../Src/usart.c#L603) | HAL/NVIC | `HAL_NVIC_DisableIRQ(UART8_IRQn);` |
+| [626](../Src/usart.c#L626) | HAL/NVIC | `HAL_NVIC_DisableIRQ(USART1_IRQn);` |
+| [649](../Src/usart.c#L649) | HAL/NVIC | `HAL_NVIC_DisableIRQ(USART2_IRQn);` |
+| [673](../Src/usart.c#L673) | HAL/NVIC | `HAL_NVIC_DisableIRQ(USART3_IRQn);` |
+| [697](../Src/usart.c#L697) | HAL/NVIC | `HAL_NVIC_DisableIRQ(USART6_IRQn);` |
 
 ## Src/usbd_conf.c
 
-源文件：[打开 Src/usbd_conf.c](../Src/usbd_conf.c)。
-
-### HAL 设置赋值与中断优先级
-
-同一变量可能在不同外设初始化中重复使用，按源代码行区分。
-
-| 行 | 设置 |
-| --- | --- |
-| [Src/usbd_conf.c:84](../Src/usbd_conf.c#L84) | `GPIO_InitStruct.Pin = GPIO_PIN_12\|GPIO_PIN_11\|GPIO_PIN_10;` |
-| [Src/usbd_conf.c:85](../Src/usbd_conf.c#L85) | `GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;` |
-| [Src/usbd_conf.c:86](../Src/usbd_conf.c#L86) | `GPIO_InitStruct.Pull = GPIO_NOPULL;` |
-| [Src/usbd_conf.c:87](../Src/usbd_conf.c#L87) | `GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;` |
-| [Src/usbd_conf.c:88](../Src/usbd_conf.c#L88) | `GPIO_InitStruct.Alternate = GPIO_AF10_OTG_FS;` |
-| [Src/usbd_conf.c:95](../Src/usbd_conf.c#L95) | `HAL_NVIC_SetPriority(OTG_FS_IRQn, 5, 0);` |
-| [Src/usbd_conf.c:340](../Src/usbd_conf.c#L340) | `hpcd_USB_OTG_FS.pData = pdev;` |
-| [Src/usbd_conf.c:343](../Src/usbd_conf.c#L343) | `hpcd_USB_OTG_FS.Instance = USB_OTG_FS;` |
-| [Src/usbd_conf.c:344](../Src/usbd_conf.c#L344) | `hpcd_USB_OTG_FS.Init.dev_endpoints = 4;` |
-| [Src/usbd_conf.c:345](../Src/usbd_conf.c#L345) | `hpcd_USB_OTG_FS.Init.speed = PCD_SPEED_FULL;` |
-| [Src/usbd_conf.c:346](../Src/usbd_conf.c#L346) | `hpcd_USB_OTG_FS.Init.dma_enable = DISABLE;` |
-| [Src/usbd_conf.c:347](../Src/usbd_conf.c#L347) | `hpcd_USB_OTG_FS.Init.phy_itface = PCD_PHY_EMBEDDED;` |
-| [Src/usbd_conf.c:348](../Src/usbd_conf.c#L348) | `hpcd_USB_OTG_FS.Init.Sof_enable = DISABLE;` |
-| [Src/usbd_conf.c:349](../Src/usbd_conf.c#L349) | `hpcd_USB_OTG_FS.Init.low_power_enable = DISABLE;` |
-| [Src/usbd_conf.c:350](../Src/usbd_conf.c#L350) | `hpcd_USB_OTG_FS.Init.lpm_enable = DISABLE;` |
-| [Src/usbd_conf.c:351](../Src/usbd_conf.c#L351) | `hpcd_USB_OTG_FS.Init.vbus_sensing_enable = DISABLE;` |
-| [Src/usbd_conf.c:352](../Src/usbd_conf.c#L352) | `hpcd_USB_OTG_FS.Init.use_dedicated_ep1 = DISABLE;` |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [95](../Src/usbd_conf.c#L95) | HAL/NVIC | `HAL_NVIC_SetPriority(OTG_FS_IRQn, 5, 0);` |
+| [96](../Src/usbd_conf.c#L96) | HAL/NVIC | `HAL_NVIC_EnableIRQ(OTG_FS_IRQn);` |
+| [127](../Src/usbd_conf.c#L127) | HAL/NVIC | `HAL_NVIC_DisableIRQ(OTG_FS_IRQn);` |
+| [140](../Src/usbd_conf.c#L140) | 预处理 | `#if (USE_HAL_PCD_REGISTER_CALLBACKS == 1U)` |
+| [142](../Src/usbd_conf.c#L142) | 预处理 | `#else` |
+| [144](../Src/usbd_conf.c#L144) | 预处理 | `#endif /* USE_HAL_PCD_REGISTER_CALLBACKS */` |
+| [155](../Src/usbd_conf.c#L155) | 预处理 | `#if (USE_HAL_PCD_REGISTER_CALLBACKS == 1U)` |
+| [157](../Src/usbd_conf.c#L157) | 预处理 | `#else` |
+| [159](../Src/usbd_conf.c#L159) | 预处理 | `#endif /* USE_HAL_PCD_REGISTER_CALLBACKS */` |
+| [170](../Src/usbd_conf.c#L170) | 预处理 | `#if (USE_HAL_PCD_REGISTER_CALLBACKS == 1U)` |
+| [172](../Src/usbd_conf.c#L172) | 预处理 | `#else` |
+| [174](../Src/usbd_conf.c#L174) | 预处理 | `#endif /* USE_HAL_PCD_REGISTER_CALLBACKS */` |
+| [184](../Src/usbd_conf.c#L184) | 预处理 | `#if (USE_HAL_PCD_REGISTER_CALLBACKS == 1U)` |
+| [186](../Src/usbd_conf.c#L186) | 预处理 | `#else` |
+| [188](../Src/usbd_conf.c#L188) | 预处理 | `#endif /* USE_HAL_PCD_REGISTER_CALLBACKS */` |
+| [198](../Src/usbd_conf.c#L198) | 预处理 | `#if (USE_HAL_PCD_REGISTER_CALLBACKS == 1U)` |
+| [200](../Src/usbd_conf.c#L200) | 预处理 | `#else` |
+| [202](../Src/usbd_conf.c#L202) | 预处理 | `#endif /* USE_HAL_PCD_REGISTER_CALLBACKS */` |
+| [231](../Src/usbd_conf.c#L231) | 预处理 | `#if (USE_HAL_PCD_REGISTER_CALLBACKS == 1U)` |
+| [233](../Src/usbd_conf.c#L233) | 预处理 | `#else` |
+| [235](../Src/usbd_conf.c#L235) | 预处理 | `#endif /* USE_HAL_PCD_REGISTER_CALLBACKS */` |
+| [256](../Src/usbd_conf.c#L256) | 预处理 | `#if (USE_HAL_PCD_REGISTER_CALLBACKS == 1U)` |
+| [258](../Src/usbd_conf.c#L258) | 预处理 | `#else` |
+| [260](../Src/usbd_conf.c#L260) | 预处理 | `#endif /* USE_HAL_PCD_REGISTER_CALLBACKS */` |
+| [274](../Src/usbd_conf.c#L274) | 预处理 | `#if (USE_HAL_PCD_REGISTER_CALLBACKS == 1U)` |
+| [276](../Src/usbd_conf.c#L276) | 预处理 | `#else` |
+| [278](../Src/usbd_conf.c#L278) | 预处理 | `#endif /* USE_HAL_PCD_REGISTER_CALLBACKS */` |
+| [289](../Src/usbd_conf.c#L289) | 预处理 | `#if (USE_HAL_PCD_REGISTER_CALLBACKS == 1U)` |
+| [291](../Src/usbd_conf.c#L291) | 预处理 | `#else` |
+| [293](../Src/usbd_conf.c#L293) | 预处理 | `#endif /* USE_HAL_PCD_REGISTER_CALLBACKS */` |
+| [303](../Src/usbd_conf.c#L303) | 预处理 | `#if (USE_HAL_PCD_REGISTER_CALLBACKS == 1U)` |
+| [305](../Src/usbd_conf.c#L305) | 预处理 | `#else` |
+| [307](../Src/usbd_conf.c#L307) | 预处理 | `#endif /* USE_HAL_PCD_REGISTER_CALLBACKS */` |
+| [317](../Src/usbd_conf.c#L317) | 预处理 | `#if (USE_HAL_PCD_REGISTER_CALLBACKS == 1U)` |
+| [319](../Src/usbd_conf.c#L319) | 预处理 | `#else` |
+| [321](../Src/usbd_conf.c#L321) | 预处理 | `#endif /* USE_HAL_PCD_REGISTER_CALLBACKS */` |
+| [344](../Src/usbd_conf.c#L344) | HAL/NVIC | `hpcd_USB_OTG_FS.Init.dev_endpoints = 4;` |
+| [345](../Src/usbd_conf.c#L345) | HAL/NVIC | `hpcd_USB_OTG_FS.Init.speed = PCD_SPEED_FULL;` |
+| [346](../Src/usbd_conf.c#L346) | HAL/NVIC | `hpcd_USB_OTG_FS.Init.dma_enable = DISABLE;` |
+| [347](../Src/usbd_conf.c#L347) | HAL/NVIC | `hpcd_USB_OTG_FS.Init.phy_itface = PCD_PHY_EMBEDDED;` |
+| [348](../Src/usbd_conf.c#L348) | HAL/NVIC | `hpcd_USB_OTG_FS.Init.Sof_enable = DISABLE;` |
+| [349](../Src/usbd_conf.c#L349) | HAL/NVIC | `hpcd_USB_OTG_FS.Init.low_power_enable = DISABLE;` |
+| [350](../Src/usbd_conf.c#L350) | HAL/NVIC | `hpcd_USB_OTG_FS.Init.lpm_enable = DISABLE;` |
+| [351](../Src/usbd_conf.c#L351) | HAL/NVIC | `hpcd_USB_OTG_FS.Init.vbus_sensing_enable = DISABLE;` |
+| [352](../Src/usbd_conf.c#L352) | HAL/NVIC | `hpcd_USB_OTG_FS.Init.use_dedicated_ep1 = DISABLE;` |
+| [358](../Src/usbd_conf.c#L358) | 预处理 | `#if (USE_HAL_PCD_REGISTER_CALLBACKS == 1U)` |
+| [372](../Src/usbd_conf.c#L372) | 预处理 | `#endif /* USE_HAL_PCD_REGISTER_CALLBACKS */` |
+| [612](../Src/usbd_conf.c#L612) | 预处理 | `#ifdef USBD_HS_TESTMODE_ENABLE` |
+| [626](../Src/usbd_conf.c#L626) | 预处理 | `#endif /* USBD_HS_TESTMODE_ENABLE */` |
 
 ## Src/usbd_desc.c
 
-源文件：[打开 Src/usbd_desc.c](../Src/usbd_desc.c)。
-
-### 宏定义
-
-| 行 | 宏 | 源码替换文本 | 条件路径 | 原行注释 |
-| --- | --- | --- | --- | --- |
-| [Src/usbd_desc.c:65](../Src/usbd_desc.c#L65) | `USBD_VID` | `1155` | 无外层条件 |  |
-| [Src/usbd_desc.c:66](../Src/usbd_desc.c#L66) | `USBD_LANGID_STRING` | `1033` | 无外层条件 |  |
-| [Src/usbd_desc.c:67](../Src/usbd_desc.c#L67) | `USBD_MANUFACTURER_STRING` | `"YueLuEmbedded"` | 无外层条件 |  |
-| [Src/usbd_desc.c:68](../Src/usbd_desc.c#L68) | `USBD_PID_FS` | `202` | 无外层条件 |  |
-| [Src/usbd_desc.c:69](../Src/usbd_desc.c#L69) | `USBD_PRODUCT_STRING_FS` | `"Vision Comm port"` | 无外层条件 |  |
-| [Src/usbd_desc.c:70](../Src/usbd_desc.c#L70) | `USBD_CONFIGURATION_STRING_FS` | `"CDC Config"` | 无外层条件 |  |
-| [Src/usbd_desc.c:71](../Src/usbd_desc.c#L71) | `USBD_INTERFACE_STRING_FS` | `"CDC Interface"` | 无外层条件 |  |
-| [Src/usbd_desc.c:73](../Src/usbd_desc.c#L73) | `USB_SIZ_BOS_DESC` | `0x0C` | 无外层条件 |  |
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [65](../Src/usbd_desc.c#L65) | 预处理 | `#define USBD_VID     1155` |
+| [66](../Src/usbd_desc.c#L66) | 预处理 | `#define USBD_LANGID_STRING     1033` |
+| [67](../Src/usbd_desc.c#L67) | 预处理 | `#define USBD_MANUFACTURER_STRING     "YueLuEmbedded"` |
+| [68](../Src/usbd_desc.c#L68) | 预处理 | `#define USBD_PID_FS     202` |
+| [69](../Src/usbd_desc.c#L69) | 预处理 | `#define USBD_PRODUCT_STRING_FS     "Vision Comm port"` |
+| [70](../Src/usbd_desc.c#L70) | 预处理 | `#define USBD_CONFIGURATION_STRING_FS     "CDC Config"` |
+| [71](../Src/usbd_desc.c#L71) | 预处理 | `#define USBD_INTERFACE_STRING_FS     "CDC Interface"` |
+| [73](../Src/usbd_desc.c#L73) | 预处理 | `#define USB_SIZ_BOS_DESC            0x0C` |
+| [124](../Src/usbd_desc.c#L124) | 预处理 | `#if (USBD_LPM_ENABLED == 1)` |
+| [126](../Src/usbd_desc.c#L126) | 预处理 | `#endif /* (USBD_LPM_ENABLED == 1) */` |
+| [146](../Src/usbd_desc.c#L146) | 预处理 | `#if (USBD_LPM_ENABLED == 1)` |
+| [148](../Src/usbd_desc.c#L148) | 预处理 | `#endif /* (USBD_LPM_ENABLED == 1) */` |
+| [151](../Src/usbd_desc.c#L151) | 预处理 | `#if defined ( __ICCARM__ ) /* IAR Compiler */` |
+| [153](../Src/usbd_desc.c#L153) | 预处理 | `#endif /* defined ( __ICCARM__ ) */` |
+| [159](../Src/usbd_desc.c#L159) | 预处理 | `#if (USBD_LPM_ENABLED == 1)` |
+| [163](../Src/usbd_desc.c#L163) | 预处理 | `#else` |
+| [165](../Src/usbd_desc.c#L165) | 预处理 | `#endif /* (USBD_LPM_ENABLED == 1) */` |
+| [185](../Src/usbd_desc.c#L185) | 预处理 | `#if (USBD_LPM_ENABLED == 1)` |
+| [186](../Src/usbd_desc.c#L186) | 预处理 | `#if defined ( __ICCARM__ ) /* IAR Compiler */` |
+| [188](../Src/usbd_desc.c#L188) | 预处理 | `#endif /* defined ( __ICCARM__ ) */` |
+| [205](../Src/usbd_desc.c#L205) | 预处理 | `#endif /* (USBD_LPM_ENABLED == 1) */` |
+| [216](../Src/usbd_desc.c#L216) | 预处理 | `#if defined ( __ICCARM__ ) /* IAR Compiler */` |
+| [218](../Src/usbd_desc.c#L218) | 预处理 | `#endif /* defined ( __ICCARM__ ) */` |
+| [229](../Src/usbd_desc.c#L229) | 预处理 | `#if defined ( __ICCARM__ ) /* IAR Compiler */` |
+| [231](../Src/usbd_desc.c#L231) | 预处理 | `#endif /* defined ( __ICCARM__ ) */` |
+| [235](../Src/usbd_desc.c#L235) | 预处理 | `#if defined ( __ICCARM__ ) /*!< IAR Compiler */` |
+| [237](../Src/usbd_desc.c#L237) | 预处理 | `#endif` |
+| [368](../Src/usbd_desc.c#L368) | 预处理 | `#if (USBD_LPM_ENABLED == 1)` |
+| [381](../Src/usbd_desc.c#L381) | 预处理 | `#endif /* (USBD_LPM_ENABLED == 1) */` |

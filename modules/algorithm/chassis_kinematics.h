@@ -22,7 +22,7 @@ typedef struct
 
 typedef struct
 {
-    float rpm[CHASSIS_WHEEL_COUNT];
+    float speed_aps[CHASSIS_WHEEL_COUNT];
 } ChassisWheelOutput_s;
 
 bool ChassisMecanumCalculate(const ChassisKinematicsInput_s *input,

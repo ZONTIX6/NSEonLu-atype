@@ -13,13 +13,13 @@ PowerShell 构建诊断基线：
 
 ```powershell
 New-Item -ItemType Directory -Force build/power-observe | Out-Null
-make -j8 BUILD_DIR=build/power-observe CHASSIS_POWER_CONTROL_STAGE=0 CHASSIS_POWER_CAPTURE_ENABLE=1 POWER_METER_ENABLE=1 UART1_USE=1
+make -j8 BUILD_DIR=build/power-observe CHASSIS_POWER_CONTROL_STAGE=0 CHASSIS_POWER_CAPTURE_ENABLE=1 POWER_METER_ENABLE=1 LOG_OUTPUT=2
 ```
 
 CMake 接入同样使用独立目录，例如：
 
 ```powershell
-cmake -S . -B build/cmake-power-observe -G Ninja -DCHASSIS_POWER_CONTROL_STAGE=0 -DCHASSIS_POWER_CAPTURE_ENABLE=1 -DPOWER_METER_ENABLE=1 -DUART1_USE=1
+cmake -S . -B build/cmake-power-observe -G Ninja -DCHASSIS_POWER_CONTROL_STAGE=0 -DCHASSIS_POWER_CAPTURE_ENABLE=1 -DPOWER_METER_ENABLE=1 -DLOG_OUTPUT=2
 cmake --build build/cmake-power-observe
 ```
 

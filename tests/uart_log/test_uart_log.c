@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-UART_HandleTypeDef huart1;
+UART_HandleTypeDef huart2;
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart);
 
 static int failures;
@@ -31,7 +31,7 @@ HAL_StatusTypeDef HAL_UART_Init(UART_HandleTypeDef *handle)
     return init_status;
 }
 
-HAL_StatusTypeDef HAL_UART_Transmit_DMA(UART_HandleTypeDef *handle,
+HAL_StatusTypeDef HAL_UART_Transmit_IT(UART_HandleTypeDef *handle,
                                         const uint8_t *data,
                                         uint16_t length)
 {
@@ -55,7 +55,7 @@ static void Reset(void)
     dma_data = NULL;
     dma_length = 0U;
     primask = 0U;
-    memset(&huart1, 0, sizeof(huart1));
+    memset(&huart2, 0, sizeof(huart2));
     BSPUARTLogInit();
     dma_calls = 0U;
     dma_data = NULL;
@@ -66,7 +66,7 @@ static void TestInitSelects250000AndResetsDiagnostics(void)
 {
     BSPUARTLogDiagnostics_s diagnostics;
     Reset();
-    ASSERT_EQ_UINT(250000U, huart1.Init.BaudRate);
+    ASSERT_EQ_UINT(115200U, huart2.Init.BaudRate);
     BSPUARTLogGetDiagnostics(&diagnostics);
     ASSERT_EQ_UINT(0U, diagnostics.dropped_messages);
     ASSERT_EQ_UINT(0U, diagnostics.tx_errors);
@@ -90,7 +90,7 @@ static void TestBusyWriteQueuesWithoutRestartingDma(void)
     BSPUARTLogWrite(first, 3U);
     BSPUARTLogWrite(second, 3U);
     ASSERT_EQ_UINT(1U, dma_calls);
-    HAL_UART_TxCpltCallback(&huart1);
+    HAL_UART_TxCpltCallback(&huart2);
     ASSERT_EQ_UINT(2U, dma_calls);
     ASSERT_EQ_UINT(3U, dma_length);
     ASSERT_TRUE(memcmp(dma_data, second, 3U) == 0);
@@ -107,10 +107,10 @@ static void TestCompletionDrainsQueuedAndWrappedSegmentsInOrder(void)
     memset(third, 'c', sizeof(third));
     BSPUARTLogWrite(first, sizeof(first));
     BSPUARTLogWrite(second, sizeof(second));
-    HAL_UART_TxCpltCallback(&huart1);
+    HAL_UART_TxCpltCallback(&huart2);
     BSPUARTLogWrite(third, sizeof(third));
-    HAL_UART_TxCpltCallback(&huart1);
-    HAL_UART_TxCpltCallback(&huart1);
+    HAL_UART_TxCpltCallback(&huart2);
+    HAL_UART_TxCpltCallback(&huart2);
     ASSERT_EQ_UINT(4U, dma_calls);
     ASSERT_TRUE(dma_data != NULL);
 }
@@ -151,16 +151,16 @@ static void TestFullRetainedQueueRecoversWithoutCapturePolling(HAL_StatusTypeDef
     ASSERT_TRUE(memcmp(dma_data, data, sizeof(data)) == 0);
     ASSERT_EQ_UINT(0U, primask);
 
-    HAL_UART_TxCpltCallback(&huart1);
+    HAL_UART_TxCpltCallback(&huart2);
     ASSERT_TRUE(BSPUARTLogIsIdle());
     ASSERT_EQ_UINT(4U, BSPUARTLogWrite("next", 4U));
     /* The next message wraps across the ring boundary after 4095 bytes. */
     ASSERT_EQ_UINT(1U, dma_length);
     ASSERT_EQ_UINT('n', dma_data[0]);
-    HAL_UART_TxCpltCallback(&huart1);
+    HAL_UART_TxCpltCallback(&huart2);
     ASSERT_EQ_UINT(3U, dma_length);
     ASSERT_TRUE(memcmp(dma_data, "ext", 3U) == 0);
-    HAL_UART_TxCpltCallback(&huart1);
+    HAL_UART_TxCpltCallback(&huart2);
     ASSERT_TRUE(BSPUARTLogIsIdle());
 }
 
@@ -186,7 +186,7 @@ int main(void)
         BSPUARTLogPoll();
         ASSERT_TRUE(memcmp(dma_data, "abc", 3) == 0);
         ASSERT_TRUE(!BSPUARTLogIsIdle());
-        HAL_UART_TxCpltCallback(&huart1);
+        HAL_UART_TxCpltCallback(&huart2);
         ASSERT_TRUE(BSPUARTLogIsIdle());
     }
     TestFirstWriteStartsDmaAndPreservesBytes();

@@ -51,10 +51,10 @@ static void AssertOutput(const ChassisWheelOutput_s *output,
                          float left_back,
                          float right_back)
 {
-    ASSERT_NEAR(left_front, output->rpm[CHASSIS_WHEEL_LEFT_FRONT], 0.0001f);
-    ASSERT_NEAR(right_front, output->rpm[CHASSIS_WHEEL_RIGHT_FRONT], 0.0001f);
-    ASSERT_NEAR(left_back, output->rpm[CHASSIS_WHEEL_LEFT_BACK], 0.0001f);
-    ASSERT_NEAR(right_back, output->rpm[CHASSIS_WHEEL_RIGHT_BACK], 0.0001f);
+    ASSERT_NEAR(left_front, output->speed_aps[CHASSIS_WHEEL_LEFT_FRONT], 0.0001f);
+    ASSERT_NEAR(right_front, output->speed_aps[CHASSIS_WHEEL_RIGHT_FRONT], 0.0001f);
+    ASSERT_NEAR(left_back, output->speed_aps[CHASSIS_WHEEL_LEFT_BACK], 0.0001f);
+    ASSERT_NEAR(right_back, output->speed_aps[CHASSIS_WHEEL_RIGHT_BACK], 0.0001f);
 }
 
 static void TestOmniXZeroInputStopsEveryWheel(void)
@@ -72,7 +72,7 @@ static void TestOmniXForwardProjection(void)
     ChassisWheelOutput_s output;
 
     ASSERT_TRUE(ChassisOmniXCalculate(&input, all_forward, &output));
-    AssertOutput(&output, -7.071068f, -7.071068f, 7.071068f, 7.071068f);
+    AssertOutput(&output, -7.071068f, 7.071068f, -7.071068f, 7.071068f);
 }
 
 static void TestOmniXRightProjection(void)
@@ -81,7 +81,7 @@ static void TestOmniXRightProjection(void)
     ChassisWheelOutput_s output;
 
     ASSERT_TRUE(ChassisOmniXCalculate(&input, all_forward, &output));
-    AssertOutput(&output, -7.071068f, 7.071068f, -7.071068f, 7.071068f);
+    AssertOutput(&output, 7.071068f, 7.071068f, -7.071068f, -7.071068f);
 }
 
 static void TestOmniXProjectsEachRotationalLever(void)
@@ -90,7 +90,7 @@ static void TestOmniXProjectsEachRotationalLever(void)
     ChassisWheelOutput_s output;
 
     ASSERT_TRUE(ChassisOmniXCalculate(&input, all_forward, &output));
-    AssertOutput(&output, -1.414214f, -2.828427f, -4.242641f, -5.656854f);
+    AssertOutput(&output, 2.0f, 4.0f, 6.0f, 8.0f);
 }
 
 static void TestOmniXDefaultGeometryDoesNotUseMecanumLeverDirectly(void)
@@ -101,7 +101,7 @@ static void TestOmniXDefaultGeometryDoesNotUseMecanumLeverDirectly(void)
         input.rotation_lever_sum[i] = 325.0f;
 
     ASSERT_TRUE(ChassisOmniXCalculate(&input, all_forward, &output));
-    AssertOutput(&output, -229.809708f, -229.809708f, -229.809708f, -229.809708f);
+    AssertOutput(&output, 325.0f, 325.0f, 325.0f, 325.0f);
 }
 
 static void TestOmniXCombinesMotionAndWheelDirections(void)
@@ -111,7 +111,7 @@ static void TestOmniXCombinesMotionAndWheelDirections(void)
     ChassisWheelOutput_s output;
 
     ASSERT_TRUE(ChassisOmniXCalculate(&input, direction, &output));
-    AssertOutput(&output, -6.363961f, 2.828427f, -7.778175f, 4.242641f);
+    AssertOutput(&output, 4.414214f, -10.242641f, 4.757359f, -10.585786f);
 }
 
 static void TestMecanumPreservesExistingFormula(void)

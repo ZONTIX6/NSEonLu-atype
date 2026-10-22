@@ -47,6 +47,12 @@ typedef struct
     uint16_t buffer_energy_j;
 } RefereePower;
 
+typedef struct {
+    bool valid;
+    uint16_t current_heat, heat_limit, cooling_rate;
+    uint32_t robot_state_tick_ms, power_heat_tick_ms;
+} RefereeHeat;
+
 typedef struct Referee
 {
     RefereeConfig config;
@@ -66,6 +72,7 @@ bool RefereeInit(Referee *instance, const RefereeConfig *config);
 bool RefereeFeed(Referee *instance, const uint8_t *data, size_t length);
 bool RefereeGetData(Referee *instance, RefereeData *data);
 bool RefereeGetPower(Referee *instance, RefereePower *power);
+bool RefereeGetHeat(Referee *instance, RefereeHeat *heat);
 bool RefereeGetDiagnostics(Referee *instance,
                            RefereeDiagnostics *diagnostics);
 bool RefereeIsOnline(Referee *instance);
