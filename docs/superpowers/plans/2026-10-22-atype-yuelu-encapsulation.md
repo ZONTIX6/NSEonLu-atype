@@ -22,7 +22,7 @@
 - 保持台架模式非底盘电机锁定、急停优先、显式复位、自动整定独占和退出后零力恢复条件。
 - 参数存储继续使用 schema 2、扇区 22/23、地址 `0x081C0000/0x081E0000`；写入前在调度暂停区内重新核对全车停机证明。
 - 保持 Make/CMake 配置一致、单板/双板/台架/直供/超容/无功率计及可选模块组合可构建。
-- 本轮交付仅为本文；实施、刷写及硬件验收分别记录，不提前勾选。
+- 本方案主体尚未实施；用户随后授权删除旧功控和超电代码。当前先删除已确认无调用方的旧功控文件，其余迁移、刷写及硬件验收分别记录，不提前勾选。
 
 ## 2. 现状与选择
 
@@ -30,7 +30,7 @@
 |---|---|---|
 | 功率控制 | `application/chassis/chassis.c` 持有预算与外环状态；`modules/motor/DJImotor/dji_motor.c` 持有功控实例、瞬态保护、功率计读取和功控遥测 | 新建独立 `modules/chassis_power`，应用只提交策略输入，电机适配层提交四轮周期数据 |
 | 超级电容 | `modules/super_cap` 已有配置、内部单例、CAN/Daemon 和纯协议；`chassis_power_link` 混入裁判系统/台架决策 | 保留设备模块，增加一致快照和诊断契约；把功率决策迁到功控模块 |
-| 旧功控文件 | `modules/motor/power_control.c` 仍包含另一套电机注册、PID 和 CAN 发送逻辑，当前 Make 未把它作为有效功控路径 | 明确为历史实现，构建中持续排除，不通过启用它实现“模块化” |
+| 旧功控文件 | 基线中的 `modules/motor/power_control.c/.h` 包含另一套注册、PID 和 CAN 发送逻辑，无业务调用方，Make 未纳入，CMake 原通过通配收集 | 已按用户授权删除，不保留死代码作为备用实现 |
 | MPU6500 | `mpu6500driver.h/.c` 绑定 SPI5/PF6 并调用 HAL | 使用 SPI BSP 配置与实例，驱动只处理寄存器和样本 |
 | SPI BSP | 传输接口无错误返回；收发等待仍有 SPI2 判断，实际注册支持 SPI1/SPI5；忙等无明确期限 | 先补可靠事务接口，再迁移 MPU 和 OLED |
 | INS/视觉 | `mpu6500.c` 同时做采集、校准、EKF、温控和 `VisionSetAltitude` | 设备、姿态服务、应用桥接分开，视觉仍由 1 ms 调度触发 |
@@ -118,7 +118,7 @@ bool ChassisPowerRequestConfig(const ChassisPower_Init_Config_s *config,
 → ChassisPowerRecordFinal（使用实际最终命令和提交结果）
 ```
 
-新增 `modules/motor/DJImotor/dji_power_adapter.*` 管理四轮绑定与字段转换。通用 `dji_motor.c` 只保留注册的组输出处理接口及最终提交通知，不引用功率计、超容、功控算法或功控遥测。适配层可以依赖电机和功率模块，依赖图必须无环。`DJIChassisPowerRegister/PublishControl/GetSnapshot` 的兼容入口暂由适配层承接，内部类型不再留在通用驱动头中。
+新增 `modules/motor/DJImotor/dji_power_adapter.*` 管理四轮绑定与字段转换。通用 `dji_motor.c` 只保留注册的组输出处理接口及最终提交通知，不引用功率计、超容、功控算法或功控遥测。适配层可以依赖电机和功率模块，依赖图必须无环。`DJIChassisPowerRegister/PublishControl/GetSnapshot` 的兼容入口仅用于分阶段迁移，由适配层承接；全部调用方转到最终接口后删除不再需要的兼容包装及旧类型，不长期保留两套 API。
 
 功控注册必须验证恰好四个不同的、已注册的 M3508；重复、空指针、非底盘型号、第五个成员均拒绝。四轮索引只在适配层保存，功率算法不知道 CAN ID。未注册时不得误把最先初始化的四个电机当底盘。
 
@@ -148,7 +148,7 @@ bool SuperCapSendCommand(const SuperCapCommand_s *command);
 bool SuperCapGetSnapshot(uint32_t now_ms, SuperCapSnapshot_s *output);
 ```
 
-- `SuperCapInstance` 内部持有 CAN、Daemon、状态、两类接收时间与诊断；应用只拿复制快照。现有 `SuperCapGetStatus/GetInputPower` 作为兼容包装保留。
+- `SuperCapInstance` 内部持有 CAN、Daemon、状态、两类接收时间与诊断；应用只拿复制快照。现有 `SuperCapGetStatus/GetInputPower` 仅在迁移期间作为兼容包装，全部调用方改用整体快照后删除旧包装，相关边界测试迁到新接口。
 - 保持 `0x061` 命令、`0x051` 状态、可选 `0x052` 输入功率帧、DLC 8、`0xA5` 标记及版本 1 的字节定义。CAN 句柄与可配置地址集中在初始化配置；模块不用 `hcan1/hcan2` 硬编码。
 - 状态帧和输入反馈分别判定新鲜度；只有有效 `0x051` 刷新状态 Daemon，`0x052` 不能维持缺失状态帧在线。输入反馈保持 20 ms 有效期。
 - 兼容接口保留原有状态 Daemon 默认 20 次、10 ms 检查的语义；用于缓冲能量控制的功控策略继续额外要求状态帧年龄 ≤20 ms。不能将两个期限混为一个而改变旧模式行为。
@@ -221,9 +221,28 @@ bool MPU6500Read(MPU6500Instance *instance, IMUSample_s *sample);
 
 以下“新增”均为计划文件，不表示当前已存在。每个实施提交同步更新引用、构建清单和测试。
 
+### 4.1 旧代码删除规则
+
+用户已允许删除旧功控和超电实现，迁移收尾以只保留有效实现为目标，不再采用“旧文件一直排除构建”的方式。
+
+| 范围 | 删除时机与保留内容 |
+|---|---|
+| `modules/motor/power_control.c/.h` | 当前已确认无调用方并删除；Git 历史保留旧版本 |
+| `chassis.c`、`dji_motor.c` 中被接管的功控代码 | 阶段 C 完成接管后删除旧算法状态、计算分支、重复遥测和失效接口；保留通用运动学、PID、CAN 输出及安全门控 |
+| `modules/super_cap/chassis_power_link.c/.h` | 决策迁入功控策略并通过原测试后删除旧源与头，同时修改 Make/CMake、include 与测试源列表 |
+| `modules/super_cap/super_cap.c/.h` | 当前是有效固件设备模块，按原路径重构；删除被新快照替换的旧 getter/分支，不删除仍有效的 CAN/Daemon 实现 |
+| `modules/super_cap/super_cap_protocol.c/.h` | 保留已验证的协议编码，不因封装而重写或丢掉协议能力 |
+| `portable_modules/modules/super_cap` | 当前为独立可移植实现并有测试，不直接认定为废弃；如新模块取代该交付物，先迁移可移植接口能力、文档和特有测试，再删除重复实现。删除后同步调整总验证清单，不能以丢失测试覆盖换取清理 |
+| 旧模块文档 | `modules/motor/power_control.md` 描述现役统一功控但部分参数已过时，迁移为新模块说明并更新引用；超电说明同步改为最终接口，不留下误导示例 |
+
+每次删除都检查源码、头文件、构建清单、符号表、测试和文档引用。行为测试迁移到新实现后继续执行；历史方案作为历史记录保留，不批量改写历史。只清理本仓库，不删除参考工程。
+
+### 4.2 目标文件清单
+
 | 操作 | 路径 | 结果 |
 |---|---|---|
 | 新增 | `modules/chassis_power/` 下第 3.1 节所列文件 | 完整功控模块及说明 |
+| 已删除 | `modules/motor/power_control.c/.h` | 清理无调用方的旧功控实现 |
 | 新增 | `modules/motor/DJImotor/dji_power_adapter.c/.h` | 四轮注册、周期字段转换、旧接口兼容 |
 | 修改 | `modules/motor/DJImotor/dji_motor.c/.h` | 通用组处理接口，移出功控运行状态与遥测 |
 | 修改 | `application/chassis/chassis.c` | 移出预算/外环实例，只保留运动学、策略输入和模块组合 |
@@ -243,7 +262,7 @@ bool MPU6500Read(MPU6500Instance *instance, IMUSample_s *sample);
 
 ## 5. 分阶段实施与验证
 
-所有步骤当前均未实施。每阶段遵循“先固定风险测试 → 观察新增断言失败 → 实现 → 回归 → 独立提交”，不把全部文件一次搬迁后再调试。下列 `make -B` 强制重编译，避免旧 exe 造成假通过。
+下列阶段尚未实施，已完成的旧功控文件清理见第 4.1 节。每阶段遵循“先固定风险测试 → 观察新增断言失败 → 实现 → 回归 → 独立提交”，不把全部文件一次搬迁后再调试。下列 `make -B` 强制重编译，避免旧 exe 造成假通过。
 
 ### 阶段 A：建立行为基线与模块边界检查
 
@@ -290,7 +309,7 @@ make -B -C portable_modules/modules/super_cap/tests test CC=gcc
 - [ ] 新增 5 ms/2 ms 交错发布测试：同一周期预算、目标、许可版本一致；两类状态互不覆盖，临界区内无整段算法运算。
 - [ ] 保留现有运行调参、RTT/USB 和参数保存测试，增加配置切换版本一致性断言，拒绝非法配置时不得改变当前参数或积分状态。
 - [ ] 扩展直供/超容、功率计有/无、缓冲控制有/无、stage 0..3 的组合测试。超容失效关闭升功率能力，能量恢复与外环学习遵循基线；控制快照过期仍最终停机。
-- [ ] 清除 `chassis.c` 的预算/外环可变实例和通用驱动的功控实例、功率计读取及功控遥测；旧 `power_control.c` 不进入任何构建。应用可通过模块接口获取显示/小陀螺需要的反馈。
+- [ ] 清除 `chassis.c` 的预算/外环可变实例和通用驱动的功控实例、功率计读取及功控遥测；删除迁移完成的 `chassis_power_link.c/.h` 和无人使用的旧接口，更新测试编译源。应用可通过模块接口获取显示/小陀螺需要的反馈。
 - [ ] 逐个运行下列测试，通过后提交 `refactor: isolate chassis power module and DJI adapter`。
 
 ```powershell
@@ -376,6 +395,7 @@ make -B -C tests/dji_chassis_power_rtt test CC=gcc
 - [ ] 文档给出超级电容和功控的独立初始化、5 ms 输入、2 ms 限流与最终提交示例；接口错误、单位和所有权可仅凭模块文档理解。
 - [ ] 运行第 6 节全部软件验收，记录真实命令数量、测试数量、配置和日志；新增测试后不能继续机械写“75 项”。
 - [ ] 审查调用图和输出路径：每帧四轮限流恰好一次、最终安全门控仍生效、功控不自行发送电机 CAN，应用无内部实例成员访问。
+- [ ] 按第 4.1 节清理被替代的旧功控/超电代码及迁移用兼容包装；迁移测试、模块说明和引用后再删除重复交付物，不保留无人调用的第二套实现。
 - [ ] 对照第 7 节完成软件验收项；硬件项目单独记录实测状态，通过后提交 `docs: validate YueLu-style A-board module integration`。
 
 ## 6. 验证命令与判定
