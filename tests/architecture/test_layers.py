@@ -9,10 +9,11 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 BASELINE = Path(__file__).with_name("baseline.json")
-INCLUDE = re.compile(r'^\s*#\s*include\s*"([^"]+)"', re.M)
+INCLUDE = re.compile(r'^\s*#\s*include\s*["<]([^">]+)[">]', re.M)
 STANDARD = {"stdint.h", "stdbool.h", "stddef.h", "stdlib.h", "stdio.h", "string.h",
             "memory.h", "math.h", "float.h", "limits.h", "stdarg.h", "assert.h"}
 HARDWARE = re.compile(r'\b(?:HAL_(?:SPI|GPIO|I2C|ADC|DMA|TIM|FLASH)\w*|__HAL_\w+|h(?:spi|uart|adc|can|tim|i2c)\d+)\b')
+REGISTER = re.compile(r'\b(GPIO[A-K]|SPI[1-6]|TIM\d+|DMA\w*|FLASH|ADC\d+|USART\d+|UART\d+)\s*->')
 TARGETS = ("modules/chassis_power", "modules/super_cap", "modules/power_meter",
            "modules/mpu6500", "modules/vtx", "modules/oled",
            "modules/vehicle_safety")
@@ -66,6 +67,8 @@ def scan(root):
         if not rel.startswith("modules/algorithm/"):
             for symbol in HARDWARE.findall(text):
                 found[(rel, "hardware-access", symbol)] += 1
+            for symbol in REGISTER.findall(text):
+                found[(rel, "register-access", symbol)] += 1
     return found
 
 
@@ -99,6 +102,20 @@ class BoundaryTests(unittest.TestCase):
                 (root / f"application/{directory}/config.h").write_text("")
             (root / "modules/chassis_power/x.c").write_text('#include "config.h"')
             self.assertEqual(sum(scan(root).values()), 1)
+
+    def test_angle_include_and_direct_register_access_are_checked(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "modules/chassis_power").mkdir(parents=True)
+            (root / "application").mkdir()
+            (root / "application/policy.h").write_text("")
+            (root / "modules/chassis_power/x.c").write_text(
+                '#include <../../application/policy.h>\nGPIOF->BSRR = 1; SPI5->CR1 = 0;')
+            result = scan(root)
+            self.assertEqual(result[("modules/chassis_power/x.c", "application-include",
+                                     "application/policy.h")], 1)
+            self.assertEqual(result[("modules/chassis_power/x.c", "register-access", "GPIOF")], 1)
+            self.assertEqual(result[("modules/chassis_power/x.c", "register-access", "SPI5")], 1)
 
 
 def main():

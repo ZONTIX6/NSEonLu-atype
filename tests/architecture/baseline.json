@@ -180,6 +180,12 @@
     "count": 1
   },
   {
+    "path": "modules/telemetry/tuning_flash.c",
+    "rule": "register-access",
+    "evidence": "FLASH",
+    "count": 1
+  },
+  {
     "path": "modules/vtx/vt02_control.c",
     "rule": "hardware-access",
     "evidence": "HAL_DMA_Init",
