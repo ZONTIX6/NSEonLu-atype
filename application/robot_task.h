@@ -81,7 +81,8 @@ void OSTaskInit()
     osThreadDef(motortask, StartMOTORTASK, osPriorityNormal, 0, 512);
     motorTaskHandle = osThreadCreate(osThread(motortask), NULL);
 
-    osThreadDef(daemontask, StartDAEMONTASK, osPriorityNormal, 0, 128);
+    /* Offline callbacks need stack for log formatting and interrupt context. */
+    osThreadDef(daemontask, StartDAEMONTASK, osPriorityNormal, 0, 512);
     daemonTaskHandle = osThreadCreate(osThread(daemontask), NULL);
 
     osThreadDef(robottask, StartROBOTTASK, osPriorityNormal, 0, 1024);
