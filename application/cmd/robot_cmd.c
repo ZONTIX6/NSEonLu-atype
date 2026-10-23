@@ -144,13 +144,8 @@ static void RemoteControlSet()
         gimbal_cmd_send.gimbal_mode = GIMBAL_GYRO_MODE;     //GIMBAL_ZERO_FORCE;
     }
     // 云台参数,确定云台控制数据
-    if (switch_is_mid(rc_data[TEMP].rc.switch_left)) // 左侧开关状态为[中],视觉模式
-    {
-        // 待添加,视觉会发来和目标的误差,同样将其转化为total angle的增量进行控制
-        // ...
-    }
-    // 左侧开关状态为[下],或视觉未识别到目标,纯遥控器拨杆控制
-    if (switch_is_down(rc_data[TEMP].rc.switch_left) || vision_recv_data->target_state == NO_TARGET)
+    // 视觉控制尚未实现，中/下档均保留人工摇杆控制，不让目标标志屏蔽输入。
+    if (switch_is_down(rc_data[TEMP].rc.switch_left) || switch_is_mid(rc_data[TEMP].rc.switch_left))
     { // 按照摇杆的输出大小进行角度增量,增益系数需调整
         gimbal_cmd_send.yaw -= 0.005f * (float)rc_data[TEMP].rc.rocker_l_;
         gimbal_cmd_send.pitch += 0.001f * (float)rc_data[TEMP].rc.rocker_l1;
@@ -341,6 +336,9 @@ static void VideoTransmissionControlSet()
         chassis_cmd_send.chassis_speed_buff = 100;
         break;
     }
+    const float speed_scale = chassis_cmd_send.chassis_speed_buff / 100.0f;
+    chassis_cmd_send.vx *= speed_scale;
+    chassis_cmd_send.vy *= speed_scale;
     switch (vt02_data->key_count[KEY_PRESS][Key_X] % 4)
     {
     case 0:
@@ -397,6 +395,8 @@ static void EmergencyHandler(bool board_online)
     bool online=RemoteControlGetSnapshot(&remote) && remote.online && remote.has_sample &&
         (uint32_t)(HAL_GetTick()-remote.last_rx_tick_ms)<=100U;
     online &= INSIsHealthy(HAL_GetTick()) && board_online;
+    online &= gimbal_fetch_data.yaw_feedback_valid &&
+        (uint32_t)(HAL_GetTick()-gimbal_fetch_data.yaw_feedback_tick_ms)<=20U;
     const bool vtx_mode=switch_is_up(remote.control.rc.switch_left);
     Vt02_Ctrl_t vtx={0};
     if (vtx_mode) online &= Vt02ControlGetSnapshot(&vtx)!=0;

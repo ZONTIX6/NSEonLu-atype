@@ -5,6 +5,8 @@
 #include "message_center.h"
 #include "general_def.h"
 #include "jscope.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
 
 static attitude_t *gimbal_IMU_data; // 云台IMU数据
@@ -153,7 +155,11 @@ void GimbalTask()
 
     // 设置反馈数据,主要是imu和yaw的ecd
     gimbal_feedback_data.gimbal_imu_data = *gimbal_IMU_data;
+    taskENTER_CRITICAL();
     gimbal_feedback_data.yaw_motor_single_round_angle = yaw_motor->measure.angle_single_round;
+    gimbal_feedback_data.yaw_feedback_tick_ms = yaw_motor->measure.rx_tick_ms;
+    gimbal_feedback_data.yaw_feedback_valid = yaw_motor->measure.rx_sequence != 0;
+    taskEXIT_CRITICAL();
 
     // 推送消息
     PubPushMessage(gimbal_pub, (void *)&gimbal_feedback_data);

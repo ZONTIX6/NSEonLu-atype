@@ -6,6 +6,9 @@
 #include "message_center.h"
 #include "bsp_dwt.h"
 #include "general_def.h"
+#include "heat_control.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
 /* 对于双发射机构的机器人,将下面的数据封装成结构体即可,生成两份shoot应用实例 */
 static DJIMotorInstance *friction_l, *friction_r, *loader; // 拨盘电机
@@ -18,6 +21,7 @@ static Shoot_Upload_Data_s shoot_feedback_data; // 来自cmd的发射控制信�
 
 // dwt定时,计算冷却用
 static float loader_target_angle = 0;
+static HeatControlInstance shoot_heat;
 
 #define LOADER_ONE_BULLET_MOTOR_ANGLE (ONE_BULLET_DELTA_ANGLE * REDUCTION_RATIO_LOADER)
 #define LOADER_ANGLE_TOLERANCE 5.0f
@@ -106,137 +110,96 @@ void ShootInit()
 
     shoot_pub = PubRegister("shoot_feed", sizeof(Shoot_Upload_Data_s));
     shoot_sub = SubRegister("shoot_cmd", sizeof(Shoot_Ctrl_Cmd_s));
+    HeatControlInit(&shoot_heat, NULL);
 }
 
-/* 机器人发射机构控制核心任务 */
-void ShootTask()
+/* A discrete batch must settle into fresh referee telemetry before another batch
+ * or burst can start. Keep this history across stop/re-enable to avoid reusing heat. */
+static float FrictionTarget(Bullet_Speed_e speed)
 {
-    static loader_mode_e last_load_mode = LOAD_STOP;
-    uint8_t loader_busy =
-        (last_load_mode == LOAD_1_BULLET || last_load_mode == LOAD_3_BULLET) &&
-        fabsf(loader->measure.total_angle - loader_target_angle) > LOADER_ANGLE_TOLERANCE;
+    switch (speed) {
+    case SMALL_AMU_15: return 4000;
+    case SMALL_AMU_18: return 32000;
+    case SMALL_AMU_30: return 8000;
+    default: return 32000;
+    }
+}
 
-    // 从cmd获取控制数据
+static bool FreshMeasure(const DJI_Motor_Measure_s *m, uint32_t now)
+{
+    return m->rx_sequence != 0 && (uint32_t)(now-m->rx_tick_ms)<=20U &&
+        isfinite(m->speed_aps) && isfinite(m->total_angle);
+}
+
+void ShootTask(void)
+{
+    static loader_mode_e previous_request = LOAD_STOP;
+    static bool active_batch, friction_tracking, fed, discrete_pending;
+    static uint32_t friction_since, last_feed_tick;
+    const uint32_t now=HAL_GetTick();
+    DJI_Motor_Measure_s left, right, feed;
+    taskENTER_CRITICAL();
+    left=friction_l->measure; right=friction_r->measure; feed=loader->measure;
+    taskEXIT_CRITICAL();
     SubGetMessage(shoot_sub, &shoot_cmd_recv);
+    /* Refresh heat even when the trigger is released. */
+    (void)HeatControlCalculate(&shoot_heat, 0);
+    const bool heat_valid=shoot_heat.data_valid && shoot_heat.heat_limit>0 &&
+        (uint32_t)(now-shoot_heat.robot_state_tick_ms)<=300U &&
+        (uint32_t)(now-shoot_heat.power_heat_tick_ms)<=300U &&
+        shoot_heat.current_heat<shoot_heat.heat_limit;
+    const bool on=shoot_cmd_recv.shoot_mode==SHOOT_ON;
+    const float target=FrictionTarget(shoot_cmd_recv.bullet_speed);
+    const bool friction_on=on && shoot_cmd_recv.friction_mode==FRICTION_ON;
+    const float left_target=friction_l->motor_settings.motor_reverse_flag==MOTOR_DIRECTION_REVERSE ? -target : target;
+    const float right_target=friction_r->motor_settings.motor_reverse_flag==MOTOR_DIRECTION_REVERSE ? -target : target;
+    const bool tracking=friction_on && FreshMeasure(&left,now) && FreshMeasure(&right,now) &&
+        fabsf(left.speed_aps-left_target)<=target*.1f &&
+        fabsf(right.speed_aps-right_target)<=target*.1f;
+    if (!tracking) friction_tracking=false;
+    else if (!friction_tracking) { friction_tracking=true; friction_since=now; }
+    const bool ready=tracking && (uint32_t)(now-friction_since)>=100U;
+    DJIMotorSetRef(friction_l,friction_on ? target : 0);
+    DJIMotorSetRef(friction_r,friction_on ? target : 0);
+    if (on) { DJIMotorEnable(friction_l); DJIMotorEnable(friction_r); }
+    else { DJIMotorStop(friction_l); DJIMotorStop(friction_r); }
 
-    // 对shoot mode等于SHOOT_STOP的情况特殊处理,直接停止所有电机(紧急停止)
-    if (shoot_cmd_recv.shoot_mode == SHOOT_OFF)
-    {
-        DJIMotorStop(friction_l);
-        DJIMotorStop(friction_r);
+    const loader_mode_e request=shoot_cmd_recv.load_mode;
+    const bool discrete=request==LOAD_1_BULLET || request==LOAD_3_BULLET;
+    const bool edge=discrete && previous_request==LOAD_STOP;
+    const bool completed=active_batch && FreshMeasure(&feed,now) &&
+        fabsf(feed.total_angle-loader_target_angle)<=LOADER_ANGLE_TOLERANCE;
+    if (completed) active_batch=false;
+    /* Signed differences support tick wrap; require source timestamps after the
+     * 300 ms reporting horizon, not merely a locally republished old snapshot. */
+    const bool settled=!fed || (!active_batch && (uint32_t)(now-last_feed_tick)>300U &&
+        heat_valid && (int32_t)(shoot_heat.power_heat_tick_ms-last_feed_tick)>300);
+    if (settled) discrete_pending=false;
+    const bool permitted=on && ready && heat_valid && FreshMeasure(&feed,now);
+    if (!permitted) active_batch=false;
+    if (permitted && !active_batch && edge && settled) {
+        const unsigned shots=request==LOAD_3_BULLET ? 3U : 1U;
+        const float required=(shots+HEAT_CONTROL_RESERVE_SHOTS)*shoot_heat.bullet_heat;
+        if (shoot_heat.heat_limit-shoot_heat.current_heat>=required) {
+            loader_target_angle=feed.total_angle+shots*LOADER_ONE_BULLET_MOTOR_ANGLE;
+            active_batch=true; discrete_pending=true;
+        }
+    }
+    if (permitted && active_batch) {
+        DJIMotorEnable(loader); DJIMotorOuterLoop(loader,ANGLE_LOOP);
+        DJIMotorSetRef(loader,loader_target_angle);
+        fed=true; last_feed_tick=now;
+    } else if (permitted && !discrete_pending && request==LOAD_BURSTFIRE &&
+               isfinite(shoot_cmd_recv.shoot_rate) && shoot_cmd_recv.shoot_rate>0) {
+        DJIMotorEnable(loader); DJIMotorOuterLoop(loader,SPEED_LOOP);
+        DJIMotorSetRef(loader,shoot_cmd_recv.shoot_rate*360*REDUCTION_RATIO_LOADER/NUM_PER_CIRCLE);
+        fed=true; last_feed_tick=now;
+    } else {
+        DJIMotorOuterLoop(loader,SPEED_LOOP); DJIMotorSetRef(loader,0);
         DJIMotorStop(loader);
-        last_load_mode = LOAD_STOP;
     }
-    else // 恢复运行
-    {
-        DJIMotorEnable(friction_l);
-        DJIMotorEnable(friction_r);
-        DJIMotorEnable(loader);
-    }
-
-    // 如果上一次触发单发或3发指令的时间加上不应期仍然大于当前时间(尚未休眠完毕),直接返回即可
-    // 单发模式主要提供给能量机关激活使用(以及英雄的射击大部分处于单发)
-    // if (hibernate_time + dead_time > DWT_GetTimeline_ms())
-    //     return;
-
-    // 单发或三发执行期间锁存拨盘动作,不受鼠标松开产生的LOAD_STOP影响
-    if (shoot_cmd_recv.shoot_mode != SHOOT_OFF &&
-        !(loader_busy &&
-          (last_load_mode == LOAD_1_BULLET || last_load_mode == LOAD_3_BULLET)))
-    {
-        // 若不在休眠状态,根据robotCMD传来的控制模式进行拨盘电机参考值设定和模式切换
-        switch (shoot_cmd_recv.load_mode)
-        {
-        // 停止拨盘
-        case LOAD_STOP:
-            if (!loader_busy)
-            {
-                DJIMotorOuterLoop(loader, SPEED_LOOP); // 切换到速度环
-                DJIMotorSetRef(loader, 0);             // 同时设定参考值为0,这样停止的速度最快
-            }
-            break;
-        // 单发模式,左键保持期间保持该命令,由last_load_mode防止重复触发
-        case LOAD_1_BULLET:                                                                     // 激活能量机关/干扰对方用,英雄用.
-            if (!loader_busy && last_load_mode != LOAD_1_BULLET)
-            {
-                DJIMotorOuterLoop(loader, ANGLE_LOOP);                                        // 切换到角度环
-                loader_target_angle = loader->measure.total_angle + LOADER_ONE_BULLET_MOTOR_ANGLE;
-                DJIMotorSetRef(loader, loader_target_angle); // 控制量增加一发弹丸的角度
-            }
-            break;
-        // 三连发,左键保持期间保持该命令,由last_load_mode防止重复触发
-        case LOAD_3_BULLET:
-            if (!loader_busy && last_load_mode != LOAD_3_BULLET)
-            {
-                DJIMotorOuterLoop(loader, ANGLE_LOOP);                                            // 切换到角度环
-                loader_target_angle = loader->measure.total_angle + 3 * LOADER_ONE_BULLET_MOTOR_ANGLE;
-                DJIMotorSetRef(loader, loader_target_angle); // 增加3发
-            }
-            break;
-        // 连发模式,对速度闭环,射频后续修改为可变,目前固定为1Hz
-        case LOAD_BURSTFIRE:
-            DJIMotorOuterLoop(loader, SPEED_LOOP);
-            DJIMotorSetRef(loader, shoot_cmd_recv.shoot_rate * 360 * REDUCTION_RATIO_LOADER / NUM_PER_CIRCLE);
-            // x颗/秒换算成速度: 已知一圈的载弹量,由此计算出1s需要转的角度,注意换算角速度(DJIMotor的速度单位是angle per second)
-            break;
-        // 拨盘反转,对速度闭环,后续增加卡弹检测(通过裁判系统剩余热量反馈和电机电流)
-        // 也有可能需要从switch-case中独立出来
-        case LOAD_REVERSE:
-            DJIMotorOuterLoop(loader, SPEED_LOOP);
-            // ...
-            break;
-        default:
-            DJIMotorStop(loader);
-            DJIMotorStop(friction_l);
-            DJIMotorStop(friction_r);
-            break;
-        }
-    }
-    if (shoot_cmd_recv.shoot_mode != SHOOT_OFF && !loader_busy)
-        last_load_mode = shoot_cmd_recv.load_mode;
-    else if (shoot_cmd_recv.shoot_mode == SHOOT_OFF)
-        last_load_mode = LOAD_STOP;
-
-    // 确定是否开启摩擦轮,后续可能修改为键鼠模式下始终开启摩擦轮(上场时建议一直开启)
-    if (shoot_cmd_recv.friction_mode == FRICTION_ON)
-    {
-        // 根据收到的弹速设置设定摩擦轮电机参考值,需实测后填入
-        switch (shoot_cmd_recv.bullet_speed)
-        {
-        case SMALL_AMU_15:
-            DJIMotorSetRef(friction_l, 4000);
-            DJIMotorSetRef(friction_r, 4000);
-            break;
-        case SMALL_AMU_18:
-            DJIMotorSetRef(friction_l, 32000);
-            DJIMotorSetRef(friction_r, 32000);
-            break;
-        case SMALL_AMU_30:
-            DJIMotorSetRef(friction_l, 8000);
-            DJIMotorSetRef(friction_r, 8000);
-            break;
-        default: // 当前为了调试设定的默认值32000,因为还没有加入裁判系统无法读取弹速.
-            DJIMotorSetRef(friction_l, 32000);
-            DJIMotorSetRef(friction_r, 32000);
-            break;
-        }
-    }
-    else // 关闭摩擦轮
-    {
-        DJIMotorSetRef(friction_l, 0);
-        DJIMotorSetRef(friction_r, 0);
-    }
-
-    // 开关弹舱盖
-    if (shoot_cmd_recv.lid_mode == LID_CLOSE)
-    {
-        //...
-    }
-    else if (shoot_cmd_recv.lid_mode == LID_OPEN)
-    {
-        //...
-    }
-
-    // 反馈数据,目前暂时没有要设定的反馈数据,后续可能增加应用离线监测以及卡弹反馈
-    PubPushMessage(shoot_pub, (void *)&shoot_feedback_data);
+    /* A denied/cancelled press is consumed; restoring readiness never resumes it.
+     * While a batch runs, require a subsequent release before accepting a new one. */
+    previous_request=active_batch ? (request==LOAD_STOP ? LOAD_1_BULLET : request) : request;
+    PubPushMessage(shoot_pub, &shoot_feedback_data);
 }

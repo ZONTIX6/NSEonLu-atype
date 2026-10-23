@@ -321,6 +321,8 @@ typedef struct
 {
     attitude_t gimbal_imu_data;
     uint16_t yaw_motor_single_round_angle;
+    uint32_t yaw_feedback_tick_ms;
+    uint8_t yaw_feedback_valid;
 } Gimbal_Upload_Data_s;
 
 typedef struct
