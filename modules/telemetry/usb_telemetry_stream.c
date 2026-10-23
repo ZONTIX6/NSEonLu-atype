@@ -84,7 +84,7 @@ void USBTelemetryStreamInit(void)
 void USBTelemetryStreamSend(USBTelemetrySample_s *sample, uint32_t now_ms)
 {
     if (sample == NULL) return;
-    sample->version = 1;
+    sample->version = 2;
     sample->seq = sequence++;
     sample->tick = now_ms;
     sample->tx_drop_count = drop_count;

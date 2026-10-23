@@ -649,6 +649,7 @@ void ChassisTask()
         .tick_ms = HAL_GetTick(),
         .mode = (uint8_t)chassis_cmd_recv.chassis_mode,
         .vx_cmd = chassis_vx, .vy_cmd = chassis_vy, .wz_cmd = chassis_cmd_recv.wz,
+        .offset_angle = chassis_cmd_recv.offset_angle,
         .nominal_budget_w = pending_power_control.nominal_budget_w,
         .target_power_w = pending_power_control.target_power_w,
         .buffer_control_enabled = CHASSIS_BUFFER_POWER_ENABLE != 0,

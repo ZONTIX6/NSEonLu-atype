@@ -14,7 +14,7 @@ async (page) => {
     store.clear();view.resume();
     for (let index = 0; index < 3000; index++) {
       const tick = 1000 + index * 20, sample = Object.fromEntries(P.FIELDS.map(key => [key, 0]));
-      Object.assign(sample, {version: 1, seq: index, tick, chassis_valid: 1, chassis_tick_ms: tick,
+      Object.assign(sample, {version: 2, seq: index, tick, chassis_valid: 1, chassis_tick_ms: tick,
         model_tick_ms: tick, motor_online_mask: 15, motor_enabled_mask: 15, power_valid: 1,
         meter_online: 1, p_meter_cw: 1234, referee_online: 1, buffer_j: 42,
         buffer_estimate_valid: 1, buffer_lower_cj: 4123, buffer_predicted_cj: 3999,

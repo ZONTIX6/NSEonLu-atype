@@ -42,7 +42,7 @@ typedef struct
     void (*heat)(void *context, float duty);
     void *context;
 } INSServiceConfig_s;
-typedef struct {attitude_t attitude; uint32_t tick_ms; bool valid;} INSSnapshot_s;
+typedef struct {attitude_t attitude; uint32_t tick_ms; bool valid, has_sample;} INSSnapshot_s;
 bool INSServiceConfigure(const INSServiceConfig_s *config);
 bool INSGetSnapshot(INSSnapshot_s *snapshot);
 

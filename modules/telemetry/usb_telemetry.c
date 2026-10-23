@@ -10,6 +10,7 @@
 #include "rm_referee.h"
 #include "super_cap.h"
 #include "chassis_energy_config.h"
+#include "usb_telemetry_imu.h"
 #include <limits.h>
 #include <math.h>
 #include <string.h>
@@ -29,18 +30,19 @@ static void Collect(uint32_t now_ms)
 {
     memset(&sample, 0, sizeof sample);
     sample.rc_age_ms = sample.meter_age_ms = sample.buffer_age_ms =
-        sample.cap_age_ms = sample.cap_input_age_ms = UINT32_MAX;
+        sample.cap_age_ms = sample.cap_input_age_ms = sample.imu_age_ms = UINT32_MAX;
     sample.power_source = CHASSIS_POWER_SOURCE_MODE;
 
     if (ChassisGetTelemetrySnapshot(&chassis)) {
         sample.chassis_valid = isfinite(chassis.vx_cmd) && isfinite(chassis.vy_cmd) &&
             isfinite(chassis.wz_cmd) && isfinite(chassis.nominal_budget_w) &&
-            isfinite(chassis.target_power_w);
+            isfinite(chassis.target_power_w) && isfinite(chassis.offset_angle);
         sample.chassis_tick_ms = chassis.tick_ms;
         sample.chassis_mode = chassis.mode;
         sample.vx_cmd_milli = USBTelemetryFixed(chassis.vx_cmd, 1000);
         sample.vy_cmd_milli = USBTelemetryFixed(chassis.vy_cmd, 1000);
         sample.wz_cmd_milli = USBTelemetryFixed(chassis.wz_cmd, 1000);
+        sample.chassis_offset_mdeg = USBTelemetryFixed(chassis.offset_angle, 1000);
         sample.nominal_budget_cw = USBTelemetryFixed(chassis.nominal_budget_w, 100);
         sample.target_power_cw = USBTelemetryFixed(chassis.target_power_w, 100);
         sample.buffer_control_enabled = chassis.buffer_control_enabled;
@@ -143,6 +145,9 @@ static void Collect(uint32_t now_ms)
         sample.cap_input_age_ms = Age(HAL_GetTick(), cap_input.last_rx_tick_ms,
                                      cap_input.online || cap_input.last_rx_tick_ms != 0);
     }
+    INSSnapshot_s imu = {0};
+    (void)INSGetSnapshot(&imu);
+    USBTelemetryEncodeIMU(&sample, &imu, HAL_GetTick());
     USBTelemetryApplyFreshness(&sample, HAL_GetTick());
 }
 #endif

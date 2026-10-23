@@ -141,6 +141,7 @@ modules/motor/motor_task.c \
 modules/telemetry/rtt_telemetry.c \
 modules/telemetry/usb_telemetry.c \
 modules/telemetry/usb_telemetry_format.c \
+modules/telemetry/usb_telemetry_imu.c \
 modules/telemetry/usb_telemetry_stream.c \
 modules/telemetry/runtime_tuning.c \
 modules/telemetry/pid_autotune.c \

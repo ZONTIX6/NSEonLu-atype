@@ -1,4 +1,5 @@
 #include "usb_telemetry_format.h"
+#include "usb_telemetry_imu.h"
 #include <assert.h>
 #include <limits.h>
 #include <math.h>
@@ -10,12 +11,12 @@
 #endif
 
 static const char expected_header[] =
-    "version,seq,tick,tx_drop_count,chassis_valid,chassis_tick_ms,chassis_mode,vx_cmd_milli,vy_cmd_milli,wz_cmd_milli,rc_online,rc_age_ms,rc_lx,rc_ly,rc_rx,rc_ry,rc_dial,rc_sw_left,rc_sw_right,mouse_x,mouse_y,mouse_left,mouse_right,keys,model_tick_ms,motor_online_mask,motor_enabled_mask,rpm_lf,rpm_rf,rpm_lb,rpm_rb,target_lf_rpm,target_rf_rpm,target_lb_rpm,target_rb_rpm,i_lf_cmd,i_rf_cmd,i_lb_cmd,i_rb_cmd,i_lf_fb,i_rf_fb,i_lb_fb,i_rb_fb,power_valid,p_unlimited_cw,p_limited_cw,effective_limit_cw,p_meter_cw,meter_online,meter_age_ms,nominal_budget_cw,target_power_cw,power_source,referee_online,referee_limit_cw,buffer_j,buffer_age_ms,buffer_control_enabled,buffer_estimate_valid,buffer_lower_cj,buffer_predicted_cj,buffer_recovering,cap_online,cap_output_enabled,cap_error,cap_energy_pm,cap_chassis_cw,cap_limit_cw,cap_age_ms,cap_input_online,cap_input_cw,cap_input_age_ms\r\n";
+    "version,seq,tick,tx_drop_count,chassis_valid,chassis_tick_ms,chassis_mode,vx_cmd_milli,vy_cmd_milli,wz_cmd_milli,rc_online,rc_age_ms,rc_lx,rc_ly,rc_rx,rc_ry,rc_dial,rc_sw_left,rc_sw_right,mouse_x,mouse_y,mouse_left,mouse_right,keys,model_tick_ms,motor_online_mask,motor_enabled_mask,rpm_lf,rpm_rf,rpm_lb,rpm_rb,target_lf_rpm,target_rf_rpm,target_lb_rpm,target_rb_rpm,i_lf_cmd,i_rf_cmd,i_lb_cmd,i_rb_cmd,i_lf_fb,i_rf_fb,i_lb_fb,i_rb_fb,power_valid,p_unlimited_cw,p_limited_cw,effective_limit_cw,p_meter_cw,meter_online,meter_age_ms,nominal_budget_cw,target_power_cw,power_source,referee_online,referee_limit_cw,buffer_j,buffer_age_ms,buffer_control_enabled,buffer_estimate_valid,buffer_lower_cj,buffer_predicted_cj,buffer_recovering,cap_online,cap_output_enabled,cap_error,cap_energy_pm,cap_chassis_cw,cap_limit_cw,cap_age_ms,cap_input_online,cap_input_cw,cap_input_age_ms,imu_valid,imu_age_ms,imu_yaw_mdeg,imu_pitch_mdeg,imu_roll_mdeg,imu_yaw_total_mdeg,imu_gx_mdps,imu_gy_mdps,imu_gz_mdps,imu_ax_mmps2,imu_ay_mmps2,imu_az_mmps2,chassis_offset_mdeg\r\n";
 
 static USBTelemetrySample_s fixture(void)
 {
     USBTelemetrySample_s s = {0};
-    s.version = 1; s.seq = 42; s.tick = 1000; s.tx_drop_count = 3;
+    s.version = 2; s.seq = 42; s.tick = 1000; s.tx_drop_count = 3;
     s.chassis_valid = 1; s.chassis_tick_ms = 995; s.chassis_mode = 2;
     s.vx_cmd_milli = -1250; s.vy_cmd_milli = 2500; s.wz_cmd_milli = -3000;
     s.rc_online = 1; s.rc_age_ms = 5; s.rc_lx = -660; s.rc_ly = 330;
@@ -38,6 +39,11 @@ static USBTelemetrySample_s fixture(void)
     s.cap_online = 1; s.cap_output_enabled = 1; s.cap_energy_pm = 750;
     s.cap_chassis_cw = 1278; s.cap_limit_cw = 12000; s.cap_age_ms = 3;
     s.cap_input_online = 1; s.cap_input_cw = 5678; s.cap_input_age_ms = 4;
+    s.imu_valid = 1; s.imu_age_ms = 3;
+    s.imu_yaw_mdeg = -12345; s.imu_pitch_mdeg = 1250; s.imu_roll_mdeg = -2500;
+    s.imu_yaw_total_mdeg = 721234; s.imu_gx_mdps = -180500; s.imu_gy_mdps = 250;
+    s.imu_gz_mdps = 90000; s.imu_ax_mmps2 = -1500; s.imu_ay_mmps2 = 2000;
+    s.imu_az_mmps2 = 9807; s.chassis_offset_mdeg = -30500;
     return s;
 }
 
@@ -55,10 +61,10 @@ int main(int argc, char **argv)
         fputs(header, stdout); fputs(row, stdout); return 0;
     }
     assert(strcmp(row,
-        "1,42,1000,3,1,995,2,-1250,2500,-3000,1,5,-660,330,660,-330,-100,1,3,-20,30,1,0,32769,999,15,7,-1234,1200,-900,800,-1500,1500,-1000,1000,-120,121,-122,123,-110,111,-112,113,1,2000,1500,1800,1234,1,2,8000,7840,1,1,6000,42,7,1,1,4123,3999,1,1,1,0,750,1278,12000,3,1,5678,4\r\n") == 0);
+        "2,42,1000,3,1,995,2,-1250,2500,-3000,1,5,-660,330,660,-330,-100,1,3,-20,30,1,0,32769,999,15,7,-1234,1200,-900,800,-1500,1500,-1000,1000,-120,121,-122,123,-110,111,-112,113,1,2000,1500,1800,1234,1,2,8000,7840,1,1,6000,42,7,1,1,4123,3999,1,1,1,0,750,1278,12000,3,1,5678,4,1,3,-12345,1250,-2500,721234,-180500,250,90000,-1500,2000,9807,-30500\r\n") == 0);
     unsigned commas = 0;
     for (const char *p = row; *p; ++p) commas += *p == ',';
-    assert(commas == 71);
+    assert(commas == 84);
     assert(USBTelemetryFixed(12.34f, 100) == 1234);
     assert(USBTelemetryFixed(-12.345f, 100) == -1235);
     assert(USBTelemetryFixed(1.25f, 1000) == 1250);
@@ -86,6 +92,10 @@ int main(int argc, char **argv)
     s = fixture();
     USBTelemetryApplyFreshness(&s, 1000);
     assert(s.chassis_valid && s.power_valid && s.motor_online_mask == 15);
+    s.imu_age_ms = 10; USBTelemetryApplyFreshness(&s, 1000); assert(s.imu_valid);
+    s.imu_age_ms = 11; USBTelemetryApplyFreshness(&s, 1000); assert(!s.imu_valid);
+    s.imu_valid = 1; s.imu_age_ms = UINT32_MAX;
+    USBTelemetryApplyFreshness(&s, 1000); assert(!s.imu_valid);
     s.rc_age_ms = 101; s.meter_age_ms = 21; s.buffer_age_ms = 301;
     s.cap_age_ms = 21; s.cap_input_age_ms = UINT32_MAX;
     USBTelemetryApplyFreshness(&s, 1200);
@@ -96,6 +106,26 @@ int main(int argc, char **argv)
     s = fixture(); s.chassis_tick_ms = UINT32_MAX - 2; s.model_tick_ms = UINT32_MAX;
     USBTelemetryApplyFreshness(&s, 3);
     assert(s.chassis_valid && s.power_valid); /* Normal HAL tick wrap is fresh. */
+    INSSnapshot_s imu = {.tick_ms = 995, .valid = false, .has_sample = true,
+        .attitude = {.Yaw = -12.345f, .Gyro = {-180.5f, 0, 0}, .Accel = {0, 0, 9.807f}}};
+    USBTelemetryEncodeIMU(&s, &imu, 1010);
+    assert(!s.imu_valid && s.imu_age_ms == 15);
+    assert(s.imu_yaw_mdeg == -12345 && s.imu_gx_mdps == -180500 && s.imu_az_mmps2 == 9807);
+    imu.valid = true;
+    USBTelemetryEncodeIMU(&s, &imu, 1000);
+    assert(s.imu_valid && s.imu_age_ms == 5);
+    imu.attitude.Accel[0] = NAN;
+    USBTelemetryEncodeIMU(&s, &imu, 1000);
+    assert(!s.imu_valid);
+    imu = (INSSnapshot_s){0};
+    USBTelemetryEncodeIMU(&s, &imu, 1000);
+    assert(!s.imu_valid && s.imu_age_ms == UINT32_MAX);
+    imu.has_sample = true; imu.valid = true; imu.tick_ms = UINT32_MAX - 2;
+    USBTelemetryEncodeIMU(&s, &imu, 3);
+    assert(s.imu_valid && s.imu_age_ms == 6);
+    imu.tick_ms = 0; imu.valid = false;
+    USBTelemetryEncodeIMU(&s, &imu, 15);
+    assert(!s.imu_valid && s.imu_age_ms == 15);
     puts("USB telemetry format tests passed");
     return 0;
 }

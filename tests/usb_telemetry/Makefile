@@ -1,8 +1,8 @@
 CC = gcc
 CFLAGS = -std=c11 -Wall -Wextra -Werror -pedantic -O0 -g
-INCLUDES = -Istubs -I../../modules/telemetry -I../../Inc -I../../bsp/usb
-FORMAT = ../../modules/telemetry/usb_telemetry_format.c
-HEADERS = $(wildcard stubs/*.h ../../modules/telemetry/usb_telemetry*.h) ../../Inc/usbd_cdc_if.h ../../bsp/usb/bsp_usb.h
+INCLUDES = -Istubs -I../../modules/telemetry -I../../modules/imu -I../../Inc -I../../bsp/usb
+FORMAT = ../../modules/telemetry/usb_telemetry_format.c ../../modules/telemetry/usb_telemetry_imu.c
+HEADERS = $(wildcard stubs/*.h ../../modules/telemetry/usb_telemetry*.h) ../../Inc/usbd_cdc_if.h ../../bsp/usb/bsp_usb.h ../../modules/imu/ins_task.h ../../modules/imu/imu_sample.h
 TRANSPORT = ../../modules/telemetry/usb_telemetry_stream.c ../../modules/telemetry/runtime_tuning.c ../../Src/usbd_cdc_if.c ../../bsp/usb/bsp_usb.c
 TRANSPORT += ../../modules/telemetry/pid_autotune.c ../../modules/telemetry/autotune_protocol.c
 REMOTE = ../../modules/remote/remote_control.c ../../modules/daemon/daemon.c

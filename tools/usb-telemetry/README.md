@@ -1,6 +1,6 @@
 # USB 遥测仪表盘
 
-A 板通过 USB CDC 虚拟串口上报数据，网页实时显示底盘、遥控器、四电机、功率和缓冲能量。页面、图表和数据处理都在本机运行。
+A 板通过 USB CDC 虚拟串口上报数据，网页实时显示底盘、IMU、遥控器、四电机、功率和缓冲能量。页面、图表和数据处理都在本机运行。
 
 ## 打开网页
 
@@ -46,7 +46,7 @@ Flash 擦写会影响本 MCU 从 Flash 执行代码，所以只在上述停机�
 
 ### 调参协议
 
-与 CSV v1 共用串口，使用独立 @T1 行前缀，CRLF 结束；每次只允许一个在途请求。每个 float32 以八位十六进制 IEEE754 位模式传输，避免嵌入式浮点格式化。
+与 CSV v1 / v2 共用串口，使用独立 @T1 行前缀，CRLF 结束；每次只允许一个在途请求。每个 float32 以八位十六进制 IEEE754 位模式传输，避免嵌入式浮点格式化。
 
 ~~~text
 @T1,<请求ID>,GET,<pid|power|spin>
@@ -89,7 +89,7 @@ make -j8 PROFILE=atype-bench BUILD_DIR=build/atype-bench REFEREE_ENABLE=1 USB_TE
 
 导出 JSON 包含完整配置、软件版本、随机种子、候选顺序、每次原始指标及判定；CSV 为逐试验记录，保留无效记录和失败原因。供电电压无法读取时明确记为“未观测”，遥测环境快照只记录实际可见字段。演示报告有 `synthetic: true` 标记。
 
-`@A2` 与 CSV v1 / `@T1` / `@A1` 共用串口。请求包括 `CAP`、`CONFIG`、`BEGIN`、`TRIAL`、`STATUS`、`END`。固定字段、缩放、单位和长度见 [V2 实施计划的协议表](../../docs/superpowers/plans/2026-10-20-pid-autotune-v2.md)。旧版字段保持原样。试验引擎和协议主机测试：
+`@A2` 与 CSV v1 / v2 / `@T1` / `@A1` 共用串口。请求包括 `CAP`、`CONFIG`、`BEGIN`、`TRIAL`、`STATUS`、`END`。固定字段、缩放、单位和长度见 [V2 实施计划的协议表](../../docs/superpowers/plans/2026-10-20-pid-autotune-v2.md)。旧版字段保持原样。试验引擎和协议主机测试：
 
 ```powershell
 make -C tests/pid_autotune test
@@ -134,7 +134,8 @@ make -j8 BUILD_DIR=build/usb-vision REFEREE_ENABLE=1 VISION_USE_VCP=1 USB_TELEME
 
 | 区域 | 显示内容 |
 | --- | --- |
-| 底盘 | 模式、坐标变换后的 Vx/Vy 控制指令、最终 Wz 指令 |
+| 底盘 | 模式、坐标变换后的 Vx/Vy 控制指令、最终 Wz 指令、Yaw 编码器跟随角 |
+| IMU | Yaw/Pitch/Roll、累计 Yaw（°）、三轴角速度（°/s）、三轴加速度（m/s²，含重力）、有效状态与样本年龄 |
 | 电机 | LF 左前 / RF 右前 / LB 左后 / RB 右后，目标与实际 rpm、电流命令和反馈、在线/使能状态 |
 | 遥控器 | 摇杆、拨轮、左右档位、鼠标和键盘 |
 | 功率 | 实测功率、模型预测、预算、目标和限制，单位 W |
@@ -143,11 +144,11 @@ make -j8 BUILD_DIR=build/usb-vision REFEREE_ENABLE=1 VISION_USE_VCP=1 USB_TELEME
 
 底盘的整车实际速度估计尚未实现，因此 Vx/Vy/Wz 显示控制原始单位；电流显示 DJI 原始值，不标为 A。转速是电机侧 rpm。裁判缓冲能量 J 与电容能量比例 % 是不同量。
 
-网页把无效、离线或过期数据留空为“—”，曲线在相应位置断开。固件在发送时重新检查模型、功率计、电容状态和电容输入功率的 20 ms 新鲜度；底盘快照和遥控器使用 100 ms，裁判缓冲使用 300 ms。浏览器还会拒绝超过 500 ms 的底盘/模型快照；连续 500 ms 没有新行时，整条数据流标记陈旧。时间和序号回退、缺行以及长间隔都会分段。
+网页把无效、离线或过期数据留空为“—”，曲线在相应位置断开。IMU 使用现有 `INSGetSnapshot()` 一致快照，年龄超过 10 ms 或任一值非有限时标记无效。固件在发送时重新检查模型、功率计、电容状态和电容输入功率的 20 ms 新鲜度；底盘快照和遥控器使用 100 ms，裁判缓冲使用 300 ms。浏览器还会拒绝超过 500 ms 的底盘/模型快照；连续 500 ms 没有新行时，整条数据流标记陈旧。时间和序号回退、缺行以及长间隔都会分段。
 
 “暂停显示”冻结已有历史和横轴时刻，仍继续接收数据。页面最多保留最近 10 分钟且不超过 30000 条样本，普通卡片默认显示 60 秒总览。暂停快照独立保留，实时缓存更新不会删掉正在查看的数据。导出 CSV 保存当前接收缓存中的历史（最多 10 分钟），原始整数单位保持不变；可导入项目现有 [波形工具](../waveform-viewer/README.md) 做离线分析。
 
-点击功率、缓冲能量卡片或四轮转速绘图区可弹窗放大，也可使用图表旁的“放大 ↗”按钮。按 Esc、点击关闭按钮或弹窗外区域返回；图表获得键盘焦点后，Enter / 空格也能放大。放大图跟随当前实时或暂停状态，暂停时仍可打开和调整窗口大小。
+IMU 姿态、角速度、加速度分图显示；累计 Yaw 默认不选中，可在“显示数据”中开启。点击 IMU、功率、缓冲能量卡片或四轮转速绘图区可弹窗放大，也可使用图表旁的“放大 ↗”按钮。按 Esc、点击关闭按钮或弹窗外区域返回；图表获得键盘焦点后，Enter / 空格也能放大。放大图跟随当前实时或暂停状态，暂停时仍可打开和调整窗口大小。
 
 在放大图内按住 Ctrl 滚动滚轮，可以围绕鼠标位置缩放时间轴，查看 100 ms～60 s 的细节，纵轴自动适配可见数据。Ctrl + 加号/减号以图中心缩放；Ctrl + 0 或“恢复全图”回到当前显示末端前的 60 s，保持暂停状态。弹窗打开时这些操作只作用于波形，关闭后恢复浏览器快捷键；普通滚轮仍可滚动。
 
@@ -159,7 +160,13 @@ make -j8 BUILD_DIR=build/usb-vision REFEREE_ENABLE=1 VISION_USE_VCP=1 USB_TELEME
 
 鼠标放在普通图或大图内，可查看定位线对应的最近真实采样，包括距窗口末端的秒数、板端 tick（ms）、各条曲线名称和数值。功率为 W，能量为 J，转速为 rpm；读数已经换算，CSV 导出仍保留原始整数单位。无效来源显示“—”，通信断点和距离采样超过 500 ms 的空白不显示读数。无数据或遥控器过期时，键盘和鼠标按键保持熄灭。
 
-## CSV v1 协议
+## 底盘跟随诊断
+
+底盘“跟随云台”使用云台 Yaw 电机编码器的相对角度：跟随角 = 单圈编码器角度 − YAW_ALIGN_ANGLE，归一化至 ±180°。最终旋转输出由当前底盘策略决定，以网页 Wz 读数为准；网页同时显示实际跟随角，IMU 区显示板载姿态。单独旋转 A 板、Yaw 电机轴未动时，不会直接改变跟随角或产生额外跟随输出。仅连接 A 板、一个 M3508 和遥控器不能复现完整云台跟随链路；本次不修改整车控制与保护逻辑。
+
+旧固件没有跟随角和 IMU 字段时留空，并提示升级。烧录新固件、重启本地服务并刷新页面后，可同步观察板载姿态、编码器跟随角、Wz 与四轮目标/实际转速。
+
+## CSV v1 / v2 协议
 
 行以 CRLF 结束，表头在串口打开后及每秒重发。串口读取块不等同于一整行，解析器能处理任意分片。
 
@@ -168,16 +175,27 @@ make -j8 BUILD_DIR=build/usb-vision REFEREE_ENABLE=1 VISION_USE_VCP=1 USB_TELEME
 | `*_cw` | 0.01 W | 除以 100 |
 | `*_cj` | 0.01 J | 除以 100 |
 | `*_milli` | 0.001 控制原始单位 | 除以 1000 |
+| `*_mdeg` | 0.001° | 除以 1000 |
+| `*_mdps` | 0.001°/s | 除以 1000 |
+| `*_mmps2` | 0.001 m/s² | 除以 1000 |
 | `cap_energy_pm` | 0.001 能量比例 | 除以 10 得到 % |
 | `buffer_j` | J | 保持整数 J |
 | `tick` / `*_tick_ms` / `*_age_ms` | ms | 未取得样本的年龄为 4294967295 |
 | `i_*_cmd` / `i_*_fb` | DJI 原始值 | 不换算为 A |
 
-固定 72 列，`version=1`：
+兼容旧固件的 CSV v1 固定 72 列，`version=1`：
 
 ```csv
 version,seq,tick,tx_drop_count,chassis_valid,chassis_tick_ms,chassis_mode,vx_cmd_milli,vy_cmd_milli,wz_cmd_milli,rc_online,rc_age_ms,rc_lx,rc_ly,rc_rx,rc_ry,rc_dial,rc_sw_left,rc_sw_right,mouse_x,mouse_y,mouse_left,mouse_right,keys,model_tick_ms,motor_online_mask,motor_enabled_mask,rpm_lf,rpm_rf,rpm_lb,rpm_rb,target_lf_rpm,target_rf_rpm,target_lb_rpm,target_rb_rpm,i_lf_cmd,i_rf_cmd,i_lb_cmd,i_rb_cmd,i_lf_fb,i_rf_fb,i_lb_fb,i_rb_fb,power_valid,p_unlimited_cw,p_limited_cw,effective_limit_cw,p_meter_cw,meter_online,meter_age_ms,nominal_budget_cw,target_power_cw,power_source,referee_online,referee_limit_cw,buffer_j,buffer_age_ms,buffer_control_enabled,buffer_estimate_valid,buffer_lower_cj,buffer_predicted_cj,buffer_recovering,cap_online,cap_output_enabled,cap_error,cap_energy_pm,cap_chassis_cw,cap_limit_cw,cap_age_ms,cap_input_online,cap_input_cw,cap_input_age_ms
 ```
+
+当前固件输出 CSV v2，固定 85 列、`version=2`，在上述 72 列后依次追加：
+
+```csv
+imu_valid,imu_age_ms,imu_yaw_mdeg,imu_pitch_mdeg,imu_roll_mdeg,imu_yaw_total_mdeg,imu_gx_mdps,imu_gy_mdps,imu_gz_mdps,imu_ax_mmps2,imu_ay_mmps2,imu_az_mmps2,chassis_offset_mdeg
+```
+
+`imu_valid` 为 0/1；`imu_age_ms` 为采集时的样本年龄，从未发布姿态时为 4294967295。采样失效后保留最后姿态的原始值和真实年龄，同时置 `imu_valid=0`，网页读数留空。网页同时识别两种精确表头，版本必须与表头一致。导出统一为 v2、保留原始整数单位；v1 记录的 IMU 标记无效，年龄为 4294967295，缺失跟随角编码为 −2147483648 并显示为空，其他原有测量保持不变。旧版网页需刷新至支持 v2 的版本。
 
 `seq` 按采样周期递增（包括被丢弃的周期）；表头重发可能占用发送机会。网页显示缺行计数，并保留 `tx_drop_count` 便于判断发送拥塞。序号和 tick 使用 uint32，支持自然回绕。
 
@@ -194,7 +212,7 @@ node --test tools/usb-telemetry/tests/*.test.cjs
 node --test tools/waveform-viewer/tests/core.test.cjs
 ```
 
-跨端测试会使用 GCC 编译 C 格式化测试程序，并将其实际输出分成任意字节块交给网页解析器，验证字段顺序、符号、功率/能量单位和导出兼容性。独立运行网页无需 GCC；只有开发测试和固件构建需要它。
+跨端测试会使用 GCC 编译 C 格式化测试程序，并将其实际输出分成任意字节块交给网页解析器，验证字段顺序、符号、IMU/功率/能量单位和导出兼容性。独立运行网页无需 GCC；只有开发测试和固件构建需要它。
 
 浏览器 QA 脚本位于 `tools/usb-telemetry/tests/browser-check.js`，通过 Playwright CLI 在本地页面执行：
 
@@ -219,3 +237,5 @@ playwright-cli -s=usb close
 - 已连接但没有数据：确认固件使用遥测模式，等待周期表头，检查是否烧录了对应构建产物。
 - 部分来源离线：检查该设备的供电、CAN/UART 链路和配置；网页连接 USB 成功并不意味着每个设备都在线。
 - 拔插后：点击连接重新选择端口；已有窗口数据仍可导出。
+
+IMU 浏览器检查脚本 `tests/imu-check.js` 覆盖新旧固件、单位、无效样本、暂停、三组曲线放大、CSV 及 320～1440 px 布局。脚本只注入模拟数据，不操作真实串口。

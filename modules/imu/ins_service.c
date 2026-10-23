@@ -14,7 +14,7 @@
 #include "QuaternionEKF.h"
 #include "mpu6500_math.h"
 
-static bool sample_valid, ins_healthy;
+static bool sample_valid, ins_healthy, ins_has_sample;
 static uint32_t ins_sample_tick;
 
 #include <math.h>
@@ -68,7 +68,8 @@ bool INSGetSnapshot(INSSnapshot_s *output)
     if(output==NULL) return false;
     INS_LOCK();
     *output=(INSSnapshot_s){.attitude=published_attitude,.tick_ms=ins_sample_tick,
-        .valid=ins_healthy && (uint32_t)(HAL_GetTick()-ins_sample_tick)<=10U};
+        .valid=ins_healthy && (uint32_t)(HAL_GetTick()-ins_sample_tick)<=10U,
+        .has_sample=ins_has_sample};
     INS_UNLOCK();
     return output->valid;
 }
@@ -390,6 +391,7 @@ void INS_Task(void)
             memcpy(published_attitude.Gyro,INS.Gyro,sizeof INS.Gyro);
             memcpy(published_attitude.Accel,INS.Accel,sizeof INS.Accel);
             ins_sample_tick=sample_tick;
+            ins_has_sample=true;
             INS_UNLOCK();
         } else {IMU_Temperature_Update(0);return;}
 

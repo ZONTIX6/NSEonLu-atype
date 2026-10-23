@@ -9,6 +9,7 @@ typedef struct {
     uint32_t tick_ms;
     uint8_t mode;
     float vx_cmd, vy_cmd, wz_cmd;
+    float offset_angle; /* Yaw encoder relative to the chassis alignment, degrees. */
     float nominal_budget_w, target_power_w;
     bool buffer_control_enabled, buffer_estimate_valid, buffer_recovering;
     float buffer_lower_j, buffer_predicted_j;

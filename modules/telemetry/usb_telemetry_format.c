@@ -21,6 +21,7 @@ int32_t USBTelemetryFixed(float value, float scale)
 void USBTelemetryApplyFreshness(USBTelemetrySample_s *sample, uint32_t now_ms)
 {
     if (sample == NULL) return;
+    if (sample->imu_age_ms > 10U) sample->imu_valid = 0;
     if ((uint32_t)(now_ms - sample->chassis_tick_ms) > 100U) {
         sample->chassis_valid = 0;
         sample->buffer_estimate_valid = 0;

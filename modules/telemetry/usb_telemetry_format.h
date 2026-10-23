@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* CSV v1 wire order. Values are already fixed point at this boundary. */
+/* CSV v2 wire order; the first 72 fields retain their v1 order and units. */
 #define USB_TELEMETRY_FIELDS(U, I) \
     U(version) U(seq) U(tick) U(tx_drop_count) \
     U(chassis_valid) U(chassis_tick_ms) U(chassis_mode) \
@@ -25,7 +25,11 @@
     I(buffer_lower_cj) I(buffer_predicted_cj) U(buffer_recovering) \
     U(cap_online) U(cap_output_enabled) U(cap_error) I(cap_energy_pm) \
     I(cap_chassis_cw) I(cap_limit_cw) U(cap_age_ms) \
-    U(cap_input_online) I(cap_input_cw) U(cap_input_age_ms)
+    U(cap_input_online) I(cap_input_cw) U(cap_input_age_ms) \
+    U(imu_valid) U(imu_age_ms) \
+    I(imu_yaw_mdeg) I(imu_pitch_mdeg) I(imu_roll_mdeg) I(imu_yaw_total_mdeg) \
+    I(imu_gx_mdps) I(imu_gy_mdps) I(imu_gz_mdps) \
+    I(imu_ax_mmps2) I(imu_ay_mmps2) I(imu_az_mmps2) I(chassis_offset_mdeg)
 
 typedef struct {
 #define USB_FIELD_U(name) uint32_t name;

@@ -18,6 +18,12 @@ test('actual firmware CSV crosses arbitrary byte boundaries and displays correct
   assert.equal(received.length, 1);
   const sample = received[0];
   assert.equal(sample.seq, 42);
+  assert.equal(sample.version, 2);
+  assert.equal(P.displayValue(sample, 'imu_yaw_mdeg'), -12.345);
+  assert.equal(P.displayValue(sample, 'imu_yaw_total_mdeg'), 721.234);
+  assert.equal(P.displayValue(sample, 'imu_gx_mdps'), -180.5);
+  assert.equal(P.displayValue(sample, 'imu_az_mmps2'), 9.807);
+  assert.equal(P.displayValue(sample, 'chassis_offset_mdeg'), -30.5);
   assert.equal(sample.rc_lx, -660);
   assert.equal(sample.rpm_lf, -1234);
   assert.equal(P.displayValue(sample, 'p_meter_cw'), 12.34);
