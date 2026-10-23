@@ -39,7 +39,7 @@ MCU 为 STM32F427IIH6；12 MHz HSE、168 MHz SYSCLK、48 MHz USB。普通 RAM 19
 | DBUS | USART1 RX PB7 | 100000、偶校验、HAL 9 位字长 |
 | 视觉 | USART3 TX PD8 / RX PD9 | 9600 |
 | 图传键鼠 | UART8 TX PE1 / RX PE0 | 115200 |
-| 裁判 | USART6 TX PG14 / RX PG9 | 115200 |
+| 裁判 | 默认 UART7 TX PE8 / RX PE7 | 115200、8N1；编号 16 最右侧、丝印 7；`REFEREE_UART_PORT=6` 可切 USART6 PG14/PG9 |
 | CAN1 | RX PD0 / TX PD1 | 1 Mbps；底盘、电容、功率计 |
 | CAN2 | RX PB12 / TX PB13 | 1 Mbps；云台、发射；双板通信 |
 | MPU6500 | SPI5 PF7/PF8/PF9、CS PF6 | 默认板载姿态源 |
@@ -47,7 +47,7 @@ MCU 为 STM32F427IIH6；12 MHz HSE、168 MHz SYSCLK、48 MHz USB。普通 RAM 19
 | 蜂鸣器 | TIM12 CH1 / PH6 | BSP 周期秒、占空比 0～1 |
 | USB CDC | PA11 DM / PA12 DP | 默认遥测；USB 视觉与遥测互斥 |
 | 可选串口日志 | USART2 TX PD5 / RX PD6 | 115200；TX 中断队列，无 TX DMA |
-| 可选辅助串口 | UART7 RX PE7 / TX PE8 | 115200；见 `Src/usart.c` |
+| 可选辅助串口 | UART7 RX PE7 / TX PE8 | 与 UART7 裁判互斥；裁判切 USART6 或关闭后可用 |
 | OLED | SPI1 PB3/PB4/PA7；DC PB9、RST PB10 | 默认 SPI 后端，需显式启用 |
 | OLED 模拟按键 | ADC1 IN6 / PA6 | 板级采样；转换失败不产生按键 |
 | I²C 扩展 | I²C2 PF0 SDA / PF1 SCL | 支持轮询；可选 I²C OLED |
@@ -98,7 +98,7 @@ Flash 保存要求整车处于新鲜零力状态、全部已注册 DJI 电机停
 
 ## 裁判与热控
 
-USART6 仅注册一个流式解析器，同时服务功控和热控。`RefereeGetHeatSnapshot()` 与功率快照并列；状态与热量的时间戳分别检查，任一超过 300 ms 都无效。热量以 10 Hz 发布，消费方每次计算仍检查来源时间戳，发布停顿不会锁存有效状态。
+选中的裁判串口（默认 UART7，可选 USART6）仅注册一个流式解析器，同时服务功控和热控。UART7 使用 RX DMA1 Stream3/Channel5、TX 中断，不增加 TX DMA 分配；USART6 保留原有 RX/TX DMA。`RefereeGetHeatSnapshot()` 与功率快照并列；状态与热量的时间戳分别检查，任一超过 300 ms 都无效。热量以 10 Hz 发布，消费方每次计算仍检查来源时间戳，发布停顿不会锁存有效状态。
 
 `0x0201` 接受 13/17 字节，输出标志来自偏移 12/16。`0x0202` 接受 14/16 字节，17 mm 热量来自偏移 10/12，42 mm 来自 12/14。16 字节的 17 mm 选择严格按已确认方案；参考工程原 `_1` 在偏移 10，故此处是明确协议映射调整。帧长 16 不自动启用旧功率字段。
 
@@ -112,7 +112,7 @@ USART6 仅注册一个流式解析器，同时服务功控和热控。`RefereeGe
 
 ## 可选模块验证边界
 
-`BOARD_AUX_UART2_DEVICE/BOARD_AUX_UART7_DEVICE`：0 不注册，1 TFmini，2 HC05，3 总线舵机；USART2 与 UART 日志互斥，同种单例不能同时占两路串口。`BOARD_OLED_ENABLE`、`BOARD_KEY_ENABLE` 默认 0；`OLED_USE_I2C=1` 选择保留的 I²C 后端。按键中断只记时，10 ms 任务完成消抖。
+`BOARD_AUX_UART2_DEVICE/BOARD_AUX_UART7_DEVICE`：0 不注册，1 TFmini，2 HC05，3 总线舵机；USART2 与 UART 日志互斥，UART7 辅助设备与 UART7 裁判互斥，同种单例不能同时占两路串口。可选模块验证配置显式使用 `REFEREE_UART_PORT=6`。`BOARD_OLED_ENABLE`、`BOARD_KEY_ENABLE` 默认 0；`OLED_USE_I2C=1` 选择保留的 I²C 后端。按键中断只记时，10 ms 任务完成消抖。
 
 `ATYPE_LINK_MODULES=1` 强制保留 `config/atype-link-symbols.txt` 中驱动初始化及控制入口；验证脚本检查 ELF 已定义符号，避免把被链接器裁掉的代码算作验证。外接 BMI088/IST8310、HT/DM/LK、电机堵转检测、舵机、Flash 与通用 BSP 都不默认注册。SPI/I²C 扩展验证以轮询接口为基准，DMA 模式需实际配置对应句柄和不冲突的流，不能只更改实例工作模式。
 

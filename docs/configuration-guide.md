@@ -43,7 +43,7 @@ cmake -S . -B build/cmake-follow-1 -G "MinGW Makefiles" -DATYPE_PROFILE=atype-ve
 cmake --build build/cmake-follow-1 -j4
 ```
 
-原 `UART1_USE` 已废止，Make/CMake/预处理均会明确报错。USART1 固定 DBUS，不能切作裁判或日志。`REFEREE_ENABLE=0/1` 控制 USART6 裁判功能；`LOG_OUTPUT=0/1/2/3` 分别关闭、RTT、USART2、两者。日志 USART2 使用中断队列，不抢 UART8 RX DMA。
+原 `UART1_USE` 已废止，Make/CMake/预处理均会明确报错。USART1 固定 DBUS，不能切作裁判或日志。`REFEREE_ENABLE=0/1` 控制裁判功能；`REFEREE_UART_PORT` 默认 `7`，对应编号 16 最右侧、丝印 7 的 UART7（TX PE8 / RX PE7）。只允许 `6/7`；设 `6` 使用 USART6（TX PG14 / RX PG9）。UART7 未分配 TX DMA，裁判 UI 自动采用 TX 中断；USART6 使用其已有 TX DMA。`LOG_OUTPUT=0/1/2/3` 分别关闭、RTT、USART2、两者。日志 USART2 使用中断队列，不抢 UART8 RX DMA。
 
 角色使用 `CHASSIS_BOARD=1` 或 `GIMBAL_BOARD=1` 覆盖；未指定时默认 ONE_BOARD，不能同时定义多个角色。双板都需更新同一消息版本，USB 调参连接底盘板。USB 视觉和遥测、USART2 辅助设备和串口日志、单例设备重复占串口都会触发检查。
 
@@ -73,7 +73,7 @@ cmake --build build/cmake-follow-1 -j4
 
 ## 可选功能
 
-辅助 UART 设备选择为 0 无、1 TFmini、2 HC05、3 总线舵机。用 `BOARD_AUX_UART7_DEVICE` 或 `BOARD_AUX_UART2_DEVICE` 注册；UART2 与日志互斥。`BOARD_OLED_ENABLE=1` 启用 SPI1 OLED，`OLED_USE_I2C=1` 切换 I²C2 后端；`BOARD_KEY_ENABLE=1` 注册板载键。
+辅助 UART 设备选择为 0 无、1 TFmini、2 HC05、3 总线舵机。用 `BOARD_AUX_UART7_DEVICE` 或 `BOARD_AUX_UART2_DEVICE` 注册；UART2 与日志互斥，UART7 与该端口上的裁判功能互斥。需要 UART7 辅助设备时，先将裁判切至 `REFEREE_UART_PORT=6` 并迁移接线，或关闭裁判；冲突配置在编译阶段拒绝。`BOARD_OLED_ENABLE=1` 启用 SPI1 OLED，`OLED_USE_I2C=1` 切换 I²C2 后端；`BOARD_KEY_ENABLE=1` 注册板载键。
 
 外接 BMI088/IST8310、HT/DM/LK 与通用 BSP 保留显式注册 API；`ATYPE_LINK_MODULES=1` 在验证配置中强制链接对应实现。SPI/I²C 的板级扩展以轮询为基准；DMA 模式需先配齐句柄、DMA 流及中断。编码器/ADC 可直接使用生成的 TIM5/TIM8/ADC1；原空驱动目录不计作已实现功能。
 

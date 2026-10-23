@@ -6,7 +6,7 @@
 
 `modules/imu/ins_task.c`、`BMI088driver.c`、`BMI088Middleware.c` 是未链接的旧 C 板实现；当前 INS 只链接 MPU6500 和公共数学接口。便携副本有独立 API，未加入固件链接。
 
-底盘原跟随档由 `application/robot_def.h` 的 `CHASSIS_FOLLOW_MODE` 选择：`1`（默认）以云台实测朝向为前方且 `wz=0`，`0` 保留原比例跟转。Make 使用 `CHASSIS_FOLLOW_MODE=0/1`，CMake 使用 `-DCHASSIS_FOLLOW_MODE=0/1`；独立目录重新构建并烧录，非法值触发编译错误。详见 [底盘说明](chassis.md#跟随档策略)。本次仅同步底盘策略涉及的三个源码节，其余条目保留原索引快照。
+底盘原跟随档由 `application/robot_def.h` 的 `CHASSIS_FOLLOW_MODE` 选择：`1`（默认）以云台实测朝向为前方且 `wz=0`，`0` 保留原比例跟转。Make 使用 `CHASSIS_FOLLOW_MODE=0/1`，CMake 使用 `-DCHASSIS_FOLLOW_MODE=0/1`；独立目录重新构建并烧录，非法值触发编译错误。详见 [底盘说明](chassis.md#跟随档策略)。本次仅同步底盘策略涉及的三个源码节，2026-10-23 另同步了 Inc/board_config.h 的裁判 UART7 默认值、端口选择与互斥检查；其余条目保留原索引快照。
 
 ## application/board_analog_key.h
 
@@ -902,53 +902,64 @@
 | [8](../Inc/board_config.h#L8) | 预处理 | `#ifndef REFEREE_ENABLE` |
 | [9](../Inc/board_config.h#L9) | 预处理 | `#define REFEREE_ENABLE 1` |
 | [10](../Inc/board_config.h#L10) | 预处理 | `#endif` |
-| [11](../Inc/board_config.h#L11) | 预处理 | `#ifndef LOG_OUTPUT` |
-| [12](../Inc/board_config.h#L12) | 预处理 | `#define LOG_OUTPUT 1 /* 0: off, 1: RTT, 2: USART2, 3: both */` |
+| [11](../Inc/board_config.h#L11) | 预处理 | `#ifndef REFEREE_UART_PORT` |
+| [12](../Inc/board_config.h#L12) | 预处理 | `#define REFEREE_UART_PORT 7 /* A-board connector 16, rightmost socket marked 7. */` |
 | [13](../Inc/board_config.h#L13) | 预处理 | `#endif` |
-| [14](../Inc/board_config.h#L14) | 预处理 | `#ifndef ATYPE_BENCH_MODE` |
-| [15](../Inc/board_config.h#L15) | 预处理 | `#define ATYPE_BENCH_MODE 0` |
+| [14](../Inc/board_config.h#L14) | 预处理 | `#ifndef LOG_OUTPUT` |
+| [15](../Inc/board_config.h#L15) | 预处理 | `#define LOG_OUTPUT 1 /* 0: off, 1: RTT, 2: USART2, 3: both */` |
 | [16](../Inc/board_config.h#L16) | 预处理 | `#endif` |
-| [17](../Inc/board_config.h#L17) | 预处理 | `#if REFEREE_ENABLE != 0 && REFEREE_ENABLE != 1` |
+| [17](../Inc/board_config.h#L17) | 预处理 | `#ifndef ATYPE_BENCH_MODE` |
+| [18](../Inc/board_config.h#L18) | 预处理 | `#define ATYPE_BENCH_MODE 0` |
 | [19](../Inc/board_config.h#L19) | 预处理 | `#endif` |
-| [20](../Inc/board_config.h#L20) | 预处理 | `#if LOG_OUTPUT < 0 &#124;&#124; LOG_OUTPUT > 3` |
+| [20](../Inc/board_config.h#L20) | 预处理 | `#if REFEREE_ENABLE != 0 && REFEREE_ENABLE != 1` |
 | [22](../Inc/board_config.h#L22) | 预处理 | `#endif` |
-| [23](../Inc/board_config.h#L23) | 预处理 | `#if ATYPE_BENCH_MODE != 0 && ATYPE_BENCH_MODE != 1` |
+| [23](../Inc/board_config.h#L23) | 预处理 | `#if REFEREE_UART_PORT != 6 && REFEREE_UART_PORT != 7` |
 | [25](../Inc/board_config.h#L25) | 预处理 | `#endif` |
-| [26](../Inc/board_config.h#L26) | 预处理 | `#define BOARD_LOG_UART_ENABLED (LOG_OUTPUT == 2 &#124;&#124; LOG_OUTPUT == 3)` |
-| [27](../Inc/board_config.h#L27) | 预处理 | `#define BOARD_LOG_RTT_ENABLED (LOG_OUTPUT == 1 &#124;&#124; LOG_OUTPUT == 3)` |
-| [29](../Inc/board_config.h#L29) | 预处理 | `#define BOARD_REMOTE_UART (&huart1)` |
-| [30](../Inc/board_config.h#L30) | 预处理 | `#define BOARD_VISION_UART (&huart3)` |
-| [31](../Inc/board_config.h#L31) | 预处理 | `#define BOARD_VTX_UART (&huart8)` |
-| [32](../Inc/board_config.h#L32) | 预处理 | `#define BOARD_REFEREE_UART (&huart6)` |
-| [33](../Inc/board_config.h#L33) | 预处理 | `#define BOARD_LOG_UART (&huart2)` |
-| [34](../Inc/board_config.h#L34) | 预处理 | `#define BOARD_SUPERCAP_CAN (&hcan1)` |
-| [35](../Inc/board_config.h#L35) | 预处理 | `#define BOARD_POWER_METER_CAN (&hcan1)` |
-| [37](../Inc/board_config.h#L37) | 预处理 | `#ifndef OLED_USE_I2C` |
-| [38](../Inc/board_config.h#L38) | 预处理 | `#define OLED_USE_I2C 0 /* A-board SPI1 OLED; I2C2 backend remains optional. */` |
-| [39](../Inc/board_config.h#L39) | 预处理 | `#endif` |
-| [40](../Inc/board_config.h#L40) | 预处理 | `#if OLED_USE_I2C != 0 && OLED_USE_I2C != 1` |
+| [26](../Inc/board_config.h#L26) | 预处理 | `#if LOG_OUTPUT < 0 &#124;&#124; LOG_OUTPUT > 3` |
+| [28](../Inc/board_config.h#L28) | 预处理 | `#endif` |
+| [29](../Inc/board_config.h#L29) | 预处理 | `#if ATYPE_BENCH_MODE != 0 && ATYPE_BENCH_MODE != 1` |
+| [31](../Inc/board_config.h#L31) | 预处理 | `#endif` |
+| [32](../Inc/board_config.h#L32) | 预处理 | `#define BOARD_LOG_UART_ENABLED (LOG_OUTPUT == 2 &#124;&#124; LOG_OUTPUT == 3)` |
+| [33](../Inc/board_config.h#L33) | 预处理 | `#define BOARD_LOG_RTT_ENABLED (LOG_OUTPUT == 1 &#124;&#124; LOG_OUTPUT == 3)` |
+| [35](../Inc/board_config.h#L35) | 预处理 | `#define BOARD_REMOTE_UART (&huart1)` |
+| [36](../Inc/board_config.h#L36) | 预处理 | `#define BOARD_VISION_UART (&huart3)` |
+| [37](../Inc/board_config.h#L37) | 预处理 | `#define BOARD_VTX_UART (&huart8)` |
+| [38](../Inc/board_config.h#L38) | 预处理 | `#if REFEREE_UART_PORT == 7` |
+| [39](../Inc/board_config.h#L39) | 预处理 | `#define BOARD_REFEREE_UART (&huart7)` |
+| [40](../Inc/board_config.h#L40) | 预处理 | `#else` |
+| [41](../Inc/board_config.h#L41) | 预处理 | `#define BOARD_REFEREE_UART (&huart6)` |
 | [42](../Inc/board_config.h#L42) | 预处理 | `#endif` |
-| [45](../Inc/board_config.h#L45) | 预处理 | `#ifndef BOARD_AUX_UART2_DEVICE` |
-| [46](../Inc/board_config.h#L46) | 预处理 | `#define BOARD_AUX_UART2_DEVICE 0` |
-| [47](../Inc/board_config.h#L47) | 预处理 | `#endif` |
-| [48](../Inc/board_config.h#L48) | 预处理 | `#ifndef BOARD_AUX_UART7_DEVICE` |
-| [49](../Inc/board_config.h#L49) | 预处理 | `#define BOARD_AUX_UART7_DEVICE 0` |
-| [50](../Inc/board_config.h#L50) | 预处理 | `#endif` |
-| [51](../Inc/board_config.h#L51) | 预处理 | `#ifndef BOARD_OLED_ENABLE` |
-| [52](../Inc/board_config.h#L52) | 预处理 | `#define BOARD_OLED_ENABLE 0` |
-| [53](../Inc/board_config.h#L53) | 预处理 | `#endif` |
-| [54](../Inc/board_config.h#L54) | 预处理 | `#ifndef BOARD_KEY_ENABLE` |
-| [55](../Inc/board_config.h#L55) | 预处理 | `#define BOARD_KEY_ENABLE 0` |
-| [56](../Inc/board_config.h#L56) | 预处理 | `#endif` |
-| [57](../Inc/board_config.h#L57) | 预处理 | `#if BOARD_AUX_UART2_DEVICE < 0 &#124;&#124; BOARD_AUX_UART2_DEVICE > 3 &#124;&#124; BOARD_AUX_UART7_DEVICE < 0 &#124;&#124; BOARD_AUX_UART7_DEVICE > 3` |
-| [59](../Inc/board_config.h#L59) | 预处理 | `#endif` |
-| [60](../Inc/board_config.h#L60) | 预处理 | `#if BOARD_AUX_UART2_DEVICE && BOARD_LOG_UART_ENABLED` |
-| [62](../Inc/board_config.h#L62) | 预处理 | `#endif` |
-| [63](../Inc/board_config.h#L63) | 预处理 | `#if BOARD_AUX_UART2_DEVICE && BOARD_AUX_UART7_DEVICE && BOARD_AUX_UART2_DEVICE == BOARD_AUX_UART7_DEVICE` |
-| [65](../Inc/board_config.h#L65) | 预处理 | `#endif` |
-| [66](../Inc/board_config.h#L66) | 预处理 | `#if BOARD_OLED_ENABLE < 0 &#124;&#124; BOARD_OLED_ENABLE > 1 &#124;&#124; BOARD_KEY_ENABLE < 0 &#124;&#124; BOARD_KEY_ENABLE > 1` |
-| [68](../Inc/board_config.h#L68) | 预处理 | `#endif` |
-| [70](../Inc/board_config.h#L70) | 预处理 | `#endif` |
+| [43](../Inc/board_config.h#L43) | 预处理 | `#define BOARD_LOG_UART (&huart2)` |
+| [44](../Inc/board_config.h#L44) | 预处理 | `#define BOARD_SUPERCAP_CAN (&hcan1)` |
+| [45](../Inc/board_config.h#L45) | 预处理 | `#define BOARD_POWER_METER_CAN (&hcan1)` |
+| [47](../Inc/board_config.h#L47) | 预处理 | `#ifndef OLED_USE_I2C` |
+| [48](../Inc/board_config.h#L48) | 预处理 | `#define OLED_USE_I2C 0 /* A-board SPI1 OLED; I2C2 backend remains optional. */` |
+| [49](../Inc/board_config.h#L49) | 预处理 | `#endif` |
+| [50](../Inc/board_config.h#L50) | 预处理 | `#if OLED_USE_I2C != 0 && OLED_USE_I2C != 1` |
+| [52](../Inc/board_config.h#L52) | 预处理 | `#endif` |
+| [55](../Inc/board_config.h#L55) | 预处理 | `#ifndef BOARD_AUX_UART2_DEVICE` |
+| [56](../Inc/board_config.h#L56) | 预处理 | `#define BOARD_AUX_UART2_DEVICE 0` |
+| [57](../Inc/board_config.h#L57) | 预处理 | `#endif` |
+| [58](../Inc/board_config.h#L58) | 预处理 | `#ifndef BOARD_AUX_UART7_DEVICE` |
+| [59](../Inc/board_config.h#L59) | 预处理 | `#define BOARD_AUX_UART7_DEVICE 0` |
+| [60](../Inc/board_config.h#L60) | 预处理 | `#endif` |
+| [61](../Inc/board_config.h#L61) | 预处理 | `#ifndef BOARD_OLED_ENABLE` |
+| [62](../Inc/board_config.h#L62) | 预处理 | `#define BOARD_OLED_ENABLE 0` |
+| [63](../Inc/board_config.h#L63) | 预处理 | `#endif` |
+| [64](../Inc/board_config.h#L64) | 预处理 | `#ifndef BOARD_KEY_ENABLE` |
+| [65](../Inc/board_config.h#L65) | 预处理 | `#define BOARD_KEY_ENABLE 0` |
+| [66](../Inc/board_config.h#L66) | 预处理 | `#endif` |
+| [67](../Inc/board_config.h#L67) | 预处理 | `#if BOARD_AUX_UART2_DEVICE < 0 &#124;&#124; BOARD_AUX_UART2_DEVICE > 3 &#124;&#124; BOARD_AUX_UART7_DEVICE < 0 &#124;&#124; BOARD_AUX_UART7_DEVICE > 3` |
+| [69](../Inc/board_config.h#L69) | 预处理 | `#endif` |
+| [70](../Inc/board_config.h#L70) | 预处理 | `#if BOARD_AUX_UART2_DEVICE && BOARD_LOG_UART_ENABLED` |
+| [72](../Inc/board_config.h#L72) | 预处理 | `#endif` |
+| [73](../Inc/board_config.h#L73) | 预处理 | `#if REFEREE_ENABLE && REFEREE_UART_PORT == 7 && BOARD_AUX_UART7_DEVICE` |
+| [75](../Inc/board_config.h#L75) | 预处理 | `#endif` |
+| [76](../Inc/board_config.h#L76) | 预处理 | `#if BOARD_AUX_UART2_DEVICE && BOARD_AUX_UART7_DEVICE && BOARD_AUX_UART2_DEVICE == BOARD_AUX_UART7_DEVICE` |
+| [78](../Inc/board_config.h#L78) | 预处理 | `#endif` |
+| [79](../Inc/board_config.h#L79) | 预处理 | `#if BOARD_OLED_ENABLE < 0 &#124;&#124; BOARD_OLED_ENABLE > 1 &#124;&#124; BOARD_KEY_ENABLE < 0 &#124;&#124; BOARD_KEY_ENABLE > 1` |
+| [81](../Inc/board_config.h#L81) | 预处理 | `#endif` |
+| [83](../Inc/board_config.h#L83) | 预处理 | `#endif` |
 
 ## Inc/can.h
 

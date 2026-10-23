@@ -12,6 +12,7 @@ static uint32_t tick_calls_inside_critical;
 static uint32_t tick_calls_outside_critical;
 static uint32_t daemon_reload_count;
 static int critical_depth;
+static USART_TRANSFER_MODE last_transmit_mode;
 
 void TestPlatformReset(void)
 {
@@ -22,6 +23,7 @@ void TestPlatformReset(void)
     tick_calls_outside_critical = 0U;
     daemon_reload_count = 0U;
     critical_depth = 0;
+    last_transmit_mode = USART_TRANSFER_NONE;
 }
 
 void TestPlatformSetTick(uint32_t value)
@@ -72,6 +74,17 @@ uint32_t TestPlatformDaemonReloadCount(void)
     return daemon_reload_count;
 }
 
+void TestPlatformTriggerRefereeLoss(void)
+{
+    daemon_instance.temp_count = 0U;
+    daemon_instance.callback(daemon_instance.owner_id);
+}
+
+uint16_t TestPlatformDaemonCountdown(void)
+{
+    return daemon_instance.temp_count;
+}
+
 int TestPlatformCriticalDepth(void)
 {
     return critical_depth;
@@ -118,7 +131,12 @@ void USARTSend(USARTInstance *instance,
     (void)instance;
     (void)send_buf;
     (void)send_size;
-    (void)mode;
+    last_transmit_mode = mode;
+}
+
+USART_TRANSFER_MODE TestPlatformLastTransmitMode(void)
+{
+    return last_transmit_mode;
 }
 
 DaemonInstance *DaemonRegister(Daemon_Init_Config_s *config)

@@ -490,6 +490,28 @@ static void TestNullOutputsAreRejected(void)
     ASSERT_FALSE(RefereeGetLinkDiagnostics(NULL));
 }
 
+static void TestLostLinkAllowsAFullReceiveWindowBeforeRestartingAgain(void)
+{
+    StartReferee();
+    TestPlatformTriggerRefereeLoss();
+    /* DaemonTask calls again every 10 ms if the expired countdown stays zero. */
+    ASSERT_EQ_U32(30U, TestPlatformDaemonCountdown());
+}
+
+static void TestRefereeTransmitUsesInterruptsWithoutATxDma(void)
+{
+    uint8_t data[] = {0xA5U, 0x01U};
+    StartReferee();
+    UART_HandleTypeDef *uart = TestPlatformGetUSART()->usart_handle;
+    uart->hdmatx = NULL;
+    RefereeSend(data, sizeof(data));
+    ASSERT_EQ_U32(USART_TRANSFER_IT, TestPlatformLastTransmitMode());
+    uart->hdmatx = &data; /* Represents the configured TX DMA on USART6. */
+    RefereeSend(data, sizeof(data));
+    ASSERT_EQ_U32(USART_TRANSFER_DMA, TestPlatformLastTransmitMode());
+    uart->hdmatx = NULL;
+}
+
 int main(void)
 {
     TestSplitAndCoalescedFramesDriveCompleteCommand();
@@ -501,6 +523,8 @@ int main(void)
     TestCrcAndPayloadLengthRejectionsAreDiagnosed();
     TestFreshnessBoundaryFailsSafeAndRecovers();
     TestNullOutputsAreRejected();
+    TestLostLinkAllowsAFullReceiveWindowBeforeRestartingAgain();
+    TestRefereeTransmitUsesInterruptsWithoutATxDma();
 
     if (failures != 0)
         return 1;

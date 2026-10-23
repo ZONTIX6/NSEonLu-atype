@@ -23,7 +23,7 @@ cmake --build build/cmake-vehicle -j8
 
 默认配置为单板完整整车、X 全向轮、固定 Wz=4000、超级电容供电、阶段 3 功控、功率计和缓冲管理开启。atype-direct 为直供；atype-bench 默认直供且允许无裁判 50 W 回退，锁停云台与发射，仅在明确台架条件下整定选中底盘轮。
 
-USART1 固定 DBUS；视觉 USART3、图传 UART8、裁判 USART6；日志默认 RTT，可选 USART2 非阻塞中断输出。旧 `UART1_USE` 构建参数会报错，替代选项见 [配置指南](docs/configuration-guide.md)。USB 默认用于网页遥测；改用 USB 视觉时同时设置 `VISION_USE_VCP=1 USB_TELEMETRY_ENABLE=0`。
+USART1 固定 DBUS；视觉 USART3、图传 UART8、裁判默认 UART7（编号 16 最右侧、丝印 7）；日志默认 RTT，可选 USART2 非阻塞中断输出。裁判 UART7 使用 RX DMA、TX 中断；`REFEREE_UART_PORT=6` 可切换到 USART6，UART7 裁判与辅助设备同时启用会编译报错。接口对应及本次故障见 [裁判通讯修复说明](docs/referee-uart7-fix.md)。旧 `UART1_USE` 构建参数会报错，替代选项见 [配置指南](docs/configuration-guide.md)。USB 默认用于网页遥测；改用 USB 视觉时同时设置 `VISION_USE_VCP=1 USB_TELEMETRY_ENABLE=0`。
 
 ## 调试与烧录
 

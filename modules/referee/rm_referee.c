@@ -202,8 +202,12 @@ static void RefereeRxCallback(void)
 static void RefereeLostCallback(void *arg)
 {
 	(void)arg;
+	taskENTER_CRITICAL();
 	RefereeStreamParserReset(&referee_stream_parser);
+	taskEXIT_CRITICAL();
 	USARTServiceInit(referee_usart_instance);
+	/* Allow another receive window instead of resetting partial frames every 10 ms. */
+	DaemonReload(referee_daemon);
 	LOGWARNING("[rm_ref] lost referee data");
 }
 
@@ -280,6 +284,9 @@ bool RefereeGetLinkDiagnostics(RefereeLinkDiagnostics_s *diagnostics)
  */
 void RefereeSend(uint8_t *send, uint16_t tx_len)
 {
-	USARTSend(referee_usart_instance, send, tx_len, USART_TRANSFER_DMA);
+	/* UART7 has RX DMA only; UI transmission must use the UART TX interrupt. */
+	const USART_TRANSFER_MODE mode = referee_usart_instance->usart_handle->hdmatx != NULL
+		? USART_TRANSFER_DMA : USART_TRANSFER_IT;
+	USARTSend(referee_usart_instance, send, tx_len, mode);
 	osDelay(115);
 }

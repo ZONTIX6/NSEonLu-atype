@@ -26,7 +26,8 @@ for name,address in {"_estack":0x20030000,"__tuning_bank0_start__":0x081c0000,
     assert symbols[name][0]==address,(name,symbols.get(name))
 for name in ["INS_Init","INS_Task","IMU_QuaternionEKF_Init",
              "IMU_QuaternionEKF_Update","BoardDevicesInit","MPU6500Read","MPU6500Register",
-             "RobotTask","OTG_FS_IRQHandler","UART8_IRQHandler"]:
+             "RobotTask","OTG_FS_IRQHandler","UART8_IRQHandler",
+             "UART7_IRQHandler","DMA1_Stream3_IRQHandler"]:
     assert symbols[name][1] in "Tt",name
 for name in ("INS_Init","INS_Task","INSGetSnapshot","OLED_init","ChassisPowerInit","ChassisPowerLimit",
              "ChassisPowerRecordFinal","ChassisPowerUpdatePolicy","ChassisPowerGetSnapshot",

@@ -6,6 +6,7 @@
 typedef struct
 {
     uint32_t marker;
+    void *hdmatx;
 } UART_HandleTypeDef;
 
 uint32_t HAL_GetTick(void);

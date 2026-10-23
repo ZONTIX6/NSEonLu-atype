@@ -37,7 +37,29 @@ bool USARTSupportsIdleStream(const UART_HandleTypeDef *handle)
  */
 void USARTServiceInit(USARTInstance *_instance)
 {
-    HAL_UARTEx_ReceiveToIdle_DMA(_instance->usart_handle, _instance->recv_buff, _instance->recv_buff_size);
+    HAL_StatusTypeDef status = HAL_OK;
+    /* A stalled DMA can leave RxState busy; ReceiveToIdle alone returns HAL_BUSY. */
+    if (_instance->usart_handle->RxState != HAL_UART_STATE_READY)
+    {
+        status = HAL_UART_AbortReceive(_instance->usart_handle);
+        if (status == HAL_OK)
+            ++_instance->stats.restart_count;
+    }
+    /* AbortReceive can leave DMA in TIMEOUT after clearing the UART's DMAR bit.
+       The UART HAL ignores DMA_Start_IT failures, so restore DMA before starting. */
+    if (status == HAL_OK &&
+        _instance->usart_handle->hdmarx->State != HAL_DMA_STATE_READY)
+        status = HAL_DMA_Init(_instance->usart_handle->hdmarx);
+    if (status == HAL_OK)
+        status = HAL_UARTEx_ReceiveToIdle_DMA(_instance->usart_handle,
+                    _instance->recv_buff, _instance->recv_buff_size);
+    _instance->stats.last_start_status = status;
+    if (status != HAL_OK)
+    {
+        ++_instance->stats.start_failure_count;
+        return;
+    }
+
     // 关闭dma half transfer中断防止两次进入HAL_UARTEx_RxEventCallback()
     // 这是HAL库的一个设计失误,发生DMA传输完成/半完成以及串口IDLE中断都会触发HAL_UARTEx_RxEventCallback()
     // 我们只希望处理第一种和第三种情况,因此直接关闭DMA半传输中断
@@ -114,6 +136,9 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
     { // find the instance which is being handled
         if (huart == usart_instance[i]->usart_handle)
         { // call the callback function if it is not NULL
+            ++usart_instance[i]->stats.rx_event_count;
+            usart_instance[i]->stats.rx_byte_count += Size;
+            usart_instance[i]->stats.last_rx_tick_ms = HAL_GetTick();
             if (usart_instance[i]->module_callback != NULL)
             {
                 usart_instance[i]->recv_data_len = Size;
@@ -121,8 +146,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
                 memset(usart_instance[i]->recv_buff, 0, Size); // 接收结束后清空buffer,对于变长数据是必要的
                 usart_instance[i]->recv_data_len = 0U;
             }
-            HAL_UARTEx_ReceiveToIdle_DMA(usart_instance[i]->usart_handle, usart_instance[i]->recv_buff, usart_instance[i]->recv_buff_size);
-            __HAL_DMA_DISABLE_IT(usart_instance[i]->usart_handle->hdmarx, DMA_IT_HT);
+            USARTServiceInit(usart_instance[i]);
             return; // break the loop
         }
     }
@@ -141,8 +165,9 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     {
         if (huart == usart_instance[i]->usart_handle)
         {
-            HAL_UARTEx_ReceiveToIdle_DMA(usart_instance[i]->usart_handle, usart_instance[i]->recv_buff, usart_instance[i]->recv_buff_size);
-            __HAL_DMA_DISABLE_IT(usart_instance[i]->usart_handle->hdmarx, DMA_IT_HT);
+            ++usart_instance[i]->stats.error_count;
+            usart_instance[i]->stats.last_error_code = huart->ErrorCode;
+            USARTServiceInit(usart_instance[i]);
             LOGWARNING("[bsp_usart] USART error callback triggered, instance idx [%d]", i);
             return;
         }

@@ -8,6 +8,9 @@
 #ifndef REFEREE_ENABLE
 #define REFEREE_ENABLE 1
 #endif
+#ifndef REFEREE_UART_PORT
+#define REFEREE_UART_PORT 7 /* A-board connector 16, rightmost socket marked 7. */
+#endif
 #ifndef LOG_OUTPUT
 #define LOG_OUTPUT 1 /* 0: off, 1: RTT, 2: USART2, 3: both */
 #endif
@@ -16,6 +19,9 @@
 #endif
 #if REFEREE_ENABLE != 0 && REFEREE_ENABLE != 1
 #error REFEREE_ENABLE must be 0 or 1.
+#endif
+#if REFEREE_UART_PORT != 6 && REFEREE_UART_PORT != 7
+#error REFEREE_UART_PORT must be 6 (USART6) or 7 (UART7); other UARTs are reserved.
 #endif
 #if LOG_OUTPUT < 0 || LOG_OUTPUT > 3
 #error LOG_OUTPUT must be 0, 1, 2, or 3.
@@ -29,7 +35,11 @@
 #define BOARD_REMOTE_UART (&huart1)
 #define BOARD_VISION_UART (&huart3)
 #define BOARD_VTX_UART (&huart8)
+#if REFEREE_UART_PORT == 7
+#define BOARD_REFEREE_UART (&huart7)
+#else
 #define BOARD_REFEREE_UART (&huart6)
+#endif
 #define BOARD_LOG_UART (&huart2)
 #define BOARD_SUPERCAP_CAN (&hcan1)
 #define BOARD_POWER_METER_CAN (&hcan1)
@@ -59,6 +69,9 @@
 #endif
 #if BOARD_AUX_UART2_DEVICE && BOARD_LOG_UART_ENABLED
 #error USART2 cannot be shared by an auxiliary device and UART logging.
+#endif
+#if REFEREE_ENABLE && REFEREE_UART_PORT == 7 && BOARD_AUX_UART7_DEVICE
+#error UART7 cannot be shared by the referee system and an auxiliary device.
 #endif
 #if BOARD_AUX_UART2_DEVICE && BOARD_AUX_UART7_DEVICE && BOARD_AUX_UART2_DEVICE == BOARD_AUX_UART7_DEVICE
 #error TFmini, HC05 and bus servo each support one UART instance.

@@ -110,7 +110,7 @@
 | `BOARD_REMOTE_UART` | `无` | `(&huart1)` | `无` | `Inc/board_config.h` | `无量纲/选择值` | `按已确认 A 板硬件或整车默认行为迁移` | `对应功能启用，范围/互斥检查通过` | `tests/atype/test_board.py；可选配置` |
 | `BOARD_VISION_UART` | `无` | `(&huart3)` | `无` | `Inc/board_config.h` | `无量纲/选择值` | `按已确认 A 板硬件或整车默认行为迁移` | `对应功能启用，范围/互斥检查通过` | `tests/atype/test_board.py；可选配置` |
 | `BOARD_VTX_UART` | `无` | `(&huart8)` | `无` | `Inc/board_config.h` | `无量纲/选择值` | `按已确认 A 板硬件或整车默认行为迁移` | `对应功能启用，范围/互斥检查通过` | `tests/atype/test_board.py；可选配置` |
-| `BOARD_REFEREE_UART` | `无` | `(&huart6)` | `无` | `Inc/board_config.h` | `无量纲/选择值` | `按已确认 A 板硬件或整车默认行为迁移` | `对应功能启用，范围/互斥检查通过` | `tests/atype/test_board.py；可选配置` |
+| `BOARD_REFEREE_UART` | `无` | `默认 (&huart7)，由 REFEREE_UART_PORT=6/7 选择` | `无` | `Inc/board_config.h` | `无量纲/选择值` | `2026-10-23 用户确认使用编号16最右侧丝印7；原huart6与接线不符` | `UART7裁判与辅助设备编译期互斥` | `tests/atype/test_board.py；可选配置` |
 | `BOARD_LOG_UART` | `无` | `(&huart2)` | `无` | `Inc/board_config.h` | `无量纲/选择值` | `按已确认 A 板硬件或整车默认行为迁移` | `对应功能启用，范围/互斥检查通过` | `tests/atype/test_board.py；可选配置` |
 | `BOARD_SUPERCAP_CAN` | `无` | `(&hcan1)` | `无` | `Inc/board_config.h` | `无量纲/选择值` | `按已确认 A 板硬件或整车默认行为迁移` | `对应功能启用，范围/互斥检查通过` | `tests/atype/test_board.py；可选配置` |
 | `BOARD_POWER_METER_CAN` | `无` | `(&hcan1)` | `无` | `Inc/board_config.h` | `无量纲/选择值` | `按已确认 A 板硬件或整车默认行为迁移` | `对应功能启用，范围/互斥检查通过` | `tests/atype/test_board.py；可选配置` |

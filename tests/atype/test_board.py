@@ -1,6 +1,7 @@
 """Compile the public A-board configuration as a consumer would."""
 import pathlib
 import subprocess
+import tempfile
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -43,7 +44,61 @@ class BoardConfiguration(unittest.TestCase):
     def test_uart_resource_conflicts(self):
         self.assertNotEqual(self.compile("", "LOG_OUTPUT=2", "BOARD_AUX_UART2_DEVICE=1").returncode, 0)
         self.assertNotEqual(self.compile("", "BOARD_AUX_UART2_DEVICE=2", "BOARD_AUX_UART7_DEVICE=2").returncode, 0)
-        self.assertEqual(self.compile("", "BOARD_AUX_UART2_DEVICE=2", "BOARD_AUX_UART7_DEVICE=1").returncode, 0)
+        self.assertEqual(self.compile("", "REFEREE_UART_PORT=6", "BOARD_AUX_UART2_DEVICE=2", "BOARD_AUX_UART7_DEVICE=1").returncode, 0)
+
+    def test_referee_uart7_is_exclusive_and_uart6_releases_it(self):
+        for device in (1, 2, 3):
+            result = self.compile("", f"BOARD_AUX_UART7_DEVICE={device}")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("UART7", result.stderr)
+            self.assertEqual(self.compile("", "REFEREE_UART_PORT=6",
+                f"BOARD_AUX_UART7_DEVICE={device}").returncode, 0)
+            self.assertEqual(self.compile("", "REFEREE_ENABLE=0",
+                f"BOARD_AUX_UART7_DEVICE={device}").returncode, 0)
+
+    def test_referee_cannot_select_ports_owned_by_other_modules(self):
+        for port in (0, 1, 2, 3, 8):
+            result = self.compile("", f"REFEREE_UART_PORT={port}")
+            self.assertNotEqual(result.returncode, 0)
+
+    def test_registered_uart_handles_are_distinct(self):
+        source = '''
+        #include "board_config.h"
+        int huart1, huart2, huart3, huart6, huart7, huart8;
+        int main(void) {
+            if (BOARD_REFEREE_UART != EXPECT_REFEREE_HANDLE) return 1;
+            int *ports[] = {BOARD_REMOTE_UART, BOARD_VISION_UART, BOARD_VTX_UART,
+        #if REFEREE_ENABLE
+                BOARD_REFEREE_UART,
+        #endif
+        #if BOARD_LOG_UART_ENABLED
+                BOARD_LOG_UART,
+        #endif
+        #if BOARD_AUX_UART2_DEVICE
+                &huart2,
+        #endif
+        #if BOARD_AUX_UART7_DEVICE
+                &huart7,
+        #endif
+            };
+            for (unsigned i = 0; i < sizeof(ports) / sizeof(ports[0]); ++i)
+                for (unsigned j = i + 1; j < sizeof(ports) / sizeof(ports[0]); ++j)
+                    if (ports[i] == ports[j]) return 2;
+            return 0;
+        }
+        '''
+        cases = [([], "(&huart7)"), (["LOG_OUTPUT=3"], "(&huart7)"),
+            (["REFEREE_UART_PORT=6", "LOG_OUTPUT=2", "BOARD_AUX_UART7_DEVICE=1"], "(&huart6)"),
+            (["REFEREE_UART_PORT=6", "BOARD_AUX_UART2_DEVICE=2", "BOARD_AUX_UART7_DEVICE=1"], "(&huart6)")]
+        with tempfile.TemporaryDirectory() as temporary:
+            target = str(pathlib.Path(temporary) / "uart_config.exe")
+            for defines, expected in cases:
+                result = subprocess.run(["gcc", "-x", "c", "-I", str(ROOT / "Inc"),
+                    *["-D" + value for value in defines],
+                    "-DEXPECT_REFEREE_HANDLE=" + expected, "-", "-o", target],
+                    input=source, text=True, capture_output=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(subprocess.run([target]).returncode, 0)
 
     def test_power_stage_and_capture_transport(self):
         source = '#include "chassis_power_config.h"\n'

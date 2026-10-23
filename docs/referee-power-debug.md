@@ -2,7 +2,7 @@
 
 ## 当前接收支持
 
-USART6 裁判功能（`REFEREE_ENABLE=1`）支持两种 `0x0202` 数据段长度：
+裁判功能（`REFEREE_ENABLE=1`，当前默认 UART7，`REFEREE_UART_PORT=6` 可选 USART6）支持两种 `0x0202` 数据段长度。早期 C 板实验使用 USART1，当前 A 板的接口及故障修复见 [UART7 修复说明](referee-uart7-fix.md)。
 
 | 协议 | 数据段长度 | 偏移 4 的 float | 偏移 8 的 uint16 | 42 mm 枪口热量 |
 |---|---|---|---|---|
@@ -64,9 +64,9 @@ make -W Makefile -j8 REFEREE_ENABLE=1
 
 烧录文件为 `build/atype-vehicle/basic_framework.hex`。固件也同时生成 ELF 和 BIN。更改选项时使用独立配置目录；Make 配置戳会触发必要的对象重编译。
 
-现有 VS Code 调试配置使用 `build/basic_framework.elf`。停止当前调试会话，重新启动并下载程序后再观察新变量。若手动烧录其他目录中的 HEX，调试器应加载同目录的 ELF。
+现有 VS Code 调试配置使用 `build/atype-vehicle/basic_framework.elf`。停止当前调试会话，重新启动并下载程序后再观察新变量。若手动烧录其他目录中的 HEX，调试器应加载同目录的 ELF。
 
-1. 确认电管 User 串口连接 USART1，串口设置 115200、8N1。
+1. 确认电管 User 串口连接 UART7（编号 16 最右侧、丝印 7），串口设置 115200、8N1；若显式选择 `REFEREE_UART_PORT=6`，接 USART6。USART1 固定 DBUS。
 2. 移除调试接收函数中的条件断点，让程序持续运行。
 3. 确认 `has_power_heat` 变为 true，`power_heat_tick_ms` 持续更新。默认配置的 `has_chassis_power` 应为 false。
 4. 仅在已核实旧版功率协议并启用对应编译选项后，对照主控模块屏幕上的底盘实时功率，查看 `chassis_power_w` 是否随负载变化。缓冲能量按发送端实际值显示，不保证非零。

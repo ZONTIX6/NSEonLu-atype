@@ -20,6 +20,19 @@ typedef enum
     USART_TRANSFER_DMA,
 } USART_TRANSFER_MODE;
 
+/* Kept per port so a debugger can separate missing input from invalid frames. */
+typedef struct
+{
+    uint32_t rx_event_count;
+    uint32_t rx_byte_count;
+    uint32_t last_rx_tick_ms;
+    uint32_t error_count;
+    uint32_t last_error_code;
+    uint32_t restart_count;       // Successful aborts of a busy RX before restarting.
+    uint32_t start_failure_count; // Includes failed RX aborts.
+    uint32_t last_start_status;   // HAL_StatusTypeDef value.
+} USARTReceiveStats_s;
+
 // 串口实例结构体,每个module都要包含一个实例.
 // 由于串口是独占的点对点通信,所以不需要考虑多个module同时使用一个串口的情况,因此不用加入id;当然也可以选择加入,这样在bsp层可以访问到module的其他信息
 typedef struct
@@ -29,6 +42,7 @@ typedef struct
     uint16_t recv_data_len;                // 最近一次DMA/IDLE事件实际收到的字节数
     UART_HandleTypeDef *usart_handle;      // 实例对应的usart_handle
     usart_module_callback module_callback; // 解析收到的数据的回调函数
+    USARTReceiveStats_s stats;
 } USARTInstance;
 
 /* usart 初始化配置结构体 */

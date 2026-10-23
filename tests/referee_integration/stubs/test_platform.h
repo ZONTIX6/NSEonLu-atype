@@ -15,6 +15,9 @@ USARTInstance *TestPlatformGetUSART(void);
 uint32_t TestPlatformTickCallsInsideCritical(void);
 uint32_t TestPlatformTickCallsOutsideCritical(void);
 uint32_t TestPlatformDaemonReloadCount(void);
+void TestPlatformTriggerRefereeLoss(void);
+uint16_t TestPlatformDaemonCountdown(void);
+USART_TRANSFER_MODE TestPlatformLastTransmitMode(void);
 int TestPlatformCriticalDepth(void);
 
 #endif

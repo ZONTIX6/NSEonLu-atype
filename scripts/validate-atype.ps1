@@ -45,8 +45,8 @@ try {
             @{name='atype-chassis';flags=@('CHASSIS_BOARD=1')},
             @{name='atype-gimbal';flags=@('GIMBAL_BOARD=1')},
             @{name='atype-dual-bench';flags=@('CHASSIS_BOARD=1','PROFILE=atype-bench')},
-            @{name='atype-optional';flags=@('ATYPE_LINK_MODULES=1','BOARD_OLED_ENABLE=1','BOARD_KEY_ENABLE=1','BOARD_AUX_UART7_DEVICE=1','BOARD_AUX_UART2_DEVICE=2')},
-            @{name='atype-i2c-oled';flags=@('ATYPE_LINK_MODULES=1','BOARD_OLED_ENABLE=1','OLED_USE_I2C=1','BOARD_AUX_UART7_DEVICE=3')}
+            @{name='atype-optional';flags=@('ATYPE_LINK_MODULES=1','BOARD_OLED_ENABLE=1','BOARD_KEY_ENABLE=1','REFEREE_UART_PORT=6','BOARD_AUX_UART7_DEVICE=1','BOARD_AUX_UART2_DEVICE=2')},
+            @{name='atype-i2c-oled';flags=@('ATYPE_LINK_MODULES=1','BOARD_OLED_ENABLE=1','OLED_USE_I2C=1','REFEREE_UART_PORT=6','BOARD_AUX_UART7_DEVICE=3')}
         )
         foreach($case in $cases) {
             $dir="build/$($case.name)"
