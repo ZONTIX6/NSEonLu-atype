@@ -1,6 +1,6 @@
 # A 板配置与参数指南
 
-更新日期：2026-10-22。目标 STM32F427IIH6，默认单板完整整车。完整接线、单位、控制与验收边界见 [交付说明](atype-integration.md)，全部宏、条件分支和初始化数值见 [源码索引](configuration-index.md)，输入基线与迁移理由见 [宏迁移表](atype-macro-migration.md)。
+更新日期：2026-10-23。目标 STM32F427IIH6，默认单板完整整车。完整接线、单位、控制与验收边界见 [交付说明](atype-integration.md)，全部宏、条件分支和初始化数值见 [源码索引](configuration-index.md)，输入基线与迁移理由见 [宏迁移表](atype-macro-migration.md)。
 
 ## 默认行为
 
@@ -10,6 +10,7 @@
 | 底盘 | OMNI_X (1) | LF/RF/LB/RB = CAN1 ID 1/4/2/3，四轮方向系数均 1 |
 | 底盘速度环 | Kp 4.5，Ki/Kd 0 | 误差 °/s；源码 PID 覆盖默认关闭 |
 | 自旋 | FIXED (0)，4000 命令尺度 | ADAPTIVE (1)、SINE (2) 可选；显式 MODE 优先 |
+| 跟随档 | CHASSIS_FOLLOW_MODE=1 | 云台实测朝向为前方，旋转目标为零；设 0 恢复原比例跟转 |
 | 电源 | SUPERCAP (1) | 第一套 0x061/0x051/0x052，CAN1 |
 | 功控 | 阶段 3、功率计开、缓冲开 | 只注册四轮；阶段 0 仍有既有预算限流 |
 | 台架回退 | 正式配置 0 | atype-bench 为 1，无有效裁判时 50 W |
@@ -25,6 +26,8 @@ make -j8 PROFILE=atype-vehicle
 make -j8 PROFILE=atype-bench
 make -j8 PROFILE=atype-direct
 make -j8 BUILD_DIR=build/atype-sine CHASSIS_SPIN_MODE=2
+make -j4 PROFILE=atype-vehicle BUILD_DIR=build/follow-original CHASSIS_FOLLOW_MODE=0
+make -j4 PROFILE=atype-vehicle BUILD_DIR=build/follow-gimbal-forward CHASSIS_FOLLOW_MODE=1
 make -j8 BUILD_DIR=build/atype-usb-vision VISION_USE_VCP=1 USB_TELEMETRY_ENABLE=0
 make -j8 BUILD_DIR=build/atype-capture LOG_OUTPUT=2 CHASSIS_POWER_CAPTURE_ENABLE=1 CHASSIS_POWER_CALIBRATION_ENABLE=1
 ```
@@ -34,11 +37,17 @@ Make/CMake 共用 `config/atype-options.txt` 的覆盖入口。列出的开关�
 ```powershell
 cmake -S . -B build/cmake-vehicle -G "MinGW Makefiles" -DATYPE_PROFILE=atype-vehicle
 cmake --build build/cmake-vehicle -j8
+cmake -S . -B build/cmake-follow-0 -G "MinGW Makefiles" -DATYPE_PROFILE=atype-vehicle -DCHASSIS_FOLLOW_MODE=0
+cmake --build build/cmake-follow-0 -j4
+cmake -S . -B build/cmake-follow-1 -G "MinGW Makefiles" -DATYPE_PROFILE=atype-vehicle -DCHASSIS_FOLLOW_MODE=1
+cmake --build build/cmake-follow-1 -j4
 ```
 
 原 `UART1_USE` 已废止，Make/CMake/预处理均会明确报错。USART1 固定 DBUS，不能切作裁判或日志。`REFEREE_ENABLE=0/1` 控制 USART6 裁判功能；`LOG_OUTPUT=0/1/2/3` 分别关闭、RTT、USART2、两者。日志 USART2 使用中断队列，不抢 UART8 RX DMA。
 
 角色使用 `CHASSIS_BOARD=1` 或 `GIMBAL_BOARD=1` 覆盖；未指定时默认 ONE_BOARD，不能同时定义多个角色。双板都需更新同一消息版本，USB 调参连接底盘板。USB 视觉和遥测、USART2 辅助设备和串口日志、单例设备重复占串口都会触发检查。
+
+`CHASSIS_FOLLOW_MODE` 只接受 `0/1`，省略等价于 `1`，独立于轮型和自旋策略；切换后重新构建并烧录。两种策略都按实测云台朝向解释平移，`1` 只取消原跟随档的主动跟转，不提供车身绝对航向锁定。遥控中档和图传 X 键沿用原入口、模式编号与云台模式；`NO_FOLLOW` 的自动整定权限及其他模式、安全输出许可均保持原样。双板部署时记录两板配置，底盘控制固件决定实际策略，详见 [底盘说明](chassis.md#跟随档策略)。
 
 ## 单位与初始化
 

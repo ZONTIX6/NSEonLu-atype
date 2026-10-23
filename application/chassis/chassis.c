@@ -12,6 +12,7 @@
  */
 
 #include "chassis.h"
+#include "chassis_motion.h"
 #include "chassis_kinematics.h"
 #include "chassis_power_budget.h"
 #include "chassis_energy_config.h"
@@ -592,35 +593,12 @@ void ChassisTask()
     float spin_target_wz = 0;
     (void)ChassisSpinUpdate(&chassis_spin_config, &chassis_spin_input,
         DWT_GetDeltaT(&chassis_spin_dwt_count), &chassis_spin_state, &spin_target_wz);
-#endif
-
-    // 根据控制模式设定旋转速度
-    switch (chassis_cmd_recv.chassis_mode)
-    {
-    case CHASSIS_NO_FOLLOW: // 底盘不旋转,但维持全向机动,一般用于调整云台姿态
-        chassis_cmd_recv.wz = 0;
-        break;
-    case CHASSIS_FOLLOW_GIMBAL_YAW: // 跟随云台,不单独设置pid,以误差角度平方为速度输出
-        chassis_cmd_recv.wz = fmaxf(-4500.0f, fminf(4500.0f, -50.0f * theta_format(chassis_cmd_recv.offset_angle)));
-        break;
-    case CHASSIS_ROTATE: // 自旋并保持全向机动;模式选择固定、功率自适应或同向正弦
-#if CHASSIS_SPIN_DYNAMIC_ENABLED
-        chassis_cmd_recv.wz = spin_target_wz;
 #else
-        chassis_cmd_recv.wz = chassis_spin_config.fixed_wz;
+    const float spin_target_wz = chassis_spin_config.fixed_wz;
 #endif
-        break;
-    default:
-        break;
-    }
 
-    // 根据云台和底盘的角度offset将控制量映射到底盘坐标系上
-    // 底盘逆时针旋转为角度正方向;云台命令的方向以云台指向的方向为x,采用右手系(x指向正北时y在正东)
-    static float sin_theta, cos_theta;
-    cos_theta = arm_cos_f32(chassis_cmd_recv.offset_angle * DEGREE_2_RAD);
-    sin_theta = arm_sin_f32(chassis_cmd_recv.offset_angle * DEGREE_2_RAD);
-    chassis_vx = chassis_cmd_recv.vx * cos_theta - chassis_cmd_recv.vy * sin_theta;
-    chassis_vy = chassis_cmd_recv.vx * sin_theta + chassis_cmd_recv.vy * cos_theta;
+    // 选择旋转策略，并按云台实测相对角将平移命令转换到底盘坐标系。
+    ChassisResolveMotion(&chassis_cmd_recv, spin_target_wz, &chassis_vx, &chassis_vy);
 
     // 根据控制模式进行正运动学解算,计算底盘输出
     CalculateWheelSpeed();

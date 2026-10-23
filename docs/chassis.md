@@ -17,6 +17,42 @@
 
 首次调试必须架空车轮，并依次给出纯前进、纯右移和原地旋转命令。如果只有某个车轮方向相反，将对应的 `OMNI_X_LF_DIRECTION`、`OMNI_X_RF_DIRECTION`、`OMNI_X_LB_DIRECTION` 或 `OMNI_X_RB_DIRECTION` 从 `1.0f` 改为 `-1.0f`，不要修改运动学公式。
 
+## 跟随档策略
+
+`application/robot_def.h` 的 `CHASSIS_FOLLOW_MODE` 控制原跟随档：
+
+| 宏值 | 平移参考 | 旋转目标 |
+| --- | --- | --- |
+| `1`（默认） | 云台当前实测朝向为前方 | 每周期 `wz = 0`，车身不主动跟转 |
+| `0` | 云台当前实测朝向为前方 | 原比例跟转：`clamp(-50 * theta_format(offset_angle), -4500, +4500)` |
+
+遥控器右侧开关中档、图传 X 键计数模 4 等于 2 时进入该档，云台仍使用 `GIMBAL_GYRO_MODE`。模式编号保持 `CHASSIS_FOLLOW_GIMBAL_YAW`，遥测验收需结合构建宏和 `wz`；未新增运行时按键或 Flash 参数。该宏独立于轮型 `CHASSIS_DRIVE_TYPE` 与自旋 `CHASSIS_SPIN_MODE`，非法数值会编译失败。
+
+默认策略下，云台朝侧面时前进会沿该侧移动，朝后时前进会沿车身后方移动，后退及左右平移同样以云台为参考；边移动边转云台，移动方向随实际朝向连续改变。坐标转换继续使用实测 yaw 编码器与 `YAW_CHASSIS_ALIGN_ECD` 得到的相对角，保持原公式且只转换一次：
+
+```text
+chassis_vx = vx * cos(theta) - vy * sin(theta)
+chassis_vy = vx * sin(theta) + vy * cos(theta)
+theta = offset_angle * DEGREE_2_RAD
+```
+
+`wz` 使用原工程命令单位，不是电机 rpm。零旋转目标不等于绝对航向锁定；外力、反作用力和打滑仍可能使车身转动，随后按实时相对角继续转换。从小陀螺切入默认策略当周期清零目标，实际停转仍受闭环和功率约束影响。
+
+编译覆盖使用独立目录，切换后需重新构建并烧录：
+
+```powershell
+make -j4 PROFILE=atype-vehicle BUILD_DIR=build/follow-original CHASSIS_FOLLOW_MODE=0
+make -j4 PROFILE=atype-vehicle BUILD_DIR=build/follow-gimbal-forward CHASSIS_FOLLOW_MODE=1
+cmake -S . -B build/cmake-follow-0 -G "MinGW Makefiles" -DATYPE_PROFILE=atype-vehicle -DCHASSIS_FOLLOW_MODE=0
+cmake --build build/cmake-follow-0 -j4
+cmake -S . -B build/cmake-follow-1 -G "MinGW Makefiles" -DATYPE_PROFILE=atype-vehicle -DCHASSIS_FOLLOW_MODE=1
+cmake --build build/cmake-follow-1 -j4
+```
+
+双板部署时记录两板配置，策略在执行底盘控制的固件中生效。`CHASSIS_NO_FOLLOW`、小陀螺、零力、急停与失联处理沿用既有路径；跟随档仍不具备 `NO_FOLLOW` 的自动整定许可。
+
+主机回归运行 `make -C tests/chassis_motion test CC=gcc`，覆盖默认值、两策略、角度环绕、平移与模式切换，并检查非法值。实车先架空核对轮向，再低速分别验证云台朝前/侧/后及移动中转动云台，遥控器和图传各验证一次；两策略分别检查小陀螺进出与急停。软件验证不代表已经完成烧录或实车验收。
+
 ## 自转功率余量调节
 
 `modules/algorithm/chassis_spin_config.h` 中的宏用于对比：

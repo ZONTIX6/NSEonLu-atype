@@ -84,6 +84,14 @@
 #error CHASSIS_DRIVE_TYPE must be CHASSIS_DRIVE_MECANUM or CHASSIS_DRIVE_OMNI_X.
 #endif
 
+// 原跟随档策略：0 保留车身跟转；1 以云台为前方平移，车身不主动跟转。
+#ifndef CHASSIS_FOLLOW_MODE
+#define CHASSIS_FOLLOW_MODE 1
+#endif
+#if CHASSIS_FOLLOW_MODE != 0 && CHASSIS_FOLLOW_MODE != 1
+#error CHASSIS_FOLLOW_MODE must be 0 or 1.
+#endif
+
 // 云台参数
 #ifndef YAW_CHASSIS_ALIGN_ECD
 #define YAW_CHASSIS_ALIGN_ECD 350// 云台和底盘对齐指向相同方向时的电机编码器值,若对云台有机械改动需要修改
@@ -192,7 +200,7 @@ typedef enum
     CHASSIS_ZERO_FORCE = 0,    // 电流零输入
     CHASSIS_ROTATE,            // 小陀螺模式
     CHASSIS_NO_FOLLOW,         // 不跟随，允许全向平移
-    CHASSIS_FOLLOW_GIMBAL_YAW, // 跟随模式，底盘叠加角度环控制
+    CHASSIS_FOLLOW_GIMBAL_YAW, // 原跟随档，旋转策略由 CHASSIS_FOLLOW_MODE 选择
 } chassis_mode_e;
 
 // 云台模式设置
