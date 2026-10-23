@@ -48,12 +48,12 @@ class BoardConfiguration(unittest.TestCase):
 
     def test_referee_uart7_is_exclusive_and_uart6_releases_it(self):
         for device in (1, 2, 3):
-            result = self.compile("", f"BOARD_AUX_UART7_DEVICE={device}")
+            result = self.compile("", "REFEREE_UART_PORT=7", f"BOARD_AUX_UART7_DEVICE={device}")
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("UART7", result.stderr)
-            self.assertEqual(self.compile("", "REFEREE_UART_PORT=6",
+            self.assertEqual(self.compile("",
                 f"BOARD_AUX_UART7_DEVICE={device}").returncode, 0)
-            self.assertEqual(self.compile("", "REFEREE_ENABLE=0",
+            self.assertEqual(self.compile("", "REFEREE_UART_PORT=7", "REFEREE_ENABLE=0",
                 f"BOARD_AUX_UART7_DEVICE={device}").returncode, 0)
 
     def test_referee_cannot_select_ports_owned_by_other_modules(self):
@@ -87,7 +87,8 @@ class BoardConfiguration(unittest.TestCase):
             return 0;
         }
         '''
-        cases = [([], "(&huart7)"), (["LOG_OUTPUT=3"], "(&huart7)"),
+        cases = [([], "(&huart6)"), (["LOG_OUTPUT=3"], "(&huart6)"),
+            (["REFEREE_UART_PORT=7"], "(&huart7)"),
             (["REFEREE_UART_PORT=6", "LOG_OUTPUT=2", "BOARD_AUX_UART7_DEVICE=1"], "(&huart6)"),
             (["REFEREE_UART_PORT=6", "BOARD_AUX_UART2_DEVICE=2", "BOARD_AUX_UART7_DEVICE=1"], "(&huart6)")]
         with tempfile.TemporaryDirectory() as temporary:

@@ -9,7 +9,7 @@
 #define REFEREE_ENABLE 1
 #endif
 #ifndef REFEREE_UART_PORT
-#define REFEREE_UART_PORT 7 /* A-board connector 16, rightmost socket marked 7. */
+#define REFEREE_UART_PORT 6 /* A-board connector 16, leftmost socket marked 6. */
 #endif
 #ifndef LOG_OUTPUT
 #define LOG_OUTPUT 1 /* 0: off, 1: RTT, 2: USART2, 3: both */

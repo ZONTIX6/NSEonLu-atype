@@ -6,7 +6,7 @@
 
 `modules/imu/ins_task.c`、`BMI088driver.c`、`BMI088Middleware.c` 是未链接的旧 C 板实现；当前 INS 只链接 MPU6500 和公共数学接口。便携副本有独立 API，未加入固件链接。
 
-底盘原跟随档由 `application/robot_def.h` 的 `CHASSIS_FOLLOW_MODE` 选择：`1`（默认）以云台实测朝向为前方且 `wz=0`，`0` 保留原比例跟转。Make 使用 `CHASSIS_FOLLOW_MODE=0/1`，CMake 使用 `-DCHASSIS_FOLLOW_MODE=0/1`；独立目录重新构建并烧录，非法值触发编译错误。详见 [底盘说明](chassis.md#跟随档策略)。本次仅同步底盘策略涉及的三个源码节，2026-10-23 另同步了 Inc/board_config.h 的裁判 UART7 默认值、端口选择与互斥检查；其余条目保留原索引快照。
+底盘原跟随档由 `application/robot_def.h` 的 `CHASSIS_FOLLOW_MODE` 选择：`1`（默认）以云台实测朝向为前方且 `wz=0`，`0` 保留原比例跟转。Make 使用 `CHASSIS_FOLLOW_MODE=0/1`，CMake 使用 `-DCHASSIS_FOLLOW_MODE=0/1`；独立目录重新构建并烧录，非法值触发编译错误。详见 [底盘说明](chassis.md#跟随档策略)。本次仅同步底盘策略涉及的三个源码节，2026-10-23 另同步了 Inc/board_config.h 的裁判 USART6 默认值、端口选择与互斥检查；其余条目保留原索引快照。
 
 ## application/board_analog_key.h
 
@@ -903,7 +903,7 @@
 | [9](../Inc/board_config.h#L9) | 预处理 | `#define REFEREE_ENABLE 1` |
 | [10](../Inc/board_config.h#L10) | 预处理 | `#endif` |
 | [11](../Inc/board_config.h#L11) | 预处理 | `#ifndef REFEREE_UART_PORT` |
-| [12](../Inc/board_config.h#L12) | 预处理 | `#define REFEREE_UART_PORT 7 /* A-board connector 16, rightmost socket marked 7. */` |
+| [12](../Inc/board_config.h#L12) | 预处理 | `#define REFEREE_UART_PORT 6 /* A-board connector 16, leftmost socket marked 6. */` |
 | [13](../Inc/board_config.h#L13) | 预处理 | `#endif` |
 | [14](../Inc/board_config.h#L14) | 预处理 | `#ifndef LOG_OUTPUT` |
 | [15](../Inc/board_config.h#L15) | 预处理 | `#define LOG_OUTPUT 1 /* 0: off, 1: RTT, 2: USART2, 3: both */` |
