@@ -5,7 +5,7 @@
   const number=value=>Number(value.toPrecision(7)).toString();
   window.createTuningUI=function(client) {
     let connected=false,busy=false,active='pid',epoch=0,polling=false,pollTimer=null,locked=false;
-    const states=Object.fromEntries(Object.keys(groups).map(key=>[key,{data:null,draft:null,status:'连接 C 板后读取当前参数。',error:false,sync:null,persistError:null}]));
+    const states=Object.fromEntries(Object.keys(groups).map(key=>[key,{data:null,draft:null,status:'连接 A 板后读取当前参数。',error:false,sync:null,persistError:null}]));
     function renderPersistence() {
       const state=states[active],status=state.data?.storage;
       const messages={
@@ -15,7 +15,7 @@
         volatile:'当前为启动参数 · 可保存到板端，作为下次上电的参数。',
         unsupported:'此固件未提供掉电保存状态，请升级固件。'
       };
-      $('tuning-persistence-status').textContent=connected ? state.persistError || messages[status] || '读取参数后显示板端掉电保存状态。' : '连接 C 板后确认掉电保存状态。';
+      $('tuning-persistence-status').textContent=connected ? state.persistError || messages[status] || '读取参数后显示板端掉电保存状态。' : '连接 A 板后确认掉电保存状态。';
       $('tuning-persistence-status').className=status==='saved' ? 'saved' : status==='error' ? 'error' : '';
       $('tuning-save').hidden=!connected||!['error','volatile'].includes(status);
       $('tuning-save').disabled=busy||polling;
@@ -155,7 +155,7 @@
         connected=value;++epoch;client.disconnect();busy=false;polling=false;clearTimeout(pollTimer);
         for (const state of Object.values(states)) {
           state.data=null;state.draft=null;state.sync=null;state.persistError=null;
-          state.status=value ? '等待读取当前生效值。' : '未连接 C 板，调参已停用。重新连接后读取实际值。';state.error=false;
+          state.status=value ? '等待读取当前生效值。' : '未连接 A 板，调参已停用。重新连接后读取实际值。';state.error=false;
         }
         render();if (connected) operate('read');
       },

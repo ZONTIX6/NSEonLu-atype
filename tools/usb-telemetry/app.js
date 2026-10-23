@@ -21,7 +21,7 @@
     tuningUI?.setConnected(state === 'connected');
     autotuneUI?.setConnected(state === 'connected');
     if (state === 'connected') {hadError = false; message('串口已打开，等待 CSV v1 遥测。若持续无数据，请确认固件启用了 USB 遥测模式。');}
-    if (state === 'idle' && mode === 'real' && !hadError) message(store.latest ? '串口已断开，最后采集的历史数据仍可导出。点击“连接 C 板”可重新采集。' : '未连接。请确认 C 板已连接，点击“连接 C 板”选择串口。');
+    if (state === 'idle' && mode === 'real' && !hadError) message(store.latest ? '串口已断开，最后采集的历史数据仍可导出。点击“连接 A 板”可重新采集。' : '未连接。请确认 A 板已连接，点击“连接 A 板”选择串口。');
     renderToolbar(clock());
   }, onError(error) {
     hadError = true;
@@ -254,7 +254,7 @@
     const offset = clock() - (start + P.HISTORY_MS);
     store.samples.forEach(sample => {sample.arrivalMs += offset;});
     demoTimer = setInterval(() => {parser.push(makeDemoSample(demoSequence++) + '\r\n');}, 20);
-    message('演示数据由本机生成，仅用于预览。连接真实 C 板时将自动结束演示并清空记录。');
+    message('演示数据由本机生成，仅用于预览。连接真实 A 板时将自动结束演示并清空记录。');
     renderToolbar(clock());
   }
   $('connect-button').addEventListener('click', () => {
@@ -270,19 +270,19 @@
   $('export-button').addEventListener('click', () => {
     if (!store.samples.length) return;
     const url = URL.createObjectURL(new Blob([store.exportCSV()], {type: 'text/csv;charset=utf-8'}));
-    const link = document.createElement('a');link.href = url;link.download = `c-board-${mode === 'demo' ? 'DEMO-' : ''}${new Date().toISOString().replace(/[:.]/g, '-')}.csv`;
+    const link = document.createElement('a');link.href = url;link.download = `a-board-${mode === 'demo' ? 'DEMO-' : ''}${new Date().toISOString().replace(/[:.]/g, '-')}.csv`;
     document.body.append(link);link.click();link.remove();setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
 
   function renderToolbar(now) {
     const connected = session.state === 'connected', busy = session.state === 'connecting' || session.state === 'disconnecting', stale = store.isStale(now);
     $('connect-button').disabled = busy;
-    $('connect-button').querySelector('span').textContent = session.state === 'connecting' ? '选择 / 打开中' : session.state === 'disconnecting' ? '正在断开' : connected ? '断开连接' : '连接 C 板';
+    $('connect-button').querySelector('span').textContent = session.state === 'connecting' ? '选择 / 打开中' : session.state === 'disconnecting' ? '正在断开' : connected ? '断开连接' : '连接 A 板';
     $('demo-button').disabled = session.state !== 'idle';
     setText('demo-button', demoTimer === null ? '演示数据' : '停止演示');
     $('demo-notice').hidden = mode !== 'demo';
     $('connection-dot').className = 'connection-dot' + (mode === 'demo' ? ' demo' : connected ? stale && store.latest ? ' stale' : ' connected' : '');
-    setText('connection-status', mode === 'demo' ? demoTimer === null ? '演示已结束 · 保留模拟记录' : '演示模式 · 模拟数据' : connected ? stale && store.latest ? 'C 板已连接 · 数据陈旧' : 'C 板已连接' : busy ? '正在连接 C 板' : '尚未连接 C 板');
+    setText('connection-status', mode === 'demo' ? demoTimer === null ? '演示已结束 · 保留模拟记录' : '演示模式 · 模拟数据' : connected ? stale && store.latest ? 'A 板已连接 · 数据陈旧' : 'A 板已连接' : busy ? '正在连接 A 板' : '尚未连接 A 板');
     setText('connection-detail', mode === 'demo' ? 'SIMULATION · 非真实设备数据' : 'USB CDC 虚拟串口 · 50 Hz 遥测');
     $('pause-button').disabled = !store.latest;
     setText('pause-button', view.paused ? '恢复显示' : '暂停显示');

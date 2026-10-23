@@ -24,6 +24,7 @@
 #include "usbd_conf.h"
 
 /* USER CODE BEGIN INCLUDE */
+#include "usb_telemetry_config.h"
 
 /* USER CODE END INCLUDE */
 
@@ -66,7 +67,11 @@
 #define USBD_LANGID_STRING     1033
 #define USBD_MANUFACTURER_STRING     "YueLuEmbedded"
 #define USBD_PID_FS     202
+#if USB_TELEMETRY_ENABLE
+#define USBD_PRODUCT_STRING_FS     "A Board Telemetry"
+#else
 #define USBD_PRODUCT_STRING_FS     "Vision Comm port"
+#endif
 #define USBD_CONFIGURATION_STRING_FS     "CDC Config"
 #define USBD_INTERFACE_STRING_FS     "CDC Interface"
 
