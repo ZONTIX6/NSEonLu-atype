@@ -131,6 +131,11 @@ static ChassisSpinConfig_s chassis_spin_config = {
     .sine_rise_wz_per_s = CHASSIS_SPIN_SINE_RISE_RATE,
     .sine_fall_wz_per_s = CHASSIS_SPIN_SINE_FALL_RATE,
     .sine_direction = CHASSIS_SPIN_SINE_DIRECTION,
+    .extension_enabled=CHASSIS_SPIN_EXTENSION_ENABLE!=0,
+    .hard_wz=CHASSIS_SPIN_HARD_WZ,
+    .body_hard_rps=CHASSIS_SPIN_BODY_HARD_RPS,
+    .wheel_hard_rpm=CHASSIS_SPIN_WHEEL_HARD_RPM,
+    .extension_rise_wz_per_s=CHASSIS_SPIN_EXTENSION_RISE_RATE,
 };
 
 static ChassisPowerBudgetConfig_s chassis_budget_config = {
@@ -256,6 +261,13 @@ static bool ApplySpinTuning(const float *v)
         .sine_amplitude_wz=v[10], .sine_period_s=v[11], .sine_ramp_s=v[12],
         .sine_rise_wz_per_s=v[13], .sine_fall_wz_per_s=v[14],
         .sine_direction=(int8_t)v[15]};
+    /* Persisted/runtime payload remains exactly 16 legacy fields. Calibration
+     * can only come from this firmware, never from bytes after old Flash data. */
+    spin.extension_enabled=CHASSIS_SPIN_EXTENSION_ENABLE!=0;
+    spin.hard_wz=CHASSIS_SPIN_HARD_WZ;
+    spin.body_hard_rps=CHASSIS_SPIN_BODY_HARD_RPS;
+    spin.wheel_hard_rpm=CHASSIS_SPIN_WHEEL_HARD_RPM;
+    spin.extension_rise_wz_per_s=CHASSIS_SPIN_EXTENSION_RISE_RATE;
     if (!ChassisSpinConfigIsValid(&spin)) return false;
 #if CHASSIS_SPIN_DYNAMIC_ENABLED
     if (chassis_cmd_recv.chassis_mode == CHASSIS_ROTATE) {
@@ -401,12 +413,12 @@ void ChassisInit()
  * @brief 计算每个轮毂电机的输出,正运动学解算
  *        用宏进行预替换减小开销,运动解算具体过程参考教程
  */
-static void CalculateWheelSpeed(void)
+static ChassisWheelOutput_s WheelSpeedFor(float vx, float vy, float wz)
 {
     const ChassisKinematicsInput_s input = {
-        .vx = chassis_vx,
-        .vy = chassis_vy,
-        .wz = chassis_cmd_recv.wz,
+        .vx = vx,
+        .vy = vy,
+        .wz = wz,
         .rotation_lever_sum = {
             LF_ROTATION_LEVER_SUM,
             RF_ROTATION_LEVER_SUM,
@@ -428,6 +440,12 @@ static void CalculateWheelSpeed(void)
     (void)ChassisMecanumCalculate(&input, &output);
 #endif
 
+    return output;
+}
+
+static void CalculateWheelSpeed(void)
+{
+    const ChassisWheelOutput_s output=WheelSpeedFor(chassis_vx,chassis_vy,chassis_cmd_recv.wz);
     vt_lf = output.speed_aps[CHASSIS_WHEEL_LEFT_FRONT];
     vt_rf = output.speed_aps[CHASSIS_WHEEL_RIGHT_FRONT];
     vt_lb = output.speed_aps[CHASSIS_WHEEL_LEFT_BACK];
@@ -454,13 +472,54 @@ static void LimitChassisOutput()
  *        对于双板的情况,考虑增加来自底盘板IMU的数据
  *
  */
-static void EstimateSpeed(void)
-{
-    static const ChassisVelocityConfig_s config={
+static const ChassisVelocityConfig_s velocity_config={
         .omni_x=CHASSIS_DRIVE_TYPE==CHASSIS_DRIVE_OMNI_X,
         .wheel_radius_m=RADIUS_WHEEL*.001f, .reduction_ratio=REDUCTION_RATIO_WHEEL,
         .wheel_base_m=WHEEL_BASE*.001f, .track_width_m=TRACK_WIDTH*.001f,
         .direction={OMNI_X_LF_DIRECTION,OMNI_X_RF_DIRECTION,OMNI_X_LB_DIRECTION,OMNI_X_RB_DIRECTION}};
+
+#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
+static void PrepareSpinLimits(void)
+{
+    ChassisSpinInput_s *i=&chassis_spin_input;
+    i->extension_path=CHASSIS_POWER_SOURCE_MODE==CHASSIS_POWER_SOURCE_DIRECT;
+    if(!i->extension_path || !i->spin_enabled) return;
+    ChassisVelocityInput_s velocity={.now_ms=i->now_ms,.online_mask=15};
+    ChassisVelocity_s body={0};
+    for(unsigned w=0;w<4;++w) {
+        velocity.rpm[w]=i->actual_rpm[w];velocity.feedback_tick_ms[w]=i->feedback_tick_ms[w];
+    }
+    i->velocity_valid=ChassisEstimateVelocity(&velocity_config,&velocity,&body);
+    i->actual_body_wz_rps=body.wz_rps;i->velocity_tick_ms=body.tick_ms;
+    ChassisWheelOutput_s translation=WheelSpeedFor(chassis_vx,chassis_vy,0);
+    const ChassisWheelOutput_s rotation=WheelSpeedFor(0,0,1);
+    float scale=1;
+    for(unsigned w=0;w<4;++w) {
+        velocity.rpm[w]=translation.speed_aps[w]/6;
+        velocity.feedback_tick_ms[w]=i->now_ms;
+        if(chassis_spin_config.wheel_hard_rpm>0 && fabsf(velocity.rpm[w])>chassis_spin_config.wheel_hard_rpm)
+            scale=fminf(scale,chassis_spin_config.wheel_hard_rpm/fabsf(velocity.rpm[w]));
+    }
+    i->velocity_valid &= ChassisEstimateVelocity(&velocity_config,&velocity,&body);
+    i->translation_mps=hypotf(body.vx_mps,body.vy_mps);
+    if(chassis_spin_config.body_hard_rps>0 && fabsf(body.wz_rps)>chassis_spin_config.body_hard_rps)
+        scale=fminf(scale,chassis_spin_config.body_hard_rps/fabsf(body.wz_rps));
+    /* If translation already consumes the wheel allowance, bound translation
+     * first. This leaves a feasible Wz=0 and never uses spin to evade the cap. */
+    chassis_vx*=scale;chassis_vy*=scale;
+    i->body_wz_offset=body.wz_rps*scale;
+    for(unsigned w=0;w<4;++w) {
+        i->wheel_rpm_offset[w]=translation.speed_aps[w]/6*scale;
+        i->wheel_rpm_per_wz[w]=rotation.speed_aps[w]/6;
+        velocity.rpm[w]=i->wheel_rpm_per_wz[w];
+    }
+    i->velocity_valid &= ChassisEstimateVelocity(&velocity_config,&velocity,&body);
+    i->body_wz_per_wz=body.wz_rps;
+}
+#endif
+
+static void EstimateSpeed(void)
+{
     DJIMotorInstance *const motors[4]={motor_lf,motor_rf,motor_lb,motor_rb};
     ChassisVelocityInput_s input={0};
     /* Raw CAN feedback remains meaningful while coasting in ZERO_FORCE.
@@ -476,7 +535,7 @@ static void EstimateSpeed(void)
     }
     taskEXIT_CRITICAL();
     ChassisVelocityFeedback_s velocity={0};
-    (void)ChassisEstimateVelocity(&config,&input,&velocity.actual);
+    (void)ChassisEstimateVelocity(&velocity_config,&input,&velocity.actual);
     const bool drive_enabled=pending_power_control.control_enabled &&
         !pending_power_control.zero_force && VehicleSafetyAllowsDrive(input.now_ms);
     for (unsigned i=0;i<4;++i) {
@@ -484,7 +543,7 @@ static void EstimateSpeed(void)
         input.feedback_tick_ms[i]=input.now_ms;
     }
     input.online_mask=15U;
-    (void)ChassisEstimateVelocity(&config,&input,&velocity.target);
+    (void)ChassisEstimateVelocity(&velocity_config,&input,&velocity.target);
     taskENTER_CRITICAL();
     chassis_velocity_data=velocity;
     taskEXIT_CRITICAL();
@@ -508,9 +567,11 @@ static void UpdateChassisPowerBudget(void)
 #if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
     input.hold_positive_learning=chassis_cmd_recv.chassis_mode==CHASSIS_ROTATE;
     input.adaptive_spin=chassis_cmd_recv.chassis_mode==CHASSIS_ROTATE;
-    input.spin_capability_limited=chassis_spin_state.applied_wz>=chassis_spin_config.max_wz ||
+    input.spin_capability_limited=chassis_spin_state.limit_state==CHASSIS_SPIN_LIMIT_HARD ||
+        (!chassis_spin_input.extension_path && chassis_spin_state.applied_wz>=chassis_spin_config.max_wz) ||
         ((chassis_spin_state.block_reasons & CHASSIS_SPIN_BLOCK_TRACKING) &&
-         chassis_spin_state.trend_no_improvement_s>=.100f);
+         (chassis_spin_state.tracking_hold_s>=.100f || chassis_spin_state.trend_no_improvement_s>=.100f));
+    input.spin_hard_margin=chassis_spin_state.hard_margin;
     DJIMotorInstance *capability_motors[POWER_MODEL_MOTOR_COUNT]={motor_lf,motor_rf,motor_lb,motor_rb};
     for(unsigned w=0;w<POWER_MODEL_MOTOR_COUNT;++w) {
         const float maximum=capability_motors[w]->motor_controller.speed_PID.MaxOut;
@@ -579,6 +640,7 @@ static void UpdateChassisPowerBudget(void)
 #if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
     chassis_spin_input.evaluate_tracking=true;
     chassis_spin_input.now_ms=spin_now_ms;
+    chassis_spin_input.power_tick_ms=meter_status.last_rx_tick_ms;
     chassis_spin_input.model_limited=power_state.base_limited;
     chassis_spin_input.current_saturated=current_saturated;
     chassis_spin_input.guard_limited=guard_limited;
@@ -611,6 +673,11 @@ static void UpdateChassisPowerBudget(void)
     chassis_spin_input.target_power_w = pending_power_control.target_power_w;
     chassis_spin_input.control_enabled = pending_power_control.control_enabled;
     chassis_spin_input.energy_recovering = chassis_budget_output.recovering;
+#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
+    chassis_spin_input.power_ceiling_w=pending_power_control.power_ceiling_w>0 ?
+        pending_power_control.power_ceiling_w : pending_power_control.nominal_budget_w;
+    PrepareSpinLimits();
+#endif
 #endif
 }
 
@@ -652,6 +719,8 @@ void ChassisTask()
     VehicleSafetyPublish(&safety,HAL_GetTick());
 #endif // CHASSIS_BOARD
 
+    // Resolve current translation before evaluating candidate wheel constraints.
+    ChassisResolveMotion(&chassis_cmd_recv, 0, &chassis_vx, &chassis_vy);
     UpdateChassisPowerBudget();
 
 #if CHASSIS_SPIN_DYNAMIC_ENABLED
@@ -663,7 +732,7 @@ void ChassisTask()
 #endif
 
     // 选择旋转策略，并按云台实测相对角将平移命令转换到底盘坐标系。
-    ChassisResolveMotion(&chassis_cmd_recv, spin_target_wz, &chassis_vx, &chassis_vy);
+    if(chassis_cmd_recv.chassis_mode==CHASSIS_ROTATE) chassis_cmd_recv.wz=spin_target_wz;
 
     // 根据控制模式进行正运动学解算,计算底盘输出
     CalculateWheelSpeed();
@@ -717,6 +786,24 @@ void ChassisTask()
         .spin_fall=chassis_spin_config.fall_wz_per_s,
         .spin_lpf_s=chassis_spin_config.power_lpf_tau_s,
         .spin_settle_s=chassis_spin_config.settle_time_s,
+        .spin_soft_wz=chassis_spin_config.max_wz,
+        .spin_hard_wz=chassis_spin_config.hard_wz>0 ? chassis_spin_config.hard_wz : chassis_spin_config.max_wz,
+        .spin_body_hard_rps=chassis_spin_config.body_hard_rps,
+        .spin_wheel_hard_rpm=chassis_spin_config.wheel_hard_rpm,
+        .spin_extension_enabled=chassis_spin_config.extension_enabled,
+        .spin_capability_latched=chassis_budget_output.spin_capability_latched,
+        .spin_capability_release_s=chassis_budget_output.spin_capability_release_s,
+#if CHASSIS_SPIN_DYNAMIC_ENABLED
+        .spin_effective_wz=chassis_spin_state.effective_max_wz,
+        .spin_limit_state=chassis_spin_state.limit_state,
+        .spin_extension_qualified=chassis_spin_state.extension_qualified,
+        .spin_extension_confirm_s=chassis_spin_state.extension_confirm_s,
+        .spin_power_gap_w=chassis_spin_state.power_gap_w,
+        .spin_max_tracking_error_rpm=chassis_spin_state.max_tracking_error_rpm,
+        .spin_body_tracking_error_rps=chassis_spin_state.body_tracking_error_rps,
+        .spin_peak_wheel_rpm=chassis_spin_state.peak_wheel_rpm,
+        .spin_peak_body_rps=chassis_spin_state.peak_body_rps,
+#endif
     };
     taskENTER_CRITICAL();
     chassis_telemetry = telemetry;

@@ -59,7 +59,7 @@ spin_rps = (uLF + uRF + uLB + uRB) / (4pL · 2π)
 velocity_actual_valid,velocity_actual_tick_ms,velocity_actual_vx_mmps,velocity_actual_vy_mmps,velocity_actual_wz_mrps,velocity_target_valid,velocity_target_tick_ms,velocity_target_vx_mmps,velocity_target_vy_mmps,velocity_target_wz_mrps
 ```
 
-`*_mmps` 为整数 mm/s，`*_mrps` 为整数毫圈/s；网页都除以 1000。两组有效性互相独立，也独立于功控模型有效性；发送前再次检查年龄。网页“底盘整体速度”显示六个数值，“底盘速度对比”提供六条曲线，实线实际、虚线目标，左轴 m/s、右轴圈/s，支持选择曲线、放大、暂停、历史查看和 CSV 导出。旧 v1–v3 记录正常显示原有数据，新增速度显示“未提供”而不是零，导出统一 v4 并标记缺失速度无效。
+`*_mmps` 为整数 mm/s，`*_mrps` 为整数毫圈/s；网页都除以 1000。两组有效性互相独立，也独立于功控模型有效性；发送前再次检查年龄。网页“底盘整体速度”显示六个数值，“底盘速度对比”提供六条曲线，实线实际、虚线目标，左轴 m/s、右轴圈/s，支持选择曲线、放大、暂停、历史查看和 CSV 导出。旧 v1–v3 记录正常显示原有数据，新增速度显示“未提供”而不是零。当前固件输出 v5，保留 v4 前 111 列并追加自转上限诊断；导出保留各记录的原始版本和缺失字段，混合版本时切换表头。
 
 不更改 `Chassis_Upload_Data_s` 的双板 CAN 报文布局；本功能的数据入口为上述统一指针/快照和 USB 遥测。
 

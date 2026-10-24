@@ -26,14 +26,14 @@ test('invalid or stale wheel estimate is blank; age handles wraparound',()=>{
   assert.equal(P.displayValue({...fixture(),velocity_actual_tick_ms:980},'velocity_actual_vx_mmps'),1.234);
   assert.equal(P.displayValue({...fixture(),tick:3,velocity_actual_tick_ms:4294967294},'velocity_actual_wz_mrps'),-1.25);
 });
-test('v1-v3 export to v4 without inventing velocity',()=>{
+test('v1-v3 preserve schema on export without inventing velocity',()=>{
   for(const version of [1,2,3]) {
     const old=fields.slice(0,{1:72,2:85,3:101}[version]);
     const rows=[],parser=new P.StreamParser({onSample:r=>rows.push(r)});
     parser.push(old.join(',')+'\n'+old.map(k=>k==='version'?version:0).join(',')+'\n');
     assert.equal(rows.length,1);assert.equal(P.displayValue(rows[0],'velocity_actual_vx_mmps'),null);
     const store=new P.TelemetryStore();store.add(rows[0],0);rows.length=0;
-    parser.push(store.exportCSV());assert.equal(rows.length,1);assert.equal(rows[0].version,4);
-    assert.equal(rows[0].velocity_actual_valid,0);assert.equal(P.displayValue(rows[0],'velocity_actual_wz_mrps'),null);
+    parser.push(store.exportCSV());assert.equal(rows.length,1);assert.equal(rows[0].version,version);
+    assert.equal(rows[0].velocity_actual_valid,undefined);assert.equal(P.displayValue(rows[0],'velocity_actual_wz_mrps'),null);
   }
 });

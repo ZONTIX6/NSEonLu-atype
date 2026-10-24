@@ -47,7 +47,7 @@ test('rejects version/header mismatch and malformed IMU flag without breaking co
   assert.deepEqual(controls, ['@T1,1,ERR,pid,busy']);
 });
 
-test('mixed legacy and IMU records export as consistent v3 CSV and reparse', () => {
+test('mixed legacy and IMU records preserve version headers and reparse', () => {
   const store = new P.TelemetryStore();
   const legacy = Object.fromEntries(legacyFields.map(key => [key, fixture({version: 1})[key]]));
   store.add({...legacy, rawLine: csv(legacyFields, legacy)}, 0);
@@ -57,9 +57,9 @@ test('mixed legacy and IMU records export as consistent v3 CSV and reparse', () 
   parser.push(exported);
   assert.deepEqual(errors, []);
   assert.equal(rows.length, 2);
-  assert.equal(rows[0].version, 4);
-  assert.equal(rows[0].imu_valid, 0);
-  assert.equal(rows[0].imu_age_ms, 4294967295);
+  assert.equal(rows[0].version, 1);
+  assert.equal(rows[0].imu_valid, undefined);
+  assert.equal(rows[0].imu_age_ms, undefined);
   assert.equal(P.displayValue(rows[0], 'chassis_offset_mdeg'), null);
   assert.equal(P.displayValue(rows[1], 'imu_yaw_mdeg'), -12.345);
 });

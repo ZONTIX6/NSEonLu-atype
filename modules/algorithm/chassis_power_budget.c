@@ -159,6 +159,29 @@ static void ResetSpinPower(ChassisPowerBudgetState_s *s)
     s->spin_phase = CHASSIS_SPIN_POWER_OFF;
     s->spin_base_time_s = s->spin_capability_s = 0;
     s->spin_sample_valid = false;
+    s->spin_release_sample_valid=false;
+    s->spin_capability_release_s=0;
+}
+
+static void UpdateCapabilityRelease(const ChassisPowerBudgetInput_s *i, ChassisPowerBudgetState_s *s)
+{
+    const bool healthy=s->spin_phase==CHASSIS_SPIN_POWER_BASE_TRACK && !s->recovering &&
+        i->spin_entry_allowed && !i->spin_capability_limited && i->spin_hard_margin &&
+        i->measured_input_power_w<=i->referee_limit_w;
+    if(!healthy) {s->spin_capability_release_s=0;s->spin_release_sample_valid=false;return;}
+    bool fresh=i->input_power_tick_ms!=s->spin_release_power_tick_ms;
+    for(unsigned w=0;w<4;++w) fresh &= i->spin_feedback_sequence[w]!=0 &&
+        i->spin_feedback_sequence[w]!=s->spin_release_sequence[w];
+    if(s->spin_release_sample_valid && !fresh) return;
+    const uint32_t delta=i->input_power_tick_ms-s->spin_release_power_tick_ms;
+    if(s->spin_release_sample_valid && delta<=20U)
+        s->spin_capability_release_s=fminf(.5f,s->spin_capability_release_s+delta*.001f);
+    else s->spin_capability_release_s=0;
+    s->spin_release_sample_valid=true;s->spin_release_power_tick_ms=i->input_power_tick_ms;
+    for(unsigned w=0;w<4;++w) s->spin_release_sequence[w]=i->spin_feedback_sequence[w];
+    if(s->spin_capability_release_s>=.5f) {
+        s->spin_capability_latched=false;s->spin_base_time_s=0;
+    }
 }
 
 /* Qualification owns its sample clock. Reading one frame many times earns no time. */
@@ -203,6 +226,7 @@ static void UpdateSpinPower(const ChassisBufferBudgetConfig_s *c,
         fminf(CHASSIS_SPIN_CAPABILITY_CONFIRM_S, s->spin_capability_s + elapsed) : 0;
     if (s->recovering)
     {
+        s->spin_capability_release_s=0;s->spin_release_sample_valid=false;
         s->spin_phase = CHASSIS_SPIN_POWER_RECOVER;
         s->spin_base_time_s = 0;
         return;
@@ -215,10 +239,19 @@ static void UpdateSpinPower(const ChassisBufferBudgetConfig_s *c,
         if (s->buffer_lower_j <= CHASSIS_SPIN_BUFFER_EXIT_J ||
             s->spin_capability_s >= CHASSIS_SPIN_CAPABILITY_CONFIRM_S)
         {
+            if(s->spin_capability_s >= CHASSIS_SPIN_CAPABILITY_CONFIRM_S) {
+                s->spin_capability_latched=true;s->spin_capability_release_s=0;
+                s->spin_release_sample_valid=false;
+            }
             s->spin_phase = CHASSIS_SPIN_POWER_BASE_TRACK;
             s->spin_base_time_s = 0;
         }
         return;
+    }
+    if(s->spin_capability_latched) {
+        UpdateCapabilityRelease(i,s);
+        s->spin_base_time_s=0;
+        return; /* A release must earn a new base-power confirmation window. */
     }
     const float band = fmaxf(CHASSIS_SPIN_BASE_BAND_W, base * CHASSIS_SPIN_BASE_BAND_RATIO);
     const bool arrived = i->spin_entry_allowed && !i->spin_capability_limited &&
@@ -301,7 +334,10 @@ static bool UpdateBufferBudget(const ChassisPowerBudgetConfig_s *config,
     if (spin_priority)
         UpdateSpinPower(buffer, input, boost_ready, state);
     else
+    {
         ResetSpinPower(state);
+        state->spin_capability_latched=false;
+    }
 
     float spin_request_w = 0;
     float target_input_budget = input->referee_limit_w;
@@ -393,6 +429,8 @@ static bool UpdateBufferBudget(const ChassisPowerBudgetConfig_s *config,
             (state->applied_budget_w - input->referee_limit_w) * buffer->safety_factor) : 0,
         .spin_base_confirm_s = state->spin_base_time_s,
         .spin_filtered_power_w = spin_priority ? state->spin_filtered_power_w : 0,
+        .spin_capability_latched=state->spin_capability_latched,
+        .spin_capability_release_s=state->spin_capability_release_s,
     };
     if (spin_priority)
         output->spin_power_ceiling_w = fminf(input->referee_limit_w + output->spin_buffer_grant_w,
@@ -454,6 +492,7 @@ bool ChassisPowerBudgetUpdate(const ChassisPowerBudgetConfig_s *config,
     state->recovering = false;
     state->recovery_time_s = 0;
     ResetSpinPower(state);
+    state->spin_capability_latched=false;
     memset(output, 0, sizeof(*output));
 
     ChassisPowerBudgetMode_e mode = CHASSIS_POWER_BUDGET_READY;

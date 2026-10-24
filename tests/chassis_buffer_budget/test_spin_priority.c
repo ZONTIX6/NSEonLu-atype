@@ -27,6 +27,7 @@ static ChassisPowerBudgetOutput_s Step(ChassisPowerBudgetState_s *s,
     const ChassisPowerBudgetConfig_s c=Config();
     i->now_ms+=5;
     if(new_meter) i->input_power_tick_ms=i->now_ms;
+    if(new_meter) for(unsigned w=0;w<4;++w) ++i->spin_feedback_sequence[w];
     if(i->now_ms%20==0) i->buffer_tick_ms=i->now_ms;
     i->buffer_age_s=(i->now_ms-i->buffer_tick_ms)*.001f;
     ChassisPowerBudgetOutput_s o;
@@ -136,6 +137,39 @@ static void EnergyTargetAndCapabilityBoundBoost(void)
     assert(o.spin_phase==CHASSIS_SPIN_POWER_BASE_TRACK);
     Near(0,o.spin_buffer_grant_w);
 }
+static void CapabilityLatchRequiresFreshMarginAndNewBaseConfirmation(void)
+{
+    ChassisPowerBudgetState_s s={0};ChassisPowerBudgetInput_s i=Input(78.4f);
+    ChassisPowerBudgetOutput_s o={0};
+    for(unsigned n=0;n<60;++n) o=Step(&s,&i,true);
+    assert(o.spin_phase==CHASSIS_SPIN_POWER_BUFFER_ASSIST);
+    i.spin_capability_limited=true;
+    for(unsigned n=0;n<25;++n) o=Step(&s,&i,true);
+    assert(o.spin_capability_latched && o.spin_phase==CHASSIS_SPIN_POWER_BASE_TRACK);
+    i.spin_capability_limited=false;
+    for(unsigned n=0;n<200;++n) o=Step(&s,&i,true);
+    assert(o.spin_capability_latched && o.spin_buffer_grant_w==0);
+    i.spin_hard_margin=true;
+    for(unsigned n=0;n<40;++n) o=Step(&s,&i,true);
+    assert(o.spin_capability_release_s>0 && o.spin_capability_latched);
+    const unsigned seq=i.spin_feedback_sequence[0];
+    for(unsigned n=0;n<150;++n) {
+        i.spin_feedback_sequence[0]=seq-1;o=Step(&s,&i,true);
+    }
+    assert(o.spin_capability_latched && o.spin_capability_release_s<.5f);
+    i.spin_feedback_valid=false;o=Step(&s,&i,true);assert(o.spin_capability_latched);
+    i.spin_feedback_valid=true;
+    for(unsigned n=0;n<99;++n) o=Step(&s,&i,true);
+    assert(o.spin_capability_latched);
+    for(unsigned n=0;n<5;++n) o=Step(&s,&i,true);
+    assert(!o.spin_capability_latched && o.spin_buffer_grant_w==0);
+    for(unsigned n=0;n<45;++n) o=Step(&s,&i,true);
+    assert(o.spin_buffer_grant_w>0);
+    i.spin_capability_limited=true;
+    for(unsigned n=0;n<25;++n) o=Step(&s,&i,true);
+    assert(o.spin_capability_latched);
+    i.spin_power_priority=false;o=Step(&s,&i,true);assert(!o.spin_capability_latched);
+}
 int main(void)
 {
     BaseMustBeReachedBeforeBoost();
@@ -143,6 +177,7 @@ int main(void)
     DropAndFaultRevokeQualification();
     LowEnergyAlwaysOverridesBasePhase();
     EnergyTargetAndCapabilityBoundBoost();
+    CapabilityLatchRequiresFreshMarginAndNewBaseConfirmation();
     puts("PASS: limit-first spin budget, samples, energy and revocation");
     return 0;
 }

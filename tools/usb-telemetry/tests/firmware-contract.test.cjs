@@ -22,7 +22,7 @@ test('actual firmware CSV crosses arbitrary byte boundaries and displays correct
   assert.equal(P.displayValue(sample,'velocity_actual_vy_mmps'),-.567);
   assert.equal(P.displayValue(sample,'velocity_actual_wz_mrps'),-1.25);
   assert.equal(P.displayValue(sample,'velocity_target_wz_mrps'),-1.5);
-  assert.equal(sample.version, 4);
+  assert.equal(sample.version, 5);
   assert.equal(P.displayValue(sample, 'imu_yaw_mdeg'), -12.345);
   assert.equal(P.displayValue(sample, 'imu_yaw_total_mdeg'), 721.234);
   assert.equal(P.displayValue(sample, 'imu_gx_mdps'), -180.5);

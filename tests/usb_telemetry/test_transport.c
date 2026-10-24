@@ -77,8 +77,8 @@ int main(void)
     complete();
     sample.rc_lx = -123;
     USBTelemetryStreamSend(&sample, 40);
-    assert(submitted == 2 && sample.seq == 2 && sample.version == 4);
-    uint8_t saved[2048];
+    assert(submitted == 2 && sample.seq == 2 && sample.version == 5);
+    uint8_t saved[3072];
     uint8_t *in_flight = cdc.TxBuffer;
     uint32_t length = cdc.TxLength;
     memcpy(saved, in_flight, length);

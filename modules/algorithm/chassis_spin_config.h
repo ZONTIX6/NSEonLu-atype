@@ -71,6 +71,29 @@
 #define CHASSIS_SPIN_BUDGET_DROP_RESET_W 1.0f
 #endif
 
+/* Enable only after loaded-vehicle calibration. Zero hard Wz follows live soft Wz. */
+#ifndef CHASSIS_SPIN_EXTENSION_ENABLE
+#define CHASSIS_SPIN_EXTENSION_ENABLE 0
+#endif
+#ifndef CHASSIS_SPIN_HARD_WZ
+#define CHASSIS_SPIN_HARD_WZ 0.0f
+#endif
+#ifndef CHASSIS_SPIN_BODY_HARD_RPS
+#define CHASSIS_SPIN_BODY_HARD_RPS 0.0f
+#endif
+#ifndef CHASSIS_SPIN_WHEEL_HARD_RPM
+#define CHASSIS_SPIN_WHEEL_HARD_RPM 0.0f
+#endif
+#ifndef CHASSIS_SPIN_EXTENSION_RISE_RATE
+#define CHASSIS_SPIN_EXTENSION_RISE_RATE 600.0f
+#endif
+#if CHASSIS_SPIN_EXTENSION_ENABLE != 0 && CHASSIS_SPIN_EXTENSION_ENABLE != 1
+#error CHASSIS_SPIN_EXTENSION_ENABLE must be 0 or 1.
+#endif
+#if CHASSIS_SPIN_EXTENSION_ENABLE && CHASSIS_SPIN_MODE != CHASSIS_SPIN_MODE_ADAPTIVE
+#error Soft-limit extension requires adaptive spin.
+#endif
+
 /* 正弦使用独立的可跟随目标；默认麦轮几何下稳态约为 3403..5672 rpm。
  * 沿用 4000 的中心会要求约 22689 rpm，使跟随/功率保护阻止振幅建立。 */
 #ifndef CHASSIS_SPIN_SINE_CENTER_WZ

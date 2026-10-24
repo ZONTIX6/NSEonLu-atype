@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include "chassis_velocity.h"
 
-/* CSV v4 wire order; the first 101 fields retain their v3 order and units. */
+/* CSV v5 wire order; the first 111 fields retain their v4 order and units. */
 #define USB_TELEMETRY_FIELDS(U, I) \
     U(version) U(seq) U(tick) U(tx_drop_count) \
     U(chassis_valid) U(chassis_tick_ms) U(chassis_mode) \
@@ -39,7 +39,13 @@
     U(velocity_actual_valid) U(velocity_actual_tick_ms) \
     I(velocity_actual_vx_mmps) I(velocity_actual_vy_mmps) I(velocity_actual_wz_mrps) \
     U(velocity_target_valid) U(velocity_target_tick_ms) \
-    I(velocity_target_vx_mmps) I(velocity_target_vy_mmps) I(velocity_target_wz_mrps)
+    I(velocity_target_vx_mmps) I(velocity_target_vy_mmps) I(velocity_target_wz_mrps) \
+    I(spin_soft_wz_milli) I(spin_hard_wz_milli) I(spin_effective_wz_milli) \
+    I(spin_body_hard_mrps) I(spin_wheel_hard_rpm) U(spin_limit_state) \
+    U(spin_extension_enabled) U(spin_extension_qualified) U(spin_extension_confirm_ms) \
+    I(spin_power_gap_cw) I(spin_max_tracking_error_rpm) I(spin_body_tracking_error_mrps) \
+    U(spin_capability_latched) U(spin_capability_release_ms) \
+    I(spin_peak_wheel_rpm) I(spin_peak_body_mrps)
 
 typedef struct {
 #define USB_FIELD_U(name) uint32_t name;

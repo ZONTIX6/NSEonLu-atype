@@ -71,6 +71,14 @@
         <div><h3>自转速度 <small>圈/s</small></h3><dl><div><dt>实际</dt><dd id="velocity-actual-wz">—</dd></div><div><dt>目标</dt><dd id="velocity-target-wz">—</dd></div></dl></div>
       </div>
       <p id="velocity-detail" class="source-age">等待目标与四轮反馈速度</p>
+      <div class="section-heading"><h3>自转速度上限</h3><span id="spin-limit-status" class="status-pill neutral">等待数据</span></div>
+      <div class="imu-readouts">
+        <div><h3>指令边界 <small>Wz</small></h3><dl><div><dt>日常软上限</dt><dd id="spin-soft">—</dd></div><div><dt>绝对硬上限</dt><dd id="spin-hard">—</dd></div><div><dt>当前允许上限</dt><dd id="spin-effective">—</dd></div></dl></div>
+        <div><h3>物理边界</h3><dl><div><dt>整车硬上限 · 圈/s</dt><dd id="spin-body-hard">—</dd></div><div><dt>轮电机硬上限 · rpm</dt><dd id="spin-wheel-hard">—</dd></div><div><dt>最大逐轮误差 · rpm</dt><dd id="spin-wheel-error">—</dd></div></dl></div>
+        <div><h3>扩展资格</h3><dl><div><dt>确认进度 · ms</dt><dd id="spin-confirm">—</dd></div><div><dt>功率缺口 · W</dt><dd id="spin-gap">—</dd></div><div><dt>整车旋转误差 · 圈/s</dt><dd id="spin-body-error">—</dd></div></dl></div>
+      </div>
+      <p id="spin-limit-detail" class="source-age">等待自转上限诊断</p>
+      <p id="spin-latch-detail" class="source-age">等待缓冲能力状态</p>
     </section>
     <section class="card chart-card" id="velocity-chart-panel"><div class="section-heading"><h2>底盘速度对比 <span>m/s · 圈/s</span></h2></div><div class="chart-legend"></div><div class="chart-container"><canvas id="velocity-chart" role="img" aria-label="底盘前进、横移与自转目标和实际速度趋势"></canvas><div class="chart-empty" data-empty-chart><strong>等待底盘速度</strong></div></div><div class="chart-footer"><span>实线：实际 · 虚线：目标</span><span>左轴 m/s · 右轴 圈/s</span></div></section>
 

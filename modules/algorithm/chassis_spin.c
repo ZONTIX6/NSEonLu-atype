@@ -38,7 +38,8 @@ static void QualifyGrowth(const ChassisSpinConfig_s *c, ChassisSpinInput_s *i,
     if (i->guard_limited || !i->increase_allowed) reasons |= CHASSIS_SPIN_BLOCK_GUARD;
     if (i->braking) reasons |= CHASSIS_SPIN_BLOCK_BRAKE;
     if (i->energy_recovering) reasons |= CHASSIS_SPIN_BLOCK_RECOVERY;
-    if (s->applied_wz >= c->max_wz) reasons |= CHASSIS_SPIN_BLOCK_MAX_SPEED;
+    if (s->applied_wz >= c->max_wz && !i->extension_path)
+        reasons |= CHASSIS_SPIN_BLOCK_MAX_SPEED;
     bool tracking = true, new_samples = true, accelerated = true, improved = false;
     for (unsigned w = 0; w < 4; ++w)
     {
@@ -81,6 +82,160 @@ static void QualifyGrowth(const ChassisSpinConfig_s *c, ChassisSpinInput_s *i,
     s->block_reasons = reasons;
     i->increase_allowed = reasons == 0;
 }
+
+/* With a feasible zero-spin translation, |offset + gain * Wz| <= bound
+ * defines an upper bound for nonnegative Wz. No averaging of wheel constraints. */
+static float AffineUpper(float offset, float gain, float bound)
+{
+    if (!isfinite(offset) || !isfinite(gain) || !isfinite(bound) || bound < 0 ||
+        fabsf(offset) > bound) return 0;
+    if (gain == 0) return INFINITY;
+    return fmaxf(0, ((gain > 0 ? bound : -bound) - offset) / gain);
+}
+
+static float NewLimitSample(const ChassisSpinInput_s *i, ChassisSpinState_s *s)
+{
+    bool fresh = i->power_tick_ms != s->limit_power_tick_ms;
+    for (unsigned w=0;w<4;++w)
+        fresh &= i->feedback_sequence[w] != s->limit_sequence[w];
+    if (s->limit_sample_valid && !fresh) return 0;
+    const uint32_t delta=i->power_tick_ms-s->limit_power_tick_ms;
+    const float elapsed=s->limit_sample_valid && delta<=20U ? delta*.001f : 0;
+    if (s->limit_sample_valid && delta>20U) s->extension_confirm_s=s->tracking_hold_s=0;
+    s->limit_sample_valid=true;
+    s->limit_power_tick_ms=i->power_tick_ms;
+    for(unsigned w=0;w<4;++w) s->limit_sequence[w]=i->feedback_sequence[w];
+    return elapsed;
+}
+
+/* Returns the absolute candidate bound; soft withdrawal is handled by the slew. */
+static float UpdateLimits(const ChassisSpinConfig_s *c, const ChassisSpinInput_s *i,
+                           float dt, ChassisSpinState_s *s, bool *withdraw, float *lead_upper,
+                           uint32_t *hard_reason)
+{
+    *withdraw=false;*lead_upper=INFINITY;
+    *hard_reason=CHASSIS_SPIN_BLOCK_MAX_SPEED;
+    s->power_gap_w=i->target_power_w-s->filtered_power_w;
+    s->effective_max_wz=c->max_wz;s->hard_margin=false;
+    if (!i->extension_path) {
+        s->extension_qualified=false;s->extension_confirm_s=0;
+        s->limit_state=CHASSIS_SPIN_LIMIT_NORMAL;
+        return c->max_wz;
+    }
+    const bool calibrated=c->body_hard_rps>0 && c->wheel_hard_rpm>0 && c->hard_wz>=c->max_wz;
+    const float hard=c->hard_wz>0 ? c->hard_wz : c->max_wz;
+    float upper=hard;
+    uint32_t bound_reason=CHASSIS_SPIN_BLOCK_MAX_SPEED;
+    bool overspeed=false, actual_at_limit=false;
+    bool margin=s->applied_wz<hard*.95f;
+    bool tracking=true;
+    s->max_tracking_error_rpm=0;
+    const float body_target=i->body_wz_offset+i->body_wz_per_wz*s->applied_wz;
+    if(isfinite(i->actual_body_wz_rps)) s->peak_body_rps=fmaxf(s->peak_body_rps,fabsf(i->actual_body_wz_rps));
+    const float body_band=fmaxf(.05f,.05f*fabsf(body_target));
+    s->body_tracking_error_rps=fabsf(body_target-i->actual_body_wz_rps);
+    tracking=isfinite(s->body_tracking_error_rps) && s->body_tracking_error_rps<=body_band;
+    if (calibrated) {
+        const float body_upper=AffineUpper(i->body_wz_offset,i->body_wz_per_wz,c->body_hard_rps);
+        if(body_upper<upper) {upper=body_upper;bound_reason=CHASSIS_SPIN_BLOCK_BODY_SPEED;}
+        overspeed=fabsf(i->actual_body_wz_rps)>c->body_hard_rps;
+        actual_at_limit=fabsf(i->actual_body_wz_rps)>=c->body_hard_rps;
+        if(actual_at_limit) s->block_reasons|=CHASSIS_SPIN_BLOCK_BODY_SPEED;
+        margin &= fabsf(body_target)<c->body_hard_rps*.95f &&
+            fabsf(i->actual_body_wz_rps)<c->body_hard_rps*.95f;
+    }
+    /* Candidate lead bound may be infeasible at Wz=0 (already rotating).
+     * Only its upper endpoint is needed for positive growth. */
+    if (i->body_wz_per_wz!=0)
+        *lead_upper=fmaxf(0,(i->actual_body_wz_rps+copysignf(body_band,i->body_wz_per_wz)-
+            i->body_wz_offset)/i->body_wz_per_wz);
+    for(unsigned w=0;w<4;++w) {
+        if(isfinite(i->actual_rpm[w])) s->peak_wheel_rpm=fmaxf(s->peak_wheel_rpm,fabsf(i->actual_rpm[w]));
+        const float candidate=i->wheel_rpm_offset[w]+i->wheel_rpm_per_wz[w]*s->applied_wz;
+        const float error=fmaxf(fabsf(i->target_rpm[w]-i->actual_rpm[w]),
+            fabsf(candidate-i->actual_rpm[w]));
+        s->max_tracking_error_rpm=fmaxf(s->max_tracking_error_rpm,error);
+        tracking &= isfinite(candidate) && isfinite(error) && error<=CHASSIS_SPIN_TRACKING_ERROR_RPM;
+        if(i->wheel_rpm_per_wz[w]!=0) {
+            const float lead=(i->actual_rpm[w]+copysignf(CHASSIS_SPIN_TRACKING_ERROR_RPM,
+                i->wheel_rpm_per_wz[w])-i->wheel_rpm_offset[w])/i->wheel_rpm_per_wz[w];
+            *lead_upper=fminf(*lead_upper,fmaxf(0,lead));
+        }
+        if(calibrated) {
+            const float wheel_upper=AffineUpper(i->wheel_rpm_offset[w],i->wheel_rpm_per_wz[w],c->wheel_hard_rpm);
+            if(wheel_upper<upper) {upper=wheel_upper;bound_reason=CHASSIS_SPIN_BLOCK_WHEEL_SPEED;}
+            overspeed |= fabsf(i->actual_rpm[w])>c->wheel_hard_rpm;
+            actual_at_limit |= fabsf(i->actual_rpm[w])>=c->wheel_hard_rpm;
+            if(fabsf(i->actual_rpm[w])>=c->wheel_hard_rpm) s->block_reasons|=CHASSIS_SPIN_BLOCK_WHEEL_SPEED;
+            margin &= fabsf(candidate)<c->wheel_hard_rpm*.95f &&
+                fabsf(i->actual_rpm[w])<c->wheel_hard_rpm*.95f;
+        }
+    }
+    const bool data_valid=i->velocity_valid && isfinite(i->body_wz_per_wz) &&
+        i->body_wz_per_wz!=0 && isfinite(i->body_wz_offset) &&
+        isfinite(i->translation_mps) && isfinite(i->actual_body_wz_rps) &&
+        (uint32_t)(i->now_ms-i->velocity_tick_ms)<=20U &&
+        (uint32_t)(i->now_ms-i->power_tick_ms)<=20U;
+    if(!data_valid) s->block_reasons|=CHASSIS_SPIN_BLOCK_FEEDBACK;
+    const float elapsed=data_valid ? NewLimitSample(i,s) : 0;
+    if(!data_valid) s->limit_sample_valid=false;
+    const bool near=s->applied_wz>=c->max_wz*.99f;
+    if(!tracking && (near || s->extension_qualified)) s->block_reasons|=CHASSIS_SPIN_BLOCK_TRACKING;
+    const uint32_t protection=s->block_reasons & (CHASSIS_SPIN_BLOCK_CONTROL |
+        CHASSIS_SPIN_BLOCK_FEEDBACK | CHASSIS_SPIN_BLOCK_MODEL | CHASSIS_SPIN_BLOCK_CURRENT |
+        CHASSIS_SPIN_BLOCK_GUARD | CHASSIS_SPIN_BLOCK_BRAKE | CHASSIS_SPIN_BLOCK_RECOVERY |
+        CHASSIS_SPIN_BLOCK_METER | CHASSIS_SPIN_BLOCK_TRACKING);
+    const bool healthy=!protection && !i->power_limited && tracking && data_valid;
+    s->tracking_hold_s=healthy ? 0 : fminf(.1f,s->tracking_hold_s+elapsed);
+    const bool translation=i->translation_mps>.10f;
+    if(translation) s->block_reasons|=CHASSIS_SPIN_BLOCK_TRANSLATION;
+    const bool reset=!data_valid || i->braking || i->energy_recovering ||
+        (protection & (CHASSIS_SPIN_BLOCK_FEEDBACK | CHASSIS_SPIN_BLOCK_METER)) ||
+        s->previous_target_power_w>i->target_power_w+c->budget_drop_reset_w;
+    const bool hit=s->applied_wz>=upper || actual_at_limit;
+    const bool hard_hold=hit || (s->limit_state==CHASSIS_SPIN_LIMIT_HARD && !margin);
+    *hard_reason=bound_reason;
+    if(s->applied_wz>=upper) s->block_reasons|=bound_reason;
+    if(hard_hold) {
+        s->limit_state=CHASSIS_SPIN_LIMIT_HARD;s->extension_qualified=false;
+        s->extension_confirm_s=0;
+    }
+    if(reset || translation || !c->extension_enabled || !calibrated || s->tracking_hold_s>=.1f) {
+        s->extension_qualified=false;s->extension_confirm_s=0;
+        *withdraw=true;
+    }
+    if(!c->extension_enabled || !calibrated) s->block_reasons|=CHASSIS_SPIN_BLOCK_CONFIG;
+    if(overspeed) {s->extension_qualified=false;*withdraw=true;}
+    s->hard_margin=calibrated && margin && healthy && !translation;
+    const bool can_qualify=c->extension_enabled && calibrated && healthy && !translation &&
+        body_target*i->actual_body_wz_rps>0 &&
+        !reset && !hard_hold && upper>s->applied_wz+c->extension_rise_wz_per_s*dt &&
+        *lead_upper>=s->applied_wz+c->extension_rise_wz_per_s*dt &&
+        isfinite(i->power_ceiling_w) && i->measured_power_w>=0 && i->measured_power_w<i->power_ceiling_w;
+    if(!s->extension_qualified && !hard_hold) {
+        if(near && can_qualify && s->power_gap_w>fmaxf(3,.05f*i->target_power_w)) {
+            s->limit_state=CHASSIS_SPIN_LIMIT_QUALIFY;
+            s->extension_confirm_s=fminf(.2f,s->extension_confirm_s+elapsed);
+            if(s->extension_confirm_s>=.2f) s->extension_qualified=true;
+        } else {
+            s->extension_confirm_s=0;
+            s->limit_state=(near || s->tracking_hold_s>=.1f) && !healthy ?
+                CHASSIS_SPIN_LIMIT_TRACKING_HOLD : CHASSIS_SPIN_LIMIT_NORMAL;
+        }
+    }
+    if(s->extension_qualified)
+        s->limit_state=healthy ? CHASSIS_SPIN_LIMIT_EXTENDED : CHASSIS_SPIN_LIMIT_TRACKING_HOLD;
+    if(!s->extension_qualified && near && !hard_hold) s->block_reasons|=CHASSIS_SPIN_BLOCK_SOFT_WAIT;
+    /* Brief hold and hard-bound hysteresis hold the last output; ordinary
+     * revocation descends to soft, while actual overspeed descends below it. */
+    s->effective_max_wz=s->extension_qualified ? upper : fminf(upper,c->max_wz);
+    s->effective_max_wz=fminf(s->effective_max_wz,fmaxf(s->applied_wz,*lead_upper));
+    if(s->tracking_hold_s>=.1f && !tracking)
+        s->effective_max_wz=fminf(s->effective_max_wz,*lead_upper);
+    if(hard_hold || !healthy) *lead_upper=fminf(*lead_upper,s->applied_wz);
+    if(overspeed) s->effective_max_wz=0;
+    return upper;
+}
 #endif
 
 bool ChassisSpinConfigIsValid(const ChassisSpinConfig_s *c)
@@ -95,6 +250,14 @@ bool ChassisSpinConfigIsValid(const ChassisSpinConfig_s *c)
            c->rise_wz_per_s > 0 && c->fall_wz_per_s > 0 &&
            c->power_lpf_tau_s > 0 && c->power_deadband_w >= 0 &&
            c->settle_time_s >= 0 && c->budget_drop_reset_w >= 0;
+    if (!common) return false;
+    if (!isfinite(c->hard_wz) || !isfinite(c->body_hard_rps) || !isfinite(c->wheel_hard_rpm) ||
+        !isfinite(c->extension_rise_wz_per_s) || c->hard_wz<0 || c->body_hard_rps<0 ||
+        c->wheel_hard_rpm<0 || c->extension_rise_wz_per_s<0 ||
+        (c->hard_wz>0 && c->hard_wz<c->max_wz)) return false;
+    if (c->extension_enabled && (CHASSIS_SPIN_MODE!=CHASSIS_SPIN_MODE_ADAPTIVE ||
+        c->hard_wz<c->max_wz || c->body_hard_rps<=0 || c->wheel_hard_rpm<=0 ||
+        c->extension_rise_wz_per_s<=0 || c->extension_rise_wz_per_s>c->rise_wz_per_s)) return false;
 #if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE
     return common && isfinite(c->sine_amplitude_wz) && c->sine_amplitude_wz >= 0 &&
         c->fixed_wz - c->sine_amplitude_wz >= c->min_wz &&
@@ -113,7 +276,8 @@ bool ChassisSpinConfigIsValid(const ChassisSpinConfig_s *c)
 #if CHASSIS_SPIN_MODE != CHASSIS_SPIN_MODE_SINE
 static void Reset(const ChassisSpinConfig_s *config, ChassisSpinState_s *state)
 {
-    *state = (ChassisSpinState_s){.target_wz = config->fixed_wz};
+    *state = (ChassisSpinState_s){.target_wz = config->fixed_wz,
+        .peak_wheel_rpm=state->peak_wheel_rpm,.peak_body_rps=state->peak_body_rps};
 }
 #else
 static float Clamp(float value, float minimum, float maximum)
@@ -204,9 +368,7 @@ static bool UpdateTarget(const ChassisSpinConfig_s *config,
         *target_wz = 0;
     if (!ChassisSpinConfigIsValid(config) || input == NULL || state == NULL || target_wz == NULL)
     {
-#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE
         if (state != NULL) *state = (ChassisSpinState_s){0};
-#endif
         return false;
     }
     *target_wz = config->fixed_wz;
@@ -222,6 +384,8 @@ static bool UpdateTarget(const ChassisSpinConfig_s *config,
     if (!input->spin_enabled || !input->control_enabled || !input->feedback_valid)
     {
         Reset(config, state);
+        if(!input->spin_enabled || !input->control_enabled)
+            state->peak_wheel_rpm=state->peak_body_rps=0;
         return true;
     }
     if (!isfinite(dt_s) || dt_s <= 0 || dt_s > .020f ||
@@ -238,7 +402,10 @@ static bool UpdateTarget(const ChassisSpinConfig_s *config,
     if (!state->initialized)
     {
         const float previous = state->applied_wz;
+        const uint32_t reasons = state->block_reasons;
         Reset(config, state);
+        state->block_reasons = reasons;
+        state->applied_wz = previous;
         state->target_wz = fminf(fmaxf(previous, 0), config->max_wz);
         state->filtered_power_w = input->measured_power_w;
         state->initialized = true;
@@ -248,6 +415,11 @@ static bool UpdateTarget(const ChassisSpinConfig_s *config,
         state->filtered_power_w += dt_s / (config->power_lpf_tau_s + dt_s) *
             (input->measured_power_w - state->filtered_power_w);
     }
+    state->target_wz=state->applied_wz;
+    bool withdraw=false;
+    float lead_upper=INFINITY;
+    uint32_t hard_reason=0;
+    const float hard_upper=UpdateLimits(config,input,dt_s,state,&withdraw,&lead_upper,&hard_reason);
     if (state->previous_target_power_w >
         input->target_power_w + config->budget_drop_reset_w)
     {
@@ -256,7 +428,9 @@ static bool UpdateTarget(const ChassisSpinConfig_s *config,
     }
     state->previous_target_power_w = input->target_power_w;
     const bool can_increase = input->increase_allowed && !input->power_limited &&
-        !input->energy_recovering && input->measured_power_w >= 0;
+        !input->energy_recovering && input->measured_power_w >= 0 &&
+        (!input->extension_path || !(state->block_reasons & (CHASSIS_SPIN_BLOCK_FEEDBACK |
+            CHASSIS_SPIN_BLOCK_TRACKING | CHASSIS_SPIN_BLOCK_BODY_SPEED | CHASSIS_SPIN_BLOCK_WHEEL_SPEED)));
     state->settled_s = can_increase ?
         fminf(state->settled_s + dt_s, config->settle_time_s) : 0;
 
@@ -266,11 +440,27 @@ static bool UpdateTarget(const ChassisSpinConfig_s *config,
     float rate = config->gain_wz_per_w_s * outside_deadband;
     if (rate > 0 && (!can_increase || state->settled_s < config->settle_time_s))
         rate = 0;
-    const float rise = config->rise_wz_per_s * (input->trend_growth ? .25f : 1);
+    float rise = config->rise_wz_per_s * (input->trend_growth ? .25f : 1);
+    if(input->extension_path && state->target_wz+rise*dt_s>config->max_wz && config->extension_enabled)
+        rise=fminf(rise,config->extension_rise_wz_per_s);
     rate = fminf(fmaxf(rate, -config->fall_wz_per_s), rise);
-    const float minimum = state->target_wz < config->min_wz ? 0 : config->min_wz;
-    state->target_wz = fminf(fmaxf(state->target_wz + rate * dt_s, minimum),
-                            config->max_wz);
+    if(withdraw && state->target_wz>state->effective_max_wz)
+        rate=-config->fall_wz_per_s;
+    const float minimum = state->target_wz < config->min_wz ||
+        (withdraw && state->effective_max_wz<config->min_wz) ? 0 : config->min_wz;
+    float candidate=fmaxf(state->target_wz+rate*dt_s,minimum);
+    if(withdraw && state->target_wz>state->effective_max_wz)
+        candidate=fmaxf(candidate,state->effective_max_wz);
+    float growth_upper=state->extension_qualified ? hard_upper :
+        fmaxf(config->max_wz,state->target_wz);
+    if(input->extension_path)
+        growth_upper=fminf(growth_upper,fmaxf(state->target_wz,lead_upper));
+    state->target_wz=fminf(candidate,fminf(hard_upper,growth_upper));
+    if(input->extension_path && state->target_wz>=hard_upper) {
+        state->block_reasons|=hard_reason;
+        state->limit_state=CHASSIS_SPIN_LIMIT_HARD;
+        state->extension_qualified=false;state->extension_confirm_s=0;
+    }
     *target_wz = state->target_wz;
     return true;
 #endif
@@ -286,7 +476,9 @@ bool ChassisSpinRetune(const ChassisSpinConfig_s *config, ChassisSpinState_s *st
     const float previous = state->applied_wz;
     const int8_t direction = state->sine_direction;
     const bool locked = state->sine_direction_locked;
+    const float peak_wheel=state->peak_wheel_rpm, peak_body=state->peak_body_rps;
     *state = (ChassisSpinState_s){.applied_wz = previous, .retuning = previous != 0,
+        .peak_wheel_rpm=peak_wheel,.peak_body_rps=peak_body,
         .sine_direction = direction, .sine_direction_locked = locked};
     return true;
 }
@@ -299,22 +491,18 @@ bool ChassisSpinUpdate(const ChassisSpinConfig_s *config,
     const bool retuning = state && state->retuning;
 #if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
     ChassisSpinInput_s qualified;
-    uint32_t reasons = 0;
     if (config && input && state && input->evaluate_tracking)
     {
         qualified = *input;
         QualifyGrowth(config, &qualified, state);
-        reasons = state->block_reasons;
         input = &qualified;
     }
 #endif
     bool ok = UpdateTarget(config, input, dt_s, state, target_wz);
     if (!state || !target_wz) return ok;
-#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
-    state->block_reasons = reasons;
-#endif
     state->retuning = false;
-    if (ok && retuning && input->spin_enabled && input->control_enabled &&
+    if (ok && retuning && (CHASSIS_SPIN_MODE != CHASSIS_SPIN_MODE_ADAPTIVE || !input->extension_path) &&
+        input->spin_enabled && input->control_enabled &&
         input->feedback_valid && isfinite(dt_s) && dt_s > 0 && dt_s <= .020f) {
 #if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE
         float rate = fabsf(*target_wz) > fabsf(previous) ?
@@ -333,5 +521,8 @@ bool ChassisSpinUpdate(const ChassisSpinConfig_s *config,
         *target_wz = previous + step;
     }
     state->applied_wz = *target_wz;
+#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
+    state->target_wz=*target_wz;
+#endif
     return ok;
 }

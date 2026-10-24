@@ -26,6 +26,12 @@ typedef struct {
     float spin_base_power_w, spin_buffer_request_w, spin_buffer_grant_w;
     float spin_base_confirm_s, spin_filtered_power_w, spin_power_ceiling_w, slow_correction_w;
     float spin_gain, spin_rise, spin_fall, spin_lpf_s, spin_settle_s;
+    float spin_soft_wz, spin_hard_wz, spin_effective_wz, spin_body_hard_rps, spin_wheel_hard_rpm;
+    uint32_t spin_limit_state;
+    bool spin_extension_enabled, spin_extension_qualified, spin_capability_latched;
+    float spin_extension_confirm_s, spin_power_gap_w, spin_max_tracking_error_rpm;
+    float spin_body_tracking_error_rps, spin_capability_release_s;
+    float spin_peak_wheel_rpm, spin_peak_body_rps;
 } ChassisTelemetrySnapshot_s;
 
 bool ChassisGetTelemetrySnapshot(ChassisTelemetrySnapshot_s *snapshot);

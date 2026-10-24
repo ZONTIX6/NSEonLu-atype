@@ -77,6 +77,8 @@ typedef struct
     /* Limit-first policy applies only to adaptive spin with a direct supply. */
     bool spin_power_priority, spin_feedback_valid, spin_entry_allowed;
     bool spin_capability_limited, spin_braking;
+    bool spin_hard_margin;
+    uint32_t spin_feedback_sequence[4];
     uint32_t now_ms, input_power_tick_ms;
 } ChassisPowerBudgetInput_s;
 
@@ -109,6 +111,9 @@ typedef struct
     float spin_base_time_s, spin_capability_s, spin_filtered_power_w, spin_limit_w;
     uint32_t spin_power_tick_ms;
     bool spin_sample_valid;
+    bool spin_capability_latched, spin_release_sample_valid;
+    float spin_capability_release_s;
+    uint32_t spin_release_power_tick_ms, spin_release_sequence[4];
 } ChassisPowerBudgetState_s;
 
 typedef struct
@@ -125,6 +130,8 @@ typedef struct
     ChassisSpinPowerPhase_e spin_phase;
     float spin_base_power_w, spin_buffer_request_w, spin_buffer_grant_w;
     float spin_base_confirm_s, spin_filtered_power_w, spin_power_ceiling_w;
+    bool spin_capability_latched;
+    float spin_capability_release_s;
 } ChassisPowerBudgetOutput_s;
 
 bool ChassisPowerBudgetConfigIsValid(const ChassisPowerBudgetConfig_s *config);

@@ -72,6 +72,9 @@ bool ChassisPowerUpdatePolicy(const ChassisPowerPolicyInput_s *i, ChassisPowerPo
             s->transient.fast_w==0 && (s->transient.mode==CHASSIS_POWER_TRANSIENT_RUN ||
                                       s->transient.mode==CHASSIS_POWER_TRANSIENT_IDLE),
         .spin_capability_limited=i->spin_capability_limited,
+        .spin_hard_margin=i->spin_hard_margin,
+        .spin_feedback_sequence={s->feedback_sequence[0],s->feedback_sequence[1],
+            s->feedback_sequence[2],s->feedback_sequence[3]},
         .spin_braking=s->transient.brake_mask!=0,
         .now_ms=i->now_ms,.input_power_tick_ms=i->meter.last_rx_tick_ms};
     bool valid=isfinite(i->dt_s) && i->dt_s>0 && i->dt_s<=.1f &&

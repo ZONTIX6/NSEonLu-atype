@@ -14,7 +14,18 @@ typedef struct
     float sine_amplitude_wz, sine_period_s, sine_ramp_s;
     float sine_rise_wz_per_s, sine_fall_wz_per_s;
     int8_t sine_direction;
+    /* Compile-only calibration; max_wz retains its legacy soft-limit meaning. */
+    bool extension_enabled;
+    float hard_wz, body_hard_rps, wheel_hard_rpm, extension_rise_wz_per_s;
 } ChassisSpinConfig_s;
+
+typedef enum {
+    CHASSIS_SPIN_LIMIT_NORMAL = 0,
+    CHASSIS_SPIN_LIMIT_QUALIFY,
+    CHASSIS_SPIN_LIMIT_EXTENDED,
+    CHASSIS_SPIN_LIMIT_TRACKING_HOLD,
+    CHASSIS_SPIN_LIMIT_HARD,
+} ChassisSpinLimit_e;
 
 enum
 {
@@ -28,6 +39,11 @@ enum
     CHASSIS_SPIN_BLOCK_MAX_SPEED = 1U << 7,
     CHASSIS_SPIN_BLOCK_RECOVERY = 1U << 8,
     CHASSIS_SPIN_BLOCK_METER = 1U << 9,
+    CHASSIS_SPIN_BLOCK_SOFT_WAIT = 1U << 10,
+    CHASSIS_SPIN_BLOCK_BODY_SPEED = 1U << 11,
+    CHASSIS_SPIN_BLOCK_WHEEL_SPEED = 1U << 12,
+    CHASSIS_SPIN_BLOCK_TRANSLATION = 1U << 13,
+    CHASSIS_SPIN_BLOCK_CONFIG = 1U << 14,
 };
 
 typedef struct
@@ -39,6 +55,12 @@ typedef struct
     uint32_t now_ms, feedback_tick_ms[4], feedback_sequence[4];
     float actual_rpm[4], target_rpm[4];
     bool trend_growth; /* Produced internally when evaluate_tracking is enabled. */
+    bool extension_path, velocity_valid;
+    uint32_t power_tick_ms, velocity_tick_ms;
+    float power_ceiling_w, translation_mps, actual_body_wz_rps;
+    /* Exact current-translation forward kinematics: rpm = offset + gain * Wz. */
+    float wheel_rpm_offset[4], wheel_rpm_per_wz[4];
+    float body_wz_offset, body_wz_per_wz;
 } ChassisSpinInput_s;
 
 typedef struct
@@ -53,6 +75,12 @@ typedef struct
     uint32_t block_reasons, trend_tick_ms, trend_sequence[4];
     float trend_speed[4], trend_error[4], trend_no_improvement_s;
     bool trend_initialized, trend_allowed;
+    ChassisSpinLimit_e limit_state;
+    bool extension_qualified, limit_sample_valid, hard_margin;
+    float extension_confirm_s, tracking_hold_s, effective_max_wz;
+    float power_gap_w, max_tracking_error_rpm, body_tracking_error_rps;
+    float peak_wheel_rpm, peak_body_rps;
+    uint32_t limit_power_tick_ms, limit_sequence[4];
 } ChassisSpinState_s;
 
 /* Limits the target only; existing power/current protection remains authoritative. */

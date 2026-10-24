@@ -110,7 +110,7 @@ V2 浏览器脚本 `tests/autotune-v2-check.js` 使用本地端口 4176，覆盖
 | `USB_TELEMETRY_ENABLE` | `1` | 1：USB CSV 遥测；0：原有 USB 视觉协议 |
 | `USB_TELEMETRY_PERIOD_MS` | `20` | 采样发送间隔，默认约 50 Hz |
 | `USB_TELEMETRY_HEADER_PERIOD_MS` | `1000` | 重复表头间隔 |
-| `USB_TELEMETRY_BUFFER_SIZE` | `2048` | 静态行缓冲字节数 |
+| `USB_TELEMETRY_BUFFER_SIZE` | `3072` | 静态行缓冲字节数，包含 v5 表头和最坏整数行 |
 
 使用项目现有 ARM GCC 和 make 工具链，从仓库根目录构建：
 
@@ -166,7 +166,7 @@ IMU 姿态、角速度、加速度分图显示；累计 Yaw 默认不选中，�
 
 旧固件没有跟随角和 IMU 字段时留空，并提示升级。烧录新固件、重启本地服务并刷新页面后，可同步观察板载姿态、编码器跟随角、Wz 与四轮目标/实际转速。
 
-## CSV v1 / v2 / v3 / v4 协议
+## CSV v1 / v2 / v3 / v4 / v5 协议
 
 行以 CRLF 结束，表头在串口打开后及每秒重发。串口读取块不等同于一整行，解析器能处理任意分片。
 
@@ -195,7 +195,7 @@ version,seq,tick,tx_drop_count,chassis_valid,chassis_tick_ms,chassis_mode,vx_cmd
 imu_valid,imu_age_ms,imu_yaw_mdeg,imu_pitch_mdeg,imu_roll_mdeg,imu_yaw_total_mdeg,imu_gx_mdps,imu_gy_mdps,imu_gz_mdps,imu_ax_mmps2,imu_ay_mmps2,imu_az_mmps2,chassis_offset_mdeg
 ```
 
-`imu_valid` 为 0/1；`imu_age_ms` 为采集时的样本年龄，从未发布姿态时为 4294967295。采样失效后保留最后姿态的原始值和真实年龄，同时置 `imu_valid=0`，网页读数留空。网页同时识别 v1–v4 精确表头，版本必须与表头一致。导出统一为 v4、保留原始整数单位；v1 记录的 IMU 标记无效，年龄为 4294967295，缺失跟随角编码为 −2147483648 并显示为空，其他原有测量保持不变。旧版网页需刷新至支持 v4 的版本。
+`imu_valid` 为 0/1；`imu_age_ms` 为采集时的样本年龄，从未发布姿态时为 4294967295。采样失效后保留最后姿态的原始值和真实年龄，同时置 `imu_valid=0`，网页读数留空。网页同时识别 v1–v5 精确表头，版本必须与表头一致。导出保留各记录的原始版本和整数单位；混合版本采集中切换版本时重新输出相应表头，缺失字段保持缺失。旧版网页需刷新至支持 v5 的版本。
 
 `seq` 按采样周期递增（包括被丢弃的周期）；表头重发可能占用发送机会。网页显示缺行计数，并保留 `tx_drop_count` 便于判断发送拥塞。序号和 tick 使用 uint32，支持自然回绕。
 
@@ -246,6 +246,18 @@ CSV v3 新增阶段、增补额度、增长受限原因和参数来源，兼容�
 
 ## 底盘目标与实际速度（CSV v4）
 
-当前固件输出 v4，共 111 列；前 101 列与 v3 相同，追加目标/实际速度各五列。网页“底盘整体速度”显示前进、横移（m/s）与自转（圈/s）的目标/实际数值和六条对比曲线，实际实线、目标虚线。目标与实际各自检查 20 ms 数据新鲜度；失效显示缺失。旧 v1–v3 不伪造速度值。`*_mmps`、`*_mrps` 均除以 1000 显示。
+CSV v4 共 111 列；前 101 列与 v3 相同，追加目标/实际速度各五列；当前 v5 完整保留这些列。网页“底盘整体速度”显示前进、横移（m/s）与自转（圈/s）的目标/实际数值和六条对比曲线，实际实线、目标虚线。目标与实际各自检查 20 ms 数据新鲜度；失效显示缺失。旧 v1–v3 不伪造速度值。`*_mmps`、`*_mrps` 均除以 1000 显示。
+
+## 自转软 / 硬上限（CSV v5）
+
+当前固件输出 127 列，前 111 列顺序和单位与 v4 相同，追加：
+
+```csv
+spin_soft_wz_milli,spin_hard_wz_milli,spin_effective_wz_milli,spin_body_hard_mrps,spin_wheel_hard_rpm,spin_limit_state,spin_extension_enabled,spin_extension_qualified,spin_extension_confirm_ms,spin_power_gap_cw,spin_max_tracking_error_rpm,spin_body_tracking_error_mrps,spin_capability_latched,spin_capability_release_ms,spin_peak_wheel_rpm,spin_peak_body_mrps
+```
+
+上限状态依次为 0 日常范围、1 软上限确认中、2 扩展中、3 跟随受限、4 已达硬上限，与功率阶段独立。原因位在原 0–9 位后追加：10 软上限等待、11 整车速度硬上限、12 轮速硬上限、13 平移超门槛、14 扩展关闭 / 未标定；v5 校验范围为 0–32767。峰值为本次自转期间绝对轮速和整车转速的最大观测值。
+
+速度读数附近展示实际生效的软 / 硬 / 当前上限、物理边界、确认时间、功率缺口、跟随误差与缓冲锁存。物理边界为零显示“未标定”；旧 v1–v4 上限诊断显示缺失。Wz 是原指令单位，不能解释为圈/s。扩展默认关闭，配置和实车步骤见 [功率优先策略](../../docs/chassis-power-priority.md)。
 
 固件统一指针 `chassis_velocity->target/actual`、完整列顺序、几何配置和快照使用见 [底盘速度说明](../../docs/chassis-velocity.md)。

@@ -4,8 +4,8 @@ async (page) => {
   await page.goto('http://127.0.0.1:4173');
   check(await page.locator('#velocity-status').count()===1,'Missing chassis velocity panel');
   await page.evaluate(()=>{
-    window.velocityRow=(version=4,extras={})=>{
-      const P=TelemetryProtocol,fields=version===3?P.V3_FIELDS:P.FIELDS;
+    window.velocityRow=(version=5,extras={})=>{
+      const P=TelemetryProtocol,fields=version===3?P.V3_FIELDS:version===4?P.V4_FIELDS:P.FIELDS;
       const row={...Object.fromEntries(fields.map(k=>[k,0])),version,seq:1,tick:1000,
         velocity_actual_valid:1,velocity_actual_tick_ms:995,velocity_actual_vx_mmps:1234,
         velocity_actual_vy_mmps:-567,velocity_actual_wz_mrps:-1250,

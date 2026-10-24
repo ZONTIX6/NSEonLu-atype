@@ -7,7 +7,9 @@
   const V1_FIELDS = Object.freeze(('version,seq,tick,tx_drop_count,chassis_valid,chassis_tick_ms,chassis_mode,vx_cmd_milli,vy_cmd_milli,wz_cmd_milli,rc_online,rc_age_ms,rc_lx,rc_ly,rc_rx,rc_ry,rc_dial,rc_sw_left,rc_sw_right,mouse_x,mouse_y,mouse_left,mouse_right,keys,model_tick_ms,motor_online_mask,motor_enabled_mask,rpm_lf,rpm_rf,rpm_lb,rpm_rb,target_lf_rpm,target_rf_rpm,target_lb_rpm,target_rb_rpm,i_lf_cmd,i_rf_cmd,i_lb_cmd,i_rb_cmd,i_lf_fb,i_rf_fb,i_lb_fb,i_rb_fb,power_valid,p_unlimited_cw,p_limited_cw,effective_limit_cw,p_meter_cw,meter_online,meter_age_ms,nominal_budget_cw,target_power_cw,power_source,referee_online,referee_limit_cw,buffer_j,buffer_age_ms,buffer_control_enabled,buffer_estimate_valid,buffer_lower_cj,buffer_predicted_cj,buffer_recovering,cap_online,cap_output_enabled,cap_error,cap_energy_pm,cap_chassis_cw,cap_limit_cw,cap_age_ms,cap_input_online,cap_input_cw,cap_input_age_ms').split(','));
   const V2_FIELDS = Object.freeze([...V1_FIELDS, ...'imu_valid,imu_age_ms,imu_yaw_mdeg,imu_pitch_mdeg,imu_roll_mdeg,imu_yaw_total_mdeg,imu_gx_mdps,imu_gy_mdps,imu_gz_mdps,imu_ax_mmps2,imu_ay_mmps2,imu_az_mmps2,chassis_offset_mdeg'.split(',')]);
   const V3_FIELDS = Object.freeze([...V2_FIELDS, ...'spin_power_phase,spin_block_reasons,spin_base_power_cw,spin_buffer_request_cw,spin_buffer_grant_cw,spin_base_confirm_ms,spin_filtered_power_cw,spin_power_ceiling_cw,spin_slow_correction_cw,spin_gain_milli,spin_rise_milli,spin_fall_milli,spin_lpf_ms,spin_settle_ms,power_tuning_source,spin_tuning_source'.split(',')]);
-  const FIELDS = Object.freeze([...V3_FIELDS, ...'velocity_actual_valid,velocity_actual_tick_ms,velocity_actual_vx_mmps,velocity_actual_vy_mmps,velocity_actual_wz_mrps,velocity_target_valid,velocity_target_tick_ms,velocity_target_vx_mmps,velocity_target_vy_mmps,velocity_target_wz_mrps'.split(',')]);
+  const V4_FIELDS = Object.freeze([...V3_FIELDS, ...'velocity_actual_valid,velocity_actual_tick_ms,velocity_actual_vx_mmps,velocity_actual_vy_mmps,velocity_actual_wz_mrps,velocity_target_valid,velocity_target_tick_ms,velocity_target_vx_mmps,velocity_target_vy_mmps,velocity_target_wz_mrps'.split(',')]);
+  const FIELDS = Object.freeze([...V4_FIELDS, ...'spin_soft_wz_milli,spin_hard_wz_milli,spin_effective_wz_milli,spin_body_hard_mrps,spin_wheel_hard_rpm,spin_limit_state,spin_extension_enabled,spin_extension_qualified,spin_extension_confirm_ms,spin_power_gap_cw,spin_max_tracking_error_rpm,spin_body_tracking_error_mrps,spin_capability_latched,spin_capability_release_ms,spin_peak_wheel_rpm,spin_peak_body_mrps'.split(',')]);
+  const V4_HEADER = V4_FIELDS.join(',');
   const V3_HEADER = V3_FIELDS.join(',');
   const V2_HEADER = V2_FIELDS.join(',');
   const V1_HEADER = V1_FIELDS.join(',');
@@ -15,7 +17,7 @@
   const UINT_MAX = 4294967295;
   const HISTORY_MS = 600000, MAX_SAMPLES = 30000;
   const SIGNED = /^(velocity_(actual|target)_(vx_mmps|vy_mmps|wz_mrps)|vx_cmd|vy_cmd|wz_cmd|rc_lx|rc_ly|rc_rx|rc_ry|rc_dial|mouse_x|mouse_y|rpm_|target_.*_rpm|i_|p_|effective_limit_cw|nominal_budget_cw|target_power_cw|referee_limit_cw|buffer_lower_cj|buffer_predicted_cj|cap_chassis_cw|cap_limit_cw|cap_input_cw|cap_energy_pm|imu_(yaw|pitch|roll|g[xyz]|a[xyz])|chassis_offset_mdeg)/;
-  const FLAGS = new Set(('velocity_actual_valid velocity_target_valid imu_valid chassis_valid rc_online mouse_left mouse_right power_valid meter_online referee_online buffer_control_enabled buffer_estimate_valid buffer_recovering cap_online cap_output_enabled cap_input_online').split(' '));
+  const FLAGS = new Set(('spin_extension_enabled spin_extension_qualified spin_capability_latched velocity_actual_valid velocity_target_valid imu_valid chassis_valid rc_online mouse_left mouse_right power_valid meter_online referee_online buffer_control_enabled buffer_estimate_valid buffer_recovering cap_online cap_output_enabled cap_input_online').split(' '));
 
   class StreamParser {
     constructor({onSample = () => {}, onError = () => {}, onControl = () => {}} = {}) {
@@ -42,7 +44,7 @@
           this.pending = '';
           this.dropping = false;
         } else if (!this.dropping) {
-          if (this.pending.length >= 2047) {
+          if (this.pending.length >= 3071) {
             this.pending = '';
             this.dropping = true;
             this.stats.oversized++;
@@ -55,9 +57,9 @@
     parseLine(line) {
       if (!line) return;
       if (line.startsWith('@T1,') || line.startsWith('@A1,') || line.startsWith('@A2,')) {this.onControl(line);return;}
-      if (line === HEADER || line === V3_HEADER || line === V1_HEADER || line === V2_HEADER) {
-        this.fields = line === HEADER ? FIELDS : line === V3_HEADER ? V3_FIELDS : line === V2_HEADER ? V2_FIELDS : V1_FIELDS;
-        this.version = line === HEADER ? 4 : line === V3_HEADER ? 3 : line === V2_HEADER ? 2 : 1;
+      if (line === HEADER || line === V4_HEADER || line === V3_HEADER || line === V1_HEADER || line === V2_HEADER) {
+        this.fields = line === HEADER ? FIELDS : line === V4_HEADER ? V4_FIELDS : line === V3_HEADER ? V3_FIELDS : line === V2_HEADER ? V2_FIELDS : V1_FIELDS;
+        this.version = line === HEADER ? 5 : line === V4_HEADER ? 4 : line === V3_HEADER ? 3 : line === V2_HEADER ? 2 : 1;
         this.stats.headers++; return;
       }
       if (line.startsWith('version,')) this.fields = null;
@@ -67,7 +69,7 @@
       const row = {};
       for (let i = 0; i < cells.length; i++) {
         const key = this.fields[i], signed = SIGNED.test(key) ||
-          key.startsWith('spin_') && /_(cw|milli)$/.test(key), value = Number(cells[i]);
+          key.startsWith('spin_') && /_(cw|milli|mrps|rpm)$/.test(key), value = Number(cells[i]);
         if (!/^-?\d+$/.test(cells[i]) || !Number.isInteger(value) || value < (signed ? -2147483648 : 0) || value > (signed ? 2147483647 : UINT_MAX) || (FLAGS.has(key) && value > 1)) {
           this.stats.bad++; this.error('value'); return;
         }
@@ -75,8 +77,9 @@
       }
       if (row.version !== this.version) {this.stats.unsupported++; this.error('version'); return;}
       if (row.motor_online_mask > 15 || row.motor_enabled_mask > 15 || row.chassis_mode > 3 || row.power_source > 1) {this.stats.bad++; this.error('enum'); return;}
-      if (row.version>=3 && (row.spin_power_phase>4 || row.spin_block_reasons>1023 ||
+      if (row.version>=3 && (row.spin_power_phase>4 || row.spin_block_reasons>(row.version>=5?32767:1023) ||
           row.power_tuning_source>3 || row.spin_tuning_source>3)) {this.stats.bad++; this.error('enum');return;}
+      if (row.version>=5 && row.spin_limit_state>4) {this.stats.bad++;this.error('enum');return;}
       row.rawLine = line;
       this.stats.samples++;
       this.onSample(row);
@@ -152,7 +155,16 @@
       return entry;
     }
     isStale(nowMs) { return !this.latest || nowMs - this.latest.arrivalMs > 500; }
-    exportCSV() {return HEADER + '\r\n' + this.samples.map(sample => sample.version === 4 && sample.rawLine || FIELDS.map(key => key === 'version' ? 4 : sample[key] ?? (key === 'imu_age_ms' ? UINT_MAX : key === 'chassis_offset_mdeg' ? -2147483648 : 0)).join(',')).join('\r\n') + (this.samples.length ? '\r\n' : '');}
+    exportCSV() {
+      if (!this.samples.length) return HEADER+'\r\n';
+      const lines=[];let version=null;
+      for (const sample of this.samples) {
+        const fields=({1:V1_FIELDS,2:V2_FIELDS,3:V3_FIELDS,4:V4_FIELDS,5:FIELDS})[sample.version];
+        if(version!==sample.version) {lines.push(fields.join(','));version=sample.version;}
+        lines.push(sample.rawLine || fields.map(key=>sample[key]??0).join(','));
+      }
+      return lines.join('\r\n')+'\r\n';
+    }
   }
   class DisplayState {
     constructor(store) { this.store = store; this.frozen = null; }
@@ -161,5 +173,5 @@
     resume() { this.frozen = null; }
     snapshot(now) { return this.frozen || {samples: this.store.samples, latest: this.store.latest, at: now}; }
   }
-  return {FIELDS, HEADER, V3_FIELDS, V3_HEADER, V1_FIELDS, V1_HEADER, V2_FIELDS, V2_HEADER, UINT_MAX, HISTORY_MS, MAX_SAMPLES, StreamParser, TelemetryStore, DisplayState, normalizeSample, normalizeForDisplay, displayValue};
+  return {FIELDS, HEADER, V4_FIELDS, V4_HEADER, V3_FIELDS, V3_HEADER, V1_FIELDS, V1_HEADER, V2_FIELDS, V2_HEADER, UINT_MAX, HISTORY_MS, MAX_SAMPLES, StreamParser, TelemetryStore, DisplayState, normalizeSample, normalizeForDisplay, displayValue};
 });

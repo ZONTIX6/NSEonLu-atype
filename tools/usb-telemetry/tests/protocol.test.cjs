@@ -4,14 +4,14 @@ let P = {};
 try { P = require('../protocol.js'); } catch (error) { if (error.code !== 'MODULE_NOT_FOUND') throw error; }
 
 function sample(overrides = {}) {
-  return Object.fromEntries(P.FIELDS.map(name => [name, 0]).concat(Object.entries({version: 4, tick: 1000, seq: 1, chassis_valid: 1, chassis_tick_ms: 1000, rc_online: 1, power_valid: 1, model_tick_ms: 1000, meter_online: 1, referee_online: 1, buffer_estimate_valid: 1, cap_online: 1, cap_input_online: 1, motor_online_mask: 15, motor_enabled_mask: 15, ...overrides})));
+  return Object.fromEntries(P.FIELDS.map(name => [name, 0]).concat(Object.entries({version: 5, tick: 1000, seq: 1, chassis_valid: 1, chassis_tick_ms: 1000, rc_online: 1, power_valid: 1, model_tick_ms: 1000, meter_online: 1, referee_online: 1, buffer_estimate_valid: 1, cap_online: 1, cap_input_online: 1, motor_online_mask: 15, motor_enabled_mask: 15, ...overrides})));
 }
 function line(values) { return P.FIELDS.map(key => values[key]).join(','); }
 
-test('exports the complete version 4 schema', () => {
+test('exports the complete version 5 schema', () => {
   assert.equal(typeof P.StreamParser, 'function');
-  assert.equal(P.FIELDS.length, 111);
-  assert.equal(new Set(P.FIELDS).size, 111);
+  assert.equal(P.FIELDS.length, 127);
+  assert.equal(new Set(P.FIELDS).size, 127);
   assert.equal(P.FIELDS[84], 'chassis_offset_mdeg');
 });
 test('streams arbitrary bytes, split CRLF, repeated headers and multiple rows', () => {
@@ -30,9 +30,9 @@ test('discards malformed / unsupported / oversized rows and recovers on next new
   parser.push(line(sample({seq: -1})) + '\n');
   parser.push(line(sample({p_meter_cw: 'NaN'})) + '\n');
   parser.push(line(sample({tick: 4294967296})) + '\n');
-  parser.push(line(sample({version: 5})) + '\n');
+  parser.push(line(sample({version: 6})) + '\n');
   parser.push('0'.repeat(10000));
-  assert.ok(parser.pendingLength <= 2048);
+  assert.ok(parser.pendingLength <= 3072);
   parser.push('\n' + line(sample()) + '\n');
   assert.equal(rows.length, 1);
   assert.equal(parser.stats.bad, 4);

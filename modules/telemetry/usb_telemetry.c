@@ -69,6 +69,22 @@ static void Collect(uint32_t now_ms)
         sample.spin_fall_milli=USBTelemetryFixed(chassis.spin_fall,1000);
         sample.spin_lpf_ms=USBTelemetryFixed(chassis.spin_lpf_s,1000);
         sample.spin_settle_ms=USBTelemetryFixed(chassis.spin_settle_s,1000);
+        sample.spin_soft_wz_milli=USBTelemetryFixed(chassis.spin_soft_wz,1000);
+        sample.spin_hard_wz_milli=USBTelemetryFixed(chassis.spin_hard_wz,1000);
+        sample.spin_effective_wz_milli=USBTelemetryFixed(chassis.spin_effective_wz,1000);
+        sample.spin_body_hard_mrps=USBTelemetryFixed(chassis.spin_body_hard_rps,1000);
+        sample.spin_wheel_hard_rpm=USBTelemetryFixed(chassis.spin_wheel_hard_rpm,1);
+        sample.spin_limit_state=chassis.spin_limit_state;
+        sample.spin_extension_enabled=chassis.spin_extension_enabled;
+        sample.spin_extension_qualified=chassis.spin_extension_qualified;
+        sample.spin_extension_confirm_ms=USBTelemetryFixed(chassis.spin_extension_confirm_s,1000);
+        sample.spin_power_gap_cw=USBTelemetryFixed(chassis.spin_power_gap_w,100);
+        sample.spin_max_tracking_error_rpm=USBTelemetryFixed(chassis.spin_max_tracking_error_rpm,1);
+        sample.spin_body_tracking_error_mrps=USBTelemetryFixed(chassis.spin_body_tracking_error_rps,1000);
+        sample.spin_capability_latched=chassis.spin_capability_latched;
+        sample.spin_capability_release_ms=USBTelemetryFixed(chassis.spin_capability_release_s,1000);
+        sample.spin_peak_wheel_rpm=USBTelemetryFixed(chassis.spin_peak_wheel_rpm,1);
+        sample.spin_peak_body_mrps=USBTelemetryFixed(chassis.spin_peak_body_rps,1000);
     }
     if (RemoteControlGetSnapshot(&remote)) {
         sample.rc_online = remote.online;
