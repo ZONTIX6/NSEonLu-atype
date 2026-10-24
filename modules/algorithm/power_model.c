@@ -218,6 +218,38 @@ static void AllocatePower(const ChassisPowerAlgorithmConfig_s *config,
     }
 }
 
+static bool RedistributeUnusedPower(const MotorPowerModelConfig_s models[POWER_MODEL_MOTOR_COUNT],
+                                   const ChassisPowerInput_s *input,
+                                   ChassisPowerOutput_s *output)
+{
+    float needs[POWER_MODEL_MOTOR_COUNT];
+    float unused = 0.0f;
+    float shortage = 0.0f;
+    for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
+    {
+        const float zero_current_power = PowerModelPredict(&models[i], 0.0f, input->speed_rpm[i]);
+        if (!isfinite(zero_current_power))
+            return false;
+        /* Reserve zero-current losses; negative predictions cannot fund another wheel. */
+        needs[i] = fmaxf(0.0f, fmaxf(zero_current_power, output->predicted_unlimited_power_w[i]));
+        unused += fmaxf(0.0f, output->allocated_power_w[i] - needs[i]);
+        shortage += fmaxf(0.0f, needs[i] - output->allocated_power_w[i]);
+    }
+    if (!isfinite(unused) || !isfinite(shortage))
+        return false;
+    if (unused <= 0.0f || shortage <= 0.0f)
+        return true;
+
+    const float fraction = fminf(1.0f, unused / shortage);
+    for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
+    {
+        const float allocation = output->allocated_power_w[i];
+        output->allocated_power_w[i] = fminf(allocation, needs[i]) +
+            fmaxf(0.0f, needs[i] - allocation) * fraction;
+    }
+    return true;
+}
+
 bool PowerModelApply(const MotorPowerModelConfig_s models[POWER_MODEL_MOTOR_COUNT],
                       const ChassisPowerAlgorithmConfig_s *config,
                       const ChassisPowerInput_s *input,
@@ -267,8 +299,6 @@ bool PowerModelApply(const MotorPowerModelConfig_s models[POWER_MODEL_MOTOR_COUN
         return false;
     }
 
-    AllocatePower(config, input, output);
-
     for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
     {
         const float desired_current = ClampFloat(input->desired_current[i],
@@ -281,7 +311,20 @@ bool PowerModelApply(const MotorPowerModelConfig_s models[POWER_MODEL_MOTOR_COUN
             ResetOutput(output, POWER_MODEL_STATUS_NUMERIC_ERROR);
             return false;
         }
+    }
 
+    AllocatePower(config, input, output);
+    if (!RedistributeUnusedPower(models, input, output))
+    {
+        ResetOutput(output, POWER_MODEL_STATUS_NUMERIC_ERROR);
+        return false;
+    }
+
+    for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
+    {
+        const float desired_current = ClampFloat(input->desired_current[i],
+                                                 -config->max_current_command,
+                                                 config->max_current_command);
         output->current_scale[i] = 1.0f;
         if (output->predicted_unlimited_power_w[i] > output->allocated_power_w[i])
         {

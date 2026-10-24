@@ -1,5 +1,6 @@
 #include "power_model.h"
 
+#include <float.h>
 #include <math.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -259,6 +260,147 @@ static void TestNoLimitKeepsCurrent(void)
     ASSERT_NEAR(1.0f, output.current_scale[0], 1.0e-6f);
 }
 
+static void TestIdleWheelPowerCanBeBorrowed(void)
+{
+    MotorPowerModelConfig_s models[POWER_MODEL_MOTOR_COUNT];
+    ChassisPowerInput_s input = ValidInput();
+    ChassisPowerOutput_s output;
+    ChassisPowerAlgorithmConfig_s config = algorithm_config;
+    config.safety_factor = 1.0f;
+    const MotorPowerModelConfig_s linear_model = {.k1 = 1.0f, .current_conversion = 1.0f};
+    const float demand[4] = {10.0f, 6.0f, 15.0f, 11.0f};
+    FillModels(models, linear_model);
+    memcpy(input.desired_current, demand, sizeof demand);
+    input.referee_power_limit_w = 49.0f;
+
+    ASSERT_TRUE(PowerModelApply(models, &config, &input, &output));
+    printf("49 W asymmetric demand: third wheel %.2f / 15 W, final total %.2f / 42 W\n",
+           (double)output.predicted_limited_power_w[2],
+           (double)Sum4(output.predicted_limited_power_w));
+    for (unsigned w = 0; w < POWER_MODEL_MOTOR_COUNT; ++w)
+    {
+        ASSERT_NEAR(demand[w], output.limited_current[w], 1.0e-5f);
+        ASSERT_NEAR(1.0f, output.current_scale[w], 1.0e-6f);
+    }
+    ASSERT_NEAR(42.0f, Sum4(output.predicted_limited_power_w), 1.0e-4f);
+    ASSERT_TRUE(Sum4(output.allocated_power_w) <= 49.0001f);
+}
+
+static void TestBorrowingRetainsTotalBudgetAndAllocationPolicies(void)
+{
+    static const struct {
+        float budget;
+        float demand[4];
+        float errors[4];
+        float expected[4];
+    } cases[] = {
+        {49, {10, 6, 40, 11}, {100, 100, 100, 100}, {10, 6, 22, 11}},
+        {49, {25, 1, 25, 1}, {100, 100, 100, 100}, {23.5f, 1, 23.5f, 1}},
+        {50, {40, 1, 1, 1}, {700, 100, 100, 100}, {40, 1, 1, 1}},
+        {100, {80, 1, 1, 1}, {700, 100, 100, 100}, {80, 1, 1, 1}},
+    };
+    MotorPowerModelConfig_s models[4];
+    FillModels(models, (MotorPowerModelConfig_s){.k1 = 1, .current_conversion = 1});
+    ChassisPowerAlgorithmConfig_s config = algorithm_config;
+    config.safety_factor = 1;
+    for (size_t k = 0; k < sizeof cases / sizeof cases[0]; ++k)
+    {
+        ChassisPowerInput_s input = ValidInput();
+        ChassisPowerOutput_s output;
+        input.referee_power_limit_w = cases[k].budget;
+        memcpy(input.desired_current, cases[k].demand, sizeof input.desired_current);
+        memcpy(input.speed_error_rpm, cases[k].errors, sizeof input.speed_error_rpm);
+        ASSERT_TRUE(PowerModelApply(models, &config, &input, &output));
+        for (unsigned w = 0; w < 4; ++w)
+            ASSERT_NEAR(cases[k].expected[w], output.limited_current[w], 1.0e-4f);
+        ASSERT_TRUE(Sum4(output.predicted_limited_power_w) <= cases[k].budget + 1.0e-4f);
+        ASSERT_TRUE(Sum4(output.allocated_power_w) <= cases[k].budget + 1.0e-4f);
+    }
+}
+
+static void TestBorrowingReservesZeroCurrentLossAndNeverCreditsNegativePower(void)
+{
+    MotorPowerModelConfig_s models[4];
+    ChassisPowerInput_s input = ValidInput();
+    ChassisPowerOutput_s output;
+    ChassisPowerAlgorithmConfig_s config = algorithm_config;
+    config.safety_factor = 1;
+    input.referee_power_limit_w = 40;
+    memset(input.desired_current, 0, sizeof input.desired_current);
+    input.desired_current[0] = 80;
+    FillModels(models, (MotorPowerModelConfig_s){.k0 = 10, .current_conversion = 1});
+    models[0] = (MotorPowerModelConfig_s){.k1 = 1, .current_conversion = 1};
+    ASSERT_TRUE(PowerModelApply(models, &config, &input, &output));
+    ASSERT_NEAR(10, output.limited_current[0], 1.0e-4f);
+    ASSERT_NEAR(40, Sum4(output.predicted_limited_power_w), 1.0e-4f);
+
+    for (unsigned w = 1; w < 4; ++w) models[w].k0 = -10;
+    ASSERT_TRUE(PowerModelApply(models, &config, &input, &output));
+    ASSERT_NEAR(40, output.limited_current[0], 1.0e-4f);
+    ASSERT_NEAR(40, Sum4(output.allocated_power_w), 1.0e-4f);
+}
+
+static void TestBorrowingUsesHardClampedDemand(void)
+{
+    MotorPowerModelConfig_s models[4];
+    FillModels(models, (MotorPowerModelConfig_s){.k1 = 1, .current_conversion = 1});
+    ChassisPowerAlgorithmConfig_s config = algorithm_config;
+    config.safety_factor = 1;
+    config.max_current_command = 100;
+    ChassisPowerInput_s input = ValidInput();
+    ChassisPowerOutput_s output;
+    memset(input.desired_current, 0, sizeof input.desired_current);
+    input.desired_current[0] = -200;
+    input.referee_power_limit_w = 200;
+    ASSERT_TRUE(PowerModelApply(models, &config, &input, &output));
+    ASSERT_NEAR(-100, output.limited_current[0], 1.0e-4f);
+    ASSERT_NEAR(100, output.predicted_unlimited_power_w[0], 1.0e-4f);
+    ASSERT_NEAR(100, Sum4(output.allocated_power_w), 1.0e-4f);
+}
+
+static void TestNonfiniteZeroCurrentLossFailsSafe(void)
+{
+    MotorPowerModelConfig_s models[4];
+    FillModels(models, (MotorPowerModelConfig_s){.current_conversion = 1});
+    models[0] = (MotorPowerModelConfig_s){.k0 = FLT_MAX, .k1 = -FLT_MAX,
+        .k5 = FLT_MAX, .current_conversion = 1};
+    ChassisPowerInput_s input = ValidInput();
+    ChassisPowerOutput_s output;
+    input.desired_current[0] = input.speed_rpm[0] = 1;
+    ASSERT_FALSE(PowerModelApply(models, &algorithm_config, &input, &output));
+    ASSERT_EQ_INT(POWER_MODEL_STATUS_NUMERIC_ERROR, output.status);
+    ASSERT_NEAR(0, Sum4(output.limited_current), 1.0e-6f);
+}
+
+static void TestRedistributionKeepsRecalibratedModelWithinBudget(void)
+{
+    MotorPowerModelConfig_s models[4];
+    FillModels(models, m3508_model);
+    uint32_t seed = 20261024U;
+    for (unsigned k = 0; k < 2000; ++k)
+    {
+        ChassisPowerInput_s input = ValidInput();
+        ChassisPowerOutput_s output;
+        input.referee_power_limit_w = 20.0f + (float)(k % 181U);
+        for (unsigned w = 0; w < 4; ++w)
+        {
+            seed = seed * 1664525U + 1013904223U;
+            input.desired_current[w] = (float)(seed % 40001U) - 20000.0f;
+            seed = seed * 1664525U + 1013904223U;
+            input.speed_rpm[w] = (float)(seed % 3001U);
+        }
+        ASSERT_TRUE(PowerModelApply(models, &algorithm_config, &input, &output));
+        ASSERT_TRUE(Sum4(output.allocated_power_w) <= output.effective_limit_w + 1.0e-3f);
+        ASSERT_TRUE(Sum4(output.predicted_limited_power_w) <= output.effective_limit_w + 1.0e-3f);
+        for (unsigned w = 0; w < 4; ++w)
+        {
+            ASSERT_TRUE(output.current_scale[w] >= 0 && output.current_scale[w] <= 1);
+            ASSERT_TRUE(fabsf(output.limited_current[w]) <= 15000.001f);
+            ASSERT_TRUE(fabsf(output.limited_current[w]) <= fabsf(input.desired_current[w]) + 1.0e-3f);
+        }
+    }
+}
+
 static void TestQuadraticLimitScalesCurrent(void)
 {
     MotorPowerModelConfig_s models[POWER_MODEL_MOTOR_COUNT];
@@ -281,7 +423,7 @@ static void TestQuadraticLimitScalesCurrent(void)
     input.desired_current[2] = 0.0f;
     input.desired_current[3] = 0.0f;
     input.speed_rpm[0] = 0.0f;
-    input.referee_power_limit_w = 100.0f;
+    input.referee_power_limit_w = 25.0f;
 
     ASSERT_TRUE(PowerModelApply(models, &config, &input, &output));
     ASSERT_NEAR(5.0f, output.limited_current[0], 1.0e-4f);
@@ -311,7 +453,7 @@ static void TestLinearBranchActuallyScalesCurrent(void)
     input.desired_current[2] = 0.0f;
     input.desired_current[3] = 0.0f;
     input.speed_rpm[0] = 0.0f;
-    input.referee_power_limit_w = 40.0f;
+    input.referee_power_limit_w = 10.0f;
 
     ASSERT_TRUE(PowerModelApply(models, &config, &input, &output));
     ASSERT_NEAR(5.0f, output.limited_current[0], 1.0e-4f);
@@ -536,6 +678,12 @@ int main(void)
     TestLargeErrorUsesReservedPower();
     TestLowBudgetUsesPureErrorRatio();
     TestNoLimitKeepsCurrent();
+    TestIdleWheelPowerCanBeBorrowed();
+    TestBorrowingRetainsTotalBudgetAndAllocationPolicies();
+    TestBorrowingReservesZeroCurrentLossAndNeverCreditsNegativePower();
+    TestBorrowingUsesHardClampedDemand();
+    TestNonfiniteZeroCurrentLossFailsSafe();
+    TestRedistributionKeepsRecalibratedModelWithinBudget();
     TestQuadraticLimitScalesCurrent();
     TestLinearBranchActuallyScalesCurrent();
     TestNegativeDiscriminantZerosCurrent();

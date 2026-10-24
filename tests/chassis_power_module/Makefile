@@ -9,11 +9,17 @@ $(TARGET): $(SOURCE)
 	$(CC) $(CFLAGS) $(INCLUDES) $(SOURCE) -lm -o $@
 test_spin_policy.exe: test_spin_policy.c $(filter-out test_chassis_power_module.c,$(SOURCE)) ../../modules/telemetry/rtt_telemetry.c ../../modules/algorithm/chassis_spin.c
 	$(CC) $(CFLAGS) $(INCLUDES) -DCHASSIS_SPIN_MODE=1 $^ -lm -o $@
-test: $(TARGET) test_spin_policy.exe
+test_idle_power.exe: test_idle_power.c $(filter-out test_chassis_power_module.c,$(SOURCE)) ../../modules/telemetry/rtt_telemetry.c
+	$(CC) $(CFLAGS) $(INCLUDES) $^ -lm -o $@
+test: $(TARGET) test_spin_policy.exe test_idle_power.exe
 	./$(TARGET)
 	./test_spin_policy.exe
 	./test_spin_policy.exe direct50
 	./test_spin_policy.exe biased
 	./test_spin_policy.exe demand50
+	./test_idle_power.exe 0
+	./test_idle_power.exe 1
+	./test_idle_power.exe 2
+	./test_idle_power.exe 3
 
 SOURCE += ../../modules/telemetry/rtt_telemetry.c
