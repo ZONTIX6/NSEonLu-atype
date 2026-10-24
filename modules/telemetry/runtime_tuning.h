@@ -6,6 +6,9 @@
 #include "tuning_storage.h"
 
 typedef enum { TUNING_PID, TUNING_POWER, TUNING_SPIN, TUNING_GROUP_COUNT } TuningGroup;
+typedef enum { TUNING_SOURCE_COMPILED, TUNING_SOURCE_FILE, TUNING_SOURCE_FLASH,
+               TUNING_SOURCE_RUNTIME } TuningSource;
+TuningSource RuntimeTuningSource(TuningGroup group);
 #define TUNING_MAX_VALUES 24U
 #define TUNING_LINE_SIZE 512U
 /* PID: each LF/RF/LB/RB has Kp, Ki, Kd, MaxOut, IntegralLimit, DeadBand.

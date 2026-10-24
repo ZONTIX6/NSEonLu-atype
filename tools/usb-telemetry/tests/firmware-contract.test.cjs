@@ -18,7 +18,7 @@ test('actual firmware CSV crosses arbitrary byte boundaries and displays correct
   assert.equal(received.length, 1);
   const sample = received[0];
   assert.equal(sample.seq, 42);
-  assert.equal(sample.version, 2);
+  assert.equal(sample.version, 3);
   assert.equal(P.displayValue(sample, 'imu_yaw_mdeg'), -12.345);
   assert.equal(P.displayValue(sample, 'imu_yaw_total_mdeg'), 721.234);
   assert.equal(P.displayValue(sample, 'imu_gx_mdps'), -180.5);

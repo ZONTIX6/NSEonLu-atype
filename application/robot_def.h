@@ -86,7 +86,7 @@
 
 // 原跟随档策略：0 保留车身跟转；1 以云台为前方平移，车身不主动跟转。
 #ifndef CHASSIS_FOLLOW_MODE
-#define CHASSIS_FOLLOW_MODE 1
+#define CHASSIS_FOLLOW_MODE 0
 #endif
 #if CHASSIS_FOLLOW_MODE != 0 && CHASSIS_FOLLOW_MODE != 1
 #error CHASSIS_FOLLOW_MODE must be 0 or 1.

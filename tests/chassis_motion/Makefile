@@ -12,7 +12,7 @@ TARGETS := test_default.exe test_original.exe test_gimbal_forward.exe
 all: $(TARGETS)
 
 test_default.exe: $(SOURCE) $(HEADERS)
-	$(CC) $(CFLAGS) $(INCLUDES) -DEXPECT_GIMBAL_FORWARD=1 $(SOURCE) -lm -o $@
+	$(CC) $(CFLAGS) $(INCLUDES) -DEXPECT_GIMBAL_FORWARD=0 $(SOURCE) -lm -o $@
 test_original.exe: $(SOURCE) $(HEADERS)
 	$(CC) $(CFLAGS) $(INCLUDES) -DCHASSIS_FOLLOW_MODE=0 -DEXPECT_GIMBAL_FORWARD=0 $(SOURCE) -lm -o $@
 test_gimbal_forward.exe: $(SOURCE) $(HEADERS)

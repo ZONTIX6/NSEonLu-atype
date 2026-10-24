@@ -5,7 +5,9 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
   const V1_FIELDS = Object.freeze(('version,seq,tick,tx_drop_count,chassis_valid,chassis_tick_ms,chassis_mode,vx_cmd_milli,vy_cmd_milli,wz_cmd_milli,rc_online,rc_age_ms,rc_lx,rc_ly,rc_rx,rc_ry,rc_dial,rc_sw_left,rc_sw_right,mouse_x,mouse_y,mouse_left,mouse_right,keys,model_tick_ms,motor_online_mask,motor_enabled_mask,rpm_lf,rpm_rf,rpm_lb,rpm_rb,target_lf_rpm,target_rf_rpm,target_lb_rpm,target_rb_rpm,i_lf_cmd,i_rf_cmd,i_lb_cmd,i_rb_cmd,i_lf_fb,i_rf_fb,i_lb_fb,i_rb_fb,power_valid,p_unlimited_cw,p_limited_cw,effective_limit_cw,p_meter_cw,meter_online,meter_age_ms,nominal_budget_cw,target_power_cw,power_source,referee_online,referee_limit_cw,buffer_j,buffer_age_ms,buffer_control_enabled,buffer_estimate_valid,buffer_lower_cj,buffer_predicted_cj,buffer_recovering,cap_online,cap_output_enabled,cap_error,cap_energy_pm,cap_chassis_cw,cap_limit_cw,cap_age_ms,cap_input_online,cap_input_cw,cap_input_age_ms').split(','));
-  const FIELDS = Object.freeze([...V1_FIELDS, ...'imu_valid,imu_age_ms,imu_yaw_mdeg,imu_pitch_mdeg,imu_roll_mdeg,imu_yaw_total_mdeg,imu_gx_mdps,imu_gy_mdps,imu_gz_mdps,imu_ax_mmps2,imu_ay_mmps2,imu_az_mmps2,chassis_offset_mdeg'.split(',')]);
+  const V2_FIELDS = Object.freeze([...V1_FIELDS, ...'imu_valid,imu_age_ms,imu_yaw_mdeg,imu_pitch_mdeg,imu_roll_mdeg,imu_yaw_total_mdeg,imu_gx_mdps,imu_gy_mdps,imu_gz_mdps,imu_ax_mmps2,imu_ay_mmps2,imu_az_mmps2,chassis_offset_mdeg'.split(',')]);
+  const FIELDS = Object.freeze([...V2_FIELDS, ...'spin_power_phase,spin_block_reasons,spin_base_power_cw,spin_buffer_request_cw,spin_buffer_grant_cw,spin_base_confirm_ms,spin_filtered_power_cw,spin_power_ceiling_cw,spin_slow_correction_cw,spin_gain_milli,spin_rise_milli,spin_fall_milli,spin_lpf_ms,spin_settle_ms,power_tuning_source,spin_tuning_source'.split(',')]);
+  const V2_HEADER = V2_FIELDS.join(',');
   const V1_HEADER = V1_FIELDS.join(',');
   const HEADER = FIELDS.join(',');
   const UINT_MAX = 4294967295;
@@ -51,9 +53,9 @@
     parseLine(line) {
       if (!line) return;
       if (line.startsWith('@T1,') || line.startsWith('@A1,') || line.startsWith('@A2,')) {this.onControl(line);return;}
-      if (line === HEADER || line === V1_HEADER) {
-        this.fields = line === HEADER ? FIELDS : V1_FIELDS;
-        this.version = line === HEADER ? 2 : 1;
+      if (line === HEADER || line === V1_HEADER || line === V2_HEADER) {
+        this.fields = line === HEADER ? FIELDS : line === V2_HEADER ? V2_FIELDS : V1_FIELDS;
+        this.version = line === HEADER ? 3 : line === V2_HEADER ? 2 : 1;
         this.stats.headers++; return;
       }
       if (line.startsWith('version,')) this.fields = null;
@@ -62,7 +64,8 @@
       if (cells.length !== this.fields.length) {this.stats.bad++; this.error('columns'); return;}
       const row = {};
       for (let i = 0; i < cells.length; i++) {
-        const key = this.fields[i], signed = SIGNED.test(key), value = Number(cells[i]);
+        const key = this.fields[i], signed = SIGNED.test(key) ||
+          key.startsWith('spin_') && /_(cw|milli)$/.test(key), value = Number(cells[i]);
         if (!/^-?\d+$/.test(cells[i]) || !Number.isInteger(value) || value < (signed ? -2147483648 : 0) || value > (signed ? 2147483647 : UINT_MAX) || (FLAGS.has(key) && value > 1)) {
           this.stats.bad++; this.error('value'); return;
         }
@@ -70,6 +73,8 @@
       }
       if (row.version !== this.version) {this.stats.unsupported++; this.error('version'); return;}
       if (row.motor_online_mask > 15 || row.motor_enabled_mask > 15 || row.chassis_mode > 3 || row.power_source > 1) {this.stats.bad++; this.error('enum'); return;}
+      if (row.version===3 && (row.spin_power_phase>4 || row.spin_block_reasons>1023 ||
+          row.power_tuning_source>3 || row.spin_tuning_source>3)) {this.stats.bad++; this.error('enum');return;}
       row.rawLine = line;
       this.stats.samples++;
       this.onSample(row);
@@ -91,6 +96,7 @@
       let ok = true;
       if (/^imu_/.test(key)) ok = valid.imu;
       else if (key === 'chassis_offset_mdeg') ok = valid.chassis && raw[key] !== -2147483648;
+      else if (key.startsWith('spin_') && key!=='spin_tuning_source') ok = valid.chassis;
       else if (remoteFields.test(key)) ok = valid.remote;
       else if (chassisFields.test(key)) ok = valid.chassis;
       else if (motorFields.test(key)) ok = motorSnapshotFresh;
@@ -142,7 +148,7 @@
       return entry;
     }
     isStale(nowMs) { return !this.latest || nowMs - this.latest.arrivalMs > 500; }
-    exportCSV() {return HEADER + '\r\n' + this.samples.map(sample => sample.version === 2 && sample.rawLine || FIELDS.map(key => key === 'version' ? 2 : sample[key] ?? (key === 'imu_age_ms' ? UINT_MAX : key === 'chassis_offset_mdeg' ? -2147483648 : 0)).join(',')).join('\r\n') + (this.samples.length ? '\r\n' : '');}
+    exportCSV() {return HEADER + '\r\n' + this.samples.map(sample => sample.version === 3 && sample.rawLine || FIELDS.map(key => key === 'version' ? 3 : sample[key] ?? (key === 'imu_age_ms' ? UINT_MAX : key === 'chassis_offset_mdeg' ? -2147483648 : 0)).join(',')).join('\r\n') + (this.samples.length ? '\r\n' : '');}
   }
   class DisplayState {
     constructor(store) { this.store = store; this.frozen = null; }
@@ -151,5 +157,5 @@
     resume() { this.frozen = null; }
     snapshot(now) { return this.frozen || {samples: this.store.samples, latest: this.store.latest, at: now}; }
   }
-  return {FIELDS, HEADER, V1_FIELDS, V1_HEADER, UINT_MAX, HISTORY_MS, MAX_SAMPLES, StreamParser, TelemetryStore, DisplayState, normalizeSample, normalizeForDisplay, displayValue};
+  return {FIELDS, HEADER, V1_FIELDS, V1_HEADER, V2_FIELDS, V2_HEADER, UINT_MAX, HISTORY_MS, MAX_SAMPLES, StreamParser, TelemetryStore, DisplayState, normalizeSample, normalizeForDisplay, displayValue};
 });

@@ -7,7 +7,7 @@ async (page) => {
   check(await page.locator('#imu-status').innerText() === '等待数据', 'IMU needs an empty state');
   await page.evaluate(() => {
     window.__imuRow = (version = 2, extras = {}) => {
-      const P = TelemetryProtocol, fields = version === 1 ? P.V1_FIELDS : P.FIELDS;
+      const P = TelemetryProtocol, fields = version === 1 ? P.V1_FIELDS : version === 2 ? P.V2_FIELDS : P.FIELDS;
       const row = {...Object.fromEntries(fields.map(key => [key, 0])), version, seq: 1, tick: 1000, chassis_valid: 1, chassis_tick_ms: 1000, chassis_mode: 3, imu_valid: 1, imu_age_ms: 2, imu_yaw_mdeg: -12345, imu_pitch_mdeg: 1250, imu_roll_mdeg: -2500, imu_yaw_total_mdeg: 721234, imu_gx_mdps: -180500, imu_gy_mdps: 250, imu_gz_mdps: 90000, imu_ax_mmps2: -1500, imu_ay_mmps2: 2000, imu_az_mmps2: 9807, chassis_offset_mdeg: -30500, wz_cmd_milli: 1525000, ...extras};
       telemetryApp.parser.push(fields.join(',') + '\r\n' + fields.map(key => row[key]).join(',') + '\r\n');
     };

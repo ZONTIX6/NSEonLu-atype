@@ -70,6 +70,7 @@ typedef struct
     PowerMeterStatus_s meter;
     ChassisPowerSnapshot_s previous;
     bool previous_valid, zero_force, bench_enabled, hold_positive_learning;
+    bool adaptive_spin, spin_capability_limited;
     float bench_limit_w;
 } ChassisPowerPolicyInput_s;
 

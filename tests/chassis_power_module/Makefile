@@ -7,7 +7,10 @@ TARGET := test_chassis_power_module.exe
 all: $(TARGET)
 $(TARGET): $(SOURCE)
 	$(CC) $(CFLAGS) $(INCLUDES) $(SOURCE) -lm -o $@
-test: $(TARGET)
+test_spin_policy.exe: test_spin_policy.c $(filter-out test_chassis_power_module.c,$(SOURCE)) ../../modules/telemetry/rtt_telemetry.c ../../modules/algorithm/chassis_spin.c
+	$(CC) $(CFLAGS) $(INCLUDES) -DCHASSIS_SPIN_MODE=1 $^ -lm -o $@
+test: $(TARGET) test_spin_policy.exe
 	./$(TARGET)
+	./test_spin_policy.exe
 
 SOURCE += ../../modules/telemetry/rtt_telemetry.c

@@ -8,13 +8,13 @@ async (page) => {
   const picker = id => page.locator(`main [data-chart="${id}"]`);
   const expandedPicker = page.locator('#expanded-trace-picker');
   check(await picker('rpm-chart').locator('input[type="checkbox"]').count() === 9, 'RPM chart must list eight wheel traces and the chassis Wz target');
-  check(await picker('power-chart').locator('input').count() === 5 && await picker('energy-chart').locator('input').count() === 3, 'Each chart must list all of its traces');
+  check(await picker('power-chart').locator('input').count() === 9 && await picker('energy-chart').locator('input').count() === 3, 'Each chart must list all of its traces');
   await page.evaluate(() => {
     const {store, view} = telemetryApp, P = TelemetryProtocol, end = performance.now();
     store.clear();view.resume();
     for (let index = 0; index < 3000; index++) {
       const tick = 1000 + index * 20, sample = Object.fromEntries(P.FIELDS.map(key => [key, 0]));
-      Object.assign(sample, {version: 2, seq: index, tick, chassis_valid: 1, chassis_tick_ms: tick,
+      Object.assign(sample, {version: 3, seq: index, tick, chassis_valid: 1, chassis_tick_ms: tick,
         model_tick_ms: tick, motor_online_mask: 15, motor_enabled_mask: 15, power_valid: 1,
         meter_online: 1, p_meter_cw: 1234, referee_online: 1, buffer_j: 42,
         buffer_estimate_valid: 1, buffer_lower_cj: 4123, buffer_predicted_cj: 3999,

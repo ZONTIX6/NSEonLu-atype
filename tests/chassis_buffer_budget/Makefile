@@ -7,5 +7,9 @@ INCLUDES := -I../../modules/algorithm
 all: $(TARGET)
 $(TARGET): $(SOURCE) ../../modules/algorithm/chassis_power_budget.h
 	$(CC) $(CFLAGS) $(INCLUDES) $(SOURCE) -lm -o $(TARGET)
-test: $(TARGET)
+test_spin_priority.exe: test_spin_priority.c ../../modules/algorithm/chassis_power_budget.c
+	$(CC) $(CFLAGS) $(INCLUDES) $^ -lm -o $@
+
+test: $(TARGET) test_spin_priority.exe
 	./$(TARGET)
+	./test_spin_priority.exe

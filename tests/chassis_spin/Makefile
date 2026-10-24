@@ -38,7 +38,10 @@ test_chassis_spin_fixed_override.exe: $(SOURCE) $(HEADERS)
 test_chassis_spin_adaptive_override.exe: $(SOURCE) $(HEADERS)
 	$(CC) $(CFLAGS) $(INCLUDES) -DCHASSIS_SPIN_MODE=1 -DCHASSIS_SPIN_ADAPTIVE_ENABLE=0 $(SOURCE) -lm -o $@
 
-test: $(TARGETS)
+test_chassis_spin_priority.exe: test_chassis_spin_priority.c ../../modules/algorithm/chassis_spin.c
+	$(CC) $(CFLAGS) $(INCLUDES) -DCHASSIS_SPIN_MODE=1 $^ -lm -o $@
+
+test: $(TARGETS) test_chassis_spin_priority.exe
 	./test_chassis_spin_fixed.exe
 	./test_chassis_spin_adaptive.exe
 	./test_chassis_spin_sine.exe
@@ -46,6 +49,7 @@ test: $(TARGETS)
 	./test_chassis_spin_adaptive_override.exe
 	./test_chassis_spin_sine_power.exe
 	./test_chassis_spin_buffer.exe
+	./test_chassis_spin_priority.exe
 
 clean:
 	-if exist test_chassis_spin_fixed.exe del /Q test_chassis_spin_fixed.exe

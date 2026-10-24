@@ -13,6 +13,15 @@ typedef enum
     CHASSIS_POWER_BUDGET_READY,
 } ChassisPowerBudgetMode_e;
 
+typedef enum
+{
+    CHASSIS_SPIN_POWER_OFF = 0,
+    CHASSIS_SPIN_POWER_BASE_TRACK,
+    CHASSIS_SPIN_POWER_BUFFER_ASSIST,
+    CHASSIS_SPIN_POWER_RECOVER,
+    CHASSIS_SPIN_POWER_DEGRADED,
+} ChassisSpinPowerPhase_e;
+
 typedef struct
 {
     float max_energy_j;
@@ -65,6 +74,10 @@ typedef struct
     bool demand_valid;
     float requested_load_power_w; /* Physical load power before current limiting. */
     float confirmed_input_target_w; /* Fresh 0x052 target, physical watts. */
+    /* Limit-first policy applies only to adaptive spin with a direct supply. */
+    bool spin_power_priority, spin_feedback_valid, spin_entry_allowed;
+    bool spin_capability_limited, spin_braking;
+    uint32_t now_ms, input_power_tick_ms;
 } ChassisPowerBudgetInput_s;
 
 typedef struct
@@ -92,6 +105,10 @@ typedef struct
     ChassisBufferHistorySample_s history[CHASSIS_BUFFER_HISTORY_LENGTH];
     uint16_t history_head;
     uint16_t history_count;
+    ChassisSpinPowerPhase_e spin_phase;
+    float spin_base_time_s, spin_capability_s, spin_filtered_power_w, spin_limit_w;
+    uint32_t spin_power_tick_ms;
+    bool spin_sample_valid;
 } ChassisPowerBudgetState_s;
 
 typedef struct
@@ -105,6 +122,9 @@ typedef struct
     float buffer_predicted_j;
     float recovery_reduction_w;
     bool recovering;
+    ChassisSpinPowerPhase_e spin_phase;
+    float spin_base_power_w, spin_buffer_request_w, spin_buffer_grant_w;
+    float spin_base_confirm_s, spin_filtered_power_w, spin_power_ceiling_w;
 } ChassisPowerBudgetOutput_s;
 
 bool ChassisPowerBudgetConfigIsValid(const ChassisPowerBudgetConfig_s *config);

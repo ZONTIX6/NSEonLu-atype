@@ -46,7 +46,7 @@ Flash 擦写会影响本 MCU 从 Flash 执行代码，所以只在上述停机�
 
 ### 调参协议
 
-与 CSV v1 / v2 共用串口，使用独立 @T1 行前缀，CRLF 结束；每次只允许一个在途请求。每个 float32 以八位十六进制 IEEE754 位模式传输，避免嵌入式浮点格式化。
+与 CSV v1 / v2 / v3 共用串口，使用独立 @T1 行前缀，CRLF 结束；每次只允许一个在途请求。每个 float32 以八位十六进制 IEEE754 位模式传输，避免嵌入式浮点格式化。
 
 ~~~text
 @T1,<请求ID>,GET,<pid|power|spin>
@@ -89,7 +89,7 @@ make -j8 PROFILE=atype-bench BUILD_DIR=build/atype-bench REFEREE_ENABLE=1 USB_TE
 
 导出 JSON 包含完整配置、软件版本、随机种子、候选顺序、每次原始指标及判定；CSV 为逐试验记录，保留无效记录和失败原因。供电电压无法读取时明确记为“未观测”，遥测环境快照只记录实际可见字段。演示报告有 `synthetic: true` 标记。
 
-`@A2` 与 CSV v1 / v2 / `@T1` / `@A1` 共用串口。请求包括 `CAP`、`CONFIG`、`BEGIN`、`TRIAL`、`STATUS`、`END`。固定字段、缩放、单位和长度见 [V2 实施计划的协议表](../../docs/superpowers/plans/2026-10-20-pid-autotune-v2.md)。旧版字段保持原样。试验引擎和协议主机测试：
+`@A2` 与 CSV v1 / v2 / v3 / `@T1` / `@A1` 共用串口。请求包括 `CAP`、`CONFIG`、`BEGIN`、`TRIAL`、`STATUS`、`END`。固定字段、缩放、单位和长度见 [V2 实施计划的协议表](../../docs/superpowers/plans/2026-10-20-pid-autotune-v2.md)。旧版字段保持原样。试验引擎和协议主机测试：
 
 ```powershell
 make -C tests/pid_autotune test
@@ -166,7 +166,7 @@ IMU 姿态、角速度、加速度分图显示；累计 Yaw 默认不选中，�
 
 旧固件没有跟随角和 IMU 字段时留空，并提示升级。烧录新固件、重启本地服务并刷新页面后，可同步观察板载姿态、编码器跟随角、Wz 与四轮目标/实际转速。
 
-## CSV v1 / v2 协议
+## CSV v1 / v2 / v3 协议
 
 行以 CRLF 结束，表头在串口打开后及每秒重发。串口读取块不等同于一整行，解析器能处理任意分片。
 
@@ -239,3 +239,7 @@ playwright-cli -s=usb close
 - 拔插后：点击连接重新选择端口；已有窗口数据仍可导出。
 
 IMU 浏览器检查脚本 `tests/imu-check.js` 覆盖新旧固件、单位、无效样本、暂停、三组曲线放大、CSV 及 320～1440 px 布局。脚本只注入模拟数据，不操作真实串口。
+
+## 自转功率策略遥测
+
+CSV v3 新增阶段、增补额度、增长受限原因和参数来源，兼容旧版解析。功率图可选新增曲线；状态标签悬停可查看原因。字段、参数及旧 Flash 值处理见 [自转功率说明](../../docs/chassis-power-priority.md)。

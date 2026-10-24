@@ -15,7 +15,10 @@ bool ChassisPowerUpdatePolicy(const ChassisPowerPolicyInput_s *i, ChassisPowerPo
         p->config_pending=false;
     }
     POWER_UNLOCK();
-    if(changed) ChassisPowerOuterLoopReset(&p->outer_state);
+    if(changed) {
+        ChassisPowerOuterLoopReset(&p->outer_state);
+        p->budget_state.spin_sample_valid=false;
+    }
     const ChassisPower_Init_Config_s *c=&p->slow_config;
     const ChassisPowerSnapshot_s *s=&i->previous;
     const ChassisPowerCommandInput_s command_input={.referee=i->referee,
@@ -31,8 +34,15 @@ bool ChassisPowerUpdatePolicy(const ChassisPowerPolicyInput_s *i, ChassisPowerPo
         !s->numeric_error && !s->transient.fault && s->online_mask==15 &&
         s->telemetry.motor_enabled_mask==15 && s->transient.drive_mask && !s->transient.brake_mask &&
         (uint32_t)(i->now_ms-s->tick_ms)<=5 && !i->zero_force;
+    bool spin_feedback_valid=i->previous_valid && s->registered &&
+        s->power.status==POWER_MODEL_STATUS_OK && !s->numeric_error && !s->transient.fault &&
+        s->online_mask==15 && s->telemetry.motor_enabled_mask==15 &&
+        (uint32_t)(i->now_ms-s->tick_ms)<=5 && !i->zero_force;
     float requested=0, predicted=0, motoring=0;
     for(unsigned w=0;w<4;++w) {
+        spin_feedback_valid &= (uint32_t)(i->now_ms-s->feedback_tick_ms[w])<=5 &&
+            isfinite(s->telemetry.actual_speed_rpm[w]) && isfinite(s->telemetry.target_speed_rpm[w]) &&
+            isfinite(s->raw_current[w]);
         demand_valid &= isfinite(s->power.predicted_unlimited_power_w[w]) &&
             (uint32_t)(i->now_ms-s->feedback_tick_ms[w])<=5;
         requested+=s->power.predicted_unlimited_power_w[w];
@@ -53,10 +63,25 @@ bool ChassisPowerUpdatePolicy(const ChassisPowerPolicyInput_s *i, ChassisPowerPo
         .measured_input_power_w=c->use_supercap ? cap_input.input_power_w : i->meter.power_w,
         .cap_input_control_ready=cap_input.online && cap_input.input_control_active,
         .load_power_valid=load_valid,.demand_valid=demand_valid,.requested_load_power_w=requested,
-        .confirmed_input_target_w=cap_input.input_power_target_w};
+        .confirmed_input_target_w=cap_input.input_power_target_w,
+        .spin_power_priority=i->adaptive_spin && !i->zero_force,
+        .spin_feedback_valid=spin_feedback_valid,
+        .spin_entry_allowed=spin_feedback_valid && !s->transient.brake_mask &&
+            s->transient.guard_scale==1 && !s->transient.growth_fallback &&
+            !s->transient.guard_infeasible && !s->transient.guard_search_exhausted &&
+            s->transient.fast_w==0 && (s->transient.mode==CHASSIS_POWER_TRANSIENT_RUN ||
+                                      s->transient.mode==CHASSIS_POWER_TRANSIENT_IDLE),
+        .spin_capability_limited=i->spin_capability_limited,
+        .spin_braking=s->transient.brake_mask!=0,
+        .now_ms=i->now_ms,.input_power_tick_ms=i->meter.last_rx_tick_ms};
     bool valid=isfinite(i->dt_s) && i->dt_s>0 && i->dt_s<=.1f &&
         ChassisPowerBudgetUpdate(&c->budget,&budget_input,i->dt_s,&p->budget_state,&o->budget);
-    if(!valid) o->budget.applied_budget_w=0;
+    if(!valid) {
+        o->budget.applied_budget_w=0;
+        p->budget_state.spin_sample_valid=false;
+        p->budget_state.spin_base_time_s=0;
+        p->budget_state.spin_phase=CHASSIS_SPIN_POWER_DEGRADED;
+    }
     o->buffer_estimate_valid=p->budget_state.buffer_estimate_valid;
     if(i->referee.chassis_output_valid && !i->referee.chassis_output_enabled) valid=false;
     o->cap_command=command.command;
@@ -98,6 +123,8 @@ bool ChassisPowerUpdatePolicy(const ChassisPowerPolicyInput_s *i, ChassisPowerPo
         .zero_force=i->zero_force,.telemetry={.nominal_budget_w=nominal,.target_power_w=target,
             .corrected_budget_w=o->outer.corrected_budget_w,.filtered_power_w=o->outer.filtered_power_w,
             .error_w=o->outer.error_w,.correction_w=o->outer.correction_w,.outer_mode=(uint8_t)o->outer.mode}};
+    if (o->budget.spin_phase!=CHASSIS_SPIN_POWER_OFF)
+        o->control.power_ceiling_w=o->budget.spin_power_ceiling_w;
     if(c->buffer_enabled && c->use_supercap && cap.online && cap.output_enabled && !cap.error_code)
         o->control.power_ceiling_w=fminf(o->control.power_ceiling_w,cap.available_power_limit_w);
     o->valid=valid;

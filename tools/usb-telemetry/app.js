@@ -15,7 +15,7 @@
   const ageText = value => value === null || value === undefined || value >= P.UINT_MAX ? '—' : String(Math.round(value));
   function message(text, error = false) {setText('message', text); $('message').classList.toggle('error', error);}
   const parser = new P.StreamParser({onSample(sample) {store.add(sample, clock());}, onControl: line => {if(!autotuneClient.receive(line)){const pending=tuningClient.pending;tuningClient.receive(line);if(pending&&!tuningClient.pending&&pending.operation==='SET'&&line.split(',')[2]==='OK')autotuneUI?.configurationChanged();}}, onError(kind) {
-    if (kind === 'version') message('遥测版本与表头不匹配。请使用 CSV v1 / v2 遥测固件。', true);
+    if (kind === 'version') message('遥测版本与表头不匹配。请使用 CSV v1 / v2 / v3 遥测固件。', true);
   }});
   const session = new window.TelemetrySerial.SerialSession({serial: navigator.serial, onChunk: chunk => parser.push(chunk), onState(state) {
     tuningUI?.setConnected(state === 'connected');
@@ -54,6 +54,11 @@
   const colors = {lf: '#3478f6', rf: '#16a69b', lb: '#e3a234', rb: '#8a65d6'};
   const wheelNames = {lf: '左前 LF', rf: '右前 RF', lb: '左后 LB', rb: '右后 RB'};
   const powerTraces = [{key: 'p_unlimited_cw', name: '模型未限流', color: '#b7c1d1'}, {key: 'effective_limit_cw', name: '最终限制', color: '#8a65d6', dash: true}, {key: 'target_power_cw', name: '目标功率', color: '#e3a234', dash: true}, {key: 'p_limited_cw', name: '模型限流后', color: '#16a69b'}, {key: 'p_meter_cw', name: '功率计实测', color: '#3478f6'}];
+  powerTraces.push(
+    {key:'spin_base_power_cw',name:'自转基础目标',color:'#df6f7b',dash:true,selected:false},
+    {key:'spin_buffer_request_cw',name:'缓冲增补请求',color:'#b88a44',selected:false},
+    {key:'spin_buffer_grant_cw',name:'获准缓冲增补',color:'#338c7e',selected:false},
+    {key:'spin_power_ceiling_cw',name:'自转物理上限',color:'#8476ae',dash:true,selected:false});
   const energyTraces = [{key: 'buffer_j', name: '裁判原始值', color: '#16a69b'}, {key: 'buffer_lower_cj', name: '保守下限', color: '#e3a234'}, {key: 'buffer_predicted_cj', name: '预测能量', color: '#8a65d6', dash: true}];
   const rpmTraces = Object.keys(colors).flatMap(key => [{key: `rpm_${key}`, name: `${wheelNames[key]} · 实际`, color: colors[key]}, {key: `target_${key}_rpm`, name: `${wheelNames[key]} · 目标`, color: colors[key], dash: true, width: 2, dashPattern: [7, 5]}]);
   rpmTraces.push({key: 'wz_cmd_milli', name: '底盘旋转目标 Wz', color: '#df6f7b', axis: 'right', unit: '指令值', digits: 3, dash: true, width: 2});
@@ -244,7 +249,7 @@
   function stopDemo() {if (demoTimer !== null) {clearInterval(demoTimer); demoTimer = null;} renderToolbar(clock());}
   function makeDemoSample(sequence) {
     const t = sequence / 50, wave = Math.sin(t * .8), row = Object.fromEntries(P.FIELDS.map(key => [key, 0]));
-    Object.assign(row, {version: 2, seq: sequence, tick: sequence * 20, chassis_valid: 1, chassis_tick_ms: sequence * 20, chassis_mode: 2, vx_cmd_milli: Math.round(Math.sin(t * .42) * 2400000), vy_cmd_milli: Math.round(Math.cos(t * .27) * 1300000), wz_cmd_milli: Math.round(Math.sin(t * .3) * 120000), rc_online: 1, rc_lx: Math.round(Math.sin(t * .42) * 480), rc_ly: Math.round(Math.cos(t * .27) * 300), rc_rx: Math.round(Math.sin(t * .3) * 240), rc_ry: Math.round(Math.cos(t * .7) * 400), rc_dial: Math.round(Math.sin(t * .2) * 500), rc_sw_left: 3, rc_sw_right: 1, mouse_x: Math.round(Math.sin(t) * 12), mouse_y: Math.round(Math.cos(t * .8) * 8), mouse_left: Math.floor(t / 2) % 2, keys: Math.floor(t / 3) % 2 ? 9 : 5, model_tick_ms: sequence * 20, motor_online_mask: 15, motor_enabled_mask: 15, power_valid: 1, p_unlimited_cw: Math.round(6700 + wave * 1800), p_limited_cw: Math.round(5400 + wave * 1400), effective_limit_cw: 8000, p_meter_cw: Math.round(5400 + wave * 1400 + Math.sin(t * 7) * 180), meter_online: 1, nominal_budget_cw: 8000, target_power_cw: 7000, power_source: 1, referee_online: 1, referee_limit_cw: 8000, buffer_j: Math.round(42 + Math.sin(t * .25) * 10), buffer_control_enabled: 1, buffer_estimate_valid: 1, buffer_lower_cj: Math.round(3700 + Math.sin(t * .25) * 900), buffer_predicted_cj: Math.round(4100 + Math.sin(t * .25 + .2) * 950), buffer_recovering: 0, cap_online: 1, cap_output_enabled: 1, cap_energy_pm: Math.round(720 + Math.sin(t * .08) * 80), cap_chassis_cw: Math.round(5400 + wave * 1400), cap_limit_cw: 12000, cap_input_online: 1, cap_input_cw: 8000});
+    Object.assign(row, {version: 3, seq: sequence, tick: sequence * 20, chassis_valid: 1, chassis_tick_ms: sequence * 20, chassis_mode: 2, vx_cmd_milli: Math.round(Math.sin(t * .42) * 2400000), vy_cmd_milli: Math.round(Math.cos(t * .27) * 1300000), wz_cmd_milli: Math.round(Math.sin(t * .3) * 120000), rc_online: 1, rc_lx: Math.round(Math.sin(t * .42) * 480), rc_ly: Math.round(Math.cos(t * .27) * 300), rc_rx: Math.round(Math.sin(t * .3) * 240), rc_ry: Math.round(Math.cos(t * .7) * 400), rc_dial: Math.round(Math.sin(t * .2) * 500), rc_sw_left: 3, rc_sw_right: 1, mouse_x: Math.round(Math.sin(t) * 12), mouse_y: Math.round(Math.cos(t * .8) * 8), mouse_left: Math.floor(t / 2) % 2, keys: Math.floor(t / 3) % 2 ? 9 : 5, model_tick_ms: sequence * 20, motor_online_mask: 15, motor_enabled_mask: 15, power_valid: 1, p_unlimited_cw: Math.round(6700 + wave * 1800), p_limited_cw: Math.round(5400 + wave * 1400), effective_limit_cw: 8000, p_meter_cw: Math.round(5400 + wave * 1400 + Math.sin(t * 7) * 180), meter_online: 1, nominal_budget_cw: 8000, target_power_cw: 7000, power_source: 1, referee_online: 1, referee_limit_cw: 8000, buffer_j: Math.round(42 + Math.sin(t * .25) * 10), buffer_control_enabled: 1, buffer_estimate_valid: 1, buffer_lower_cj: Math.round(3700 + Math.sin(t * .25) * 900), buffer_predicted_cj: Math.round(4100 + Math.sin(t * .25 + .2) * 950), buffer_recovering: 0, cap_online: 1, cap_output_enabled: 1, cap_energy_pm: Math.round(720 + Math.sin(t * .08) * 80), cap_chassis_cw: Math.round(5400 + wave * 1400), cap_limit_cw: 12000, cap_input_online: 1, cap_input_cw: 8000});
     Object.assign(row, {imu_valid: 1, imu_age_ms: 1, imu_yaw_mdeg: Math.round(Math.sin(t * .2) * 120000), imu_pitch_mdeg: Math.round(Math.sin(t * .4) * 15000), imu_roll_mdeg: Math.round(Math.cos(t * .3) * 8000), imu_yaw_total_mdeg: Math.round(t * 10000), imu_gx_mdps: Math.round(Math.sin(t * .3) * -2400), imu_gy_mdps: Math.round(Math.cos(t * .4) * 6000), imu_gz_mdps: Math.round(Math.cos(t * .2) * 24000), imu_ax_mmps2: Math.round(Math.sin(t * .4) * 1500), imu_ay_mmps2: Math.round(Math.cos(t * .3) * 800), imu_az_mmps2: Math.round(9807 + Math.sin(t) * 150), chassis_offset_mdeg: Math.round(Math.sin(t * .3) * -2400)});
     Object.keys(colors).forEach((key, i) => {const target = Math.sin(t * .5 + i * .55) * 2500 + Math.cos(t * .3) * 1200; row[`target_${key}_rpm`] = Math.round(target); row[`rpm_${key}`] = Math.round(target - Math.cos(t * .5 + i * .55) * 65); row[`i_${key}_cmd`] = Math.round(Math.cos(t * .5 + i * .55) * 2800); row[`i_${key}_fb`] = row[`i_${key}_cmd`] + Math.round(Math.sin(t * 3 + i) * 90);});
     return P.FIELDS.map(key => row[key]).join(',');
@@ -340,6 +345,14 @@
     setText('metric-cap-detail', valid.cap ? `电容输出${v.cap_output_enabled ? '已使能' : '已关闭'}` : sample ? '电容离线或数据过期' : '等待电容数据');
     $('cap-progress-value').style.width = `${Math.max(0, Math.min(100, v.cap_energy_pm || 0))}%`;
     pill('buffer-state', !normalized ? '等待数据' : !valid.bufferEstimate ? '估算无效' : v.buffer_recovering ? '恢复能量中' : v.buffer_control_enabled ? '缓冲控制已启用' : '缓冲控制未启用', valid.bufferEstimate ? v.buffer_recovering ? 'warning' : 'good' : 'neutral');
+    if(valid.chassis && v.spin_power_phase>0) {
+      const phase=['','基础功率跟踪','缓冲增补','低能量恢复','数据降级'][v.spin_power_phase];
+      pill('buffer-state',phase,v.spin_power_phase>=3?'warning':'good');
+      const names=['控制停用','反馈失效','模型限流','电流硬限','快保护 / 暂停增长','制动','轮速未跟上','转速上限','低能量恢复','功率计过期'];
+      const reasons=names.filter((_,bit)=>v.spin_block_reasons&(1<<bit));
+      const sources=['编译默认','参数文件','板端 Flash','运行时调参'];
+      $('buffer-state').title=`${reasons.join('、')||'允许升速'}；功控：${sources[v.power_tuning_source]??'未知'}；自转：${sources[v.spin_tuning_source]??'未知'}`;
+    } else $('buffer-state').title='';
     pill('remote-status', !sample ? '等待数据' : valid.remote ? '在线' : '离线 / 过期', valid.remote ? 'good' : sample ? 'bad' : 'neutral');
     for (const [prefix, xkey, ykey] of [['left', 'rc_lx', 'rc_ly'], ['right', 'rc_rx', 'rc_ry']]) {
       const point = $(`${prefix}-stick-point`);

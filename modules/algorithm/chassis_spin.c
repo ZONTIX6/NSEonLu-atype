@@ -12,7 +12,7 @@ bool ChassisSpinGuardAllowsIncrease(const ChassisPowerTransientOutput_s *guard)
 
 bool ChassisSpinTransientAllowsIncrease(const ChassisPowerTransientOutput_s *transient)
 {
-#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE
+#if CHASSIS_SPIN_MODE != CHASSIS_SPIN_MODE_FIXED
     /* A tracked low-load target can have no drive demand. Qualify that healthy
      * state so startup and a braking trough can initiate the next bounded rise. */
     return transient != NULL && !transient->fault && transient->meter_fresh &&
@@ -24,6 +24,64 @@ bool ChassisSpinTransientAllowsIncrease(const ChassisPowerTransientOutput_s *tra
     return transient != NULL && transient->positive_allowed && transient->brake_mask == 0;
 #endif
 }
+
+#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
+static void QualifyGrowth(const ChassisSpinConfig_s *c, ChassisSpinInput_s *i,
+                          ChassisSpinState_s *s)
+{
+    uint32_t reasons = 0;
+    if (!i->spin_enabled || !i->control_enabled) reasons |= CHASSIS_SPIN_BLOCK_CONTROL;
+    if (!i->feedback_valid && !i->meter_stale) reasons |= CHASSIS_SPIN_BLOCK_FEEDBACK;
+    if (i->meter_stale) reasons |= CHASSIS_SPIN_BLOCK_METER;
+    if (i->model_limited) reasons |= CHASSIS_SPIN_BLOCK_MODEL;
+    if (i->current_saturated) reasons |= CHASSIS_SPIN_BLOCK_CURRENT;
+    if (i->guard_limited || !i->increase_allowed) reasons |= CHASSIS_SPIN_BLOCK_GUARD;
+    if (i->braking) reasons |= CHASSIS_SPIN_BLOCK_BRAKE;
+    if (i->energy_recovering) reasons |= CHASSIS_SPIN_BLOCK_RECOVERY;
+    if (s->applied_wz >= c->max_wz) reasons |= CHASSIS_SPIN_BLOCK_MAX_SPEED;
+    bool tracking = true, new_samples = true, accelerated = true, improved = false;
+    for (unsigned w = 0; w < 4; ++w)
+    {
+        const float speed = fabsf(i->actual_rpm[w]);
+        const float error = fabsf(i->target_rpm[w] - i->actual_rpm[w]);
+        if (!isfinite(speed) || !isfinite(error) || i->feedback_sequence[w] == 0 ||
+            (uint32_t)(i->now_ms - i->feedback_tick_ms[w]) > 5U)
+            reasons |= CHASSIS_SPIN_BLOCK_FEEDBACK;
+        tracking &= error <= CHASSIS_SPIN_TRACKING_ERROR_RPM;
+        new_samples &= i->feedback_sequence[w] != s->trend_sequence[w];
+        accelerated &= speed > s->trend_speed[w] + 1 && error <= s->trend_error[w] + 5 &&
+            i->actual_rpm[w] * i->target_rpm[w] > 0;
+        improved |= error < s->trend_error[w] - 1;
+    }
+    if (reasons & (CHASSIS_SPIN_BLOCK_CONTROL | CHASSIS_SPIN_BLOCK_FEEDBACK | CHASSIS_SPIN_BLOCK_METER))
+    {
+        s->trend_initialized = s->trend_allowed = false;
+        s->trend_no_improvement_s = 0;
+    }
+    else if (!s->trend_initialized ||
+             (new_samples && (uint32_t)(i->now_ms - s->trend_tick_ms) >= 50U))
+    {
+        const uint32_t elapsed_ms = i->now_ms - s->trend_tick_ms;
+        s->trend_allowed = s->trend_initialized && elapsed_ms <= 60U && accelerated;
+        s->trend_no_improvement_s = !s->trend_initialized || improved ? 0 :
+            s->trend_no_improvement_s + elapsed_ms * .001f;
+        if (s->trend_no_improvement_s >= .100f) s->trend_allowed = false;
+        s->trend_initialized = true;
+        s->trend_tick_ms = i->now_ms;
+        for (unsigned w = 0; w < 4; ++w)
+        {
+            s->trend_sequence[w] = i->feedback_sequence[w];
+            s->trend_speed[w] = fabsf(i->actual_rpm[w]);
+            s->trend_error[w] = fabsf(i->target_rpm[w] - i->actual_rpm[w]);
+        }
+    }
+    if ((uint32_t)(i->now_ms - s->trend_tick_ms) > 60U) s->trend_allowed = false;
+    i->trend_growth = !tracking && s->trend_allowed;
+    if (!tracking && !i->trend_growth) reasons |= CHASSIS_SPIN_BLOCK_TRACKING;
+    s->block_reasons = reasons;
+    i->increase_allowed = reasons == 0;
+}
+#endif
 
 bool ChassisSpinConfigIsValid(const ChassisSpinConfig_s *c)
 {
@@ -160,6 +218,7 @@ static bool UpdateTarget(const ChassisSpinConfig_s *config,
 #elif CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE
     return UpdateSine(config, input, dt_s, state, target_wz);
 #else
+    *target_wz = 0;
     if (!input->spin_enabled || !input->control_enabled || !input->feedback_valid)
     {
         Reset(config, state);
@@ -178,7 +237,9 @@ static bool UpdateTarget(const ChassisSpinConfig_s *config,
     }
     if (!state->initialized)
     {
+        const float previous = state->applied_wz;
         Reset(config, state);
+        state->target_wz = fminf(fmaxf(previous, 0), config->max_wz);
         state->filtered_power_w = input->measured_power_w;
         state->initialized = true;
     }
@@ -194,7 +255,8 @@ static bool UpdateTarget(const ChassisSpinConfig_s *config,
         state->settled_s = 0;
     }
     state->previous_target_power_w = input->target_power_w;
-    const bool can_increase = input->increase_allowed && input->measured_power_w >= 0;
+    const bool can_increase = input->increase_allowed && !input->power_limited &&
+        !input->energy_recovering && input->measured_power_w >= 0;
     state->settled_s = can_increase ?
         fminf(state->settled_s + dt_s, config->settle_time_s) : 0;
 
@@ -204,8 +266,10 @@ static bool UpdateTarget(const ChassisSpinConfig_s *config,
     float rate = config->gain_wz_per_w_s * outside_deadband;
     if (rate > 0 && (!can_increase || state->settled_s < config->settle_time_s))
         rate = 0;
-    rate = fminf(fmaxf(rate, -config->fall_wz_per_s), config->rise_wz_per_s);
-    state->target_wz = fminf(fmaxf(state->target_wz + rate * dt_s, config->min_wz),
+    const float rise = config->rise_wz_per_s * (input->trend_growth ? .25f : 1);
+    rate = fminf(fmaxf(rate, -config->fall_wz_per_s), rise);
+    const float minimum = state->target_wz < config->min_wz ? 0 : config->min_wz;
+    state->target_wz = fminf(fmaxf(state->target_wz + rate * dt_s, minimum),
                             config->max_wz);
     *target_wz = state->target_wz;
     return true;
@@ -233,8 +297,22 @@ bool ChassisSpinUpdate(const ChassisSpinConfig_s *config,
 {
     const float previous = state ? state->applied_wz : 0;
     const bool retuning = state && state->retuning;
+#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
+    ChassisSpinInput_s qualified;
+    uint32_t reasons = 0;
+    if (config && input && state && input->evaluate_tracking)
+    {
+        qualified = *input;
+        QualifyGrowth(config, &qualified, state);
+        reasons = state->block_reasons;
+        input = &qualified;
+    }
+#endif
     bool ok = UpdateTarget(config, input, dt_s, state, target_wz);
     if (!state || !target_wz) return ok;
+#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
+    state->block_reasons = reasons;
+#endif
     state->retuning = false;
     if (ok && retuning && input->spin_enabled && input->control_enabled &&
         input->feedback_valid && isfinite(dt_s) && dt_s > 0 && dt_s <= .020f) {

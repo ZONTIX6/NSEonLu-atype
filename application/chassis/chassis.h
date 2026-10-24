@@ -13,6 +13,10 @@ typedef struct {
     float nominal_budget_w, target_power_w;
     bool buffer_control_enabled, buffer_estimate_valid, buffer_recovering;
     float buffer_lower_j, buffer_predicted_j;
+    uint32_t spin_phase, spin_block_reasons;
+    float spin_base_power_w, spin_buffer_request_w, spin_buffer_grant_w;
+    float spin_base_confirm_s, spin_filtered_power_w, spin_power_ceiling_w, slow_correction_w;
+    float spin_gain, spin_rise, spin_fall, spin_lpf_s, spin_settle_s;
 } ChassisTelemetrySnapshot_s;
 
 bool ChassisGetTelemetrySnapshot(ChassisTelemetrySnapshot_s *snapshot);

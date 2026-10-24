@@ -16,11 +16,29 @@ typedef struct
     int8_t sine_direction;
 } ChassisSpinConfig_s;
 
+enum
+{
+    CHASSIS_SPIN_BLOCK_CONTROL = 1U << 0,
+    CHASSIS_SPIN_BLOCK_FEEDBACK = 1U << 1,
+    CHASSIS_SPIN_BLOCK_MODEL = 1U << 2,
+    CHASSIS_SPIN_BLOCK_CURRENT = 1U << 3,
+    CHASSIS_SPIN_BLOCK_GUARD = 1U << 4,
+    CHASSIS_SPIN_BLOCK_BRAKE = 1U << 5,
+    CHASSIS_SPIN_BLOCK_TRACKING = 1U << 6,
+    CHASSIS_SPIN_BLOCK_MAX_SPEED = 1U << 7,
+    CHASSIS_SPIN_BLOCK_RECOVERY = 1U << 8,
+    CHASSIS_SPIN_BLOCK_METER = 1U << 9,
+};
+
 typedef struct
 {
     bool spin_enabled, control_enabled, feedback_valid, increase_allowed;
     float target_power_w, measured_power_w;
     bool power_limited, energy_recovering;
+    bool evaluate_tracking, model_limited, current_saturated, guard_limited, braking, meter_stale;
+    uint32_t now_ms, feedback_tick_ms[4], feedback_sequence[4];
+    float actual_rpm[4], target_rpm[4];
+    bool trend_growth; /* Produced internally when evaluate_tracking is enabled. */
 } ChassisSpinInput_s;
 
 typedef struct
@@ -32,6 +50,9 @@ typedef struct
     bool sine_direction_locked;
     float applied_wz;
     bool retuning;
+    uint32_t block_reasons, trend_tick_ms, trend_sequence[4];
+    float trend_speed[4], trend_error[4], trend_no_improvement_s;
+    bool trend_initialized, trend_allowed;
 } ChassisSpinState_s;
 
 /* Limits the target only; existing power/current protection remains authoritative. */

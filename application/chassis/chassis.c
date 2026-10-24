@@ -228,7 +228,7 @@ static bool ApplyPowerTuning(const float *v)
 }
 static bool ApplySpinTuning(const float *v)
 {
-    const float upper[] = {6000,6000,6000,1000,10000,10000,10,1000,60,
+    const float upper[] = {8000,8000,8000,1000,10000,10000,10,1000,60,
         1000,6000,120,60,10000,10000};
     for (unsigned i = 0; i < 15; ++i)
         if (!isfinite(v[i]) || v[i] < 0 || v[i] > upper[i]) return false;
@@ -462,6 +462,16 @@ static void UpdateChassisPowerBudget(void)
     input.now_ms=HAL_GetTick(); /* Evaluate ages after acquiring all asynchronous snapshots. */
 #if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
     input.hold_positive_learning=chassis_cmd_recv.chassis_mode==CHASSIS_ROTATE;
+    input.adaptive_spin=chassis_cmd_recv.chassis_mode==CHASSIS_ROTATE;
+    input.spin_capability_limited=chassis_spin_state.applied_wz>=chassis_spin_config.max_wz ||
+        ((chassis_spin_state.block_reasons & CHASSIS_SPIN_BLOCK_TRACKING) &&
+         chassis_spin_state.trend_no_improvement_s>=.100f);
+    DJIMotorInstance *capability_motors[POWER_MODEL_MOTOR_COUNT]={motor_lf,motor_rf,motor_lb,motor_rb};
+    for(unsigned w=0;w<POWER_MODEL_MOTOR_COUNT;++w) {
+        const float maximum=capability_motors[w]->motor_controller.speed_PID.MaxOut;
+        input.spin_capability_limited |= !isfinite(maximum) || maximum<=0 ||
+            fabsf(input.previous.raw_current[w])>=maximum;
+    }
 #endif
     ChassisPowerPolicyOutput_s output;
     (void)ChassisPowerUpdatePolicy(&input,&output);
@@ -490,8 +500,11 @@ static void UpdateChassisPowerBudget(void)
         (uint32_t)(spin_now_ms - power_state.tick_ms) <= 5;
     bool tracking = true;
     bool current_limited = power_state.base_limited;
+    bool guard_limited = false;
+    bool current_saturated = false;
 #if CHASSIS_POWER_CONTROL_STAGE >= 2
-    current_limited |= !ChassisSpinGuardAllowsIncrease(&power_state.transient);
+    guard_limited = !ChassisSpinGuardAllowsIncrease(&power_state.transient);
+    current_limited |= guard_limited;
 #endif
     DJIMotorInstance *spin_motors[POWER_MODEL_MOTOR_COUNT] = {
         motor_lf, motor_rf, motor_lb, motor_rb,
@@ -504,15 +517,33 @@ static void UpdateChassisPowerBudget(void)
             isfinite(actual_rpm) && isfinite(target_rpm) && isfinite(power_state.raw_current[i]);
         tracking &= fabsf(target_rpm - actual_rpm) <= CHASSIS_SPIN_TRACKING_ERROR_RPM;
         const float max_current = spin_motors[i]->motor_controller.speed_PID.MaxOut;
-        current_limited |= !isfinite(max_current) || max_current <= 0 ||
+        current_saturated |= !isfinite(max_current) || max_current <= 0 ||
             fabsf(power_state.raw_current[i]) >= max_current;
+        chassis_spin_input.actual_rpm[i]=actual_rpm;
+        chassis_spin_input.target_rpm[i]=target_rpm;
+        chassis_spin_input.feedback_tick_ms[i]=power_state.feedback_tick_ms[i];
+        chassis_spin_input.feedback_sequence[i]=power_state.feedback_sequence[i];
     }
+    current_limited |= current_saturated;
     chassis_spin_input.feedback_valid = feedback_valid && meter_valid &&
         (uint32_t)(spin_now_ms - meter_status.last_rx_tick_ms) <= 20;
     chassis_spin_input.measured_power_w = meter_status.power_w;
     chassis_spin_input.power_limited = current_limited;
     chassis_spin_input.increase_allowed = tracking && !current_limited &&
         ChassisSpinTransientAllowsIncrease(&power_state.transient);
+#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
+    chassis_spin_input.evaluate_tracking=true;
+    chassis_spin_input.now_ms=spin_now_ms;
+    chassis_spin_input.model_limited=power_state.base_limited;
+    chassis_spin_input.current_saturated=current_saturated;
+    chassis_spin_input.guard_limited=guard_limited;
+    chassis_spin_input.braking=power_state.transient.brake_mask!=0;
+    chassis_spin_input.meter_stale=!meter_valid ||
+        (uint32_t)(spin_now_ms-meter_status.last_rx_tick_ms)>20;
+    chassis_spin_input.increase_allowed=ChassisSpinTransientAllowsIncrease(&power_state.transient);
+    if(chassis_budget_output.spin_phase==CHASSIS_SPIN_POWER_DEGRADED)
+        chassis_spin_input.increase_allowed=false;
+#endif
 #endif
 #endif
 #ifdef CHASSIS_BOARD
@@ -624,6 +655,22 @@ void ChassisTask()
         .buffer_recovering = chassis_budget_output.recovering,
         .buffer_lower_j = chassis_budget_output.buffer_lower_j,
         .buffer_predicted_j = chassis_budget_output.buffer_predicted_j,
+        .spin_phase=chassis_budget_output.spin_phase,
+#if CHASSIS_SPIN_DYNAMIC_ENABLED
+        .spin_block_reasons=chassis_spin_state.block_reasons,
+#endif
+        .spin_base_power_w=chassis_budget_output.spin_base_power_w,
+        .spin_buffer_request_w=chassis_budget_output.spin_buffer_request_w,
+        .spin_buffer_grant_w=chassis_budget_output.spin_buffer_grant_w,
+        .spin_base_confirm_s=chassis_budget_output.spin_base_confirm_s,
+        .spin_filtered_power_w=chassis_budget_output.spin_filtered_power_w,
+        .spin_power_ceiling_w=pending_power_control.power_ceiling_w,
+        .slow_correction_w=pending_power_control.slow_correction_w,
+        .spin_gain=chassis_spin_config.gain_wz_per_w_s,
+        .spin_rise=chassis_spin_config.rise_wz_per_s,
+        .spin_fall=chassis_spin_config.fall_wz_per_s,
+        .spin_lpf_s=chassis_spin_config.power_lpf_tau_s,
+        .spin_settle_s=chassis_spin_config.settle_time_s,
     };
     taskENTER_CRITICAL();
     chassis_telemetry = telemetry;

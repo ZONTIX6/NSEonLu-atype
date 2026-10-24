@@ -76,6 +76,6 @@ ChassisPowerRecordFinal(&final);
 
 `ChassisPowerRequestConfig` 验证并复制完整配置及版本，慢环边界消费；控制快照携带配置版本，快环按整个版本切换。非法配置不替换参数或清空积分。慢环与快环分别拥有预算/外环和瞬态可变状态，通过短临界区复制快照，不在锁内运行算法，周期内不分配内存。临时快环缓冲属于内部实例或适配器，避免压满电机任务的 2 KB 栈。
 
-RTT 字段、40 ms 输出节拍、USB 字段及 Flash schema 保持兼容。捕获发送由原低优先级任务调用 `ChassisPowerCaptureDrain`，不新增功控任务。整定 PID 仍由电机和整定模块管理。
+RTT 字段、40 ms 输出节拍及 Flash schema 保持兼容。USB CSV v3 在原 v2 末尾追加自转阶段、增长原因、增补额度和参数来源，接收器兼容 v1/v2/v3。`adaptive_spin` 输入仅对直供开启限功率优先策略，详见 [自转功率说明](../../docs/chassis-power-priority.md)。捕获发送由原低优先级任务调用 `ChassisPowerCaptureDrain`，不新增功控任务。整定 PID 仍由电机和整定模块管理。
 
 验证入口：`tests/chassis_power_module`（32 个源/功率计/缓冲/阶段组合）、`tests/dji_chassis_power_rtt`、纯算法与捕获测试，以及 `tests/architecture/test_layers.py`。硬件时序与实车响应须按集成计划单独验收。

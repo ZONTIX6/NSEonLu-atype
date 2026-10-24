@@ -1,4 +1,5 @@
 #include "chassis_power_budget.h"
+#include "chassis_energy_config.h"
 
 #include <math.h>
 #include <stddef.h>
@@ -153,6 +154,83 @@ static bool UpdateBufferEstimate(const ChassisBufferBudgetConfig_s *buffer,
     return true;
 }
 
+static void ResetSpinPower(ChassisPowerBudgetState_s *s)
+{
+    s->spin_phase = CHASSIS_SPIN_POWER_OFF;
+    s->spin_base_time_s = s->spin_capability_s = 0;
+    s->spin_sample_valid = false;
+}
+
+/* Qualification owns its sample clock. Reading one frame many times earns no time. */
+static void UpdateSpinPower(const ChassisBufferBudgetConfig_s *c,
+                            const ChassisPowerBudgetInput_s *i, bool ready,
+                            ChassisPowerBudgetState_s *s)
+{
+    const float base = c->safety_factor * i->referee_limit_w;
+    if (!ready || !i->spin_feedback_valid || i->spin_braking ||
+        (uint32_t)(i->now_ms - i->input_power_tick_ms) > 20U ||
+        i->measured_input_power_w < 0)
+    {
+        ResetSpinPower(s);
+        s->spin_phase = s->recovering ? CHASSIS_SPIN_POWER_RECOVER : CHASSIS_SPIN_POWER_DEGRADED;
+        return;
+    }
+    const bool limit_changed = s->spin_limit_w != i->referee_limit_w;
+    const uint32_t delta = i->input_power_tick_ms - s->spin_power_tick_ms;
+    if (s->spin_sample_valid && !limit_changed && delta > 20U)
+    {
+        ResetSpinPower(s);
+        s->spin_phase = CHASSIS_SPIN_POWER_DEGRADED;
+        return;
+    }
+    float elapsed = 0;
+    if (!s->spin_sample_valid || limit_changed)
+    {
+        s->spin_phase = CHASSIS_SPIN_POWER_BASE_TRACK;
+        s->spin_base_time_s = s->spin_capability_s = 0;
+        s->spin_filtered_power_w = i->measured_input_power_w;
+    }
+    else if (delta != 0U)
+    {
+        elapsed = delta * .001f;
+        s->spin_filtered_power_w += elapsed / (CHASSIS_SPIN_BASE_LPF_S + elapsed) *
+            (i->measured_input_power_w - s->spin_filtered_power_w);
+    }
+    s->spin_sample_valid = true;
+    s->spin_power_tick_ms = i->input_power_tick_ms;
+    s->spin_limit_w = i->referee_limit_w;
+    s->spin_capability_s = i->spin_capability_limited ?
+        fminf(CHASSIS_SPIN_CAPABILITY_CONFIRM_S, s->spin_capability_s + elapsed) : 0;
+    if (s->recovering)
+    {
+        s->spin_phase = CHASSIS_SPIN_POWER_RECOVER;
+        s->spin_base_time_s = 0;
+        return;
+    }
+    if (s->spin_phase == CHASSIS_SPIN_POWER_RECOVER ||
+        s->spin_phase == CHASSIS_SPIN_POWER_DEGRADED)
+        s->spin_phase = CHASSIS_SPIN_POWER_BASE_TRACK;
+    if (s->spin_phase == CHASSIS_SPIN_POWER_BUFFER_ASSIST)
+    {
+        if (s->buffer_lower_j <= CHASSIS_SPIN_BUFFER_EXIT_J ||
+            s->spin_capability_s >= CHASSIS_SPIN_CAPABILITY_CONFIRM_S)
+        {
+            s->spin_phase = CHASSIS_SPIN_POWER_BASE_TRACK;
+            s->spin_base_time_s = 0;
+        }
+        return;
+    }
+    const float band = fmaxf(CHASSIS_SPIN_BASE_BAND_W, base * CHASSIS_SPIN_BASE_BAND_RATIO);
+    const bool arrived = i->spin_entry_allowed && !i->spin_capability_limited &&
+        i->measured_input_power_w <= i->referee_limit_w &&
+        fabsf(s->spin_filtered_power_w - base) <= band;
+    s->spin_base_time_s = arrived ?
+        fminf(CHASSIS_SPIN_BASE_CONFIRM_S, s->spin_base_time_s + elapsed) : 0;
+    if (s->spin_base_time_s >= CHASSIS_SPIN_BASE_CONFIRM_S &&
+        s->buffer_lower_j >= CHASSIS_SPIN_BUFFER_ENTER_J)
+        s->spin_phase = CHASSIS_SPIN_POWER_BUFFER_ASSIST;
+}
+
 static bool UpdateBufferBudget(const ChassisPowerBudgetConfig_s *config,
                               const ChassisPowerBudgetInput_s *input, float dt_s,
                               ChassisPowerBudgetState_s *state,
@@ -219,6 +297,13 @@ static bool UpdateBufferBudget(const ChassisPowerBudgetConfig_s *config,
             state->recovery_time_s = 0;
     }
 
+    const bool spin_priority = input->spin_power_priority && !input->use_supercap;
+    if (spin_priority)
+        UpdateSpinPower(buffer, input, boost_ready, state);
+    else
+        ResetSpinPower(state);
+
+    float spin_request_w = 0;
     float target_input_budget = input->referee_limit_w;
     float recovery_reduction_w = 0;
     if (state->recovering && buffer_valid)
@@ -229,6 +314,19 @@ static bool UpdateBufferBudget(const ChassisPowerBudgetConfig_s *config,
         if (lower <= buffer->hard_floor_j || predicted <= buffer->hard_floor_j)
             recovery_reduction_w = buffer->recovery_power_w;
         target_input_budget = fmaxf(0, input->referee_limit_w - recovery_reduction_w);
+    }
+    else if (spin_priority)
+    {
+        if (state->spin_phase == CHASSIS_SPIN_POWER_BUFFER_ASSIST)
+        {
+            const float energy_boost = fmaxf(0, (lower - CHASSIS_SPIN_BUFFER_TARGET_J) /
+                buffer->prediction_window_s);
+            const float safe_boost = fmaxf(0, (lower - buffer->hard_floor_j) /
+                buffer->guard_window_s - buffer->power_margin_w);
+            spin_request_w = fminf(buffer->max_boost_w, fminf(energy_boost, safe_boost));
+            /* The request is physical watts; convert once to the model's nominal budget. */
+            target_input_budget += spin_request_w / buffer->safety_factor;
+        }
     }
     else if (boost_ready && demand_valid &&
              input->requested_load_power_w > input->referee_limit_w * buffer->safety_factor)
@@ -252,7 +350,8 @@ static bool UpdateBufferBudget(const ChassisPowerBudgetConfig_s *config,
         state->applied_budget_w = state->input_budget_w;
         state->buffer_initialized = true;
     }
-    const float rise = timing_valid ? buffer->rise_rate_w_per_s * dt_s : 0;
+    const float rise = timing_valid ? buffer->rise_rate_w_per_s * dt_s /
+        (spin_priority ? buffer->safety_factor : 1.0f) : 0;
     state->input_budget_w = ApplyRise(state->input_budget_w, target_input_budget, rise);
 
     float factor = 0;
@@ -287,7 +386,17 @@ static bool UpdateBufferBudget(const ChassisPowerBudgetConfig_s *config,
         .buffer_predicted_j = predicted,
         .recovery_reduction_w = recovery_reduction_w,
         .recovering = state->recovering,
+        .spin_phase = state->spin_phase,
+        .spin_base_power_w = spin_priority ? input->referee_limit_w * buffer->safety_factor : 0,
+        .spin_buffer_request_w = spin_request_w,
+        .spin_buffer_grant_w = spin_priority ? fmaxf(0,
+            (state->applied_budget_w - input->referee_limit_w) * buffer->safety_factor) : 0,
+        .spin_base_confirm_s = state->spin_base_time_s,
+        .spin_filtered_power_w = spin_priority ? state->spin_filtered_power_w : 0,
     };
+    if (spin_priority)
+        output->spin_power_ceiling_w = fminf(input->referee_limit_w + output->spin_buffer_grant_w,
+            state->applied_budget_w);
     return true;
 }
 
@@ -344,6 +453,7 @@ bool ChassisPowerBudgetUpdate(const ChassisPowerBudgetConfig_s *config,
     state->history_head = state->history_count = 0;
     state->recovering = false;
     state->recovery_time_s = 0;
+    ResetSpinPower(state);
     memset(output, 0, sizeof(*output));
 
     ChassisPowerBudgetMode_e mode = CHASSIS_POWER_BUDGET_READY;

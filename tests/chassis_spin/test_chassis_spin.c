@@ -38,7 +38,7 @@ static float Update(ChassisSpinState_s *state, ChassisSpinInput_s input, unsigne
 /* A fixed legacy target must fail these tests: spare power now increases speed. */
 static void TestSparePowerWaitsForTrackingAndRisesWithinRate(void)
 {
-    ChassisSpinState_s state = {0};
+    ChassisSpinState_s state = {.applied_wz=4000};
     ChassisSpinInput_s input = ReadyInput();
     NEAR(4000, Update(&state, input, 20));
     const float target = Update(&state, input, 40);
@@ -52,14 +52,14 @@ static void TestContinuousDeadbandDoesNotHunt(void)
     const float powers[] = {37, 37.5f, 38, 38.5f, 39};
     for (unsigned i = 0; i < sizeof(powers) / sizeof(powers[0]); ++i)
     {
-        ChassisSpinState_s state = {0};
+        ChassisSpinState_s state = {.applied_wz=4000};
         ChassisSpinInput_s input = ReadyInput();
         input.measured_power_w = powers[i];
         NEAR(4000, Update(&state, input, 100));
     }
     ChassisSpinConfig_s fast = config;
     fast.settle_time_s = 0;
-    ChassisSpinState_s state = {0};
+    ChassisSpinState_s state = {.applied_wz=4000};
     ChassisSpinInput_s input = ReadyInput();
     input.measured_power_w = 36.5f;
     float target;
@@ -69,7 +69,7 @@ static void TestContinuousDeadbandDoesNotHunt(void)
 
 static void TestExcessPowerLowersTargetWithoutGrowthPermission(void)
 {
-    ChassisSpinState_s state = {0};
+    ChassisSpinState_s state = {.applied_wz=4000};
     ChassisSpinInput_s input = ReadyInput();
     input.measured_power_w = 100;
     input.increase_allowed = false;
@@ -78,7 +78,7 @@ static void TestExcessPowerLowersTargetWithoutGrowthPermission(void)
 
 static void TestLimitingOrStartupCannotAccumulateTarget(void)
 {
-    ChassisSpinState_s state = {0};
+    ChassisSpinState_s state = {.applied_wz=4000};
     ChassisSpinInput_s input = ReadyInput();
     input.increase_allowed = false;
     NEAR(4000, Update(&state, input, 500));
@@ -93,7 +93,7 @@ static void TestLimitingOrStartupCannotAccumulateTarget(void)
 
 static void TestBothSpeedBounds(void)
 {
-    ChassisSpinState_s state = {0};
+    ChassisSpinState_s state = {.applied_wz=4000};
     ChassisSpinInput_s input = ReadyInput();
     NEAR(6000, Update(&state, input, 2000));
     input.measured_power_w = 1000;
@@ -105,7 +105,7 @@ static void TestBothSpeedBounds(void)
 
 static void TestBudgetDropRemovesPositiveSpeedCorrection(void)
 {
-    ChassisSpinState_s state = {0};
+    ChassisSpinState_s state = {.applied_wz=4000};
     ChassisSpinInput_s input = ReadyInput();
     CHECK(Update(&state, input, 1000) > 5500);
     input.target_power_w = 19;
@@ -116,21 +116,21 @@ static void TestBudgetDropRemovesPositiveSpeedCorrection(void)
 
 static void TestFallbackAndModeReentryDoNotKeepHighTarget(void)
 {
-    ChassisSpinState_s state = {0};
+    ChassisSpinState_s state = {.applied_wz=4000};
     ChassisSpinInput_s input = ReadyInput();
     CHECK(Update(&state, input, 100) > 4000);
     input.feedback_valid = false;
-    NEAR(4000, Update(&state, input, 1));
+    NEAR(0, Update(&state, input, 1));
     input.feedback_valid = true;
-    NEAR(4000, Update(&state, input, 20));
-    CHECK(Update(&state, input, 100) > 4000);
+    NEAR(0, Update(&state, input, 20));
+    CHECK(Update(&state, input, 100) > 0);
     input.spin_enabled = false;
-    NEAR(4000, Update(&state, input, 1));
+    NEAR(0, Update(&state, input, 1));
     input.spin_enabled = true;
-    NEAR(4000, Update(&state, input, 20));
-    CHECK(Update(&state, input, 100) > 4000);
+    NEAR(0, Update(&state, input, 20));
+    CHECK(Update(&state, input, 100) > 0);
     input.control_enabled = false;
-    NEAR(4000, Update(&state, input, 1));
+    NEAR(0, Update(&state, input, 1));
 }
 
 static void TestInvalidMeasurementAndTimingCannotIncreaseTarget(void)
@@ -138,40 +138,40 @@ static void TestInvalidMeasurementAndTimingCannotIncreaseTarget(void)
     const float bad_values[] = {NAN, INFINITY, -INFINITY};
     for (unsigned i = 0; i < sizeof(bad_values) / sizeof(bad_values[0]); ++i)
     {
-        ChassisSpinState_s state = {0};
+        ChassisSpinState_s state = {.applied_wz=4000};
         ChassisSpinInput_s input = ReadyInput();
         CHECK(Update(&state, input, 100) > 4000);
         input.measured_power_w = bad_values[i];
         float target;
         CHECK(!ChassisSpinUpdate(&config, &input, .005f, &state, &target));
-        NEAR(4000, target);
+        NEAR(0, target);
     }
     const float bad_dt[] = {0, -.005f, .021f, NAN, INFINITY};
     for (unsigned i = 0; i < sizeof(bad_dt) / sizeof(bad_dt[0]); ++i)
     {
-        ChassisSpinState_s state = {0};
+        ChassisSpinState_s state = {.applied_wz=4000};
         ChassisSpinInput_s input = ReadyInput();
         CHECK(Update(&state, input, 100) > 4000);
         float target;
         CHECK(!ChassisSpinUpdate(&config, &input, bad_dt[i], &state, &target));
-        NEAR(4000, target);
+        NEAR(0, target);
     }
-    ChassisSpinState_s state = {0};
+    ChassisSpinState_s state = {.applied_wz=4000};
     ChassisSpinInput_s input = ReadyInput();
     input.target_power_w = 0;
     float target;
     CHECK(!ChassisSpinUpdate(&config, &input, .005f, &state, &target));
-    NEAR(4000, target);
+    NEAR(0, target);
     input = ReadyInput();
     state.target_wz = NAN;
     state.initialized = true;
     CHECK(!ChassisSpinUpdate(&config, &input, .005f, &state, &target));
-    NEAR(4000, target);
+    NEAR(0, target);
 }
 
 static void TestClosedLoopUsesSparePowerAndRespondsToTranslationLoad(void)
 {
-    ChassisSpinState_s state = {0};
+    ChassisSpinState_s state = {.applied_wz=4000};
     ChassisSpinInput_s input = ReadyInput();
     float target = 4000;
     for (unsigned i = 0; i < 2500; ++i)
@@ -194,7 +194,7 @@ static void TestClosedLoopUsesSparePowerAndRespondsToTranslationLoad(void)
 #else
 static void TestDisabledMacroKeepsLegacyFixedTarget(void)
 {
-    ChassisSpinState_s state = {0};
+    ChassisSpinState_s state = {.applied_wz=4000};
     ChassisSpinInput_s input = ReadyInput();
     NEAR(4000, Update(&state, input, 2000));
     input.measured_power_w = 100;
@@ -208,7 +208,7 @@ static void TestDisabledMacroKeepsLegacyFixedTarget(void)
 static void TestInvalidConfigurationAndPointersFailSafely(void)
 {
     ChassisSpinConfig_s bad = config;
-    ChassisSpinState_s state = {0};
+    ChassisSpinState_s state = {.applied_wz=4000};
     ChassisSpinInput_s input = ReadyInput();
     float target = 9999;
     bad.max_wz = 3000;
@@ -233,7 +233,7 @@ static void TestDefaultMinimumKeepsARecoveryDemand(void)
 {
     ChassisSpinConfig_s configured = config;
     configured.min_wz = CHASSIS_SPIN_MIN_WZ;
-    ChassisSpinState_s state = {0};
+    ChassisSpinState_s state = {.applied_wz=4000};
     ChassisSpinInput_s input = ReadyInput();
     input.measured_power_w = 1000;
     float target = 0;
@@ -248,7 +248,7 @@ static void TestAppliedPredictiveGuardBlocksFurtherGrowth(void)
     CHECK(ChassisSpinGuardAllowsIncrease(&guard));
     guard.guard_scale = .5f;
     CHECK(!ChassisSpinGuardAllowsIncrease(&guard));
-    ChassisSpinState_s state = {0};
+    ChassisSpinState_s state = {.applied_wz=4000};
     ChassisSpinInput_s input = ReadyInput();
     input.increase_allowed = ChassisSpinGuardAllowsIncrease(&guard);
     NEAR(4000, Update(&state, input, 500));

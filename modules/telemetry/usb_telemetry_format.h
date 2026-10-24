@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* CSV v2 wire order; the first 72 fields retain their v1 order and units. */
+/* CSV v3 wire order; the first 85 fields retain their v2 order and units. */
 #define USB_TELEMETRY_FIELDS(U, I) \
     U(version) U(seq) U(tick) U(tx_drop_count) \
     U(chassis_valid) U(chassis_tick_ms) U(chassis_mode) \
@@ -29,7 +29,12 @@
     U(imu_valid) U(imu_age_ms) \
     I(imu_yaw_mdeg) I(imu_pitch_mdeg) I(imu_roll_mdeg) I(imu_yaw_total_mdeg) \
     I(imu_gx_mdps) I(imu_gy_mdps) I(imu_gz_mdps) \
-    I(imu_ax_mmps2) I(imu_ay_mmps2) I(imu_az_mmps2) I(chassis_offset_mdeg)
+    I(imu_ax_mmps2) I(imu_ay_mmps2) I(imu_az_mmps2) I(chassis_offset_mdeg) \
+    U(spin_power_phase) U(spin_block_reasons) I(spin_base_power_cw) \
+    I(spin_buffer_request_cw) I(spin_buffer_grant_cw) U(spin_base_confirm_ms) \
+    I(spin_filtered_power_cw) I(spin_power_ceiling_cw) I(spin_slow_correction_cw) \
+    I(spin_gain_milli) I(spin_rise_milli) I(spin_fall_milli) \
+    U(spin_lpf_ms) U(spin_settle_ms) U(power_tuning_source) U(spin_tuning_source)
 
 typedef struct {
 #define USB_FIELD_U(name) uint32_t name;

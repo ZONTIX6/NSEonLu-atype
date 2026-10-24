@@ -17,8 +17,16 @@ typedef struct {
     uint32_t revision;
     unsigned mode;
     bool registered;
+    TuningSource source;
 } GroupState;
 static GroupState groups[TUNING_GROUP_COUNT];
+TuningSource RuntimeTuningSource(TuningGroup group)
+{
+    taskENTER_CRITICAL();
+    const TuningSource source=group<TUNING_GROUP_COUNT ? groups[group].source : TUNING_SOURCE_COMPILED;
+    taskEXIT_CRITICAL();
+    return source;
+}
 static TuningStoredImage durable;
 static unsigned dirty_mask;
 static bool persistence_enabled, persistence_failed;
@@ -77,10 +85,13 @@ void RuntimeTuningRestore(TuningGroup group, bool (*apply)(const float *))
     if ((durable.mask&(1U<<group)) && durable.modes[group]==groups[group].mode &&
         apply(durable.values[group])) {
         memcpy(groups[group].values,durable.values[group],counts[group]*sizeof(float));
+        groups[group].source=TUNING_SOURCE_FLASH;
         return;
     }
-    if (saved_enabled[group] && saved_modes[group]==groups[group].mode && apply(saved_values[group]))
+    if (saved_enabled[group] && saved_modes[group]==groups[group].mode && apply(saved_values[group])) {
         memcpy(groups[group].values, saved_values[group], counts[group] * sizeof(float));
+        groups[group].source=TUNING_SOURCE_FILE;
+    }
 }
 enum { IDLE, QUEUED, APPLYING, READY };
 static struct {
@@ -103,6 +114,7 @@ void RuntimeTuningRegister(TuningGroup group, const float *values, unsigned mode
     groups[group].revision = 1;
     groups[group].mode = mode;
     groups[group].registered = true;
+    groups[group].source = TUNING_SOURCE_COMPILED;
     taskEXIT_CRITICAL();
 }
 static bool ParseUnsigned(const char *text, uint32_t *value)
@@ -205,6 +217,7 @@ void RuntimeTuningProcess(TuningGroup group, bool (*apply)(const float *))
     if (ok) {
         memcpy(groups[group].values, values, counts[group] * sizeof(float));
         ++groups[group].revision;
+        groups[group].source=TUNING_SOURCE_RUNTIME;
         if (persistence_enabled) {
             if (!IsSaved(group,&groups[group])) dirty_mask |= 1U<<group;
             else dirty_mask &= ~(1U<<group);

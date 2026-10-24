@@ -1,12 +1,14 @@
 # 完整宏与初始化参数索引
 
+2026-10-24：自转阶段、能量门槛和响应参数的当前值见 [自转功率说明](chassis-power-priority.md)。下方扫描表除明确更新条目外保留历史快照，生效值以源码及板端 GET 为准。
+
 更新日期：2026-10-23。当前目标为 STM32F427 A 板。配套说明：[配置指南](configuration-guide.md)、[宏迁移表](atype-macro-migration.md)。
 
 由 `scripts/generate-configuration-index.py` 扫描 263 个项目 C/H 文件，记录 3232 条预处理、配置初始化和 HAL/NVIC 项。预处理条目包含互斥分支与保护宏，不能将所有条目同时理解为有效配置。可从构建命令覆盖的选项见 `config/atype-options.txt`；普通源码 PID/功率模型初值也列在所属文件下。
 
 `modules/imu/ins_task.c`、`BMI088driver.c`、`BMI088Middleware.c` 是未链接的旧 C 板实现；当前 INS 只链接 MPU6500 和公共数学接口。便携副本有独立 API，未加入固件链接。
 
-底盘原跟随档由 `application/robot_def.h` 的 `CHASSIS_FOLLOW_MODE` 选择：`1`（默认）以云台实测朝向为前方且 `wz=0`，`0` 保留原比例跟转。Make 使用 `CHASSIS_FOLLOW_MODE=0/1`，CMake 使用 `-DCHASSIS_FOLLOW_MODE=0/1`；独立目录重新构建并烧录，非法值触发编译错误。详见 [底盘说明](chassis.md#跟随档策略)。本次仅同步底盘策略涉及的三个源码节，2026-10-23 另同步了 Inc/board_config.h 的裁判 USART6 默认值、端口选择与互斥检查；其余条目保留原索引快照。
+底盘原跟随档由 `application/robot_def.h` 的 `CHASSIS_FOLLOW_MODE` 选择：`0`（默认）恢复原比例跟转，`1` 以云台实测朝向为前方且 `wz=0`。Make 使用 `CHASSIS_FOLLOW_MODE=0/1`，CMake 使用 `-DCHASSIS_FOLLOW_MODE=0/1`；独立目录重新构建并烧录，非法值触发编译错误。详见 [底盘说明](chassis.md#跟随档策略)。本次仅同步底盘策略涉及的三个源码节，2026-10-23 另同步了 Inc/board_config.h 的裁判 USART6 默认值、端口选择与互斥检查；其余条目保留原索引快照。
 
 ## application/board_analog_key.h
 
@@ -504,7 +506,7 @@
 | [82](../application/robot_def.h#L82) | 预处理 | `#if CHASSIS_DRIVE_TYPE != CHASSIS_DRIVE_MECANUM && \` |
 | [85](../application/robot_def.h#L85) | 预处理 | `#endif` |
 | [88](../application/robot_def.h#L88) | 预处理 | `#ifndef CHASSIS_FOLLOW_MODE` |
-| [89](../application/robot_def.h#L89) | 预处理 | `#define CHASSIS_FOLLOW_MODE 1` |
+| [89](../application/robot_def.h#L89) | 预处理 | `#define CHASSIS_FOLLOW_MODE 0` |
 | [90](../application/robot_def.h#L90) | 预处理 | `#endif` |
 | [91](../application/robot_def.h#L91) | 预处理 | `#if CHASSIS_FOLLOW_MODE != 0 && CHASSIS_FOLLOW_MODE != 1` |
 | [93](../application/robot_def.h#L93) | 预处理 | `#endif` |

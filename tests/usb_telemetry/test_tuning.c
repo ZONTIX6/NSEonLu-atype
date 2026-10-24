@@ -29,6 +29,7 @@ int main(void)
         memcpy(&pid[i * 6], wheel, sizeof wheel);
     }
     RuntimeTuningRegister(TUNING_PID, pid, 0);
+    assert(RuntimeTuningSource(TUNING_PID)==TUNING_SOURCE_COMPILED);
     assert(!RuntimeTuningBeginTrial(2));
     assert(RuntimeTuningBeginTrial(1));
     RuntimeTuningSubmit("@T1,99,SAVE,pid,1");
@@ -47,6 +48,7 @@ int main(void)
     assert(applied == 0);
     RuntimeTuningProcess(TUNING_PID, accept);
     assert(applied == 1);
+    assert(RuntimeTuningSource(TUNING_PID)==TUNING_SOURCE_RUNTIME);
     reply_contains("@T1,2,OK,pid,2,0,");
     RuntimeTuningSubmit(set);
     reply_contains("@T1,2,ERR,pid,conflict");
@@ -82,6 +84,7 @@ int main(void)
     RuntimeTuningPersistenceInit(&saved);
     RuntimeTuningRegister(TUNING_PID,pid,0);
     RuntimeTuningRestore(TUNING_PID,accept);
+    assert(RuntimeTuningSource(TUNING_PID)==TUNING_SOURCE_FLASH);
     RuntimeTuningSubmit("@T1,10,GET,pid");
     assert(RuntimeTuningReply(reply,sizeof reply)>0 && strstr(reply,",3fa00000,") && strstr(reply,",saved\r\n"));
     RuntimeTuningReplySent();
@@ -113,6 +116,7 @@ int main(void)
     RuntimeTuningPersistenceInit(&saved);
     pid[0]=.75f; RuntimeTuningRegister(TUNING_PID,pid,0);
     RuntimeTuningRestore(TUNING_PID,accept);
+    assert(RuntimeTuningSource(TUNING_PID)==TUNING_SOURCE_COMPILED);
     RuntimeTuningSubmit("@T1,17,GET,pid");
     assert(RuntimeTuningReply(reply,sizeof reply)>0 && strstr(reply,",3f400000,") && strstr(reply,",volatile\r\n"));
     RuntimeTuningReplySent();

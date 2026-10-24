@@ -1,5 +1,6 @@
 #include "usb_telemetry.h"
 #include "tuning_flash.h"
+#include "runtime_tuning.h"
 
 #if USB_TELEMETRY_ENABLE
 #include "usbd_cdc_if.h"
@@ -32,6 +33,8 @@ static void Collect(uint32_t now_ms)
     sample.rc_age_ms = sample.meter_age_ms = sample.buffer_age_ms =
         sample.cap_age_ms = sample.cap_input_age_ms = sample.imu_age_ms = UINT32_MAX;
     sample.power_source = CHASSIS_POWER_SOURCE_MODE;
+    sample.power_tuning_source=RuntimeTuningSource(TUNING_POWER);
+    sample.spin_tuning_source=RuntimeTuningSource(TUNING_SPIN);
 
     if (ChassisGetTelemetrySnapshot(&chassis)) {
         sample.chassis_valid = isfinite(chassis.vx_cmd) && isfinite(chassis.vy_cmd) &&
@@ -51,6 +54,20 @@ static void Collect(uint32_t now_ms)
         sample.buffer_lower_cj = USBTelemetryFixed(chassis.buffer_lower_j, 100);
         sample.buffer_predicted_cj = USBTelemetryFixed(chassis.buffer_predicted_j, 100);
         sample.buffer_recovering = chassis.buffer_recovering;
+        sample.spin_power_phase=chassis.spin_phase;
+        sample.spin_block_reasons=chassis.spin_block_reasons;
+        sample.spin_base_power_cw=USBTelemetryFixed(chassis.spin_base_power_w,100);
+        sample.spin_buffer_request_cw=USBTelemetryFixed(chassis.spin_buffer_request_w,100);
+        sample.spin_buffer_grant_cw=USBTelemetryFixed(chassis.spin_buffer_grant_w,100);
+        sample.spin_base_confirm_ms=USBTelemetryFixed(chassis.spin_base_confirm_s,1000);
+        sample.spin_filtered_power_cw=USBTelemetryFixed(chassis.spin_filtered_power_w,100);
+        sample.spin_power_ceiling_cw=USBTelemetryFixed(chassis.spin_power_ceiling_w,100);
+        sample.spin_slow_correction_cw=USBTelemetryFixed(chassis.slow_correction_w,100);
+        sample.spin_gain_milli=USBTelemetryFixed(chassis.spin_gain,1000);
+        sample.spin_rise_milli=USBTelemetryFixed(chassis.spin_rise,1000);
+        sample.spin_fall_milli=USBTelemetryFixed(chassis.spin_fall,1000);
+        sample.spin_lpf_ms=USBTelemetryFixed(chassis.spin_lpf_s,1000);
+        sample.spin_settle_ms=USBTelemetryFixed(chassis.spin_settle_s,1000);
     }
     if (RemoteControlGetSnapshot(&remote)) {
         sample.rc_online = remote.online;

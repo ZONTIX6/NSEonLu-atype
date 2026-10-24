@@ -34,7 +34,7 @@ async (page) => {
     Object.defineProperty(navigator, 'serial', {configurable: true, value: provider});
     window.__sendUsbSample = (seq, tick, meter = 1234, extras = {}) => {
       const values = Object.fromEntries(TelemetryProtocol.FIELDS.map(key => [key, 0]));
-      Object.assign(values, {version: 2, seq, tick, chassis_valid: 1, chassis_tick_ms: tick,
+      Object.assign(values, {version: 3, seq, tick, chassis_valid: 1, chassis_tick_ms: tick,
         chassis_mode: 2, vx_cmd_milli: -1250, rc_online: 1, rc_lx: -660, rc_ly: 330,
         rc_sw_left: 1, rc_sw_right: 3, keys: 32769, model_tick_ms: tick,
         motor_online_mask: 15, motor_enabled_mask: 15, rpm_lf: -1234,
