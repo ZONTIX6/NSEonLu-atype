@@ -76,15 +76,7 @@
 #define CHASSIS_POWER_DEMAND_MARGIN_W 5.0f     // 高于基础功率的真实驱动需求所允许的额外余量(W)
 #endif
 
-/* Adaptive direct-supply spin: qualify base power before publishing buffer capacity.
- * These are compile-time policy thresholds; runtime power/spin groups retain their schema. */
-#define CHASSIS_SPIN_BUFFER_TARGET_J 20.0f
-#define CHASSIS_SPIN_BUFFER_ENTER_J 30.0f
-#define CHASSIS_SPIN_BUFFER_EXIT_J 15.0f
-#define CHASSIS_SPIN_BASE_CONFIRM_S 0.100f
-#define CHASSIS_SPIN_CAPABILITY_CONFIRM_S 0.100f
-#define CHASSIS_SPIN_BASE_BAND_W 2.0f
-#define CHASSIS_SPIN_BASE_BAND_RATIO 0.03f
+/* Spin power filtering is diagnostic only; buffer admission uses common demand. */
 #define CHASSIS_SPIN_BASE_LPF_S 0.050f
 
 #endif

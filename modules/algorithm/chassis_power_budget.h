@@ -74,7 +74,8 @@ typedef struct
     bool demand_valid;
     float requested_load_power_w; /* Physical load power before current limiting. */
     float confirmed_input_target_w; /* Fresh 0x052 target, physical watts. */
-    /* Limit-first policy applies only to adaptive spin with a direct supply. */
+    /* Legacy name: selects direct-spin diagnostics, not a separate budget policy.
+     * Entry/capability/margin fields remain source-compatible but do not qualify boost. */
     bool spin_power_priority, spin_feedback_valid, spin_entry_allowed;
     bool spin_capability_limited, spin_braking;
     bool spin_hard_margin;
@@ -129,7 +130,7 @@ typedef struct
     bool recovering;
     ChassisSpinPowerPhase_e spin_phase;
     float spin_base_power_w, spin_buffer_request_w, spin_buffer_grant_w;
-    float spin_base_confirm_s, spin_filtered_power_w, spin_power_ceiling_w;
+    float spin_base_confirm_s, spin_filtered_power_w, spin_power_ceiling_w; /* confirm stays 0 */
     bool spin_capability_latched;
     float spin_capability_release_s;
 } ChassisPowerBudgetOutput_s;

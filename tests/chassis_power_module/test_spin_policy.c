@@ -8,7 +8,7 @@ unsigned BSPLogWrite(const void *data,unsigned length) {(void)data;return length
 unsigned BSPLogWriteString(const char *text) {return (unsigned)strlen(text);}
 static void Near(float a,float b) {assert(isfinite(b) && fabsf(a-b)<.02f);}
 
-/* Exercise idle -> real motor demand -> base confirmation -> buffer assist through
+/* Exercise idle -> real motor demand -> demand-driven buffer assist through
  * all production controllers. The independent motor has finite inertia and drag. */
 static void ClosedLoop(const ChassisPower_Init_Config_s *config)
 {
@@ -17,7 +17,7 @@ static void ClosedLoop(const ChassisPower_Init_Config_s *config)
         .power_deadband_w=1,.settle_time_s=.05f,.budget_drop_reset_w=1};
     ChassisSpinState_s state={0};
     float rpm=0,power=0,energy=60,target=0;
-    bool saw_base=false,saw_assist=false,saw_demand=false;
+    bool saw_assist=false,saw_demand=false;
     for(unsigned n=0;n<2000;++n) {
         const uint32_t tick=2000+n*5;
         ChassisPowerPolicyInput_s i={.now_ms=tick,.dt_s=.005f,.adaptive_spin=true,
@@ -27,8 +27,7 @@ static void ClosedLoop(const ChassisPower_Init_Config_s *config)
         i.previous_valid=ChassisPowerGetSnapshot(&i.previous);
         ChassisPowerPolicyOutput_s p;
         assert(ChassisPowerUpdatePolicy(&i,&p));
-        if(p.budget.spin_phase==CHASSIS_SPIN_POWER_BASE_TRACK && power>75 && power<=80) saw_base=true;
-        if(p.budget.spin_phase==CHASSIS_SPIN_POWER_BUFFER_ASSIST) {assert(saw_base);saw_assist=true;}
+        saw_assist|=p.budget.spin_phase==CHASSIS_SPIN_POWER_BUFFER_ASSIST;
         ChassisSpinInput_s si={.spin_enabled=true,.control_enabled=p.control.control_enabled,
             .feedback_valid=i.previous_valid && i.previous.online_mask==15,
             .increase_allowed=ChassisSpinTransientAllowsIncrease(&i.previous.transient) &&
@@ -70,7 +69,7 @@ static void ClosedLoop(const ChassisPower_Init_Config_s *config)
         rpm+=(final.current_command[0]*.5f-rpm)*.005f/.1f;
         energy=fminf(60,fmaxf(0,energy+(80-power)*.005f));
     }
-    assert(saw_demand && saw_base && saw_assist);
+    assert(saw_demand && saw_assist);
 }
 static void Direct50WWithIndependentMeter(ChassisPower_Init_Config_s config, float torque_ratio)
 {
@@ -89,7 +88,7 @@ static void Direct50WWithIndependentMeter(ChassisPower_Init_Config_s config, flo
     const float wheel_gain=325*.0174532925199433f/6;
     const float body_per_rpm=.06f/(60*19*.7071067811865475f*.325f);
     ChassisSpinState_s state={0};
-    float rpm=0,power=0,energy=60,target=0,base_peak=0,correction=0;
+    float rpm=0,power=0,energy=60,target=0,base_peak=0,correction=0,entry_power=0;
     bool saw_entry=false,saw_base=false,saw_assist=false;
     for(unsigned n=0;n<2500;++n) {
         const uint32_t tick=20000+n*5;
@@ -107,10 +106,11 @@ static void Direct50WWithIndependentMeter(ChassisPower_Init_Config_s config, flo
         if(p.budget.spin_phase==CHASSIS_SPIN_POWER_BASE_TRACK) {
             Near(49,p.control.target_power_w);Near(50,p.control.power_ceiling_w);
             base_peak=fmaxf(base_peak,power);
-            saw_base|=power>=47;
+            saw_base=true;
         }
         if(p.budget.spin_phase==CHASSIS_SPIN_POWER_BUFFER_ASSIST) {
-            assert(saw_base);saw_assist=true;
+            if(!saw_assist) entry_power=power;
+            saw_assist=true;
         }
         const bool guard_ok=ChassisSpinGuardAllowsIncrease(&i.previous.transient);
         ChassisSpinInput_s si={.spin_enabled=true,.control_enabled=p.control.control_enabled,
@@ -159,10 +159,45 @@ static void Direct50WWithIndependentMeter(ChassisPower_Init_Config_s config, flo
         rpm+=(final.current_command[0]-rpm)*.005f/.1f;
         energy=fminf(60,fmaxf(0,energy+(50-power)*.005f));
     }
-    printf("50 W direct, torque ratio %.2f: base peak %.2f W, correction %.2f W, assist %u\n",
-        torque_ratio,base_peak,correction,(unsigned)saw_assist);
-    assert(saw_entry && saw_base && saw_assist);
-    if(torque_ratio<1) assert(correction>1);
+    printf("50 W direct, torque ratio %.2f: base peak %.2f W, assist %u at %.2f W, correction %.2f W\n",
+        torque_ratio,base_peak,(unsigned)saw_assist,entry_power,correction);
+    assert(saw_entry && saw_base);
+    if(torque_ratio<1) assert(saw_assist);
+    else assert(base_peak>=47); /* No excess demand need not consume buffer. */
+}
+static void PredictedDemandCanUseBufferBelowMeasuredBase(ChassisPower_Init_Config_s c)
+{
+    assert(ChassisPowerInit(&c));
+    ChassisPowerPolicyInput_s i={.now_ms=100,.dt_s=.005f,.adaptive_spin=true,.previous_valid=true,
+        .referee={.valid=true,.chassis_output_enabled=true,.chassis_output_valid=true,
+            .chassis_power_limit_w=50,.buffer_energy_j=60},
+        .meter={.online=true,.power_w=42},
+        .previous={.registered=true,.online_mask=15,.meter_online=true,.measured_power_w=42,
+            .power={.status=POWER_MODEL_STATUS_OK},.telemetry={.motor_enabled_mask=15},
+            .transient={.guard_scale=.9f,.mode=CHASSIS_POWER_TRANSIENT_RUN,
+                .drive_mask=15,.feedback_fresh=true,.timing_valid=true,.meter_fresh=true}}};
+    ChassisPowerPolicyOutput_s o={0};
+    for(unsigned n=0;n<60;++n) {
+        i.now_ms+=5;i.referee.buffer_tick_ms=i.meter.last_rx_tick_ms=i.now_ms;
+        i.previous.tick_ms=i.previous.meter_tick_ms=i.now_ms;
+        for(unsigned w=0;w<4;++w) {
+            i.previous.feedback_tick_ms[w]=i.now_ms;i.previous.feedback_sequence[w]=n+1;
+            i.previous.telemetry.actual_speed_rpm[w]=1000;
+            i.previous.telemetry.target_speed_rpm[w]=1200;
+            i.previous.power.predicted_unlimited_power_w[w]=15;
+        }
+        assert(ChassisPowerUpdatePolicy(&i,&o));
+        if(n==1) assert(o.budget.spin_buffer_grant_w>0 && o.budget.spin_base_confirm_s==0);
+    }
+    Near(65,o.control.target_power_w);Near(65/.98f,o.control.power_ceiling_w);
+    assert(o.budget.spin_phase==CHASSIS_SPIN_POWER_BUFFER_ASSIST);
+    /* The fresh raw demand remains valid during model/predictive limiting. */
+    for(unsigned w=0;w<4;++w) i.previous.power.predicted_unlimited_power_w[w]=10;
+    assert(ChassisPowerUpdatePolicy(&i,&o));
+    Near(49,o.control.target_power_w);Near(50,o.control.power_ceiling_w);
+    i.zero_force=true;assert(ChassisPowerUpdatePolicy(&i,&o));
+    assert(!o.control.control_enabled && o.budget.spin_buffer_grant_w==0);
+    puts("PASS: 50 W limit / 42 W meter / 60 W demand publishes 65 W without base confirmation");
 }
 int main(int argc, char **argv)
 {
@@ -183,6 +218,9 @@ int main(int argc, char **argv)
         .positive_slew_rate_w_per_s=60,.budget_drop_reset_w=1,.antiwindup_gain_per_s=10,
         .low_demand_delay_s=.5f,.low_demand_decay_w_per_s=1};
     if(argc==2) {
+        if(strcmp(argv[1],"demand50")==0) {
+            PredictedDemandCanUseBufferBelowMeasuredBase(c);return 0;
+        }
         Direct50WWithIndependentMeter(c,strcmp(argv[1],"biased")==0 ? .85f : 1);
         return 0;
     }
@@ -206,7 +244,8 @@ int main(int argc, char **argv)
             i.previous.power.predicted_unlimited_power_w[w]=40;
         }
         assert(ChassisPowerUpdatePolicy(&i,&o));
-        Near(80,o.control.nominal_budget_w);Near(78.4f,o.control.target_power_w);
+        assert(o.control.nominal_budget_w>=80 && o.control.nominal_budget_w<=140);
+        Near(0,o.budget.spin_base_confirm_s);
     }
     i.meter.power_w=78.4f;
     for(unsigned n=0;n<200;++n) {
@@ -218,7 +257,7 @@ int main(int argc, char **argv)
     assert(o.budget.spin_phase==CHASSIS_SPIN_POWER_BUFFER_ASSIST);
     assert(o.control.target_power_w>80);
     Near(o.control.target_power_w,78.4f+o.budget.spin_buffer_grant_w);
-    Near(o.control.power_ceiling_w,80+o.budget.spin_buffer_grant_w);
+    Near(o.control.power_ceiling_w,o.control.nominal_budget_w);
     ChassisPowerCycleInput_s fast={.control=o.control,.now_ms=i.now_ms,.dt_s=.002f,
         .online_mask=15,.enabled_mask=15,.meter=i.meter};
     fast.control.slow_correction_w=8; /* Model correction cannot create physical extra allowance. */
@@ -236,8 +275,8 @@ int main(int argc, char **argv)
     assert(!o.control.control_enabled);
     i.dt_s=.005f;
     assert(ChassisPowerUpdatePolicy(&i,&o));
-    assert(o.budget.spin_phase==CHASSIS_SPIN_POWER_BASE_TRACK);
-    Near(0,o.budget.spin_buffer_grant_w);
+    assert(o.budget.spin_phase==CHASSIS_SPIN_POWER_BUFFER_ASSIST);
+    assert(o.budget.spin_buffer_grant_w>0);
     i.previous.feedback_tick_ms[2]-=30;
     assert(ChassisPowerUpdatePolicy(&i,&o));
     assert(o.budget.spin_phase==CHASSIS_SPIN_POWER_DEGRADED);

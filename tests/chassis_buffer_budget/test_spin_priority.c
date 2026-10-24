@@ -2,7 +2,6 @@
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
-
 static ChassisPowerBudgetConfig_s Config(void)
 {
     return (ChassisPowerBudgetConfig_s){.empty_energy_ratio=.1f,.full_energy_ratio=.3f,
@@ -15,10 +14,10 @@ static ChassisPowerBudgetConfig_s Config(void)
 }
 static ChassisPowerBudgetInput_s Input(float watts)
 {
-    return (ChassisPowerBudgetInput_s){.referee_limit_w=80,.buffer_control_enabled=true,
+    return (ChassisPowerBudgetInput_s){.referee_limit_w=50,.buffer_control_enabled=true,
         .buffer_data_valid=true,.buffer_energy_j=60,.buffer_tick_ms=100,.input_power_valid=true,
         .measured_input_power_w=watts,.load_power_valid=true,.demand_valid=true,
-        .requested_load_power_w=140,.spin_power_priority=true,.spin_feedback_valid=true,
+        .requested_load_power_w=60,.spin_power_priority=true,.spin_feedback_valid=true,
         .spin_entry_allowed=true,.now_ms=100,.input_power_tick_ms=100};
 }
 static ChassisPowerBudgetOutput_s Step(ChassisPowerBudgetState_s *s,
@@ -35,149 +34,97 @@ static ChassisPowerBudgetOutput_s Step(ChassisPowerBudgetState_s *s,
     return o;
 }
 static void Near(float a,float b) {assert(isfinite(b) && fabsf(a-b)<.02f);}
-static void BaseMustBeReachedBeforeBoost(void)
+static void DemandBoostDoesNotWaitForMeasuredBase(void)
 {
-    ChassisPowerBudgetState_s s={0};
-    ChassisPowerBudgetInput_s i=Input(20);
-    ChassisPowerBudgetOutput_s o={0};
-    for(unsigned n=0;n<100;++n) o=Step(&s,&i,true);
-    Near(80,o.applied_budget_w); /* High energy and high request must not bypass the base phase. */
+    ChassisPowerBudgetState_s s={0};ChassisPowerBudgetInput_s i=Input(42);
+    ChassisPowerBudgetOutput_s o=Step(&s,&i,true);o=Step(&s,&i,true);
+    assert(o.spin_phase==CHASSIS_SPIN_POWER_BUFFER_ASSIST && o.spin_buffer_grant_w>0);
+    Near(0,o.spin_base_confirm_s);
+    for(unsigned n=0;n<60;++n) o=Step(&s,&i,true);
+    Near(65,o.input_target_w);Near(65/.98f,o.applied_budget_w);
+    Near(16,o.spin_buffer_request_w);Near(16,o.spin_buffer_grant_w);
+    Near(o.applied_budget_w,o.spin_power_ceiling_w);
+    i.requested_load_power_w=40;o=Step(&s,&i,true);
+    Near(50,o.applied_budget_w);Near(0,o.spin_buffer_grant_w);
     assert(o.spin_phase==CHASSIS_SPIN_POWER_BASE_TRACK);
-    Near(0,o.spin_buffer_grant_w);
-    i.measured_input_power_w=78.4f;
-    i.demand_valid=false;i.requested_load_power_w=0; /* No pre-existing excess demand required. */
-    for(unsigned n=0;n<200;++n) o=Step(&s,&i,true);
-    assert(o.spin_phase==CHASSIS_SPIN_POWER_BUFFER_ASSIST);
-    assert(o.spin_buffer_request_w>0 && o.spin_buffer_grant_w>0);
-    Near(78.4f,o.spin_base_power_w);
-    Near(78.4f+o.spin_buffer_grant_w,o.input_target_w);
-    Near(80+o.spin_buffer_grant_w,o.spin_power_ceiling_w);
-    /* Budget conversion must not attenuate the physical boost a second time. */
-    Near(o.input_target_w,.98f*o.applied_budget_w);
-    i.measured_input_power_w=95;
-    for(unsigned n=0;n<10;++n) o=Step(&s,&i,true);
-    assert(o.spin_phase==CHASSIS_SPIN_POWER_BUFFER_ASSIST); /* Leaving base band is expected. */
+    i.requested_load_power_w=60;i.demand_valid=false;o=Step(&s,&i,true);
+    Near(50,o.applied_budget_w);Near(0,o.spin_buffer_grant_w);
 }
-static void RepeatedAndStaleSamplesCannotQualify(void)
+static void SpinAndOrdinaryBudgetUseTheSameDemandFormula(void)
 {
-    ChassisPowerBudgetState_s s={0};
-    ChassisPowerBudgetInput_s i=Input(78.4f);
-    ChassisPowerBudgetOutput_s o;
-    for(unsigned n=0;n<100;++n) {
-        o=Step(&s,&i,false);
-        Near(0,o.spin_buffer_grant_w);
+    const float energy[]={12,25,60},demand[]={40,49,50,60,140},meter[]={20,42,55,100};
+    for(unsigned e=0;e<3;++e) for(unsigned d=0;d<5;++d) for(unsigned m=0;m<4;++m) {
+        ChassisPowerBudgetState_s spin={0},ordinary={0};
+        ChassisPowerBudgetInput_s a=Input(meter[m]);a.buffer_energy_j=energy[e];
+        a.requested_load_power_w=demand[d];a.spin_entry_allowed=false;
+        a.spin_capability_limited=true; /* Motor limits remain downstream, as on C. */
+        ChassisPowerBudgetInput_s b=a;b.spin_power_priority=false;
+        for(unsigned n=0;n<60;++n) {
+            ChassisPowerBudgetOutput_s x=Step(&spin,&a,true),y=Step(&ordinary,&b,true);
+            Near(y.applied_budget_w,x.applied_budget_w);Near(y.input_target_w,x.input_target_w);
+            Near(y.buffer_lower_j,x.buffer_lower_j);assert(x.recovering==y.recovering);
+            assert(!x.spin_capability_latched && x.spin_capability_release_s==0);
+        }
     }
-    assert(o.spin_phase==CHASSIS_SPIN_POWER_DEGRADED);
-    Near(0,o.spin_base_confirm_s);
 }
-static void DropAndFaultRevokeQualification(void)
+static void OldCapabilityAndBaseStateCannotBlockDemand(void)
 {
-    ChassisPowerBudgetState_s s={0};
-    ChassisPowerBudgetInput_s i=Input(78.4f);
-    ChassisPowerBudgetOutput_s o;
-    for(unsigned n=0;n<60;++n) o=Step(&s,&i,true);
-    assert(o.spin_buffer_grant_w>0);
-    i.spin_braking=true;
-    o=Step(&s,&i,true);
-    assert(o.spin_phase==CHASSIS_SPIN_POWER_DEGRADED);
-    Near(0,o.spin_buffer_grant_w);
-    i.spin_braking=false;
-    o=Step(&s,&i,true);
-    assert(o.spin_phase==CHASSIS_SPIN_POWER_BASE_TRACK);
-    for(unsigned n=0;n<60;++n) o=Step(&s,&i,true);
-    assert(o.spin_buffer_grant_w>0);
-    i.referee_limit_w=40;i.measured_input_power_w=39.2f;
-    o=Step(&s,&i,true);
-    assert(o.spin_phase==CHASSIS_SPIN_POWER_BASE_TRACK);
-    Near(0,o.spin_buffer_grant_w);Near(40,o.applied_budget_w);
-    for(unsigned n=0;n<60;++n) o=Step(&s,&i,true);
-    assert(o.spin_buffer_grant_w>0);
-    i.spin_feedback_valid=false;
-    o=Step(&s,&i,true);
-    assert(o.spin_phase==CHASSIS_SPIN_POWER_DEGRADED);
-    Near(0,o.spin_buffer_grant_w);Near(40,o.applied_budget_w);
-    i.spin_feedback_valid=true;
-    o=Step(&s,&i,true);
-    assert(o.spin_phase==CHASSIS_SPIN_POWER_BASE_TRACK);
-    Near(0,o.spin_buffer_grant_w);
-    i.spin_power_priority=false;i.demand_valid=false;
-    o=Step(&s,&i,true);
-    assert(o.spin_phase==CHASSIS_SPIN_POWER_OFF);
-    Near(0,o.spin_base_confirm_s);
+    ChassisPowerBudgetState_s s={.spin_capability_latched=true,.spin_base_time_s=.1f};
+    ChassisPowerBudgetInput_s i=Input(42);i.spin_entry_allowed=false;i.spin_capability_limited=true;
+    ChassisPowerBudgetOutput_s o=Step(&s,&i,true);o=Step(&s,&i,true);
+    assert(o.spin_buffer_grant_w>0 && !o.spin_capability_latched);
+    Near(0,o.spin_base_confirm_s);Near(0,o.spin_capability_release_s);
 }
-static void LowEnergyAlwaysOverridesBasePhase(void)
+static void FaultsRevokeAndHealthyDemandResumesWithoutBaseWindow(void)
 {
-    ChassisPowerBudgetState_s s={0};
-    ChassisPowerBudgetInput_s i=Input(20);
+    for(unsigned fault=0;fault<7;++fault) {
+        ChassisPowerBudgetState_s s={0};ChassisPowerBudgetInput_s i=Input(42);
+        ChassisPowerBudgetOutput_s o={0};
+        for(unsigned n=0;n<10;++n) o=Step(&s,&i,true);
+        assert(o.spin_buffer_grant_w>0);
+        if(fault==0) i.spin_braking=true;
+        if(fault==1) i.spin_feedback_valid=false;
+        if(fault==2) i.measured_input_power_w=-1;
+        if(fault==3) i.input_power_valid=false;
+        if(fault==4) i.buffer_data_valid=false;
+        if(fault==5) i.demand_valid=false;
+        if(fault==6) i.input_power_tick_ms=i.now_ms-30;
+        o=Step(&s,&i,fault!=6);
+        Near(50,o.applied_budget_w);Near(0,o.spin_buffer_grant_w);
+        i.spin_braking=false;i.spin_feedback_valid=true;i.measured_input_power_w=42;
+        i.input_power_valid=i.buffer_data_valid=i.demand_valid=true;
+        for(unsigned n=0;n<2;++n) o=Step(&s,&i,true);
+        assert(o.spin_buffer_grant_w>0 && o.spin_base_confirm_s==0);
+    }
+}
+static void StaleMeterCannotKeepBoost(void)
+{
+    ChassisPowerBudgetState_s s={0};ChassisPowerBudgetInput_s i=Input(42);
+    ChassisPowerBudgetOutput_s o={0};
+    for(unsigned n=0;n<10;++n) o=Step(&s,&i,true);
+    for(unsigned n=0;n<10;++n) o=Step(&s,&i,false);
+    assert(o.spin_phase==CHASSIS_SPIN_POWER_DEGRADED);
+    Near(0,o.spin_buffer_grant_w);Near(0,o.spin_base_confirm_s);
+}
+static void LowEnergyAndPredictionStillOverrideDemand(void)
+{
+    ChassisPowerBudgetState_s s={0};ChassisPowerBudgetInput_s i=Input(20);
     i.buffer_energy_j=10;
     ChassisPowerBudgetOutput_s o=Step(&s,&i,true);
     assert(o.recovering && o.spin_phase==CHASSIS_SPIN_POWER_RECOVER);
-    assert(o.input_target_w<78.4f);Near(0,o.spin_buffer_grant_w);
-    s=(ChassisPowerBudgetState_s){0};i=Input(150);i.buffer_energy_j=38;
+    assert(o.input_target_w<49);Near(0,o.spin_buffer_grant_w);
+    s=(ChassisPowerBudgetState_s){0};i=Input(120);i.buffer_energy_j=35;
     o=Step(&s,&i,true);
-    assert(o.buffer_lower_j>10 && o.buffer_predicted_j<=5);
-    assert(o.recovering); /* Prediction overrides even a high current estimate. */
-}
-static void EnergyTargetAndCapabilityBoundBoost(void)
-{
-    ChassisPowerBudgetState_s s={0};
-    ChassisPowerBudgetInput_s i=Input(78.4f);
-    ChassisPowerBudgetOutput_s o;
-    for(unsigned n=0;n<60;++n) o=Step(&s,&i,true);
-    assert(o.spin_phase==CHASSIS_SPIN_POWER_BUFFER_ASSIST);
-    /* A controlled observed lower bound checks the target independently of observer correction. */
-    s.buffer_lower_j=25;i.buffer_tick_ms=s.buffer_tick_ms;i.buffer_age_s=s.last_buffer_age_s;
-    i.now_ms=s.buffer_tick_ms+(uint32_t)lroundf(s.last_buffer_age_s*1000);
-    o=Step(&s,&i,true);
-    assert(o.spin_buffer_request_w>19 && o.spin_buffer_request_w<21);
-    i.spin_capability_limited=true;
-    for(unsigned n=0;n<10;++n) o=Step(&s,&i,true);
-    assert(o.spin_phase==CHASSIS_SPIN_POWER_BUFFER_ASSIST);
-    for(unsigned n=0;n<20;++n) o=Step(&s,&i,true);
-    assert(o.spin_phase==CHASSIS_SPIN_POWER_BASE_TRACK);
-    Near(0,o.spin_buffer_grant_w);
-}
-static void CapabilityLatchRequiresFreshMarginAndNewBaseConfirmation(void)
-{
-    ChassisPowerBudgetState_s s={0};ChassisPowerBudgetInput_s i=Input(78.4f);
-    ChassisPowerBudgetOutput_s o={0};
-    for(unsigned n=0;n<60;++n) o=Step(&s,&i,true);
-    assert(o.spin_phase==CHASSIS_SPIN_POWER_BUFFER_ASSIST);
-    i.spin_capability_limited=true;
-    for(unsigned n=0;n<25;++n) o=Step(&s,&i,true);
-    assert(o.spin_capability_latched && o.spin_phase==CHASSIS_SPIN_POWER_BASE_TRACK);
-    i.spin_capability_limited=false;
-    for(unsigned n=0;n<200;++n) o=Step(&s,&i,true);
-    assert(o.spin_capability_latched && o.spin_buffer_grant_w==0);
-    i.spin_hard_margin=true;
-    for(unsigned n=0;n<40;++n) o=Step(&s,&i,true);
-    assert(o.spin_capability_release_s>0 && o.spin_capability_latched);
-    const unsigned seq=i.spin_feedback_sequence[0];
-    for(unsigned n=0;n<150;++n) {
-        i.spin_feedback_sequence[0]=seq-1;o=Step(&s,&i,true);
-    }
-    assert(o.spin_capability_latched && o.spin_capability_release_s<.5f);
-    i.spin_feedback_valid=false;o=Step(&s,&i,true);assert(o.spin_capability_latched);
-    i.spin_feedback_valid=true;
-    for(unsigned n=0;n<99;++n) o=Step(&s,&i,true);
-    assert(o.spin_capability_latched);
-    for(unsigned n=0;n<5;++n) o=Step(&s,&i,true);
-    assert(!o.spin_capability_latched && o.spin_buffer_grant_w==0);
-    for(unsigned n=0;n<45;++n) o=Step(&s,&i,true);
-    assert(o.spin_buffer_grant_w>0);
-    i.spin_capability_limited=true;
-    for(unsigned n=0;n<25;++n) o=Step(&s,&i,true);
-    assert(o.spin_capability_latched);
-    i.spin_power_priority=false;o=Step(&s,&i,true);assert(!o.spin_capability_latched);
+    assert(o.buffer_lower_j>10 && o.buffer_predicted_j<=5 && o.recovering);
 }
 int main(void)
 {
-    BaseMustBeReachedBeforeBoost();
-    RepeatedAndStaleSamplesCannotQualify();
-    DropAndFaultRevokeQualification();
-    LowEnergyAlwaysOverridesBasePhase();
-    EnergyTargetAndCapabilityBoundBoost();
-    CapabilityLatchRequiresFreshMarginAndNewBaseConfirmation();
-    puts("PASS: limit-first spin budget, samples, energy and revocation");
+    DemandBoostDoesNotWaitForMeasuredBase();
+    SpinAndOrdinaryBudgetUseTheSameDemandFormula();
+    OldCapabilityAndBaseStateCannotBlockDemand();
+    FaultsRevokeAndHealthyDemandResumesWithoutBaseWindow();
+    StaleMeterCannotKeepBoost();
+    LowEnergyAndPredictionStillOverrideDemand();
+    puts("PASS: demand-driven spin buffer, C-policy equivalence and protection");
     return 0;
 }
