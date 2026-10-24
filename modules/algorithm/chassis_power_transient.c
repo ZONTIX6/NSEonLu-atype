@@ -232,7 +232,11 @@ bool ChassisPowerTransientUpdate(const ChassisPowerTransientConfig_s *c,
     o->excess_j = s->excess_j; o->allowance_j = s->allowance_j;
     o->allowed_guard_w = s->startup_active ? s->peak_w : o->effective_w;
     if (i->power_ceiling_w > 0)
-        o->allowed_guard_w = fminf(o->allowed_guard_w, i->power_ceiling_w);
+        /* The guard predicts model watts. Convert the physical ceiling using
+         * only compensation already applied under fresh driving feedback.
+         * Meter-based fast clamping above retains the uncompensated ceiling. */
+        o->allowed_guard_w = fminf(o->allowed_guard_w,
+            i->power_ceiling_w + c->eta * fmaxf(o->slow_applied_w, 0));
     return true;
 }
 

@@ -12,5 +12,7 @@ test_spin_policy.exe: test_spin_policy.c $(filter-out test_chassis_power_module.
 test: $(TARGET) test_spin_policy.exe
 	./$(TARGET)
 	./test_spin_policy.exe
+	./test_spin_policy.exe direct50
+	./test_spin_policy.exe biased
 
 SOURCE += ../../modules/telemetry/rtt_telemetry.c

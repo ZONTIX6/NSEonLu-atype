@@ -122,12 +122,12 @@ static void TestFallbackAndModeReentryDoNotKeepHighTarget(void)
     input.feedback_valid = false;
     NEAR(0, Update(&state, input, 1));
     input.feedback_valid = true;
-    NEAR(0, Update(&state, input, 20));
+    NEAR(config.min_wz, Update(&state, input, 20));
     CHECK(Update(&state, input, 100) > 0);
     input.spin_enabled = false;
     NEAR(0, Update(&state, input, 1));
     input.spin_enabled = true;
-    NEAR(0, Update(&state, input, 20));
+    NEAR(config.min_wz, Update(&state, input, 20));
     CHECK(Update(&state, input, 100) > 0);
     input.control_enabled = false;
     NEAR(0, Update(&state, input, 1));

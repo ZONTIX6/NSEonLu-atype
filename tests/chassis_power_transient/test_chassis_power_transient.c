@@ -299,8 +299,37 @@ static void TestDirectionHysteresisAndStableRunGate(void)
     assert(!output.learning_allowed);
     Tick(201, true); assert(output.learning_allowed);
 }
+static void TestModelCompensationIsNotClippedToPhysicalWatts(void)
+{
+    for(unsigned fault=0;fault<7;++fault) {
+        Prepare();input.budget_w=input.power_ceiling_w=50;input.target_w=49;
+        input.slow_w=8;input.meter_w=42;
+        for(uint32_t t=100;t<=601;++t) Tick(t,true);
+        assert(fabsf(output.slow_applied_w-8)<.001f);
+        MotorPowerModelConfig_s models[4];
+        const float candidate[4]={4000,4000,4000,4000};
+        for(unsigned w=0;w<4;++w) {
+            models[w]=(MotorPowerModelConfig_s){.current_conversion=1,.k4=.000001f};
+            state.feedback_seen[w]=2;
+        }
+        assert(ChassisPowerTransientGuard(&config,models,&input,candidate,&state,&output));
+        assert(output.guard_power_w>55 && output.guard_power_w<57);
+        if(fault==0) input.meter_w=51;
+        if(fault==1) input.meter_online=false;
+        if(fault==2) input.meter_enabled=false;
+        if(fault==3) input.raw_current[0]=-2000;
+        if(fault==4) input.feedback_tick_ms[0]=570;
+        if(fault==5) input.meter_tick_ms=570;
+        input.now_ms=602;
+        if(fault!=5) input.meter_tick_ms=602;
+        assert(ChassisPowerTransientUpdate(&config,&input,fault==6 ? .006f : .001f,&state,&output));
+        assert(output.slow_applied_w==0 && output.allowed_guard_w<=50);
+        if(fault==0) assert(output.fast_w<0 && output.mode==CHASSIS_POWER_TRANSIENT_CLAMP);
+    }
+}
 int main(void)
 {
+    TestModelCompensationIsNotClippedToPhysicalWatts();
     StartLowSpeed();
     input.power_ceiling_w = 20;
     input.meter_w = 25;

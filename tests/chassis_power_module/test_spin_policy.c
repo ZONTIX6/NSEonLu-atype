@@ -46,7 +46,8 @@ static void ClosedLoop(const ChassisPower_Init_Config_s *config)
         }
         const float before=target;
         assert(ChassisSpinUpdate(&spin,&si,.005f,&state,&target));
-        assert(fabsf(target-before)<=12.01f);
+        if(before==0 && target>0) assert(target==spin.min_wz);
+        else assert(fabsf(target-before)<=12.01f);
         ChassisPowerCycleInput_s fast={.control=p.control,.now_ms=tick,.dt_s=.005f,
             .online_mask=15,.enabled_mask=15,.meter=i.meter};
         for(unsigned w=0;w<4;++w) {
@@ -71,7 +72,99 @@ static void ClosedLoop(const ChassisPower_Init_Config_s *config)
     }
     assert(saw_demand && saw_base && saw_assist);
 }
-int main(void)
+static void Direct50WWithIndependentMeter(ChassisPower_Init_Config_s config, float torque_ratio)
+{
+    MotorPowerModelConfig_s truth[4];
+    for(unsigned w=0;w<4;++w) {
+        config.models[w]=(MotorPowerModelConfig_s){.k0=1.3123816f,.k1=-.25836727f,
+            .k2=.0007424524f,.k3=.0024271158f,.k4=.081198552f,
+            .k5=3.890596e-08f,.current_conversion=1000};
+        truth[w]=config.models[w];truth[w].k3*=torque_ratio;
+    }
+    assert(ChassisPowerInit(&config));
+    const ChassisSpinConfig_s spin={.fixed_wz=6000,.min_wz=1000,.max_wz=8000,
+        .gain_wz_per_w_s=80,.rise_wz_per_s=3600,.fall_wz_per_s=2400,
+        .power_lpf_tau_s=.05f,.power_deadband_w=1,.settle_time_s=.05f,
+        .budget_drop_reset_w=1};
+    const float wheel_gain=325*.0174532925199433f/6;
+    const float body_per_rpm=.06f/(60*19*.7071067811865475f*.325f);
+    ChassisSpinState_s state={0};
+    float rpm=0,power=0,energy=60,target=0,base_peak=0,correction=0;
+    bool saw_entry=false,saw_base=false,saw_assist=false;
+    for(unsigned n=0;n<2500;++n) {
+        const uint32_t tick=20000+n*5;
+        ChassisPowerPolicyInput_s i={.now_ms=tick,.dt_s=.005f,.adaptive_spin=true,
+            .hold_positive_learning=true,
+            .meter={.online=true,.power_w=power,.last_rx_tick_ms=tick},
+            .referee={.valid=true,.chassis_output_valid=true,.chassis_output_enabled=true,
+                .chassis_power_limit_w=50,.buffer_energy_j=(uint16_t)energy,.buffer_tick_ms=tick}};
+        i.previous_valid=ChassisPowerGetSnapshot(&i.previous);
+        i.spin_capability_limited=state.limit_state==CHASSIS_SPIN_LIMIT_HARD ||
+            ((state.block_reasons&CHASSIS_SPIN_BLOCK_TRACKING) && state.tracking_hold_s>=.1f);
+        i.spin_hard_margin=state.hard_margin;
+        ChassisPowerPolicyOutput_s p;
+        assert(ChassisPowerUpdatePolicy(&i,&p));
+        if(p.budget.spin_phase==CHASSIS_SPIN_POWER_BASE_TRACK) {
+            Near(49,p.control.target_power_w);Near(50,p.control.power_ceiling_w);
+            base_peak=fmaxf(base_peak,power);
+            saw_base|=power>=47;
+        }
+        if(p.budget.spin_phase==CHASSIS_SPIN_POWER_BUFFER_ASSIST) {
+            assert(saw_base);saw_assist=true;
+        }
+        const bool guard_ok=ChassisSpinGuardAllowsIncrease(&i.previous.transient);
+        ChassisSpinInput_s si={.spin_enabled=true,.control_enabled=p.control.control_enabled,
+            .feedback_valid=i.previous_valid && i.previous.online_mask==15,
+            .increase_allowed=ChassisSpinTransientAllowsIncrease(&i.previous.transient) &&
+                p.budget.spin_phase!=CHASSIS_SPIN_POWER_DEGRADED,
+            .target_power_w=p.control.target_power_w,.measured_power_w=power,
+            .power_limited=i.previous.base_limited || !guard_ok,
+            .energy_recovering=p.budget.recovering,.evaluate_tracking=true,
+            .model_limited=i.previous.base_limited,.guard_limited=!guard_ok,
+            .braking=i.previous.transient.brake_mask!=0,.now_ms=tick,
+            .extension_path=true,.velocity_valid=true,.power_tick_ms=tick,
+            .velocity_tick_ms=i.previous.feedback_tick_ms[0],.power_ceiling_w=p.control.power_ceiling_w,
+            .actual_body_wz_rps=i.previous.telemetry.actual_speed_rpm[0]*body_per_rpm,
+            .body_wz_per_wz=wheel_gain*body_per_rpm};
+        for(unsigned w=0;w<4;++w) {
+            si.actual_rpm[w]=i.previous.telemetry.actual_speed_rpm[w];
+            si.target_rpm[w]=i.previous.telemetry.target_speed_rpm[w];
+            si.feedback_tick_ms[w]=i.previous.feedback_tick_ms[w];
+            si.feedback_sequence[w]=i.previous.feedback_sequence[w];
+            si.wheel_rpm_per_wz[w]=wheel_gain;
+        }
+        const float before=target;
+        assert(ChassisSpinUpdate(&spin,&si,.005f,&state,&target));
+        if(before==0 && target>0) {assert(target==1000);saw_entry=true;}
+        else assert(fabsf(target-before)<=18.01f);
+        ChassisPowerCycleInput_s fast={.control=p.control,.now_ms=tick,.dt_s=.005f,
+            .online_mask=15,.enabled_mask=15,.meter=i.meter};
+        for(unsigned w=0;w<4;++w) {
+            fast.actual_rpm[w]=rpm;fast.target_rpm[w]=target*wheel_gain;
+            /* Firmware Kp=.75 uses degrees/s: .75 * 6 = 4.5 per rpm. */
+            fast.raw_current[w]=fminf(15000,fmaxf(-15000,(fast.target_rpm[w]-rpm)*4.5f));
+            fast.feedback_tick_ms[w]=tick;fast.feedback_sequence[w]=n+1;
+        }
+        ChassisPowerCycleOutput_s out;assert(ChassisPowerLimit(&fast,&out));
+        ChassisPowerFinalInput_s final={.control_version=p.control.version,.now_ms=tick,
+            .enabled_mask=15,.can_submitted=true};
+        power=0;
+        for(unsigned w=0;w<4;++w) {
+            final.current_command[w]=(int16_t)out.current[w];
+            power+=PowerModelPredict(&truth[w],final.current_command[w],rpm);
+        }
+        assert(ChassisPowerRecordFinal(&final));
+        correction=fmaxf(correction,p.outer.correction_w);
+        /* Finite inertia and a separate power plant: prediction is not the meter. */
+        rpm+=(final.current_command[0]-rpm)*.005f/.1f;
+        energy=fminf(60,fmaxf(0,energy+(50-power)*.005f));
+    }
+    printf("50 W direct, torque ratio %.2f: base peak %.2f W, correction %.2f W, assist %u\n",
+        torque_ratio,base_peak,correction,(unsigned)saw_assist);
+    assert(saw_entry && saw_base && saw_assist);
+    if(torque_ratio<1) assert(correction>1);
+}
+int main(int argc, char **argv)
 {
     ChassisPower_Init_Config_s c={.stage=3,.meter_enabled=true,.buffer_enabled=true};
     for(unsigned w=0;w<4;++w) c.models[w]=(MotorPowerModelConfig_s){.current_conversion=1,.k4=.000001f};
@@ -89,6 +182,10 @@ int main(void)
         .activation_margin_w=5,.error_deadband_w=.3f,.max_positive_correction_w=8,
         .positive_slew_rate_w_per_s=60,.budget_drop_reset_w=1,.antiwindup_gain_per_s=10,
         .low_demand_delay_s=.5f,.low_demand_decay_w_per_s=1};
+    if(argc==2) {
+        Direct50WWithIndependentMeter(c,strcmp(argv[1],"biased")==0 ? .85f : 1);
+        return 0;
+    }
     assert(ChassisPowerInit(&c));
     ChassisPowerPolicyInput_s i={.now_ms=100,.dt_s=.005f,.adaptive_spin=true,.previous_valid=true,
         .referee={.valid=true,.chassis_output_enabled=true,.chassis_output_valid=true,.chassis_power_limit_w=80,

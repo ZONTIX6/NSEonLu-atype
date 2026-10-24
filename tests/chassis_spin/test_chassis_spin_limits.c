@@ -151,6 +151,42 @@ static void StartupAndNegativeWheelGeometry(void)
     Sample(&i,&s);Step(&c,&i,&s);
     assert(s.applied_wz<=8000 && (s.limit_state==CHASSIS_SPIN_LIMIT_HARD));
 }
+static void OrdinaryGrowthDoesNotRequireExtensionTracking(void)
+{
+    ChassisSpinConfig_s c=Config();c.extension_enabled=false;
+    c.hard_wz=c.body_hard_rps=c.wheel_hard_rpm=0;
+    ChassisSpinInput_s i=Input();i.body_wz_per_wz=.00022902f;
+    ChassisSpinState_s s=State();s.applied_wz=s.target_wz=3000;
+    Sample(&i,&s);
+    for(unsigned w=0;w<4;++w) i.actual_rpm[w]-=300;
+    i.actual_body_wz_rps-=300*i.body_wz_per_wz;
+    assert(Step(&c,&i,&s)>3000);
+    assert(s.body_tracking_error_rps>.05f && s.tracking_hold_s==0);
+
+    s=State();Sample(&i,&s);
+    for(unsigned w=0;w<4;++w) i.actual_rpm[w]-=450;
+    i.actual_body_wz_rps-=450*i.body_wz_per_wz;
+    assert(Step(&c,&i,&s)==8000);
+    assert(s.block_reasons&CHASSIS_SPIN_BLOCK_TRACKING);
+
+    s=(ChassisSpinState_s){0};i=Input();Sample(&i,&s);
+    assert(Step(&c,&i,&s)==c.min_wz);
+    c.wheel_hard_rpm=500;c.body_hard_rps=2;c.hard_wz=10000;
+    s=(ChassisSpinState_s){0};i=Input();Sample(&i,&s);
+    assert(Step(&c,&i,&s)<=500); /* Configured hard bounds also constrain entry. */
+}
+static void OrdinaryTrendCannotBypassHardBoundaryHysteresis(void)
+{
+    ChassisSpinConfig_s c=Config();c.wheel_hard_rpm=5000;
+    ChassisSpinState_s s=State();s.applied_wz=s.target_wz=4900;
+    s.limit_state=CHASSIS_SPIN_LIMIT_HARD;
+    ChassisSpinInput_s i=Input();Sample(&i,&s);
+    for(unsigned w=0;w<4;++w) i.actual_rpm[w]-=600;
+    i.actual_body_wz_rps-=600*i.body_wz_per_wz;
+    s.trend_initialized=s.trend_allowed=true;s.trend_tick_ms=i.now_ms;
+    assert(Step(&c,&i,&s)<=4900);
+    assert(s.limit_state==CHASSIS_SPIN_LIMIT_HARD);
+}
 static void FaultsBudgetDropAndRetuneClearQualification(void)
 {
     for(unsigned fault=0;fault<5;++fault) {
@@ -193,6 +229,8 @@ int main(void)
     DisabledExtensionStillAllowsPowerDescent();
     PersistentLagReturnsBelowSoftToReachableDemand();
     StartupAndNegativeWheelGeometry();
+    OrdinaryGrowthDoesNotRequireExtensionTracking();
+    OrdinaryTrendCannotBypassHardBoundaryHysteresis();
     FaultsBudgetDropAndRetuneClearQualification();
     HardBoundaryReasonIsImmediateAndOverspeedPeaksPersist();
     puts("PASS: spin soft extension, sample qualification, tracking and hard bounds");

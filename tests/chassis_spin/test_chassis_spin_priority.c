@@ -18,25 +18,41 @@ static void Feedback(ChassisSpinInput_s *i,unsigned n,float actual,float target)
         i->actual_rpm[w]=actual;i->target_rpm[w]=target;
     }
 }
-static void EntryRampsAndInvalidFeedbackStops(void)
+static void EntryStartsAtMinimumThenRampsAndInvalidFeedbackStops(void)
 {
     ChassisSpinState_s s={0};ChassisSpinInput_s i=Input();float target=0,previous=0;
     for(unsigned n=0;n<50;++n) {
-        Feedback(&i,n,0,0);
+        Feedback(&i,n,previous*.945f,previous*.945f);
         assert(ChassisSpinUpdate(&c,&i,.005f,&s,&target));
-        assert(target>=previous && target-previous<=6.01f);
+        if(n==0) assert(target==c.min_wz);
+        else assert(target>=previous && target-previous<=6.01f);
         previous=target;
     }
-    assert(target>0 && target<1000);
+    assert(target>c.min_wz);
     i.feedback_valid=false;
     assert(ChassisSpinUpdate(&c,&i,.005f,&s,&target));assert(target==0);
     i.feedback_valid=true;i.control_enabled=false;
     assert(ChassisSpinUpdate(&c,&i,.005f,&s,&target));assert(target==0);
 }
+static void EntryCannotBypassProtection(void)
+{
+    for(unsigned reason=0;reason<5;++reason) {
+        ChassisSpinState_s s={0};ChassisSpinInput_s i=Input();float target=-1;
+        Feedback(&i,0,0,0);
+        if(reason==0) i.increase_allowed=false;
+        if(reason==1) i.energy_recovering=true;
+        if(reason==2) i.power_limited=true;
+        if(reason==3) i.measured_power_w=100;
+        if(reason==4) i.measured_power_w=-1;
+        assert(ChassisSpinUpdate(&c,&i,.005f,&s,&target));assert(target==0);
+        i=Input();Feedback(&i,1,0,0);
+        assert(ChassisSpinUpdate(&c,&i,.005f,&s,&target));assert(target==c.min_wz);
+    }
+}
 static void TrendHasLimitedRateAndCannotRenewOnOldSamples(void)
 {
     ChassisSpinConfig_s fast=c;fast.settle_time_s=0;
-    ChassisSpinState_s s={0};ChassisSpinInput_s i=Input();float target=0,previous=0;
+    ChassisSpinState_s s={.applied_wz=1000};ChassisSpinInput_s i=Input();float target=1000,previous=1000;
     for(unsigned n=0;n<18;++n) {
         Feedback(&i,n,500+n*10,2000+n*10);
         assert(ChassisSpinUpdate(&fast,&i,.005f,&s,&target));
@@ -84,7 +100,8 @@ static void HealthyIdleCanEstablishDemand(void)
 }
 int main(void)
 {
-    EntryRampsAndInvalidFeedbackStops();
+    EntryStartsAtMinimumThenRampsAndInvalidFeedbackStops();
+    EntryCannotBypassProtection();
     TrendHasLimitedRateAndCannotRenewOnOldSamples();
     HardLimitsAndModelLimitHaveDistinctReasons();
     HealthyIdleCanEstablishDemand();
