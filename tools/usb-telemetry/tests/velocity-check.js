@@ -17,8 +17,8 @@ async (page) => {
   });
   await page.waitForFunction(()=>document.querySelector('#velocity-actual-vx').textContent==='1.234');
   check(await page.locator('#velocity-actual-vy').innerText()==='-0.567','Lateral units/sign');
-  check(await page.locator('#velocity-actual-wz').innerText()==='-1.250','Spin must be rev/s');
-  check(await page.locator('#velocity-target-wz').innerText()==='-1.500','Target units/sign');
+  check(await page.locator('#velocity-actual-wz').innerText()==='-75.000','Spin must be body rpm');
+  check(await page.locator('#velocity-target-wz').innerText()==='-90.000','Target units/sign');
   check(await page.locator('[data-chart="velocity-chart"] input').count()===6,'Need six target/actual traces');
   await page.locator('#pause-button').click();
   await page.evaluate(()=>velocityRow(4,{seq:2,velocity_actual_vx_mmps:2500}));
@@ -37,7 +37,7 @@ async (page) => {
     check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Overflow '+width);
   }
   await page.locator('[aria-label="放大底盘整体速度"]').click();
-  check(await page.locator('#expanded-chart-unit').innerText()==='m/s / 圈/s','Chart axes units');
+  check(await page.locator('#expanded-chart-unit').innerText()==='m/s / rpm','Chart axes units');
   await page.locator('#close-chart-button').click();
   await page.setViewportSize({width:1440,height:1000});
   await page.evaluate(()=>velocityRow(4,{seq:6}));

@@ -130,4 +130,4 @@ make -j4 BUILD_DIR=build/sine-fix-usb CHASSIS_SPIN_MODE=2 USB_TELEMETRY_ENABLE=1
 
 ### 整车速度读取
 
-`chassis_velocity->target/actual` 分别提供目标/实际 `vx_mps`、`vy_mps`、`wz_rps`（m/s、m/s、圈/s）。跨任务读取用 `ChassisGetVelocitySnapshot()`。指针、单位、有效性和 CSV v4 字段见 [底盘速度说明](chassis-velocity.md)。
+`chassis_velocity->target/actual` 分别提供目标/实际 `vx_mps`、`vy_mps`、`wz_rpm`（m/s、m/s、转/分钟）。跨任务读取用 `ChassisGetVelocitySnapshot()`。指针、单位、有效性和兼容的 CSV 字段见 [底盘速度说明](chassis-velocity.md)。

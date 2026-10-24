@@ -490,7 +490,8 @@ static void PrepareSpinLimits(void)
         velocity.rpm[w]=i->actual_rpm[w];velocity.feedback_tick_ms[w]=i->feedback_tick_ms[w];
     }
     i->velocity_valid=ChassisEstimateVelocity(&velocity_config,&velocity,&body);
-    i->actual_body_wz_rps=body.wz_rps;i->velocity_tick_ms=body.tick_ms;
+    /* Spin calibration and protection keep their existing revolutions/s units. */
+    i->actual_body_wz_rps=body.wz_rpm/60.0f;i->velocity_tick_ms=body.tick_ms;
     ChassisWheelOutput_s translation=WheelSpeedFor(chassis_vx,chassis_vy,0);
     const ChassisWheelOutput_s rotation=WheelSpeedFor(0,0,1);
     float scale=1;
@@ -502,19 +503,19 @@ static void PrepareSpinLimits(void)
     }
     i->velocity_valid &= ChassisEstimateVelocity(&velocity_config,&velocity,&body);
     i->translation_mps=hypotf(body.vx_mps,body.vy_mps);
-    if(chassis_spin_config.body_hard_rps>0 && fabsf(body.wz_rps)>chassis_spin_config.body_hard_rps)
-        scale=fminf(scale,chassis_spin_config.body_hard_rps/fabsf(body.wz_rps));
+    if(chassis_spin_config.body_hard_rps>0 && fabsf(body.wz_rpm)/60.0f>chassis_spin_config.body_hard_rps)
+        scale=fminf(scale,chassis_spin_config.body_hard_rps/(fabsf(body.wz_rpm)/60.0f));
     /* If translation already consumes the wheel allowance, bound translation
      * first. This leaves a feasible Wz=0 and never uses spin to evade the cap. */
     chassis_vx*=scale;chassis_vy*=scale;
-    i->body_wz_offset=body.wz_rps*scale;
+    i->body_wz_offset=body.wz_rpm/60.0f*scale;
     for(unsigned w=0;w<4;++w) {
         i->wheel_rpm_offset[w]=translation.speed_aps[w]/6*scale;
         i->wheel_rpm_per_wz[w]=rotation.speed_aps[w]/6;
         velocity.rpm[w]=i->wheel_rpm_per_wz[w];
     }
     i->velocity_valid &= ChassisEstimateVelocity(&velocity_config,&velocity,&body);
-    i->body_wz_per_wz=body.wz_rps;
+    i->body_wz_per_wz=body.wz_rpm/60.0f;
 }
 #endif
 

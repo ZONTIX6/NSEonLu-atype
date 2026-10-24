@@ -50,8 +50,8 @@ static USBTelemetrySample_s fixture(void)
     s.spin_gain_milli=80000;s.spin_rise_milli=1200000;s.spin_fall_milli=2400000;
     s.spin_lpf_ms=50;s.spin_settle_ms=50;s.power_tuning_source=2;s.spin_tuning_source=3;
     const ChassisVelocityFeedback_s velocity={
-        .actual={.valid=true,.tick_ms=995,.vx_mps=1.234f,.vy_mps=-.567f,.wz_rps=-1.25f},
-        .target={.valid=true,.tick_ms=1000,.vx_mps=1.5f,.vy_mps=-.6f,.wz_rps=-1.5f}};
+        .actual={.valid=true,.tick_ms=995,.vx_mps=1.234f,.vy_mps=-.567f,.wz_rpm=-75.0f},
+        .target={.valid=true,.tick_ms=1000,.vx_mps=1.5f,.vy_mps=-.6f,.wz_rpm=-90.0f}};
     USBTelemetryEncodeVelocity(&s,&velocity,1000);
     return s;
 }
@@ -106,7 +106,7 @@ int main(int argc, char **argv)
     USBTelemetryApplyFreshness(&s,1016);
     assert(!s.velocity_actual_valid && s.velocity_target_valid);
     USBTelemetryApplyFreshness(&s,1021);assert(!s.velocity_target_valid);
-    const ChassisVelocityFeedback_s invalid={.actual={.valid=true,.wz_rps=NAN}};
+    const ChassisVelocityFeedback_s invalid={.actual={.valid=true,.wz_rpm=NAN}};
     USBTelemetryEncodeVelocity(&s,&invalid,0);assert(!s.velocity_actual_valid);
     s=fixture();
     s.imu_age_ms = 10; USBTelemetryApplyFreshness(&s, 1000); assert(s.imu_valid);

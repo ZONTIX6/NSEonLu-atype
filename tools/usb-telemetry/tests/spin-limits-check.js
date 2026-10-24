@@ -21,6 +21,7 @@ async (page) => {
   await page.waitForFunction(()=>document.querySelector('#spin-limit-detail').textContent.includes('轮速硬上限'));
   check((await page.locator('#spin-latch-detail').innerText()).includes('200 / 500'),'latch release display');
   check(await page.locator('#spin-soft').innerText()==='8000','Wz units');
+  check(await page.locator('#spin-body-hard').innerText()==='120.000','Body hard bound must be rpm');
   await page.setViewportSize({width:375,height:900});
   check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'mobile horizontal overflow');
   await page.locator('#velocity-panel').screenshot({path:'output/playwright/spin-limits-mobile.png'});

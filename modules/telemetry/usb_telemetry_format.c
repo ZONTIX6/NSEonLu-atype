@@ -21,7 +21,7 @@ int32_t USBTelemetryFixed(float value, float scale)
 static bool VelocityValid(const ChassisVelocity_s *v, uint32_t now_ms)
 {
     return v->valid && (uint32_t)(now_ms-v->tick_ms)<=CHASSIS_VELOCITY_MAX_AGE_MS &&
-        isfinite(v->vx_mps) && isfinite(v->vy_mps) && isfinite(v->wz_rps);
+        isfinite(v->vx_mps) && isfinite(v->vy_mps) && isfinite(v->wz_rpm);
 }
 
 void USBTelemetryEncodeVelocity(USBTelemetrySample_s *sample,
@@ -34,12 +34,13 @@ void USBTelemetryEncodeVelocity(USBTelemetrySample_s *sample,
     sample->velocity_actual_tick_ms=velocity->actual.tick_ms;
     sample->velocity_actual_vx_mmps=USBTelemetryFixed(velocity->actual.vx_mps,1000);
     sample->velocity_actual_vy_mmps=USBTelemetryFixed(velocity->actual.vy_mps,1000);
-    sample->velocity_actual_wz_mrps=USBTelemetryFixed(velocity->actual.wz_rps,1000);
+    /* Published v4/v5 wire fields retain millirevolutions/s. Feedback is rpm. */
+    sample->velocity_actual_wz_mrps=USBTelemetryFixed(velocity->actual.wz_rpm/60.0f,1000);
     sample->velocity_target_valid=VelocityValid(&velocity->target,now_ms);
     sample->velocity_target_tick_ms=velocity->target.tick_ms;
     sample->velocity_target_vx_mmps=USBTelemetryFixed(velocity->target.vx_mps,1000);
     sample->velocity_target_vy_mmps=USBTelemetryFixed(velocity->target.vy_mps,1000);
-    sample->velocity_target_wz_mrps=USBTelemetryFixed(velocity->target.wz_rps,1000);
+    sample->velocity_target_wz_mrps=USBTelemetryFixed(velocity->target.wz_rpm/60.0f,1000);
 }
 
 void USBTelemetryApplyFreshness(USBTelemetrySample_s *sample, uint32_t now_ms)

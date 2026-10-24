@@ -15,7 +15,7 @@ static void check(float a,float b,float c,float d,float x,float y,float spin)
     ChassisVelocity_s out={0};
     assert(ChassisEstimateVelocity(&config,&input,&out));
     assert(out.valid && out.tick_ms==96);
-    near(out.vx_mps,x);near(out.vy_mps,y);near(out.wz_rps,spin);
+    near(out.vx_mps,x);near(out.vy_mps,y);near(out.wz_rpm,spin*60);
 }
 int main(void)
 {
@@ -39,7 +39,7 @@ int main(void)
     ChassisVelocity_s out={0};
     input.now_ms=116;assert(ChassisEstimateVelocity(&config,&input,&out));
     input.now_ms=117;assert(!ChassisEstimateVelocity(&config,&input,&out));
-    assert(!out.valid);near(out.vx_mps,0);near(out.wz_rps,0);
+    assert(!out.valid);near(out.vx_mps,0);near(out.wz_rpm,0);
     input.now_ms=100;input.online_mask=7;
     assert(!ChassisEstimateVelocity(&config,&input,&out));
     input.online_mask=15;input.rpm[2]=NAN;

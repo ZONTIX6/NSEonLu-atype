@@ -12,7 +12,7 @@ extern const ChassisVelocityFeedback_s *const volatile chassis_velocity;
 | --- | --- | --- |
 | `chassis_velocity->target.vx_mps` | `chassis_velocity->actual.vx_mps` | m/s，向前为正 |
 | `chassis_velocity->target.vy_mps` | `chassis_velocity->actual.vy_mps` | m/s，向右为正 |
-| `chassis_velocity->target.wz_rps` | `chassis_velocity->actual.wz_rps` | 圈/s，带旋转方向符号 |
+| `chassis_velocity->target.wz_rpm` | `chassis_velocity->actual.wz_rpm` | rpm（转/分钟），带旋转方向符号 |
 
 两组数据各有 `valid` 和 `tick_ms`。实际时间戳取最老一轮 CAN 反馈，目标时间戳取本次底盘计算时刻。`EstimateSpeed()` 每次 `ChassisTask()` 更新；若底盘任务停止，指针数据也会停止更新，因此消费者必须检查时间。跨任务读取应调用快照接口，它在临界区复制整个目标/实际对，并复查两者的 20 ms 新鲜度：
 
@@ -24,7 +24,7 @@ ChassisVelocityFeedback_s speed;
 if (speed.actual.valid) {
     float forward_mps = speed.actual.vx_mps;
     float sideways_mps = speed.actual.vy_mps;
-    float spin_rps = speed.actual.wz_rps;
+    float spin_rpm = speed.actual.wz_rpm;
     // 使用本地快照，避免多字段读取跨越两个更新周期。
 }
 if (speed.target.valid) {
@@ -44,12 +44,14 @@ if (speed.target.valid) {
 ```text
 vx = (-uLF + uRF - uLB + uRB) / (4p)
 vy = ( uLF + uRF - uLB - uRB) / (4p)
-spin_rps = (uLF + uRF + uLB + uRB) / (4pL · 2π)
+spin_rpm = 60 × (uLF + uRF + uLB + uRB) / (4pL · 2π)
 ```
 
 全向轮物理旋转有效力臂为 `pL≈0.22981 m`。当前正解算的 Wz 控制标度并非物理角速度，因此目标也必须从轮速目标换算。麦轮模式采用现有麦轮符号矩阵逆解，旋转力臂为 `L`。
 
 这是轮速里程计估算，不包含打滑修正或 IMU 融合。轮径、减速比、轮序、安装角和方向必须与实车一致；几何参数失准或打滑会直接造成估算偏差。
+
+整车转速反馈于 2026-10-24 从 `wz_rps` 改名为 `wz_rpm` 并乘以 60，例如 1.25 圈/s 对应 75 rpm。这里是车体自身的转速；四轮电机转子 rpm 和原始 Wz 指令仍是各自独立的量。自转控制器内部的 `body_hard_rps`、圈/s 跟随阈值和编译校准参数保留原单位，底盘接入时显式除以 60，避免改变已有物理边界。
 
 ## 遥测
 
@@ -59,7 +61,7 @@ spin_rps = (uLF + uRF + uLB + uRB) / (4pL · 2π)
 velocity_actual_valid,velocity_actual_tick_ms,velocity_actual_vx_mmps,velocity_actual_vy_mmps,velocity_actual_wz_mrps,velocity_target_valid,velocity_target_tick_ms,velocity_target_vx_mmps,velocity_target_vy_mmps,velocity_target_wz_mrps
 ```
 
-`*_mmps` 为整数 mm/s，`*_mrps` 为整数毫圈/s；网页都除以 1000。两组有效性互相独立，也独立于功控模型有效性；发送前再次检查年龄。网页“底盘整体速度”显示六个数值，“底盘速度对比”提供六条曲线，实线实际、虚线目标，左轴 m/s、右轴圈/s，支持选择曲线、放大、暂停、历史查看和 CSV 导出。旧 v1–v3 记录正常显示原有数据，新增速度显示“未提供”而不是零。当前固件输出 v5，保留 v4 前 111 列并追加自转上限诊断；导出保留各记录的原始版本和缺失字段，混合版本时切换表头。
+已发布 CSV 的 `*_mmps` 保持整数 mm/s，`*_mrps` 保持整数毫圈/s；固件把 rpm 反馈除以 60 再编码，保持 v4/v5 兼容。网页平移除以 1000 显示 m/s；整车旋转除以 1000 再乘 60 显示 rpm，使用独立派生键 `velocity_actual_wz_rpm` / `velocity_target_wz_rpm`。两组有效性互相独立，也独立于功控模型有效性；发送前再次检查年龄。网页“底盘整体速度”显示六个数值，“底盘速度对比”提供六条曲线，实线实际、虚线目标，左轴 m/s、右轴 rpm，支持选择曲线、放大、暂停、历史查看和 CSV 导出。旧 v1–v3 记录正常显示原有数据，新增速度显示“未提供”而不是零。当前固件输出 v5，保留 v4 前 111 列并追加自转上限诊断；导出保留各记录的原始版本、原始单位和缺失字段，混合版本时切换表头。
 
 不更改 `Chassis_Upload_Data_s` 的双板 CAN 报文布局；本功能的数据入口为上述统一指针/快照和 USB 遥测。
 

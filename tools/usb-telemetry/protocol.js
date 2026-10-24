@@ -121,6 +121,14 @@
       if (value !== null && key === 'cap_energy_pm') value = value >= 0 && value <= 1000 ? value / 10 : null;
       values[key] = ok ? value : null;
     }
+    // Keep v4/v5 wire and export units; expose separate body rpm display values.
+    for (const [source,target] of [
+      ['velocity_actual_wz_mrps','velocity_actual_wz_rpm'],
+      ['velocity_target_wz_mrps','velocity_target_wz_rpm'],
+      ['spin_body_hard_mrps','spin_body_hard_rpm'],
+      ['spin_body_tracking_error_mrps','spin_body_tracking_error_rpm'],
+      ['spin_peak_body_mrps','spin_peak_body_rpm']])
+      values[target]=values[source]===null ? null : values[source]*60;
     const motors = ['lf', 'rf', 'lb', 'rb'].map((key, index) => {
       const online = motorSnapshotFresh && Boolean(raw.motor_online_mask & (1 << index));
       for (const field of [`rpm_${key}`, `target_${key}_rpm`, `i_${key}_cmd`, `i_${key}_fb`]) if (!online) values[field] = null;

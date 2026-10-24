@@ -63,11 +63,11 @@
   const rpmTraces = Object.keys(colors).flatMap(key => [{key: `rpm_${key}`, name: `${wheelNames[key]} · 实际`, color: colors[key]}, {key: `target_${key}_rpm`, name: `${wheelNames[key]} · 目标`, color: colors[key], dash: true, width: 2, dashPattern: [7, 5]}]);
   rpmTraces.push({key: 'wz_cmd_milli', name: '底盘旋转目标 Wz', color: '#df6f7b', axis: 'right', unit: '指令值', digits: 3, dash: true, width: 2});
   const charts = [{id: 'power-chart', title: '功率观测', unit: 'W', traces: powerTraces}, {id: 'energy-chart', title: '缓冲能量', unit: 'J', traces: energyTraces}, {id: 'rpm-chart', title: '四轮转速', unit: 'rpm', rightUnit: 'Wz 指令', traces: rpmTraces}];
-  charts.push({id:'velocity-chart',title:'底盘整体速度',unit:'m/s',rightUnit:'圈/s',traces:
+  charts.push({id:'velocity-chart',title:'底盘整体速度',unit:'m/s',rightUnit:'rpm',traces:
     [['vx','前进','#3478f6'],['vy','横移','#16a69b'],['wz','自转','#8a65d6']].flatMap(([axis,name,color])=>
-      ['actual','target'].map(kind=>({key: 'velocity_'+kind+'_'+axis+(axis==='wz'?'_mrps':'_mmps'),
+      ['actual','target'].map(kind=>({key: 'velocity_'+kind+'_'+axis+(axis==='wz'?'_rpm':'_mmps'),
         name:name+' · '+(kind==='actual'?'实际':'目标'),color,dash:kind==='target',digits:3,
-        unit:axis==='wz'?'圈/s':'m/s',axis:axis==='wz'?'right':'left'})))});
+        unit:axis==='wz'?'rpm':'m/s',axis:axis==='wz'?'right':'left'})))});
   charts.push(
     {id: 'imu-attitude-chart', title: 'IMU 姿态', unit: '°', source: 'imu', traces: [
       {key: 'imu_yaw_mdeg', name: 'Yaw 偏航', color: colors.lf},
@@ -346,7 +346,7 @@
     const velocityLegacy=sample && sample.version<4;
     pill('velocity-status',!sample?'等待数据':velocityLegacy?'固件未提供速度':valid.velocityActual?'轮速估算有效':'反馈无效 / 过期',valid.velocityActual?'good':sample&&!velocityLegacy?'bad':'neutral');
     for(const kind of ['actual','target']) for(const axis of ['vx','vy','wz'])
-      setText('velocity-'+kind+'-'+axis,format(v['velocity_'+kind+'_'+axis+(axis==='wz'?'_mrps':'_mmps')],3));
+      setText('velocity-'+kind+'-'+axis,format(v['velocity_'+kind+'_'+axis+(axis==='wz'?'_rpm':'_mmps')],3));
     setText('velocity-detail',velocityLegacy?'当前固件未上报底盘整体速度，请使用支持速度遥测的固件。':'车身坐标：前进、右移为正；自转正向沿底盘控制约定。实际为四轮反馈估算，打滑时存在偏差。');
     const limitLegacy=sample && sample.version<5;
     const limitNames=['日常范围','软上限确认中','扩展中','跟随受限','已达硬上限'];
@@ -357,8 +357,8 @@
       !v.spin_extension_enabled?'扩展未启用':limitNames[v.spin_limit_state]??'等待数据',
       valid.chassis && !limitLegacy && v.spin_extension_enabled ? v.spin_limit_state>=3?'warning':'good':'neutral');
     for(const [id,key,digits] of [['soft','soft_wz_milli',0],['hard','hard_wz_milli',0],['effective','effective_wz_milli',0],
-      ['body-hard','body_hard_mrps',3],['wheel-hard','wheel_hard_rpm',0],['wheel-error','max_tracking_error_rpm',0],
-      ['confirm','extension_confirm_ms',0],['gap','power_gap_cw',2],['body-error','body_tracking_error_mrps',3]])
+      ['body-hard','body_hard_rpm',3],['wheel-hard','wheel_hard_rpm',0],['wheel-error','max_tracking_error_rpm',0],
+      ['confirm','extension_confirm_ms',0],['gap','power_gap_cw',2],['body-error','body_tracking_error_rpm',3]])
       setText('spin-'+id,format(v['spin_'+key],digits));
     if(v.spin_body_hard_mrps===0) setText('spin-body-hard','未标定');
     if(v.spin_wheel_hard_rpm===0) setText('spin-wheel-hard','未标定');

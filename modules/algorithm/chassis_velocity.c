@@ -37,13 +37,13 @@ bool ChassisEstimateVelocity(const ChassisVelocityConfig_s *config,
     if (config->omni_x) {
         result.vx_mps=(-lf+rf-lb+rb)/(4.0f*PROJECTION_45);
         result.vy_mps=(lf+rf-lb-rb)/(4.0f*PROJECTION_45);
-        result.wz_rps=(lf+rf+lb+rb)/(4.0f*PROJECTION_45*lever*TWO_PI);
+        result.wz_rpm=60.0f*(lf+rf+lb+rb)/(4.0f*PROJECTION_45*lever*TWO_PI);
     } else {
         result.vx_mps=(-lf-rf+lb+rb)*.25f;
         result.vy_mps=(-lf+rf-lb+rb)*.25f;
-        result.wz_rps=-(lf+rf+lb+rb)/(4.0f*lever*TWO_PI);
+        result.wz_rpm=-60.0f*(lf+rf+lb+rb)/(4.0f*lever*TWO_PI);
     }
-    if (!isfinite(result.vx_mps) || !isfinite(result.vy_mps) || !isfinite(result.wz_rps))
+    if (!isfinite(result.vx_mps) || !isfinite(result.vy_mps) || !isfinite(result.wz_rpm))
         return false;
     result.valid=true;
     *output=result;

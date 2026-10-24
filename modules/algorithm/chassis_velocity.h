@@ -10,7 +10,7 @@ typedef struct {
     bool valid;
     uint32_t tick_ms; /* Oldest of the four CAN feedback timestamps. */
     float vx_mps, vy_mps; /* Geometric center: forward/right positive, m/s. */
-    float wz_rps; /* Signed revolutions/s, same positive spin convention as commands. */
+    float wz_rpm; /* Signed body revolutions/minute; same positive spin convention as commands. */
 } ChassisVelocity_s;
 
 typedef struct {
