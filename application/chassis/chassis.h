@@ -3,6 +3,14 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "chassis_velocity.h"
+
+/* Stable read-only data pointer for debugger/watch use.
+ * Volatile pointer access keeps this debug anchor in the linked firmware.
+ * Use the snapshot function for coherent cross-task reads and freshness checks. */
+extern const ChassisVelocityFeedback_s *const volatile chassis_velocity;
+/* Returns actual.valid; target retains its own independent validity. */
+bool ChassisGetVelocitySnapshot(ChassisVelocityFeedback_s *snapshot);
 
 typedef struct {
     bool valid;
@@ -10,6 +18,7 @@ typedef struct {
     uint8_t mode;
     float vx_cmd, vy_cmd, wz_cmd;
     float offset_angle; /* Yaw encoder relative to the chassis alignment, degrees. */
+    ChassisVelocityFeedback_s velocity;
     float nominal_budget_w, target_power_w;
     bool buffer_control_enabled, buffer_estimate_valid, buffer_recovering;
     float buffer_lower_j, buffer_predicted_j;

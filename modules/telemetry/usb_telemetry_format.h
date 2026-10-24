@@ -3,8 +3,9 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include "chassis_velocity.h"
 
-/* CSV v3 wire order; the first 85 fields retain their v2 order and units. */
+/* CSV v4 wire order; the first 101 fields retain their v3 order and units. */
 #define USB_TELEMETRY_FIELDS(U, I) \
     U(version) U(seq) U(tick) U(tx_drop_count) \
     U(chassis_valid) U(chassis_tick_ms) U(chassis_mode) \
@@ -34,7 +35,11 @@
     I(spin_buffer_request_cw) I(spin_buffer_grant_cw) U(spin_base_confirm_ms) \
     I(spin_filtered_power_cw) I(spin_power_ceiling_cw) I(spin_slow_correction_cw) \
     I(spin_gain_milli) I(spin_rise_milli) I(spin_fall_milli) \
-    U(spin_lpf_ms) U(spin_settle_ms) U(power_tuning_source) U(spin_tuning_source)
+    U(spin_lpf_ms) U(spin_settle_ms) U(power_tuning_source) U(spin_tuning_source) \
+    U(velocity_actual_valid) U(velocity_actual_tick_ms) \
+    I(velocity_actual_vx_mmps) I(velocity_actual_vy_mmps) I(velocity_actual_wz_mrps) \
+    U(velocity_target_valid) U(velocity_target_tick_ms) \
+    I(velocity_target_vx_mmps) I(velocity_target_vy_mmps) I(velocity_target_wz_mrps)
 
 typedef struct {
 #define USB_FIELD_U(name) uint32_t name;
@@ -46,6 +51,8 @@ typedef struct {
 
 /* Nonfinite inputs encode zero; the caller must clear the source validity flag. */
 int32_t USBTelemetryFixed(float value, float scale);
+void USBTelemetryEncodeVelocity(USBTelemetrySample_s *sample,
+    const ChassisVelocityFeedback_s *velocity, uint32_t now_ms);
 /* Recheck source freshness at the instant a row is collected. */
 void USBTelemetryApplyFreshness(USBTelemetrySample_s *sample, uint32_t now_ms);
 /* Returns bytes excluding NUL, or zero with buffer[0] cleared on truncation. */

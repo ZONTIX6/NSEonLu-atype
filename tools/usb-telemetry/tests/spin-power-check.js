@@ -3,13 +3,13 @@ async (page) => {
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto('http://127.0.0.1:4173');
   await page.evaluate(()=>{
-    const P=TelemetryProtocol,fields=P.FIELDS;
+    const P=TelemetryProtocol,fields=P.V3_FIELDS;
     const row={...Object.fromEntries(fields.map(key=>[key,0])),version:3,seq:1,tick:1000,
       chassis_valid:1,chassis_tick_ms:1000,spin_power_phase:1,spin_block_reasons:4,
       spin_base_power_cw:7840,spin_buffer_request_cw:6000,spin_buffer_grant_cw:2000,
       spin_power_ceiling_cw:10000,power_tuning_source:2,spin_tuning_source:3,
       buffer_control_enabled:1,buffer_estimate_valid:1,referee_online:1,buffer_j:50};
-    telemetryApp.parser.push(P.HEADER+'\n'+fields.map(key=>row[key]).join(',')+'\n');
+    telemetryApp.parser.push(P.V3_HEADER+'\n'+fields.map(key=>row[key]).join(',')+'\n');
   });
   await page.waitForFunction(()=>document.querySelector('#buffer-state').textContent==='基础功率跟踪');
   const title=await page.locator('#buffer-state').getAttribute('title');

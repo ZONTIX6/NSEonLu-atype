@@ -166,7 +166,7 @@ IMU 姿态、角速度、加速度分图显示；累计 Yaw 默认不选中，�
 
 旧固件没有跟随角和 IMU 字段时留空，并提示升级。烧录新固件、重启本地服务并刷新页面后，可同步观察板载姿态、编码器跟随角、Wz 与四轮目标/实际转速。
 
-## CSV v1 / v2 / v3 协议
+## CSV v1 / v2 / v3 / v4 协议
 
 行以 CRLF 结束，表头在串口打开后及每秒重发。串口读取块不等同于一整行，解析器能处理任意分片。
 
@@ -189,13 +189,13 @@ IMU 姿态、角速度、加速度分图显示；累计 Yaw 默认不选中，�
 version,seq,tick,tx_drop_count,chassis_valid,chassis_tick_ms,chassis_mode,vx_cmd_milli,vy_cmd_milli,wz_cmd_milli,rc_online,rc_age_ms,rc_lx,rc_ly,rc_rx,rc_ry,rc_dial,rc_sw_left,rc_sw_right,mouse_x,mouse_y,mouse_left,mouse_right,keys,model_tick_ms,motor_online_mask,motor_enabled_mask,rpm_lf,rpm_rf,rpm_lb,rpm_rb,target_lf_rpm,target_rf_rpm,target_lb_rpm,target_rb_rpm,i_lf_cmd,i_rf_cmd,i_lb_cmd,i_rb_cmd,i_lf_fb,i_rf_fb,i_lb_fb,i_rb_fb,power_valid,p_unlimited_cw,p_limited_cw,effective_limit_cw,p_meter_cw,meter_online,meter_age_ms,nominal_budget_cw,target_power_cw,power_source,referee_online,referee_limit_cw,buffer_j,buffer_age_ms,buffer_control_enabled,buffer_estimate_valid,buffer_lower_cj,buffer_predicted_cj,buffer_recovering,cap_online,cap_output_enabled,cap_error,cap_energy_pm,cap_chassis_cw,cap_limit_cw,cap_age_ms,cap_input_online,cap_input_cw,cap_input_age_ms
 ```
 
-当前固件输出 CSV v2，固定 85 列、`version=2`，在上述 72 列后依次追加：
+兼容旧固件 CSV v2，固定 85 列、`version=2`，在上述 72 列后依次追加：
 
 ```csv
 imu_valid,imu_age_ms,imu_yaw_mdeg,imu_pitch_mdeg,imu_roll_mdeg,imu_yaw_total_mdeg,imu_gx_mdps,imu_gy_mdps,imu_gz_mdps,imu_ax_mmps2,imu_ay_mmps2,imu_az_mmps2,chassis_offset_mdeg
 ```
 
-`imu_valid` 为 0/1；`imu_age_ms` 为采集时的样本年龄，从未发布姿态时为 4294967295。采样失效后保留最后姿态的原始值和真实年龄，同时置 `imu_valid=0`，网页读数留空。网页同时识别两种精确表头，版本必须与表头一致。导出统一为 v2、保留原始整数单位；v1 记录的 IMU 标记无效，年龄为 4294967295，缺失跟随角编码为 −2147483648 并显示为空，其他原有测量保持不变。旧版网页需刷新至支持 v2 的版本。
+`imu_valid` 为 0/1；`imu_age_ms` 为采集时的样本年龄，从未发布姿态时为 4294967295。采样失效后保留最后姿态的原始值和真实年龄，同时置 `imu_valid=0`，网页读数留空。网页同时识别 v1–v4 精确表头，版本必须与表头一致。导出统一为 v4、保留原始整数单位；v1 记录的 IMU 标记无效，年龄为 4294967295，缺失跟随角编码为 −2147483648 并显示为空，其他原有测量保持不变。旧版网页需刷新至支持 v4 的版本。
 
 `seq` 按采样周期递增（包括被丢弃的周期）；表头重发可能占用发送机会。网页显示缺行计数，并保留 `tx_drop_count` 便于判断发送拥塞。序号和 tick 使用 uint32，支持自然回绕。
 
@@ -243,3 +243,9 @@ IMU 浏览器检查脚本 `tests/imu-check.js` 覆盖新旧固件、单位、无
 ## 自转功率策略遥测
 
 CSV v3 新增阶段、增补额度、增长受限原因和参数来源，兼容旧版解析。功率图可选新增曲线；状态标签悬停可查看原因。字段、参数及旧 Flash 值处理见 [自转功率说明](../../docs/chassis-power-priority.md)。
+
+## 底盘目标与实际速度（CSV v4）
+
+当前固件输出 v4，共 111 列；前 101 列与 v3 相同，追加目标/实际速度各五列。网页“底盘整体速度”显示前进、横移（m/s）与自转（圈/s）的目标/实际数值和六条对比曲线，实际实线、目标虚线。目标与实际各自检查 20 ms 数据新鲜度；失效显示缺失。旧 v1–v3 不伪造速度值。`*_mmps`、`*_mrps` 均除以 1000 显示。
+
+固件统一指针 `chassis_velocity->target/actual`、完整列顺序、几何配置和快照使用见 [底盘速度说明](../../docs/chassis-velocity.md)。

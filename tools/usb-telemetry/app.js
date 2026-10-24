@@ -15,7 +15,7 @@
   const ageText = value => value === null || value === undefined || value >= P.UINT_MAX ? '—' : String(Math.round(value));
   function message(text, error = false) {setText('message', text); $('message').classList.toggle('error', error);}
   const parser = new P.StreamParser({onSample(sample) {store.add(sample, clock());}, onControl: line => {if(!autotuneClient.receive(line)){const pending=tuningClient.pending;tuningClient.receive(line);if(pending&&!tuningClient.pending&&pending.operation==='SET'&&line.split(',')[2]==='OK')autotuneUI?.configurationChanged();}}, onError(kind) {
-    if (kind === 'version') message('遥测版本与表头不匹配。请使用 CSV v1 / v2 / v3 遥测固件。', true);
+    if (kind === 'version') message('遥测版本与表头不匹配。请使用 CSV v1 / v2 / v3 / v4 遥测固件。', true);
   }});
   const session = new window.TelemetrySerial.SerialSession({serial: navigator.serial, onChunk: chunk => parser.push(chunk), onState(state) {
     tuningUI?.setConnected(state === 'connected');
@@ -63,6 +63,11 @@
   const rpmTraces = Object.keys(colors).flatMap(key => [{key: `rpm_${key}`, name: `${wheelNames[key]} · 实际`, color: colors[key]}, {key: `target_${key}_rpm`, name: `${wheelNames[key]} · 目标`, color: colors[key], dash: true, width: 2, dashPattern: [7, 5]}]);
   rpmTraces.push({key: 'wz_cmd_milli', name: '底盘旋转目标 Wz', color: '#df6f7b', axis: 'right', unit: '指令值', digits: 3, dash: true, width: 2});
   const charts = [{id: 'power-chart', title: '功率观测', unit: 'W', traces: powerTraces}, {id: 'energy-chart', title: '缓冲能量', unit: 'J', traces: energyTraces}, {id: 'rpm-chart', title: '四轮转速', unit: 'rpm', rightUnit: 'Wz 指令', traces: rpmTraces}];
+  charts.push({id:'velocity-chart',title:'底盘整体速度',unit:'m/s',rightUnit:'圈/s',traces:
+    [['vx','前进','#3478f6'],['vy','横移','#16a69b'],['wz','自转','#8a65d6']].flatMap(([axis,name,color])=>
+      ['actual','target'].map(kind=>({key: 'velocity_'+kind+'_'+axis+(axis==='wz'?'_mrps':'_mmps'),
+        name:name+' · '+(kind==='actual'?'实际':'目标'),color,dash:kind==='target',digits:3,
+        unit:axis==='wz'?'圈/s':'m/s',axis:axis==='wz'?'right':'left'})))});
   charts.push(
     {id: 'imu-attitude-chart', title: 'IMU 姿态', unit: '°', source: 'imu', traces: [
       {key: 'imu_yaw_mdeg', name: 'Yaw 偏航', color: colors.lf},
@@ -249,9 +254,17 @@
   function stopDemo() {if (demoTimer !== null) {clearInterval(demoTimer); demoTimer = null;} renderToolbar(clock());}
   function makeDemoSample(sequence) {
     const t = sequence / 50, wave = Math.sin(t * .8), row = Object.fromEntries(P.FIELDS.map(key => [key, 0]));
-    Object.assign(row, {version: 3, seq: sequence, tick: sequence * 20, chassis_valid: 1, chassis_tick_ms: sequence * 20, chassis_mode: 2, vx_cmd_milli: Math.round(Math.sin(t * .42) * 2400000), vy_cmd_milli: Math.round(Math.cos(t * .27) * 1300000), wz_cmd_milli: Math.round(Math.sin(t * .3) * 120000), rc_online: 1, rc_lx: Math.round(Math.sin(t * .42) * 480), rc_ly: Math.round(Math.cos(t * .27) * 300), rc_rx: Math.round(Math.sin(t * .3) * 240), rc_ry: Math.round(Math.cos(t * .7) * 400), rc_dial: Math.round(Math.sin(t * .2) * 500), rc_sw_left: 3, rc_sw_right: 1, mouse_x: Math.round(Math.sin(t) * 12), mouse_y: Math.round(Math.cos(t * .8) * 8), mouse_left: Math.floor(t / 2) % 2, keys: Math.floor(t / 3) % 2 ? 9 : 5, model_tick_ms: sequence * 20, motor_online_mask: 15, motor_enabled_mask: 15, power_valid: 1, p_unlimited_cw: Math.round(6700 + wave * 1800), p_limited_cw: Math.round(5400 + wave * 1400), effective_limit_cw: 8000, p_meter_cw: Math.round(5400 + wave * 1400 + Math.sin(t * 7) * 180), meter_online: 1, nominal_budget_cw: 8000, target_power_cw: 7000, power_source: 1, referee_online: 1, referee_limit_cw: 8000, buffer_j: Math.round(42 + Math.sin(t * .25) * 10), buffer_control_enabled: 1, buffer_estimate_valid: 1, buffer_lower_cj: Math.round(3700 + Math.sin(t * .25) * 900), buffer_predicted_cj: Math.round(4100 + Math.sin(t * .25 + .2) * 950), buffer_recovering: 0, cap_online: 1, cap_output_enabled: 1, cap_energy_pm: Math.round(720 + Math.sin(t * .08) * 80), cap_chassis_cw: Math.round(5400 + wave * 1400), cap_limit_cw: 12000, cap_input_online: 1, cap_input_cw: 8000});
+    Object.assign(row, {version: 4, seq: sequence, tick: sequence * 20, chassis_valid: 1, chassis_tick_ms: sequence * 20, chassis_mode: 2, vx_cmd_milli: Math.round(Math.sin(t * .42) * 2400000), vy_cmd_milli: Math.round(Math.cos(t * .27) * 1300000), wz_cmd_milli: Math.round(Math.sin(t * .3) * 120000), rc_online: 1, rc_lx: Math.round(Math.sin(t * .42) * 480), rc_ly: Math.round(Math.cos(t * .27) * 300), rc_rx: Math.round(Math.sin(t * .3) * 240), rc_ry: Math.round(Math.cos(t * .7) * 400), rc_dial: Math.round(Math.sin(t * .2) * 500), rc_sw_left: 3, rc_sw_right: 1, mouse_x: Math.round(Math.sin(t) * 12), mouse_y: Math.round(Math.cos(t * .8) * 8), mouse_left: Math.floor(t / 2) % 2, keys: Math.floor(t / 3) % 2 ? 9 : 5, model_tick_ms: sequence * 20, motor_online_mask: 15, motor_enabled_mask: 15, power_valid: 1, p_unlimited_cw: Math.round(6700 + wave * 1800), p_limited_cw: Math.round(5400 + wave * 1400), effective_limit_cw: 8000, p_meter_cw: Math.round(5400 + wave * 1400 + Math.sin(t * 7) * 180), meter_online: 1, nominal_budget_cw: 8000, target_power_cw: 7000, power_source: 1, referee_online: 1, referee_limit_cw: 8000, buffer_j: Math.round(42 + Math.sin(t * .25) * 10), buffer_control_enabled: 1, buffer_estimate_valid: 1, buffer_lower_cj: Math.round(3700 + Math.sin(t * .25) * 900), buffer_predicted_cj: Math.round(4100 + Math.sin(t * .25 + .2) * 950), buffer_recovering: 0, cap_online: 1, cap_output_enabled: 1, cap_energy_pm: Math.round(720 + Math.sin(t * .08) * 80), cap_chassis_cw: Math.round(5400 + wave * 1400), cap_limit_cw: 12000, cap_input_online: 1, cap_input_cw: 8000});
     Object.assign(row, {imu_valid: 1, imu_age_ms: 1, imu_yaw_mdeg: Math.round(Math.sin(t * .2) * 120000), imu_pitch_mdeg: Math.round(Math.sin(t * .4) * 15000), imu_roll_mdeg: Math.round(Math.cos(t * .3) * 8000), imu_yaw_total_mdeg: Math.round(t * 10000), imu_gx_mdps: Math.round(Math.sin(t * .3) * -2400), imu_gy_mdps: Math.round(Math.cos(t * .4) * 6000), imu_gz_mdps: Math.round(Math.cos(t * .2) * 24000), imu_ax_mmps2: Math.round(Math.sin(t * .4) * 1500), imu_ay_mmps2: Math.round(Math.cos(t * .3) * 800), imu_az_mmps2: Math.round(9807 + Math.sin(t) * 150), chassis_offset_mdeg: Math.round(Math.sin(t * .3) * -2400)});
     Object.keys(colors).forEach((key, i) => {const target = Math.sin(t * .5 + i * .55) * 2500 + Math.cos(t * .3) * 1200; row[`target_${key}_rpm`] = Math.round(target); row[`rpm_${key}`] = Math.round(target - Math.cos(t * .5 + i * .55) * 65); row[`i_${key}_cmd`] = Math.round(Math.cos(t * .5 + i * .55) * 2800); row[`i_${key}_fb`] = row[`i_${key}_cmd`] + Math.round(Math.sin(t * 3 + i) * 90);});
+    for(const kind of ['actual','target']) {
+      row['velocity_'+kind+'_valid']=1;row['velocity_'+kind+'_tick_ms']=row.tick;
+      const wheels=['lf','rf','lb','rb'].map(key=>row[kind==='actual'?'rpm_'+key:'target_'+key+'_rpm'] * 2*Math.PI*.06/(60*19));
+      const [lf,rf,lb,rb]=wheels,p=Math.SQRT1_2;
+      row['velocity_'+kind+'_vx_mmps']=Math.round((-lf+rf-lb+rb)/(4*p)*1000);
+      row['velocity_'+kind+'_vy_mmps']=Math.round((lf+rf-lb-rb)/(4*p)*1000);
+      row['velocity_'+kind+'_wz_mrps']=Math.round((lf+rf+lb+rb)/(4*p*.325*2*Math.PI)*1000);
+    }
     return P.FIELDS.map(key => row[key]).join(',');
   }
   function startDemo() {
@@ -324,6 +337,11 @@
     const normalized = P.normalizeForDisplay(sample, snapshot.at);
     const v = normalized ? normalized.values : {}, valid = normalized ? normalized.valid : {};
     const ages = normalized ? Object.fromEntries(Object.entries(normalized.ages).map(([key, age]) => [key, age === P.UINT_MAX ? P.UINT_MAX : Math.min(P.UINT_MAX, age + lag)])) : {};
+    const velocityLegacy=sample && sample.version<4;
+    pill('velocity-status',!sample?'等待数据':velocityLegacy?'固件未提供速度':valid.velocityActual?'轮速估算有效':'反馈无效 / 过期',valid.velocityActual?'good':sample&&!velocityLegacy?'bad':'neutral');
+    for(const kind of ['actual','target']) for(const axis of ['vx','vy','wz'])
+      setText('velocity-'+kind+'-'+axis,format(v['velocity_'+kind+'_'+axis+(axis==='wz'?'_mrps':'_mmps')],3));
+    setText('velocity-detail',velocityLegacy?'当前固件未上报底盘整体速度，请使用支持速度遥测的固件。':'车身坐标：前进、右移为正；自转正向沿底盘控制约定。实际为四轮反馈估算，打滑时存在偏差。');
     const legacy = sample?.version === 1;
     pill('imu-status', !sample ? '等待数据' : legacy ? '固件未提供 IMU' : valid.imu ? '在线' : '无效 / 过期', valid.imu ? 'good' : sample && !legacy ? 'bad' : 'neutral');
     for (const [id, key, digits] of [

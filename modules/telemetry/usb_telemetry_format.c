@@ -18,9 +18,37 @@ int32_t USBTelemetryFixed(float value, float scale)
     return (int32_t)(scaled >= 0 ? scaled + 0.5 : scaled - 0.5);
 }
 
+static bool VelocityValid(const ChassisVelocity_s *v, uint32_t now_ms)
+{
+    return v->valid && (uint32_t)(now_ms-v->tick_ms)<=CHASSIS_VELOCITY_MAX_AGE_MS &&
+        isfinite(v->vx_mps) && isfinite(v->vy_mps) && isfinite(v->wz_rps);
+}
+
+void USBTelemetryEncodeVelocity(USBTelemetrySample_s *sample,
+    const ChassisVelocityFeedback_s *velocity, uint32_t now_ms)
+{
+    if (sample==NULL) return;
+    const ChassisVelocityFeedback_s empty={0};
+    if (velocity==NULL) velocity=&empty;
+    sample->velocity_actual_valid=VelocityValid(&velocity->actual,now_ms);
+    sample->velocity_actual_tick_ms=velocity->actual.tick_ms;
+    sample->velocity_actual_vx_mmps=USBTelemetryFixed(velocity->actual.vx_mps,1000);
+    sample->velocity_actual_vy_mmps=USBTelemetryFixed(velocity->actual.vy_mps,1000);
+    sample->velocity_actual_wz_mrps=USBTelemetryFixed(velocity->actual.wz_rps,1000);
+    sample->velocity_target_valid=VelocityValid(&velocity->target,now_ms);
+    sample->velocity_target_tick_ms=velocity->target.tick_ms;
+    sample->velocity_target_vx_mmps=USBTelemetryFixed(velocity->target.vx_mps,1000);
+    sample->velocity_target_vy_mmps=USBTelemetryFixed(velocity->target.vy_mps,1000);
+    sample->velocity_target_wz_mrps=USBTelemetryFixed(velocity->target.wz_rps,1000);
+}
+
 void USBTelemetryApplyFreshness(USBTelemetrySample_s *sample, uint32_t now_ms)
 {
     if (sample == NULL) return;
+    if ((uint32_t)(now_ms-sample->velocity_actual_tick_ms)>CHASSIS_VELOCITY_MAX_AGE_MS)
+        sample->velocity_actual_valid=0;
+    if ((uint32_t)(now_ms-sample->velocity_target_tick_ms)>CHASSIS_VELOCITY_MAX_AGE_MS)
+        sample->velocity_target_valid=0;
     if (sample->imu_age_ms > 10U) sample->imu_valid = 0;
     if ((uint32_t)(now_ms - sample->chassis_tick_ms) > 100U) {
         sample->chassis_valid = 0;

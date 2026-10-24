@@ -153,6 +153,7 @@ application/tuning_policy.c \
 modules/telemetry/chassis_power_capture.c \
 modules/algorithm/power_model.c \
 modules/algorithm/chassis_kinematics.c \
+modules/algorithm/chassis_velocity.c \
 modules/algorithm/chassis_spin.c \
 modules/algorithm/chassis_power_budget.c \
 modules/algorithm/chassis_power_outer_loop.c \

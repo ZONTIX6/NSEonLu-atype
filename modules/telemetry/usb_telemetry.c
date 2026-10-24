@@ -46,6 +46,7 @@ static void Collect(uint32_t now_ms)
         sample.vy_cmd_milli = USBTelemetryFixed(chassis.vy_cmd, 1000);
         sample.wz_cmd_milli = USBTelemetryFixed(chassis.wz_cmd, 1000);
         sample.chassis_offset_mdeg = USBTelemetryFixed(chassis.offset_angle, 1000);
+        USBTelemetryEncodeVelocity(&sample,&chassis.velocity,HAL_GetTick());
         sample.nominal_budget_cw = USBTelemetryFixed(chassis.nominal_budget_w, 100);
         sample.target_power_cw = USBTelemetryFixed(chassis.target_power_w, 100);
         sample.buffer_control_enabled = chassis.buffer_control_enabled;

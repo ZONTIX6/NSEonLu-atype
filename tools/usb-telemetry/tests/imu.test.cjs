@@ -57,7 +57,7 @@ test('mixed legacy and IMU records export as consistent v3 CSV and reparse', () 
   parser.push(exported);
   assert.deepEqual(errors, []);
   assert.equal(rows.length, 2);
-  assert.equal(rows[0].version, 3);
+  assert.equal(rows[0].version, 4);
   assert.equal(rows[0].imu_valid, 0);
   assert.equal(rows[0].imu_age_ms, 4294967295);
   assert.equal(P.displayValue(rows[0], 'chassis_offset_mdeg'), null);

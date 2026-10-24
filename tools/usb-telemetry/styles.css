@@ -19,3 +19,7 @@
 @media(max-width:1180px){.imu-charts{gap:15px}.imu-charts .section-heading h2{font-size:13px}}
 @media(max-width:900px){.imu-charts{grid-template-columns:1fr}.imu-charts .chart-container{height:200px}}
 @media(max-width:540px){.imu-card{padding:16px}.imu-readouts{grid-template-columns:1fr;gap:18px}.imu-readouts>div+div{border-top:1px solid #e7edf5;padding-top:16px}.imu-readouts dl{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:20px}.imu-readouts dl>div{flex-direction:column;gap:5px}.imu-charts{gap:12px}}
+
+/* Velocity readouts reuse the dashboard layout, with readable units and labels. */
+#velocity-chart-panel{margin-top:20px}
+#velocity-panel .source-age,#velocity-panel dt,#velocity-panel small,#velocity-chart-panel .chart-footer,#velocity-chart-panel h2 span,#velocity-chart-panel .trace-picker legend,#velocity-chart-panel .trace-options label,#velocity-chart-panel .trace-options small{color:#536d8e}

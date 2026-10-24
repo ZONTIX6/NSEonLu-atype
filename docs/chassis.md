@@ -15,7 +15,7 @@
 #define CHASSIS_DRIVE_TYPE CHASSIS_DRIVE_OMNI_X
 ```
 
-四轮位置和 CAN ID 沿用现有接线：左前 1、右前 2、左后 4、右后 3。底盘坐标系以向前为 `+x`、向右为 `+y`；X 型全向轮按 45° 安装，运动学对平移量和轴距/轮距分量之和做 `1/sqrt(2)` 投影。默认 350 mm × 300 mm 底盘的旋转有效力臂约为 229.81 mm。
+四轮位置和 CAN ID 沿用现有接线：左前 1、右前 4、左后 2、右后 3。底盘坐标系以向前为 `+x`、向右为 `+y`；X 型全向轮按 45° 安装，当前控制正解算只对平移量做 `1/sqrt(2)` 投影，Wz 沿用工程指令标度。实际速度逆解算使用物理几何：默认 350 mm × 300 mm 底盘的旋转有效力臂约为 229.81 mm，详见 [底盘速度反馈](chassis-velocity.md)。
 
 首次调试必须架空车轮，并依次给出纯前进、纯右移和原地旋转命令。如果只有某个车轮方向相反，将对应的 `OMNI_X_LF_DIRECTION`、`OMNI_X_RF_DIRECTION`、`OMNI_X_LB_DIRECTION` 或 `OMNI_X_RB_DIRECTION` 从 `1.0f` 改为 `-1.0f`，不要修改运动学公式。
 
@@ -119,11 +119,15 @@ make -j4 BUILD_DIR=build/sine-fix-usb CHASSIS_SPIN_MODE=2 USB_TELEMETRY_ENABLE=1
 4. 根据控制数据中yaw电机的编码器值`angle_offset`，将控制数据映射到底盘坐标系下
 5. 根据编译期选择进行麦克纳姆轮或四轮 X 型全向轮运动学解算，得到每个电机的设定值
 6. 获取裁判系统的数据，并根据底盘功率限制对输出进行限幅
-7. 由电机的反馈数据和IMU（如果有），计算底盘当前的真实运动速度
-8. 设置底盘反馈数据，包括运动速度和裁判系统数据
+7. 由四轮 CAN 速度反馈估算底盘几何中心速度，同时换算下发轮速对应的目标速度
+8. 更新统一指针 `chassis_velocity` 的目标/实际速度和 USB 遥测快照；另行更新裁判系统反馈数据
 9. 将反馈数据推送到消息中心（如果双板则通过CANComm发送）
 
 
 ### 后续支持平衡底盘
 
 新增一个app balance_chassis
+
+### 整车速度读取
+
+`chassis_velocity->target/actual` 分别提供目标/实际 `vx_mps`、`vy_mps`、`wz_rps`（m/s、m/s、圈/s）。跨任务读取用 `ChassisGetVelocitySnapshot()`。指针、单位、有效性和 CSV v4 字段见 [底盘速度说明](chassis-velocity.md)。

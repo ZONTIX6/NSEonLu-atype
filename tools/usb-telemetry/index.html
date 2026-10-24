@@ -63,6 +63,17 @@
       </aside>
     </div>
 
+    <section class="card imu-card" id="velocity-panel" aria-label="底盘目标与实际速度">
+      <div class="section-heading"><h2>底盘整体速度</h2><span id="velocity-status" class="status-pill neutral">等待数据</span></div>
+      <div class="imu-readouts">
+        <div><h3>前进速度 <small>m/s</small></h3><dl><div><dt>实际</dt><dd id="velocity-actual-vx">—</dd></div><div><dt>目标</dt><dd id="velocity-target-vx">—</dd></div></dl></div>
+        <div><h3>横移速度 <small>m/s</small></h3><dl><div><dt>实际</dt><dd id="velocity-actual-vy">—</dd></div><div><dt>目标</dt><dd id="velocity-target-vy">—</dd></div></dl></div>
+        <div><h3>自转速度 <small>圈/s</small></h3><dl><div><dt>实际</dt><dd id="velocity-actual-wz">—</dd></div><div><dt>目标</dt><dd id="velocity-target-wz">—</dd></div></dl></div>
+      </div>
+      <p id="velocity-detail" class="source-age">等待目标与四轮反馈速度</p>
+    </section>
+    <section class="card chart-card" id="velocity-chart-panel"><div class="section-heading"><h2>底盘速度对比 <span>m/s · 圈/s</span></h2></div><div class="chart-legend"></div><div class="chart-container"><canvas id="velocity-chart" role="img" aria-label="底盘前进、横移与自转目标和实际速度趋势"></canvas><div class="chart-empty" data-empty-chart><strong>等待底盘速度</strong></div></div><div class="chart-footer"><span>实线：实际 · 虚线：目标</span><span>左轴 m/s · 右轴 圈/s</span></div></section>
+
     <section class="card imu-card" id="imu-card" aria-label="板载 IMU 数据">
       <div class="section-heading"><div><span class="eyebrow">ONBOARD IMU</span><h2>IMU 姿态与运动</h2></div><span id="imu-status" class="status-pill neutral">等待数据</span></div>
       <div class="imu-readouts">
@@ -129,7 +140,7 @@
       </article>
       <article class="card auto-results-card"><h3>试验记录与报告</h3><p>限流超过 5% 或覆盖质量不足的试验会剔除。未完成验收时仅提供探索记录，不能采用。</p><div class="auto-buttons auto-exports"><button id="auto-json" class="secondary-button" type="button" disabled>导出 JSON 完整报告</button><button id="auto-csv" class="secondary-button" type="button" disabled>导出 CSV 逐试验记录</button></div><div class="auto-table-wrap"><table class="auto-table"><thead><tr><th>#</th><th>电机</th><th>阶段 / rpm</th><th>Kp</th><th>Ki</th><th>Kd</th><th>RMSE · rpm</th><th>超调 · rpm</th><th>稳态误差 · rpm</th><th>稳定时间</th><th>状态 / 门槛</th></tr></thead><tbody id="auto-trials"></tbody></table></div></article>
     </section>
-    <footer class="app-footer"><span>USB CDC · CSV v1 / v2 / v3 · 最近 10 分钟历史 · 默认显示 60 秒</span><span>在线调参 · 单轮自动整定 · 板端确认后同步项目文件</span></footer>
+    <footer class="app-footer"><span>USB CDC · CSV v1 / v2 / v3 / v4 · 最近 10 分钟历史 · 默认显示 60 秒</span><span>在线调参 · 单轮自动整定 · 板端确认后同步项目文件</span></footer>
   </main>
   <dialog id="chart-dialog" class="chart-dialog" aria-labelledby="expanded-chart-title">
     <div class="section-heading"><div><span class="eyebrow">WAVEFORM DETAIL</span><h2><span id="expanded-chart-title">波形详情</span> <small id="expanded-chart-unit"></small></h2></div><div class="chart-dialog-actions"><button type="button" class="secondary-button" id="reset-chart-button" disabled>恢复全图</button><button type="button" class="secondary-button" id="close-chart-button" autofocus>关闭 <span aria-hidden="true">×</span></button></div></div>

@@ -76,8 +76,24 @@ static ChassisPowerControlSnapshot_s pending_power_control;
 static ChassisPower_Init_Config_s power_module_config;
 static uint32_t power_config_version;
 static ChassisTelemetrySnapshot_s chassis_telemetry;
+static ChassisVelocityFeedback_s chassis_velocity_data;
+const ChassisVelocityFeedback_s *const volatile chassis_velocity = &chassis_velocity_data;
 static Publisher_t *heat_pub;
 static uint32_t heat_publish_tick;
+
+bool ChassisGetVelocitySnapshot(ChassisVelocityFeedback_s *snapshot)
+{
+    if (snapshot == NULL) return false;
+    taskENTER_CRITICAL();
+    *snapshot = *chassis_velocity;
+    taskEXIT_CRITICAL();
+    const uint32_t now=HAL_GetTick();
+    if ((uint32_t)(now-snapshot->actual.tick_ms)>CHASSIS_VELOCITY_MAX_AGE_MS)
+        snapshot->actual=(ChassisVelocity_s){0};
+    if ((uint32_t)(now-snapshot->target.tick_ms)>CHASSIS_VELOCITY_MAX_AGE_MS)
+        snapshot->target=(ChassisVelocity_s){0};
+    return snapshot->actual.valid;
+}
 
 bool ChassisGetTelemetrySnapshot(ChassisTelemetrySnapshot_s *snapshot)
 {
@@ -438,11 +454,40 @@ static void LimitChassisOutput()
  *        对于双板的情况,考虑增加来自底盘板IMU的数据
  *
  */
-static void EstimateSpeed()
+static void EstimateSpeed(void)
 {
-    // 根据电机速度和陀螺仪的角速度进行解算,还可以利用加速度计判断是否打滑(如果有)
-    // chassis_feedback_data.vx vy wz =
-    //  ...
+    static const ChassisVelocityConfig_s config={
+        .omni_x=CHASSIS_DRIVE_TYPE==CHASSIS_DRIVE_OMNI_X,
+        .wheel_radius_m=RADIUS_WHEEL*.001f, .reduction_ratio=REDUCTION_RATIO_WHEEL,
+        .wheel_base_m=WHEEL_BASE*.001f, .track_width_m=TRACK_WIDTH*.001f,
+        .direction={OMNI_X_LF_DIRECTION,OMNI_X_RF_DIRECTION,OMNI_X_LB_DIRECTION,OMNI_X_RB_DIRECTION}};
+    DJIMotorInstance *const motors[4]={motor_lf,motor_rf,motor_lb,motor_rb};
+    ChassisVelocityInput_s input={0};
+    /* Raw CAN feedback remains meaningful while coasting in ZERO_FORCE.
+     * Copy all wheels under the same lock as the motor task's feedback snapshot. */
+    taskENTER_CRITICAL();
+    input.now_ms=HAL_GetTick();
+    for (unsigned i=0;i<4;++i) {
+        if (motors[i]==NULL) continue;
+        input.rpm[i]=motors[i]->measure.speed_aps/6.0f;
+        input.feedback_tick_ms[i]=motors[i]->measure.rx_tick_ms;
+        if (motors[i]->measure.rx_sequence!=0 && DaemonIsOnline(motors[i]->daemon))
+            input.online_mask|=(uint8_t)(1U<<i);
+    }
+    taskEXIT_CRITICAL();
+    ChassisVelocityFeedback_s velocity={0};
+    (void)ChassisEstimateVelocity(&config,&input,&velocity.actual);
+    const bool drive_enabled=pending_power_control.control_enabled &&
+        !pending_power_control.zero_force && VehicleSafetyAllowsDrive(input.now_ms);
+    for (unsigned i=0;i<4;++i) {
+        input.rpm[i]=drive_enabled ? pending_power_control.target_rpm[i] : 0;
+        input.feedback_tick_ms[i]=input.now_ms;
+    }
+    input.online_mask=15U;
+    (void)ChassisEstimateVelocity(&config,&input,&velocity.target);
+    taskENTER_CRITICAL();
+    chassis_velocity_data=velocity;
+    taskEXIT_CRITICAL();
 }
 
 static void UpdateChassisPowerBudget(void)
@@ -626,7 +671,7 @@ void ChassisTask()
     // 根据裁判系统的反馈数据和电容数据对输出限幅并设定闭环参考值
     LimitChassisOutput();
 
-    // 根据电机的反馈速度和IMU(如果有)计算真实速度
+    // 从四轮 CAN 反馈估算底盘几何中心速度。
     EstimateSpeed();
 
     // // 获取裁判系统数据   建议将裁判系统与底盘分离，所以此处数据应使用消息中心发送
@@ -648,6 +693,7 @@ void ChassisTask()
         .mode = (uint8_t)chassis_cmd_recv.chassis_mode,
         .vx_cmd = chassis_vx, .vy_cmd = chassis_vy, .wz_cmd = chassis_cmd_recv.wz,
         .offset_angle = chassis_cmd_recv.offset_angle,
+        .velocity = *chassis_velocity,
         .nominal_budget_w = pending_power_control.nominal_budget_w,
         .target_power_w = pending_power_control.target_power_w,
         .buffer_control_enabled = CHASSIS_BUFFER_POWER_ENABLE != 0,
