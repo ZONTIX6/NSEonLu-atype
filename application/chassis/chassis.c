@@ -65,7 +65,6 @@ static Subscriber_t *chassis_sub;                   // 用于订阅底盘的控�
 static Chassis_Ctrl_Cmd_s chassis_cmd_recv;         // 底盘接收到的控制命令
 static Chassis_Upload_Data_s chassis_feedback_data; // 底盘回传的反馈数据
 
-static PIDInstance buffer_PID;             // 用于底盘的缓冲能量PID
 static Referee_Interactive_info_t ui_data; // UI数据，将底盘中的数据传入此结构体的对应变量中，UI会自动检测是否变化，对应显示UI
 
  DJIMotorInstance *motor_lf, *motor_rf, *motor_lb, *motor_rb; // left right forward back
@@ -330,16 +329,6 @@ void ChassisInit()
     (void)UITaskInit(BOARD_REFEREE_UART, &ui_data); // 裁判系统初始化,会同时初始化UI
 #endif
 
-/* Buffer环暂未测试，逻辑是计算期望buffer与实际buffer的差值，转换为冗余的功率，todo：输入给功率控制部分，待完善 */
-    PID_Init_Config_s Buffer_pid_conf = {
-        .Kp = 0.1,
-        .Ki = 0,
-        .Kd = 0,
-        .IntegralLimit = 1000,
-        .Improve = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
-        .MaxOut = 1000,
-    };
-    PIDInit(&buffer_PID, &Buffer_pid_conf); // 缓冲能量PID初始化
 #if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP
     SuperCap_Init_Config_s cap_conf = {
         .can_config = {
