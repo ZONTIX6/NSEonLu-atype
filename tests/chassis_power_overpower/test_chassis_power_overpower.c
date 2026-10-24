@@ -334,8 +334,32 @@ static void TestRampSpikeOnExistingClampFreezesSlowLoop(void)
     assert(slow_state.integral_w < integral); /* Sustained error resumes learning. */
 }
 
+static void TestTargetRoundTripWithoutOverpowerCannotLeaveNegativeHistory(void)
+{
+    Prepare();
+    fast_input.meter_w = 49;
+    float minimum_integral = 0;
+    for (uint32_t t = 0; t <= 1000; ++t) {
+        fast_input.target_w = t >= 200 && t < 400 ? 65 : 49;
+        fast_input.budget_w = fast_input.target_w / .98f;
+        FastTick(t, t % 5 == 0, true, .001f);
+        if (t % 5 == 0) {
+            SlowTick(true, true);
+            minimum_integral = fminf(minimum_integral, slow_state.integral_w);
+        }
+        assert(!fast_output.negative_learning_allowed);
+        assert(fast_output.fast_w == 0);
+    }
+    printf("Target switching without overpower: minimum integral=%.3f W, slow=%.3f W\n",
+           minimum_integral, slow_output.correction_w);
+    assert(minimum_integral >= 0);
+    assert(slow_output.correction_w >= 0);
+    assert(slow_output.corrected_budget_w >= fast_input.budget_w);
+}
+
 int main(void)
 {
+    TestTargetRoundTripWithoutOverpowerCannotLeaveNegativeHistory();
     TestPersistentOverpowerConverges();
     TestMeasuredOverpowerBypassesModelDemandGates();
     TestSpikeKeepsSlowHistoryFrozen();

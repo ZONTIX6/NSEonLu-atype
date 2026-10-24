@@ -824,8 +824,101 @@ static void TestInvalidDeltaTimeFailsWithoutPositiveOutput(void)
     ASSERT_TRUE(state.measurement_initialized);
 }
 
+static ChassisPowerOuterLoopConfig_s CompleteSlowConfig(void)
+{
+    ChassisPowerOuterLoopConfig_s config = valid_config;
+    config.kp = 1;
+    config.ki = 1.5f;
+    config.error_deadband_w = .3f;
+    config.positive_slew_rate_w_per_s = 60;
+    config.antiwindup_gain_per_s = 10;
+    config.low_demand_delay_s = .5f;
+    config.low_demand_decay_w_per_s = 1;
+    return config;
+}
+
+static void TestTargetRoundTripCannotManufactureNegativeCorrection(void)
+{
+    const ChassisPowerOuterLoopConfig_s config = CompleteSlowConfig();
+    for (unsigned fixed_budget = 0; fixed_budget < 2; ++fixed_budget)
+    {
+        ChassisPowerOuterLoopState_s state = {0};
+        ChassisPowerOuterLoopOutput_s output;
+        ChassisPowerOuterLoopInput_s input = BaseInput();
+        input.complete_slow_control = input.learning_allowed = true;
+        input.base_limited = input.demand_sufficient = true;
+        input.measured_power_w = input.target_power_w = 49;
+        input.nominal_budget_w = fixed_budget ? 80 : 50;
+        for (unsigned tick = 1; tick <= 2; ++tick)
+        {
+            input.meter_tick_ms = tick * 5;
+            ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&config, &input, .005f,
+                                                           &state, &output));
+        }
+        float minimum_integral = 0;
+        for (unsigned tick = 3; tick <= 42; ++tick)
+        {
+            const float previous_correction = output.correction_w;
+            input.target_power_w = 65;
+            input.nominal_budget_w = fixed_budget ? 80 : 65 / .98f;
+            input.meter_tick_ms = tick * 5;
+            ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&config, &input, .005f,
+                                                           &state, &output));
+            minimum_integral = fminf(minimum_integral, state.integral_w);
+            ASSERT_TRUE(output.correction_w >= 0 && output.correction_w <= 8);
+            ASSERT_TRUE(output.correction_w <= previous_correction + .30001f);
+        }
+        input.target_power_w = 49;
+        input.nominal_budget_w = fixed_budget ? 80 : 50;
+        input.meter_tick_ms += 5;
+        ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&config, &input, .005f,
+                                                       &state, &output));
+        printf("Target round trip (%s budget): minimum integral=%.3f W, returned correction=%.3f W\n",
+               fixed_budget ? "fixed" : "changing", minimum_integral, output.correction_w);
+        ASSERT_TRUE(minimum_integral >= 0);
+        ASSERT_NEAR(0, output.error_w, 1e-6f);
+        ASSERT_TRUE(output.correction_w >= 0);
+        ASSERT_TRUE(output.corrected_budget_w >= input.nominal_budget_w);
+    }
+}
+
+static void TestTargetRisePreservesAndReleasesGenuineNegativeHistory(void)
+{
+    const ChassisPowerOuterLoopConfig_s config = CompleteSlowConfig();
+    ChassisPowerOuterLoopState_s state = {0};
+    ChassisPowerOuterLoopOutput_s output;
+    ChassisPowerOuterLoopInput_s input = BaseInput();
+    input.complete_slow_control = input.negative_learning_allowed = true;
+    input.target_power_w = 49;
+    input.nominal_budget_w = 50;
+    input.measured_power_w = 55;
+    for (unsigned tick = 1; tick <= 102; ++tick)
+    {
+        input.meter_tick_ms = tick * 5;
+        ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&config, &input, .005f,
+                                                       &state, &output));
+    }
+    ASSERT_TRUE(state.integral_w < -4);
+    ASSERT_TRUE(output.correction_w < -9);
+    const float previous_integral = state.integral_w;
+    const float previous_correction = output.correction_w;
+    input.target_power_w = 65;
+    input.nominal_budget_w = 65 / .98f;
+    input.negative_learning_allowed = false;
+    input.learning_allowed = input.base_limited = input.demand_sufficient = true;
+    input.meter_tick_ms += 5;
+    ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&config, &input, .005f,
+                                                   &state, &output));
+    ASSERT_TRUE(state.integral_w < 0);
+    ASSERT_TRUE(state.integral_w > previous_integral);
+    ASSERT_TRUE(output.correction_w < 0);
+    ASSERT_TRUE(output.correction_w <= previous_correction + .30001f);
+}
+
 int main(void)
 {
+    TestTargetRoundTripCannotManufactureNegativeCorrection();
+    TestTargetRisePreservesAndReleasesGenuineNegativeHistory();
     {
         ChassisPowerOuterLoopConfig_s c = valid_config;
         c.error_deadband_w = .3f; c.antiwindup_gain_per_s = 10;
@@ -879,10 +972,10 @@ int main(void)
         ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&c, &i, .005f, &s, &o));
         ASSERT_NEAR(10, o.error_w, 1e-4f);
         ASSERT_NEAR(.1f, o.correction_w, 1e-5f);
-        ASSERT_NEAR(-.195f, s.integral_w, 1e-4f);
+        ASSERT_NEAR(.05f, s.integral_w, 1e-4f);
         i.learning_allowed = i.allow_positive_correction = false; i.measured_power_w = 100;
         ASSERT_TRUE(ChassisPowerOuterLoopUpdateIsolated(&c, &i, .005f, &s, &o));
-        ASSERT_NEAR(-.195f, s.integral_w, 1e-4f);
+        ASSERT_NEAR(.05f, s.integral_w, 1e-4f);
         ASSERT_NEAR(.1f, s.correction_w, 1e-5f);
         ASSERT_NEAR(0, o.correction_w, 1e-6f);
         s.integral_w = s.correction_w = s.applied_correction_w = -2;

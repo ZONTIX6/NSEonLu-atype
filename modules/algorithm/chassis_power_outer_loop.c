@@ -314,9 +314,13 @@ static bool UpdateCompleteSlow(const ChassisPowerOuterLoopConfig_s *c,
         const float limited = ClampFloat(candidate, -i->nominal_budget_w, upper_limit);
         s->correction_w = limited > s->correction_w ?
             fminf(limited, s->correction_w + c->positive_slew_rate_w_per_s * dt) : limited;
+        /* Unwind existing history only; output slew must not create opposite-sign I. */
+        const float tracking_delta = ClampFloat(
+            c->antiwindup_gain_per_s * (s->correction_w - candidate) * dt,
+            -fmaxf(s->integral_w, 0), -fminf(s->integral_w, 0));
         /* Track only the slow loop's own saturation/slew, never a transient mask. */
         s->integral_w = ClampFloat(s->integral_w + c->ki * e_db * dt +
-            c->antiwindup_gain_per_s * (s->correction_w - candidate) * dt,
+            tracking_delta,
             -i->nominal_budget_w, upper_limit);
         o->error_w = e_db;
     }
