@@ -6,6 +6,10 @@
 
 **Constraints:** Python standard library; preserve existing unrelated firmware changes; all source origins remain visible; no invented runtime addresses or accessors; local temporaries and extern declarations are explicitly classified.
 
+**User scope update:** The default entry is now a concise common-data reference (remote, motors, meter, capacitor, referee, IMU and velocity), containing pointer names, a few useful member expressions and source locations. The exhaustive instance renderer remains optional through `--full`, writing a separate file; normal one-click updates keep the primary reference short.
+
+The compact default has 10 category rows, checked against real member paths and source locations; all 48 regression tests pass. Review corrected the RC note to identify the control-task snapshot without claiming that its unused second element holds historical data.
+
 - [x] Write failing fixture tests for global/static/local instances, multi-declarations, arrays, externs, function/parameter exclusion, anonymous objects and direct assignment scope.
 - [x] Expose the existing repository type inventory without changing type-index output apart from a link to the new primary index, then implement declaration discovery.
 - [x] Test and implement recursive pointer/object access paths, alias pointer depth, cycles and ambiguous type candidates.

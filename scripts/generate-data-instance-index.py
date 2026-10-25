@@ -486,7 +486,7 @@ def generate(root):
            "实际运行地址由固件装载及分配决定；本文给出变量名和 C 访问表达式。`static` 或局部变量需在对应源码/函数作用域查看；`extern` 是声明，不代表本文件定义存储。数组路径中的 `[0]` 是示例下标，实际使用时按有效范围选择。指针在相应初始化完成后才可能可用。", "",
            "直接赋值证据只表示当前文件里按词法作用域找到的 `变量 = 表达式`，不把成员写入、参数赋值当成根指针重新绑定，不分析任意函数调用的副作用。条件编译分支、便携副本和测试桩保留并按来源区分，不表示全部参与当前固件。", "",
            "类型有多个候选或遇到递归环时明确标记并停止深层路径推断。成员说明来自源码注释；没有注释时不猜测含义。类型定义与完整字段声明见[结构体与成员索引](structure-index.md)。", "",
-           "更新：双击 `scripts/update-structure-index.cmd`，或运行 `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/update-structure-index.ps1`，同时更新本索引与类型索引。", "",
+           "更新本完整表：运行 `python scripts/generate-data-instance-index.py --full`；检查使用 `--full --check`。默认一键脚本只更新常用速查与类型索引。", "",
            "## 项目实例指针速查", "", "优先查看项目代码中保存数据的持久指针；更多结构体对象、extern 声明及其他来源见后续完整表。", "",
            "| 中文用途 | 指针入口 | 声明初始化 / 直接赋值 | 定义位置 |", "| --- | --- | --- | --- |"]
     for variable in persistent:
@@ -531,17 +531,71 @@ def generate(root):
     return "\n".join(out) + "\n"
 
 
+MOTOR_COMMON = [("角速度", "measure.speed_aps"), ("电流反馈", "measure.real_current"), ("累计角度", "measure.total_angle")]
+COMMON_DATA = [
+    ("遥控器", "application/cmd/robot_cmd.c", ["rc_data"],
+     [("左摇杆横向", "rc.rocker_l_"), ("左拨杆", "rc.switch_left"), ("键盘", "key[0].keys")]),
+    ("图传键鼠", "application/cmd/robot_cmd.c", ["vt02_data"],
+     [("鼠标横向", "mouse.x"), ("键盘", "key[0].keys"), ("在线", "online")]),
+    ("底盘电机", "application/chassis/chassis.c", ["motor_lf", "motor_rf", "motor_lb", "motor_rb"], MOTOR_COMMON),
+    ("云台电机", "application/gimbal/gimbal.c", ["yaw_motor", "pitch_motor"], MOTOR_COMMON),
+    ("发射电机", "application/shoot/shoot.c", ["friction_l", "friction_r", "loader"], MOTOR_COMMON),
+    ("功率计", "modules/power_meter/power_meter.c", ["power_meter"],
+     [("功率", "status.power_w"), ("电流", "status.current_a"), ("电压", "status.bus_voltage_v"), ("在线", "status.online")]),
+    ("超级电容", "modules/super_cap/super_cap.c", ["cap"],
+     [("剩余能量比例", "snapshot.status.energy_ratio"), ("输出使能", "snapshot.status.output_enabled"),
+      ("故障码", "snapshot.status.error_code"), ("输入功率", "snapshot.input_power.input_power_w")]),
+    ("裁判系统", "modules/referee/referee_task.c", ["referee_recv_info"],
+     [("机器人 ID", "GameRobotState.robot_id"), ("血量", "GameRobotState.current_HP"),
+      ("底盘功率上限", "GameRobotState.chassis_power_limit"), ("枪管热量", "PowerHeatData.shooter_17mm_barrel_heat")]),
+    ("IMU 姿态", "application/gimbal/gimbal.c", ["gimbal_IMU_data"],
+     [("偏航", "Yaw"), ("俯仰", "Pitch"), ("横滚", "Roll")]),
+    ("底盘速度", "application/chassis/chassis.c", ["chassis_velocity"],
+     [("前后速度", "actual.vx_mps"), ("左右速度", "actual.vy_mps"), ("旋转速度", "actual.wz_rpm")]),
+]
+
+
+def generate_common(root):
+    data = inventory(Path(root))
+    out = ["# 常用数据指针速查", "",
+           "用 **Ctrl+F** 搜数据用途、指针名或成员名。下表只列日常调试常用的数据入口。", "",
+           "| 数据 | 常用指针 | 常看成员 / 访问示例 | 定义位置 |", "| --- | --- | --- | --- |"]
+    for label, path, names, fields in COMMON_DATA:
+        variables = [v for name in names for v in data.variables if v.path == path and v.name == name and not v.function and v.storage != "extern"]
+        if not variables:
+            continue
+        examples = []
+        for variable in variables:
+            base, operator = access_base(variable, data)
+            available = {expression for _, expression, _, _ in member_paths(variable, data)}
+            for meaning, suffix in fields:
+                expression = base + operator + suffix
+                if expression not in available:
+                    raise ValueError(f"{path}: 常用指针 {variable.name} 的成员路径已变化: {expression}")
+                if variable is variables[0]:
+                    examples.append(types.cell(meaning) + "：" + types.code(expression))
+        definitions = sorted({(v.path, v.line) for v in variables})
+        out.append(f"| {label} | {'、'.join(types.code(v.name) for v in variables)} | {'<br>'.join(examples)} | "
+                   + "、".join(types.source_link(p, line) for p, line in definitions) + " |")
+    out += ["", "电机同组共用 `measure` 成员，示例中的指针可替换成同一行的其他电机指针。`lf/rf/lb/rb` 分别为左前/右前/左后/右后；`yaw/pitch` 为偏航/俯仰；`friction_l/friction_r/loader` 为左摩擦轮/右摩擦轮/拨弹电机。", "",
+            "`rc_data` 指向控制任务中的遥控器快照，示例查看当前数据。`static` 指针在对应源码作用域查看，并需完成相应初始化。", "",
+            "更新：双击 `scripts/update-structure-index.cmd`。常用名单和示例在生成脚本的 `COMMON_DATA` 中维护；更新时会自动刷新源码位置并核对成员路径。", ""]
+    return "\n".join(out)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--check", action="store_true")
+    parser.add_argument("--full", action="store_true", help="generate the optional exhaustive index instead of the common-data quick reference")
     args = parser.parse_args()
-    output = args.root / "docs/data-instance-index.md"
+    output = args.root / ("docs/data-instance-index-full.md" if args.full else "docs/data-instance-index.md")
     try:
-        markdown = generate(args.root)
+        markdown = generate(args.root) if args.full else generate_common(args.root)
         if args.check:
             if not output.exists() or output.read_text(encoding="utf-8") != markdown:
-                print("Data instance index is stale; run scripts/update-structure-index.ps1", file=sys.stderr)
+                command = "python scripts/generate-data-instance-index.py --full" if args.full else "scripts/update-structure-index.ps1"
+                print(f"Data instance index is stale; run {command}", file=sys.stderr)
                 return 1
             print("Data instance index is up to date.")
         else:

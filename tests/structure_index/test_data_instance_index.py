@@ -177,16 +177,35 @@ class InstanceTests(unittest.TestCase):
 
     def test_cli_check_and_deterministic_generation(self):
         self.write("modules/sample.c", 'typedef struct { int value; } State;\nstatic State *data;')
-        args = [sys.executable, str(SCRIPT), "--root", str(self.root)]
+        args = [sys.executable, str(SCRIPT), "--root", str(self.root), "--full"]
         result = subprocess.run(args, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr)
-        output = self.root / "docs/data-instance-index.md"
+        output = self.root / "docs/data-instance-index-full.md"
         old = output.read_bytes()
         self.assertEqual(subprocess.run(args + ["--check"], capture_output=True).returncode, 0)
         self.write("modules/sample.c", 'typedef struct { int new_value; } State;\nstatic State *data;')
         self.assertNotEqual(subprocess.run(args + ["--check"], capture_output=True).returncode, 0)
         self.assertEqual(output.read_bytes(), old)
         self.assertEqual(index.generate(self.root), index.generate(self.root))
+
+    def test_common_index_keeps_useful_pointer_paths_and_omits_unrelated_instances(self):
+        self.write("modules/power_meter/power_meter.c",
+                   'typedef struct { float power_w, current_a, bus_voltage_v; bool online; } Status;\n'
+                   'typedef struct { Status status; } Meter;\nstatic Meter *power_meter;\n'
+                   'static Meter *unrelated_pointer;')
+        md = index.generate_common(self.root)
+        self.assertIn("功率计", md)
+        self.assertIn("`power_meter->status.power_w`", md)
+        self.assertIn("power_meter.c#L3", md)
+        self.assertNotIn("unrelated_pointer", md)
+        self.assertNotIn("局部临时实例", md)
+
+    def test_common_index_reports_a_stale_curated_member_instead_of_printing_bad_paths(self):
+        self.write("modules/power_meter/power_meter.c",
+                   'typedef struct { int renamed; } Status;\n'
+                   'typedef struct { Status status; } Meter;\nstatic Meter *power_meter;')
+        with self.assertRaisesRegex(ValueError, "power_meter"):
+            index.generate_common(self.root)
 
 
 if __name__ == "__main__":
