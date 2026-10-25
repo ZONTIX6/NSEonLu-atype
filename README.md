@@ -40,16 +40,19 @@ node tools/usb-telemetry/serve.cjs
 
 ## 配置与验证
 
-- [结构体与成员索引：按中文用途、类型名或成员名查找](docs/structure-index.md)
+- [数据实例与指针索引：查找真正保存数据的指针和成员访问路径](docs/data-instance-index.md)
+- [结构体与成员索引：查字段类型、说明与嵌套定义](docs/structure-index.md)
 - [配置与参数指南](docs/configuration-guide.md)
 - [完整宏和初始化参数索引](docs/configuration-index.md)
 - [宏迁移对照与输入基线](docs/atype-macro-migration.md)
 - [接线、CAN、单位、模块与安全条件](docs/atype-integration.md)
 - [验证结果和硬件验收清单](docs/atype-validation.md)
 
-结构体索引包含项目代码、芯片驱动、第三方库、便携副本和测试桩。用 `Ctrl+F` 搜索“电机”“功率计”等用途，或搜索 `speed_aps`、`power_w` 等成员名，再沿嵌套关系跳转。成员说明沿用源码注释，未注释字段会明确标记；保留条件编译分支，因此收录不代表参与当前固件链接。
+要找实际数据，先打开“数据实例与指针索引”，用 `Ctrl+F` 搜索“电机”“功率计”等用途，或搜索 `speed_aps`、`power_w` 等成员名，即可找到 `motor_lf->measure.speed_aps`、`power_meter->status.power_w` 等访问路径，以及指针定义、初始化赋值和赋值来源变量。文件内长期保存的实例、局部 static、extern 声明和函数临时变量会明确区分。
 
-源码变化后，双击 `scripts/update-structure-index.cmd`，或执行下面的命令更新索引（Python 3.10+，仅标准库，不需要编译固件）：
+两份索引都覆盖项目代码、芯片驱动、第三方库、便携副本和测试桩。类型索引提供字段定义与嵌套关系；成员说明沿用源码注释，未注释字段会明确标记。保留条件编译分支，因此收录不代表参与当前固件链接；数组路径中的 `[0]` 是示例下标，实际变量的访问需要所在作用域和初始化状态有效。
+
+源码变化后，双击 `scripts/update-structure-index.cmd`，或执行下面的命令同时更新两份索引（Python 3.10+，仅标准库，不需要编译固件）：
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/update-structure-index.ps1
@@ -59,7 +62,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/update-structure-ind
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/update-structure-index.ps1 -Check
 ```
 
-也可跨平台执行 `python scripts/generate-structure-index.py`（检查使用 `--check`）。生成失败会返回非零状态并保留原索引；中文模块关键词在生成脚本的 `PURPOSES` 表中维护。CMD 自动化调用可设置环境变量 `STRUCTURE_INDEX_NO_PAUSE=1` 跳过窗口暂停。
+也可跨平台分别执行 `python scripts/generate-structure-index.py` 和 `python scripts/generate-data-instance-index.py`（检查使用 `--check`）。每份文档在成功生成后原子替换，生成失败返回非零状态；中文模块关键词在类型生成脚本的 `PURPOSES` 表中维护。CMD 自动化调用可设置环境变量 `STRUCTURE_INDEX_NO_PAUSE=1` 跳过窗口暂停。
 
 ```powershell
 ./scripts/validate-atype.ps1 -Python "<Python 3 executable>" -FirmwareMatrix -CMake

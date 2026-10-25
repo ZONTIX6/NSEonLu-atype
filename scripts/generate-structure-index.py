@@ -532,7 +532,8 @@ def type_targets(owner, member, records, by_name):
     return preferred_targets(owner.path, by_name.get(member.type_name, []))
 
 
-def generate(root):
+def load_repository(root):
+    """Return the source/type inventory shared by the type and instance indexes."""
     root = Path(root)
     paths = sorted(source_paths(root), key=lambda p: p.relative_to(root).as_posix())
     all_records, counts, aliases = [], [], []
@@ -574,12 +575,19 @@ def generate(root):
         if not changed:
             break
         pending = remaining
+    return paths, all_records, counts, by_id, by_name
+
+
+def generate(root):
+    root = Path(root)
+    paths, all_records, counts, by_id, by_name = load_repository(root)
     groups = ["项目源码", "便携副本", "芯片驱动与 CMSIS", "第三方中间件", "测试与测试桩"]
     all_records.sort(key=lambda r: (groups.index(group(r.path)), r.path, r.line, r.start))
     nstruct = sum(r.kind == "struct" for r in all_records)
     nmember = sum(len(r.members) for r in all_records)
     out = ["# 结构体与成员索引", "",
            f"扫描 **{len(paths)}** 个 C/H 文件，收录 **{nstruct}** 个结构体、**{len(all_records) - nstruct}** 个联合体、**{nmember}** 条直接成员声明（含匿名成员与未命名位域）。", "",
+           "要查实际保存数据的实例指针及访问表达式，请先看[数据实例与指针索引](data-instance-index.md)；本文件用于查字段类型、注释和定义。", "",
            "在本文件用 **Ctrl+F** 搜索中文用途、类型名或任意成员名。先从[中文用途导航](#中文用途导航)找模块，或从[成员名反查](#成员名反查)找字段，再跳转到类型详情和源码。", "",
            "更新：在仓库目录执行 `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/update-structure-index.ps1`，或双击 `scripts/update-structure-index.cmd`。解释器不能自动发现时传入 `-Python <python.exe 完整路径>`。", "",
            "本文件由 `scripts/generate-structure-index.py` 自动生成，请勿直接编辑。中文用途关键词在脚本 `PURPOSES` 中维护；字段含义优先使用源码注释，没有注释时明确标注，不推测语义。", "",
@@ -642,6 +650,20 @@ def generate(root):
     return "\n".join(out) + "\n"
 
 
+def write_document(output, markdown):
+    """Publish a complete UTF-8 document without truncating its previous version."""
+    output.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary = tempfile.mkstemp(prefix=output.name + ".", suffix=".tmp", dir=output.parent)
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(markdown.encode("utf-8"))
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, output)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
@@ -656,16 +678,7 @@ def main():
                 return 1
             print("Structure index is up to date.")
         else:
-            output.parent.mkdir(parents=True, exist_ok=True)
-            descriptor, temporary = tempfile.mkstemp(prefix=output.name + ".", suffix=".tmp", dir=output.parent)
-            try:
-                with os.fdopen(descriptor, "wb") as stream:
-                    stream.write(markdown.encode("utf-8"))
-                    stream.flush()
-                    os.fsync(stream.fileno())
-                os.replace(temporary, output)
-            finally:
-                Path(temporary).unlink(missing_ok=True)
+            write_document(output, markdown)
             print(f"Updated {output}")
         return 0
     except (ValueError, OSError) as error:

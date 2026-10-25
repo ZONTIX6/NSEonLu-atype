@@ -2,6 +2,8 @@
 
 扫描 **631** 个 C/H 文件，收录 **867** 个结构体、**76** 个联合体、**7056** 条直接成员声明（含匿名成员与未命名位域）。
 
+要查实际保存数据的实例指针及访问表达式，请先看[数据实例与指针索引](data-instance-index.md)；本文件用于查字段类型、注释和定义。
+
 在本文件用 **Ctrl+F** 搜索中文用途、类型名或任意成员名。先从[中文用途导航](#中文用途导航)找模块，或从[成员名反查](#成员名反查)找字段，再跳转到类型详情和源码。
 
 更新：在仓库目录执行 `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/update-structure-index.ps1`，或双击 `scripts/update-structure-index.cmd`。解释器不能自动发现时传入 `-Python <python.exe 完整路径>`。

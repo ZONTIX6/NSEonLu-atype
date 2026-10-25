@@ -45,9 +45,11 @@ if ($null -eq $selected) {
     throw 'Python 3.10+ was not found. Pass -Python with the full path to python.exe.'
 }
 
-$scriptPath = Join-Path $PSScriptRoot 'generate-structure-index.py'
-$arguments = @($scriptPath)
-if ($Check) { $arguments += '--check' }
 $prefix = $selected.Prefix
-& $selected.Program @prefix @arguments
-if ($LASTEXITCODE -ne 0) { throw "Structure index update failed (exit $LASTEXITCODE)." }
+foreach ($name in @('generate-structure-index.py', 'generate-data-instance-index.py')) {
+    $scriptPath = Join-Path $PSScriptRoot $name
+    $arguments = @($scriptPath)
+    if ($Check) { $arguments += '--check' }
+    & $selected.Program @prefix @arguments
+    if ($LASTEXITCODE -ne 0) { throw "$name failed (exit $LASTEXITCODE)." }
+}
