@@ -40,11 +40,26 @@ node tools/usb-telemetry/serve.cjs
 
 ## 配置与验证
 
+- [结构体与成员索引：按中文用途、类型名或成员名查找](docs/structure-index.md)
 - [配置与参数指南](docs/configuration-guide.md)
 - [完整宏和初始化参数索引](docs/configuration-index.md)
 - [宏迁移对照与输入基线](docs/atype-macro-migration.md)
 - [接线、CAN、单位、模块与安全条件](docs/atype-integration.md)
 - [验证结果和硬件验收清单](docs/atype-validation.md)
+
+结构体索引包含项目代码、芯片驱动、第三方库、便携副本和测试桩。用 `Ctrl+F` 搜索“电机”“功率计”等用途，或搜索 `speed_aps`、`power_w` 等成员名，再沿嵌套关系跳转。成员说明沿用源码注释，未注释字段会明确标记；保留条件编译分支，因此收录不代表参与当前固件链接。
+
+源码变化后，双击 `scripts/update-structure-index.cmd`，或执行下面的命令更新索引（Python 3.10+，仅标准库，不需要编译固件）：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/update-structure-index.ps1
+# Python 不能自动发现时指定路径：
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/update-structure-index.ps1 -Python "C:\path\to\python.exe"
+# 只检查索引是否需要更新，不修改文件：
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/update-structure-index.ps1 -Check
+```
+
+也可跨平台执行 `python scripts/generate-structure-index.py`（检查使用 `--check`）。生成失败会返回非零状态并保留原索引；中文模块关键词在生成脚本的 `PURPOSES` 表中维护。CMD 自动化调用可设置环境变量 `STRUCTURE_INDEX_NO_PAUSE=1` 跳过窗口暂停。
 
 ```powershell
 ./scripts/validate-atype.ps1 -Python "<Python 3 executable>" -FirmwareMatrix -CMake

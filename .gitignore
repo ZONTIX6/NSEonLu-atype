@@ -48,9 +48,11 @@ Module.symvers
 Mkfile.old
 dkms.conf
 /build/
+__pycache__/
 /output/playwright/
 /.playwright-cli/
 !tools/usb-telemetry/start.cmd
+!scripts/update-structure-index.cmd
 ./idea
 .vscode/.cortex-debug.peripherals.state.json
 .vscode/.cortex-debug.registers.state.json
