@@ -4,6 +4,8 @@
 
 状态：设计交付，控制代码尚未实施。本方案替代 2026-10-24 方案中的“车体速度外环产生力／力矩”路线。编写时已核对本地 HEAD `bf07270` 和当前底盘相关工作区代码；本文不代表已完成编译、烧录、标定或实车验证。
 
+修订：2026-10-25 增加力控小陀螺功率自适应转矩，以及直供／超级电容两种能源路径。功率闭环允许调节旋转转矩，仍禁止任何目标速度跟踪环。
+
 ## 1. 已确定的控制原则
 
 1. 用 `CHASSIS_CONTROL_MODE` 编译选择原速控或直接力控，默认速控；不在运行中切换。
@@ -13,6 +15,8 @@
 5. 速度反馈仅用于功率预测、限速、制动方向与结束判断、故障检查和遥测，不作为正常驱动力的速度误差来源。
 6. 电调内部电流／转矩控制保留。只有四个已注册底盘电机使用直接电流入口，云台和发射电机继续走原驱动路径。
 7. 保留唯一 CAN 打包发送路径、VehicleSafety、裁判／缓冲预算和功率计保护。
+8. 力控默认小陀螺策略为功率自适应转矩；允许宏切换固定转矩作为调试对照。功率调节器输出转矩，不输出目标转速。
+9. 超级电容模式保留 DCDC 许可、输入功率目标、输入反馈确认、能量相关负载增补和故障降级；裁判缓冲能量与电容储能分别管理。
 
 禁止在力控路径中使用 `Kp*(v_ref-v)`、速度误差积分、角速度目标跟踪，或用“阻尼／前馈”的名称隐含恢复这些环节。不通过先生成旧目标轮速再换算电流实现直接力控。
 
@@ -24,7 +28,7 @@
 | --- | --- |
 | 平移摇杆／WASD | 直接给平移力，幅度表示用力大小 |
 | 平移松杆 | 按正常力下降斜率回到零，之后滑行；不自动保持零速度 |
-| 小陀螺开启 | 按转矩上升斜率施加指定方向的旋转力矩 |
+| 小陀螺开启 | 从保守启动转矩建立输出，默认按获准功率与实测负载功率之差调节转矩 |
 | 小陀螺最高转速 | 达到上限后抑制同向加力，降至恢复阈值后允许重新加力 |
 | 小陀螺退出 | 尚未指定主动制动偏好，默认立即撤销旋转力矩；可用独立宏选择一次受限制动 |
 | NO_FOLLOW | 云台方向平移，正常旋转力矩为零，不自动抑制旋转漂移 |
@@ -57,6 +61,12 @@
 #define CHASSIS_FORCE_CALIBRATION_VALID 0
 #endif
 
+#define CHASSIS_FORCE_SPIN_FIXED_TORQUE 0
+#define CHASSIS_FORCE_SPIN_POWER_ADAPTIVE 1
+#ifndef CHASSIS_FORCE_SPIN_MODE
+#define CHASSIS_FORCE_SPIN_MODE CHASSIS_FORCE_SPIN_POWER_ADAPTIVE
+#endif
+
 #if CHASSIS_CONTROL_MODE != CHASSIS_CONTROL_SPEED && CHASSIS_CONTROL_MODE != CHASSIS_CONTROL_FORCE
 #error Invalid CHASSIS_CONTROL_MODE
 #endif
@@ -66,10 +76,13 @@
 #if CHASSIS_FORCE_CALIBRATION_VALID != 0 && CHASSIS_FORCE_CALIBRATION_VALID != 1
 #error Invalid CHASSIS_FORCE_CALIBRATION_VALID
 #endif
+#if CHASSIS_FORCE_SPIN_MODE != CHASSIS_FORCE_SPIN_FIXED_TORQUE && CHASSIS_FORCE_SPIN_MODE != CHASSIS_FORCE_SPIN_POWER_ADAPTIVE
+#error Invalid CHASSIS_FORCE_SPIN_MODE
+#endif
 #endif
 ```
 
-在已包含 `robot_def.h` 和功率配置头的应用装配边界检查轮型与功率阶段，通用宏头不反向包含应用头：
+在已包含 `robot_def.h`、功率配置、功率计配置及 `chassis_energy_config.h` 的应用装配边界检查组合，通用宏头不反向包含应用头：
 
 ```c
 #if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
@@ -79,6 +92,12 @@
 #if CHASSIS_POWER_CONTROL_STAGE != 3
 #error Direct force control requires power stage 3
 #endif
+#if CHASSIS_FORCE_SPIN_MODE == CHASSIS_FORCE_SPIN_POWER_ADAPTIVE && !POWER_METER_ENABLE
+#error Adaptive force spin requires load power feedback
+#endif
+#if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP && !CHASSIS_BUFFER_POWER_ENABLE
+#error Force supercap control requires the verified input-power budget path
+#endif
 #endif
 ```
 
@@ -87,17 +106,20 @@
 | `CHASSIS_CONTROL_MODE=0/1` | 0：原轮速闭环 | 1：直接力／电流路径 |
 | `CHASSIS_FORCE_EXIT_MODE=0/1` | 不参与控制 | 0：退出滑行；1：退出一次制动 |
 | `CHASSIS_FORCE_CALIBRATION_VALID=0/1` | 不参与控制 | 0：禁止使能；1：还须通过全部参数校验 |
+| `CHASSIS_FORCE_SPIN_MODE=0/1` | 不参与控制 | 0：固定转矩；1：功率自适应转矩，默认 1 |
 | `CHASSIS_DRIVE_TYPE` | 原支持范围 | 仅 OMNI_X |
 | `CHASSIS_POWER_CONTROL_STAGE` | 原支持范围 | 必须为 3 |
 | `CHASSIS_FOLLOW_MODE` | 保留原语义 | 不调用原跟随速度策略 |
 | `CHASSIS_SPIN_MODE`、旧自旋参数 | 保留原语义 | 不用于生成转矩；无固定／自适应／正弦转速目标 |
 | `CHASSIS_POWER_SOURCE_MODE` | 原供电选择 | 使用同一供电与缓冲预算策略 |
+| `POWER_METER_ENABLE` | 原支持范围 | 功率自适应转矩必须为 1，负载功率计接线位置须确认 |
+| `CHASSIS_BUFFER_POWER_ENABLE` | 原支持范围 | 超电路径必须为 1；直供为 0 时禁用裁判缓冲增补 |
 
-旧自旋宏可以在公共工程配置中存在，但力控不包含和初始化旧自旋控制器，启动信息明确显示 `spin=direct_torque`。如以后增加力矩波形，另设力矩参数，不能把旧 WZ 参数解释为 N·m。
+旧自旋宏可以在公共工程配置中存在，但力控不包含和初始化旧自旋控制器，启动信息显示 `spin=fixed_torque` 或 `spin=power_adaptive_torque`。如以后增加力矩波形，另设力矩参数，不能把旧 WZ 参数解释为 N·m。供电模式独立于后端宏：MODE=1 不自动表示已连接超电，必须另行选择 SOURCE=1 并配套匹配的 F334 固件。
 
 ### 2.1 构建系统与资源隔离
 
-- 把上述三个新配置宏加入 `config/atype-options.txt`，Make／CMake 同时支持覆盖。
+- 把上述四个新配置宏加入 `config/atype-options.txt`，Make／CMake 同时支持覆盖；供电、功率计与缓冲宏使用已有入口。
 - 构建系统先将未指定的 `CHASSIS_CONTROL_MODE` 解析为 0，并验证值为 0 或 1；源文件筛选与传给编译器的宏必须一致。
 - Make 按后端加入专属源；CMake 对递归发现的源做同等筛选。速控不编译力控专属实现，力控不注册旧底盘自旋速度控制器。
 - 应用状态、初始化、任务调用和调参入口均使用 `#if` 隔离，不同时计算两套输出再选择。
@@ -120,10 +142,21 @@ make -j4 PROFILE=atype-vehicle BUILD_DIR=build/control-force-coast CHASSIS_CONTR
 # 直接力控，退出小陀螺时执行一次受限制动
 make -j4 PROFILE=atype-vehicle BUILD_DIR=build/control-force-brake CHASSIS_CONTROL_MODE=1 CHASSIS_POWER_CONTROL_STAGE=3 CHASSIS_FORCE_EXIT_MODE=1
 
+# 力控＋功率自适应转矩＋超级电容及裁判缓冲管理
+make -j4 PROFILE=atype-vehicle BUILD_DIR=build/force-power-supercap CHASSIS_CONTROL_MODE=1 CHASSIS_FORCE_SPIN_MODE=1 CHASSIS_POWER_SOURCE_MODE=1 CHASSIS_BUFFER_POWER_ENABLE=1 POWER_METER_ENABLE=1 CHASSIS_POWER_CONTROL_STAGE=3
+
+# 力控＋功率自适应转矩＋直供；没有电容增补
+make -j4 PROFILE=atype-vehicle BUILD_DIR=build/force-power-direct CHASSIS_CONTROL_MODE=1 CHASSIS_FORCE_SPIN_MODE=1 CHASSIS_POWER_SOURCE_MODE=0 CHASSIS_BUFFER_POWER_ENABLE=1 POWER_METER_ENABLE=1 CHASSIS_POWER_CONTROL_STAGE=3
+
+# 固定转矩调试对照，仍保留供电预算及最终功率保护
+make -j4 PROFILE=atype-vehicle BUILD_DIR=build/force-fixed-supercap CHASSIS_CONTROL_MODE=1 CHASSIS_FORCE_SPIN_MODE=0 CHASSIS_POWER_SOURCE_MODE=1 CHASSIS_BUFFER_POWER_ENABLE=1 POWER_METER_ENABLE=1 CHASSIS_POWER_CONTROL_STAGE=3
+
 cmake -S . -B build/cmake-control-speed -G "MinGW Makefiles" -DATYPE_PROFILE=atype-vehicle -DCHASSIS_CONTROL_MODE=0
 cmake --build build/cmake-control-speed -j4
 cmake -S . -B build/cmake-control-force -G "MinGW Makefiles" -DATYPE_PROFILE=atype-vehicle -DCHASSIS_CONTROL_MODE=1 -DCHASSIS_POWER_CONTROL_STAGE=3 -DCHASSIS_FORCE_EXIT_MODE=0
 cmake --build build/cmake-control-force -j4
+cmake -S . -B build/cmake-force-supercap -G "MinGW Makefiles" -DATYPE_PROFILE=atype-vehicle -DCHASSIS_CONTROL_MODE=1 -DCHASSIS_FORCE_SPIN_MODE=1 -DCHASSIS_POWER_SOURCE_MODE=1 -DCHASSIS_BUFFER_POWER_ENABLE=1 -DPOWER_METER_ENABLE=1 -DCHASSIS_POWER_CONTROL_STAGE=3
+cmake --build build/cmake-force-supercap -j4
 ```
 
 每种宏组合使用独立构建目录。标定完成后，在受版本管理的车辆配置中填写参数并设有效标志；只把有效标志改成 1 不构成标定。回退为重新烧录独立速控固件。
@@ -140,6 +173,11 @@ flowchart TD
     FEEDBACK[四轮真实反馈] --> LIMITS[速度保护与功率预测]
     LIMITS --> ALLOC
     BUDGET[裁判和缓冲及功率计预算] --> ALLOC
+    BUDGET --> SPINPOWER[功率误差调节旋转转矩]
+    METER[底盘负载侧实测功率] --> SPINPOWER
+    SPINPOWER --> FORCE
+    CAP[电容状态051与输入反馈052] --> BUDGET
+    BUDGET --> CAPCMD[061 DCDC许可与输入功率目标]
     BUDGET --> SPEEDPOWER[原速控功率分配]
     SPEED --> SPEEDPOWER
     ALLOC --> GUARD[候选电流检查及最终保护]
@@ -148,7 +186,7 @@ flowchart TD
     CAN --> RECORD[最终电流及提交结果记录]
 ```
 
-力控的数据流中不存在 `v_ref`、`omega_ref` 或目标轮速。估计速度不回到正常力指令生成器。输入整形器只处理操作意图与力变化率；保护器单独约束允许输出。
+力控的数据流中不存在 `v_ref`、`omega_ref` 或目标轮速。估计速度不作为正常力指令的误差源；功率自适应调节只比较功率。实际速度用于建立功率预测和限速许可。输入整形器处理操作意图与力变化率；保护器单独约束允许输出。
 
 ## 4. 输入与消息契约
 
@@ -264,9 +302,11 @@ C620 CAN 指令 ±16384 对应 ±20 A，依据 [DJI C620 使用说明](https://c
 
 ### 6.1 正常旋转
 
-`Mz_request = spin_direction * spin_torque_nm`，进入时从零按 `torque_rise_nm_s` 增加。只有操作模式、方向和转矩配置决定正常请求，实际转速不参与正常请求大小的计算。
+固定模式 `CHASSIS_FORCE_SPIN_MODE=0`：`Mz_request = spin_direction * spin_torque_nm`，进入时从零按 `torque_rise_nm_s` 增加。
 
-分配器优先保留平移需求，小陀螺驱动使用剩余能力。功率不足时削减旋转力矩，不通过提高目标转速“追功率”。旧 `ChassisSpinUpdate`、转速正弦生成器和速度跟踪许可不进入力控路径。
+自适应模式 `CHASSIS_FORCE_SPIN_MODE=1`：`Mz_request = spin_direction * torque_request_nm`，转矩幅值由第 6.4 节功率调节器给出。正常请求由操作模式、方向、转矩限制和功率误差决定，不计算速度误差。
+
+分配器优先保留平移需求，小陀螺驱动使用剩余能力。功率不足时削减旋转力矩；获准且存在真实功率余量时，自适应模式可增加旋转力矩。旧 `ChassisSpinUpdate`、转速正弦生成器和速度跟踪许可不进入力控路径。
 
 正常旋转过程中持续的固定转矩可能继续加速，负载变化也会改变转速；本模式不保证恒速。反向切换先按正常斜率降至零，再建立反向转矩。
 
@@ -292,6 +332,48 @@ C620 CAN 指令 ±16384 对应 ±20 A，依据 [DJI C620 使用说明](https://c
 4. 重新进入 SPIN 时取消退出制动并重新建立正常转矩；ZERO_FORCE、急停、失联及反馈失效直接零输出。
 
 该策略只有方向、死区和超时判断，不使用 `K*(0-omega)`，不积累速度误差，不执行零速保持。制动未完成但超时必须记录。制动功率不能当作负功率抵扣其他驱动预算。
+
+### 6.4 功率自适应转矩：调节目标与算法
+
+目标是在已获准的底盘负载功率内调节旋转输出，同时优先满足平移和保护。控制量是转矩幅值 T，误差为 `P_track-P_load_filtered`，没有角速度目标。
+
+`P_track` 使用能源管理器发布的物理负载侧目标 W，且不高于当期有效负载硬上限；不使用未经批准的申请值，不把模型修正后放大的虚拟预算当作物理目标。实测 `P_load` 必须来自电容输出后、覆盖受控底盘电机的功率计。不得拿 `0x052` 输入功率替代负载功率来调转矩，否则电容放电时会错误认为功率不足。
+
+平移与旋转电流存在耦合，不能简单计算“总预算−平移单独预测功率”作为精确旋转额度。调节器观察整车受控负载功率，分配器在电流层实现优先级。
+
+首版采用有界积分式转矩变化率，不另加比例跳变：
+
+```text
+e = P_track - P_load_filtered
+e_db = sign(e) * max(abs(e)-power_deadband_w, 0)
+rate = clamp(power_gain_nm_per_w_s * e_db,
+             -torque_fall_nm_s, torque_rise_nm_s)
+T_next = clamp(T_state + rate*dt_meter, 0, spin_torque_max_nm)
+Mz_request = spin_direction * T_next
+```
+
+- 每个新鲜功率样本只更新一次，以实测样本间隔积分；无新样本保持、不按电机周期重复累加。样本间隔异常不补积历史误差。
+- 负载功率样本年龄与积分步长均要求≤20 ms；恢复默认连续三个新鲜样本确认。功率为 NaN／Inf、明显负值或测量方向未确认时禁止增长，不把回馈／异常负功率变成更大的正向误差。正常近零噪声的死区在功率计标定后配置。
+- 进入 SPIN 从零向经标定的 `spin_start_torque_nm` 爬升，仍须先通过当期预算与分配；不存在强制输出的最小转矩。取得足够的新鲜反馈后再允许功率误差驱动增量。
+- 正向增长须同时满足：SPIN 持续许可、负载功率计新鲜、四轮反馈有效、最近最终 CAN 提交成功、无超速／制动／电流硬饱和／热降额、平移未被削减、上一请求能够执行。允许近零速受限起步，不以转速跟踪误差判定“跟上”。
+- 达到转速上限或转矩上限，停止累积正向误差，允许功率用不满；不通过持续堵转消耗功率。堵转采用已标定的高电流低转速持续时间与温升限制，触发后冻结增长并降额或故障。
+- 平移需求明显增加或预算下降，先由同周期分配立即削减旋转；调节状态随最终已实现模型转矩下调，避免积累尚未执行的请求。
+
+成功提交后，以同一 cycle_seq 的最终电流重建旋转分量：`T_sent=max(0,spin_direction*W_sent_est.Mz)`。若 beta／guard／限速发生削减，则 `T_state=min(T_state,T_sent)`；失败或记录过期不拿旧输出继续积分。该投影只用于正常 SPIN，不把退出制动力矩投影为新的正向旋转请求。模型值用于控制器状态跟踪，不宣称实测转矩。
+
+预算下降、功率超限和急停的削减不等待低通；下降保护可越过软转矩斜率。恢复时从受约束后的状态逐步增加，不恢复饱和前累积值。这里的积分状态为功率误差驱动的转矩，禁止加入任何速度积分状态。
+
+### 6.5 预算申请与转矩执行分开
+
+现有缓冲增补按未限幅需求申请。若只把“获准基础功率下已执行的转矩”作为需求，自适应模式可能永远申请不到新增预算；如果把最大转矩无限申请，又可能无条件消耗缓冲。因此增加有界、显式的申请过程：
+
+1. `T_operating` 为当前可执行请求；只有在健康、功率接近当前目标、无运动／温度硬限制且允许增长时，构造 `T_offer=min(T_operating+torque_probe_step_nm,spin_torque_max_nm)`。
+2. 用真实平移需求与 T_offer 合成电流、做物理电流／轮力／超速可行性检查后预测 `P_offer`。申请增量每次不超过 `power_request_step_w`，累计申请也受操作转矩上限及源端允许能力限制。
+3. 该候选仅供能源管理器审核，不发送到电机、不改变当期硬上限、不计作已经实现的功率。制动、零输入、功率计失联、故障或无转矩余量时撤销申请。
+4. 能源管理器按裁判缓冲、电容状态和输入目标确认批准下一版预算。只有新预算到达后，执行调节器才可提高 P_track 并逐步提高 T_operating。
+5. 分配不足时区分“尚未获批的候选申请”和“执行请求被削减”：前者可保留至确认超时，后者执行状态回投；候选不能绕过 beta 限制偷偷加力。
+
+申请步长、确认超时和增长确认样本数均为受限配置并纳入测试。无批准或遇 RECOVER／DEGRADED 时不连续扩大申请。固定转矩模式用真实固定请求申请预算，不进行功率追踪探测。
 
 ## 7. 速度估计与保护边界
 
@@ -392,13 +474,94 @@ P_bound = sum(max(0,P_i))
 
 ### 9.3 共用预算与遥测
 
-裁判上限、缓冲 BASE_TRACK／BUFFER_ASSIST／RECOVER、源端硬上限和功率计修正继续由现有功率模块单点负责。力控的 `spin_capability_limited` 来源改为分配限制、超速限制、故障和反馈有效性，不读取停止运行的速度 PID。
+裁判上限、裁判缓冲恢复、源端硬上限和功率计修正继续由现有功率模块单点负责。当前代码的 BASE_TRACK／BUFFER_ASSIST／RECOVER 小陀螺阶段主要用于直供诊断，不是另一套能量审批器；超电路径不能依赖该阶段非 OFF 才使能增补。力控的 `spin_capability_limited` 来源改为分配限制、超速限制、故障和反馈有效性，不读取停止运行的速度 PID。
 
-旧 `adaptive_spin` 标志承载的预算策略与速度控制器应在接口上拆开：力控只有在 SPIN、存在实际驱动力需求且满足既有缓冲许可时才请求对应能量策略；不能因为进入 SPIN 就强行耗尽剩余功率。
+旧 `adaptive_spin` 标志承载的预算诊断与速度控制器应在接口上拆开：力控只有在 SPIN、存在实际驱动力需求或第 6.5 节经过物理可行性检查的有界候选需求，且满足能源许可时才请求增补。适配接口分别记录 operating_demand 和 offered_demand，禁止将零输入、饱和请求或无上限最大转矩伪装成真实需求。
 
 力控显式构造有效的功率输出与状态，填齐原始／分配／最终电流、预算、预测值和限幅原因。现有 `PowerModelRecomputeFinal` 要求输出状态已为 OK，实施时不能跳过 `PowerModelApply` 后拿零初始化状态直接调用并忽略失败。力控非负功率合计须由同一专用求值函数计算，保持约束与遥测一致。
 
 功率计失联沿现有降级预算，但禁止新增正向预算学习；无有效预算则零输出。最终 CAN 提交失败不得推进“已发送电流”的斜率历史或被当作已实现力。
+
+### 9.4 功率、裁判缓冲与超级电容的测量边界
+
+| 量 | 来源／含义 | 用途 |
+| --- | --- | --- |
+| P_ref | 有效裁判底盘原始功率上限 | 源端基础额度，写入 0x061 原始限额字段 |
+| E_buffer | 裁判缓冲能量 J | 根据输入侧耗能估计保守余量及恢复需求 |
+| P_input | 超电模式来自新鲜 0x052 | 裁判输入功率和缓冲能量估算，不包含电容放电贡献 |
+| P_load | 电容输出后的底盘负载功率计 | 电机快保护和功率自适应转矩的测量值 |
+| E_cap_ratio | 新鲜 0x051 的电容能量比例 | 电容额外负载能力的比例限制，不当成裁判缓冲 J |
+| P_cap_available | 0x051 的底盘总可供功率 | 超电负载侧总上限，包含源端贡献，不能再次与 P_ref 相加 |
+| P_input_request / P_input_confirmed | 0x061 目标／0x052 回报目标 | 区分已申请和已生效的输入额度 |
+| P_load_granted / P_model_allow | 已获准物理负载额度／模型约束额度 | 前者给功率跟踪，后者给电流求解；安全系数转换只做一次 |
+
+实物接线验收确认功率计测量节点、正负方向和覆盖负载。若其他设备共用测量节点，先扣除有可靠测量的非受控负载或按保守总负载限制；不能仅改字段名声称得到底盘电机功率。0x051 的负载功率首版用于诊断对照，不在外部功率计掉线时无校验地热切换。
+
+直供时，在测量边界一致的前提下 P_input 与 P_load 可共用功率计。超电模式必须保留二者分离：只监测 P_load 无法正确估计裁判缓冲，只有 P_input 也无法控制电容放电后的电机功率。
+
+### 9.5 超级电容控制链与充放电责任
+
+复用 `ChassisPowerUpdatePolicy → SuperCapSendCommand`，底盘只有一个电容指令发布者。A 板决定输入目标和允许负载，F334 执行 DCDC 电气控制；本方案不增加 A 板 PWM、充电电流环或第二个 DCDC 控制器。
+
+1. 获取裁判、电容 0x051、输入反馈 0x052 和负载功率计的独立时间戳快照。
+2. 沿现有 `ChassisPowerBudgetUpdate` 管理裁判缓冲：低能量时降低输入目标、恢复迟滞保持、能量允许且有需求时批准输入增补。保守估算使用真实 P_input 历史，不使用 P_load。
+3. 超电有足够能量时按现有 energy_factor 与 max_boost_w 批准额外负载，始终受 P_cap_available 封顶。裁判缓冲恢复时，健康电容可按现有预算策略继续支持负载，但不因此抬高输入目标。
+4. 电容能量低于空电门槛时撤销电容增补，保留有效基础供电额度。负载低于允许输入、硬件允许时，F334 可利用余量恢复电容能量；A 板不能把未测电容容量推算为确定的剩余放电时间。
+5. 预算上升按现有配置斜率，下降立即生效。电容输入和负载增补的上升斜率各自管理，不把两个能源贡献重复累计。
+
+复用当前函数对 safety_factor 的名义预算／物理 W 转换，不在方案中另造一套系数。例如现有负载输入贡献受 `min(input_budget,confirmed_input_target/safety_factor)` 限制，0x051 总能力也在同一域换算后封顶。实施时增加明确的物理 W 输出字段供转矩调节器使用，并用数值案例验证系数不被重复应用。
+
+预算更新后，输出组与电容命令共用 policy_version。新输入目标尚未被新鲜 0x052 确认前，不将其增量当作已可用输入贡献；电容自身已独立确认的储能贡献按其有效上限管理。目标下降不等待回报便收紧本地负载；若 0x052 仍报告过高输入目标，按实际输入继续计入缓冲消耗并重复下发下降目标。
+
+### 9.6 CAN 指令、确认和停机
+
+沿用现有 [电容协议](../../supercap-can-protocol.md)，不修改载荷：
+
+- `0x061`：DCDC 使能、裁判原始限额、裁判原始缓冲，以及输入闭环目标；字节 7 的 `0xA5` 表示扩展输入控制。
+- `0x051`：输出使能／故障、负载功率、总可提供功率和电容能量比例。
+- `0x052`：实际输入功率、当前输入目标、版本 1、输入控制生效标志。
+
+`0x061.referee_power_limit_w` 永远写裁判原始限额，禁止写“基础＋电容增补”的电机预算。输入目标写 `input_power_target_w`，禁止写入旋转目标或转矩。周期命令不携带重启请求。
+
+慢任务按现有约 5 ms 调度发送并记录实际周期与发送返回值；不能将 `osDelay(5)` 当作严格 200 Hz。当前应用忽略 `SuperCapSendCommand` 返回值，力控实施须接收并发布该结果，失败当周期撤销待确认增补、禁止转矩增长。
+
+0x051 和 0x052 分别要求年龄≤20 ms，输入扩展有效且版本匹配。200 ms 的设备离线看门狗不能替代能量调度的新鲜度检查。仅有旧 0x051 固件时不给扩展输入／电容增补许可。
+
+现有 0x052 没有命令序号；目标回报不是强事务 ACK。确认使用“发送后收到的新样本＋输入扩展有效＋回报目标在允许整数误差内”，上升额度始终取请求与已确认目标的保守较小值；记录 confirmed_age，不能用一次历史相同值长期确认新目标。连续确认超时撤销增长并降级，禁止在无确认时反复扩大申请。
+
+ZERO_FORCE、VehicleSafety 停机或力控 FAULT 时，电机立即归零，下一次可发送的电容指令关闭 DCDC 并清扩展输入使能；原始裁判字段沿现有构包规则保留或在裁判无效时清零。普通小陀螺退出不等于整车停机，平移仍许可时保持正常供电政策。不能因为退出 SPIN 而切断平移所需 DCDC。
+
+F334 命令失联的硬件侧处置按匹配固件协议验证；本设计不假定 A 板发送失败后 DCDC 已关闭，也不凭一次 CAN 成功宣称目标已经执行。
+
+### 9.7 调节器职责与慢快环顺序
+
+| 层 | 调节对象 | 禁止越过的边界 |
+| --- | --- | --- |
+| 能源管理 | 输入目标、裁判缓冲、电容负载额度 | 不通过速度或转矩误差扩张能量上限 |
+| 功率自适应小陀螺 | 正常旋转转矩请求 | 只使用已获准物理 P_track，受平移优先及限速约束 |
+| 原模型慢修正 | 模型误差补偿 W | 不当作新的物理能源额度，不与转矩环同时主动追同一功率缺口 |
+| 快分配与 guard | 最终四轮电流 | 当周期硬电流、功率、温度和超速约束 |
+
+自适应转矩活动期间默认冻结模型正向慢学习，保留已有经验证修正、负向超功率收紧和快保护。若确需重新学习正向模型修正，先冻结转矩增长，在明确的独立稳定窗口中完成；不允许两个积分器同时因功率不足向上增加输出。固定转矩模式可按现有学习许可工作。
+
+慢周期顺序：读取最新快环完成记录 → 更新需求及有界申请 → 能源预算审批 → 构造并发送电容命令／记录结果 → 发布预算与增长许可。功率新样本到达时依据已发布的有效预算更新转矩状态；快周期始终使用完整同版本快照。
+
+预算模式变化、源端能力下降及超速触发可直接撤销增长许可。任何步出现无效数值、过期记录或输出许可丢失，不再推进申请、转矩积分或正向学习。
+
+### 9.8 降级与恢复表
+
+| 条件 | 能源行为 | 自适应转矩行为 |
+| --- | --- | --- |
+| 电容低能量、状态仍健康 | 逐配置撤销储能增补，保留有效基础预算和输入控制 | 跟踪降低后的已批准负载目标，不要求恒速 |
+| 0x052 过期／版本不符／输入扩展无效 | 撤销未确认输入增补与依赖该链路的超电增补，沿原基础预算降级 | 冻结增长并下调至当前可执行转矩，记录降级原因 |
+| 0x051 过期／故障／输出禁用 | 撤销全部超电增补；保留基础预算只表示软件上限，不表示硬件必然有旁路供电 | 禁止增长；硬件失去供电能力或触发安全条件时故障零输出 |
+| 负载功率计失联 | 撤销需要负载闭环的新增额度，按有效模型与源端基础上限保护 | 旋转请求按下降斜率降到零，不凭输入侧功率继续追踪；平移按原安全许可决定 |
+| 电容命令提交失败／确认超时 | 撤销待确认增补，重复发送当前安全目标并记录计数 | 禁止增长，按已确认且仍新鲜的能力限幅；反馈随后过期则进一步降级 |
+| 裁判缓冲进入恢复 | 收紧输入目标；电容仅在自身健康且有余量时独立支撑部分负载 | 服从实际获准 P_track；退出恢复不跳回旧转矩 |
+| 裁判数据无效／底盘输出禁止 | 沿原许可关闭 DCDC；无有效正式预算则禁止驱动，台架例外须显式配置 | 清转矩状态，零输出 |
+| 所有反馈恢复 | 连续新鲜样本及原安全复位条件通过后，逐步恢复预算 | 从受限状态重新爬升，不恢复失联前的积累值 |
+
+电容正常降级不凭空新增“已切为电池直供”的硬件结论。是否可基础供电由实际 F334 电路和状态验证；本版不在运行中切换 SOURCE 宏。上述降级不得放宽硬保护或停机要求。
 
 ## 10. 电机快任务、时序与执行权
 
@@ -412,7 +575,7 @@ P_bound = sum(max(0,P_i))
 
 ### 10.2 原子快照与序号
 
-慢任务发布 `ChassisForceActuationSnapshot_s`：完整力意图、许可、来源年龄、本周期可用的慢预算、命令序号、参数版本。整包在同一临界区复制。
+慢任务发布 `ChassisForceActuationSnapshot_s`：完整力意图、许可、来源年龄、本周期可用的慢预算、物理 P_track、能源模式、申请／确认状态、转矩增长许可、命令序号、参数版本。整包在同一临界区复制。
 
 区分四个标识：
 
@@ -427,7 +590,7 @@ P_bound = sum(max(0,P_i))
 
 1. 短临界区复制四轮反馈、命令、许可和上一成功提交记录。
 2. 校验配置、源年龄、命令年龄、角度年龄、四轮反馈及实际 dt；建立 cycle_seq。
-3. 更新状态与速度保护，产生平滑后的直接力请求。
+3. 更新状态与速度保护；使用同版本有效预算和新鲜负载功率样本更新转矩调节器，产生平滑后的直接力请求。
 4. 更新一次本周期预算，形成固定转速包络和全部约束。
 5. 分层分配，按候选重新分类，执行最终 guard 和整数化复验。
 6. 发包前再次检查安全代次、局部故障、最新停机、命令新鲜度和四轮反馈。晚到停机使全组归零。
@@ -451,7 +614,7 @@ P_bound = sum(max(0,P_i))
 
 运行许可为 `VehicleSafety` 与力控健康状态的逻辑与。故障恢复要求现有安全复位条件、重新看到中立／复位输入和连续新鲜反馈；局部健康恢复不得绕过原急停锁存。建议连续三个有效快周期作为最小反馈恢复确认，并纳入时序测试。
 
-没有速度积分器；需要复位的是输入平滑、旋转上升斜率、超速滞回、退出制动和发送历史。缓冲／功率状态按原模块许可恢复，不能被力控自行清零来获得新预算。
+没有速度积分器；需要复位的是输入平滑、旋转上升斜率、功率误差转矩状态、待审批候选、超速滞回、退出制动和发送历史。缓冲／功率状态按原模块许可恢复，不能被力控自行清零来获得新预算。
 
 ## 12. 配置与调参
 
@@ -462,6 +625,10 @@ P_bound = sum(max(0,P_i))
 | 各轮位置、方向、半径、减速比 | m、单位向量、正值 | 实物确认；矩阵有效后才允许输出 |
 | K_out[4] | N·m/A，全部正且有限 | 实测；未填写禁止使能 |
 | force_max_n、spin_torque_nm | N、N·m，正且有限 | 从低电流标定结果设置 |
+| spin_start_torque_nm、spin_torque_max_nm | N·m，0<start≤max | 自适应模式起步和绝对上限，预算不足允许降至零 |
+| power_gain_nm_per_w_s、power_deadband_w | N·m/(W·s)、W，正值 | 用低转矩功率阶跃整定，不照搬旧 WZ 增益 |
+| power_lpf_tau_s、power_recovery_samples | s、样本数，正值 | 滤波只用于跟踪；快超功率保护不等滤波 |
+| torque_probe_step_nm、power_request_step_w、grant_timeout_ms | N·m、W、ms，正值且有标定上限 | 有界申请，不表示已经批准或发送 |
 | force_rise/fall_n_s | N/s，正且有限 | 台架确认输入平滑 |
 | torque_rise/fall_nm_s | N·m/s，正且有限 | 台架确认旋转建立与换向 |
 | current_limit[4] | CAN 指令幅度，≤16384及已验证硬件限值 | 采用更小的有效限值 |
@@ -471,6 +638,8 @@ P_bound = sum(max(0,P_i))
 | resume_ratio | (0,1) | 初始 0.9 |
 | brake_torque_nm、brake_stop_rad_s、brake_timeout_ms | 正值且与上限相容 | 仅退出制动宏启用时必填 |
 | input_deadzone、input_gamma | [0,1)、正值 | 初始 0.05、1.5 |
+
+能源参数沿用 `chassis_energy_config.h`、功率初始化结构与 F334 已验证参数；裁判缓冲恢复阈值、输入增补上限、电容能量空满阈值、电容负载增补上限及两侧上升斜率分别记录。旧说明中的数值可能滞后，以实施时实际展开配置为准，不另设一组同义宏覆盖。新增堵转检测阈值与时间必须经台架标定；未验证不能允许自适应转矩无限增长至堵转上限。
 
 没有实测依据的物理限值不提供可使能的通用默认数。默认标定标志为 0；这不是文档占位，而是明确的未标定锁定行为。运行中禁止修改几何和转矩标定；停稳修改必须重新校验并更新版本。
 
@@ -484,11 +653,13 @@ P_bound = sum(max(0,P_i))
 | `modules/algorithm/chassis_force_config.[ch]` | 标定、限制、参数校验 |
 | `modules/algorithm/chassis_force_geometry.[ch]` | H、逆映射、力／电流换算 |
 | `modules/algorithm/chassis_force_command.[ch]` | 直接力曲线、平滑、旋转与退出状态 |
+| `modules/algorithm/chassis_force_spin_power.[ch]` | 功率误差转矩调节、有界申请、执行状态回投及增长许可 |
 | `modules/algorithm/chassis_force_limits.[ch]` | 速度约束与候选合法性 |
 | `modules/algorithm/chassis_force_allocator.[ch]` | 两阶段有界约束求解 |
 | `application/chassis/chassis_force_intent.[ch]` | 归一化输入契约和 force-v1 编解码 |
 | `modules/motor/DJImotor/dji_power_adapter.[ch]` | 后端装配、原子快照、准备电流及最终记录 |
-| `modules/chassis_power/*` | 共用预算；力控专属需求与候选检查分支 |
+| `modules/chassis_power/*` | 共用预算；力控专属需求／有界申请、物理负载目标、候选检查和输入确认 |
+| `modules/super_cap/*` | 复用现有 0x061/051/052 协议与收发，提供独立帧龄及发送结果 |
 | `application/cmd/robot_cmd.c` | 按后端从输入源产生命令 |
 | `application/chassis/chassis.c` | 按宏初始化及调用后端，保留安全与反馈发布 |
 | `modules/telemetry/*` | 独立版本力控遥测帧 |
@@ -505,6 +676,9 @@ P_bound = sum(max(0,P_i))
 - alpha、beta，原始／分配／guard／最终电流，W_request 和 W_sent_est。
 - 实际轮速、实际反馈电流、温度、估计车体速度和残差。
 - 预算来源、nominal／当前额度／源端硬上限、预测及实测功率。
+- 自旋宏、P_track／负载功率误差、转矩状态、增长阻塞原因、T_offer／P_offer 和预算申请／批准版本。
+- SOURCE、裁判原始限额、缓冲估计下限／恢复状态、电容能量比例及总可供功率。
+- 输入实际功率、输入请求／确认目标、0x051/052 各自帧龄、输入扩展状态、061 发送失败及确认超时计数。
 - 车体及轮级超速滞回、退出制动触发／完成／超时。
 - command_seq、cycle_seq、安全代次、样本年龄、实际 dt、各段耗时和 CAN 结果。
 
@@ -530,7 +704,7 @@ P_bound = sum(max(0,P_i))
 
 ### E：功率与混合动作
 
-接入完整分层分配与缓冲预算，验证平移＋小陀螺、预算骤降、功率计失联、制动、候选电流反向和零电流仍预测超限。
+接入完整分层分配、功率自适应转矩与缓冲预算。先直供，再连接匹配 F334 做超电联调，验证输入目标确认、裁判缓冲与电容能量独立变化、平移＋小陀螺、预算骤降、两侧反馈失联、制动、候选电流反向和零电流仍预测超限。若只能完成主机模拟，明确超电实机交付尚未完成。
 
 ### F：双构建和实机交付
 
@@ -542,9 +716,9 @@ P_bound = sum(max(0,P_i))
 
 1. 几何：三个基向量、16 组轮向符号组合、随机虚功与回代；轮序或方向错误可被检测。
 2. 单位：mm/m、度/rad、转子 rpm、减速比、CAN/A 换算；K_out 不重复乘减速比。
-3. 直接力语义：同一操作输入在不同实际速度下，保护未触发时产生同一正常力请求；不出现速度误差状态或积分状态。
+3. 直接力语义：同一操作输入在不同实际速度下，其他状态相同且保护未触发时产生同一平移及固定旋转力请求；自适应模式在相同功率误差及控制状态下产生同一转矩变化率，不出现速度误差或速度积分状态。
 4. 输入：遥控器、DBUS 键盘和图传键盘方向一致；对角输入不超圆限幅；松杆、来源切换和角度跨周连续。
-5. 旋转：固定转矩、进入斜率、反向切换、上下限滞回；不以恒转速为通过条件。
+5. 旋转：固定／功率自适应两模式、进入斜率、反向切换、上下限滞回、受限状态回投；不以恒转速为通过条件。
 6. 退出：COAST 立即撤销旋转请求；BRAKE 仅触发一次、停止死区／反转／超时撤销；急停永远零输出。
 7. 分配：一维解析解对照独立高密度扫描，覆盖负一次项、负模型片段截断、非单调、零点、根边界、退化和空集。
 8. 保护：分配导致单轮电流反向时重新分类；guard 后 W 不违反车体超速约束；整数化后约束仍成立或明确零输出失败。
@@ -552,6 +726,11 @@ P_bound = sum(max(0,P_i))
 10. 时序与故障：NaN、Inf、dt≤0／>5 ms、源／角度／反馈过期、tick 和序号回绕、CAN 失败、晚到急停及配置版本变化。
 11. 协议：44 字节布局、序列化往返、非法枚举、保留位、长度／后端不匹配、重复帧、独立 MCU 时钟。
 12. 速控回归：相同输入和参数下，参考、原始电流、功率限幅、最终输出及既有整定测试一致。
+13. 功率调节：独立电机／负载功率模型验证功率阶跃、死区、下降优先、重复样本不重复积分、限速饱和释放、平移突增及堵转降额；同周期正向模型学习与转矩增长互斥。
+14. 能源许可：有界申请能够从基础预算申请到合法增补；未批准／未确认的输入增量永不执行；拒绝、超时、预算骤降不造成转矩积累，零需求不申请增补。
+15. 超电协议：0x061 原始限额与输入目标字段正确；0x051 总能力不重复加 P_ref；0x052 版本、目标确认、新旧帧与 20/21 ms 边界；CAN 失败不当作输入目标已生效。
+16. 双能源账目：改变 P_load 而保持 P_input 不变，不额外扣裁判缓冲；改变 P_input 必须反映到缓冲估算；低电容能量只撤销电容能力，不能伪造裁判缓冲恢复。
+17. 失联组合：分别中断负载功率计、051、052、裁判或061发送；恢复顺序任意时都不提前开放增补，正常退出小陀螺不关闭仍在平移的 DCDC。
 
 ### 16.2 构建矩阵
 
@@ -559,7 +738,9 @@ P_bound = sum(max(0,P_i))
 | --- | --- |
 | MODE 默认／0 | 原速控可构建，宏默认值与构建源选择一致 |
 | MODE=1，OMNI_X，stage=3，EXIT=0／1 | 力控可构建；未标定时零输出 |
+| MODE=1，FORCE_SPIN=0／1，SOURCE=0／1，METER=1 | 固定／自适应转矩与直供／超电四组合通过；超电要求 BUFFER=1 |
 | MODE=2、非法 EXIT 或非法标定标志 | 编译失败 |
+| 非法 FORCE_SPIN；自适应＋METER=0；力控超电＋BUFFER=0 | 编译失败 |
 | MODE=1＋MECANUM，或 stage≠3 | 编译失败 |
 | MODE=0＋既有轮型、FOLLOW、自旋及供电组合 | 保留既有支持范围与回归 |
 | 单板／双板，Make／CMake，调试／Release | 类型一致、宏实际生效、非法数值可检测 |
@@ -575,6 +756,9 @@ P_bound = sum(max(0,P_i))
 | 平移＋旋转 | 预算收紧时按优先级削减；记录合力方向误差与旋转削减，不只看轮速 |
 | 退出宏 | 分别测滑行距离／时间与主动制动距离／时间；制动不反向持续驱动 |
 | 预算与失联 | 预测符合获准边界；故障检出后下一次可发送帧全组零，测量实际延迟 |
+| 自适应功率小陀螺 | 在无电流、转矩、热及限速饱和的可达工况，稳态负载功率误差目标≤max(5 W,目标的5%)，记录响应与波动；这是待测门槛 |
+| 超电供电 | 测量输入／负载两侧功率，核对输入目标与确认；电容放电提升负载功率时不重复扣裁判缓冲 |
+| 低电量／缓冲恢复 | 电容能力撤销和裁判输入恢复各自生效；确认预算下降立即削减输出，不出现积分释放冲击 |
 | 长时运行 | 记录温度、电流、CAN 错误和供电边界；没有持续故障重启或限速抖动 |
 
 不使用“速度稳态误差≤10%”或“目标速度 t90 必须改善≥10%”作为直接力控验收标准。与速控比较驾驶性能时，用明确的操作任务、外部位移／速度测量和相同供电条件；转矩标定精度报告测量方法及误差，不凭轮速推断真实接地力。
@@ -594,6 +778,8 @@ P_bound = sum(max(0,P_i))
 | 车体速度 PI、加速度前馈、交叉补偿 | 不进入正常指令生成；刚体动力学仅用于仿真与验证 |
 | 速度积分抗饱和 | 删除；保留指令平滑、约束状态和发送历史 |
 | 目标转速型固定／自适应／正弦小陀螺 | 力控使用直接转矩＋最高转速保护；旧策略仅速控 |
+| 功率不足时降低／有余量时提高转速目标 | 改为获准功率误差调节转矩；固定转矩可作宏选择对照 |
+| 超电输入闭环与负载增补 | 两后端共用，力控补充输入确认、独立能量账目和有界转矩需求申请 |
 | 目标轮速驱动的启动和功率分类 | 力控使用有类型电流需求及候选分类 |
 | 几何、转矩标定、分配、预算、CAN、安全 | 保留基础结构并按本文收紧接口 |
 | 速度跟踪误差与 t90 主要验收 | 改为力／电流标定、约束、操作语义、故障与时序验收 |
@@ -601,7 +787,8 @@ P_bound = sum(max(0,P_i))
 ## 18. 资料与交付边界
 
 - [原设计文档](2026-10-24-chassis-force-control-design.md)：仅供理解历史路线，发生冲突以本文为准。
+- [项目电容 CAN 协议](../../supercap-can-protocol.md)：0x061/051/052 字段与反馈确认；具体预算参数以当前源码配置为准。
 - [DJI C620 使用说明](https://cdn-hz.robomaster.com/robomasters/public/document/RoboMaster%20C620%20Brushless%20DC%20Motor%20Speed%20Controller%20V1.0.pdf)：转矩控制能力与 CAN 电流指令协议。
 - [ODrive 控制结构说明](https://docs.odriverobotics.com/v/latest/manual/control.html)：作为“转矩模式保留电流控制、取消速度跟踪”的概念参考；其限速器实现不直接移植到本项目。
 
-本次交付为具体 Markdown 设计及旧方案替代标记。表中模块、宏、报文和测试为后续实施要求；未生成或烧录新控制固件。
+本修订交付为包含功率自适应转矩和超级电容管理的 Markdown 设计。表中新增模块、宏、力意图报文和测试为后续实施要求；0x061/051/052 沿用现有协议。未生成或烧录新控制固件，实际功率跟踪与充放电效果须完成第 16 节实机验证。
