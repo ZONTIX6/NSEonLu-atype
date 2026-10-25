@@ -70,7 +70,13 @@ class InstanceTests(unittest.TestCase):
 #define CHASSIS_SPIN_FIXED_WZ 8000.0f
 """)
         self.write("application/robot_def.h",
-                   "#define CHASSIS_FOLLOW_MODE 0\n#define YAW_CHASSIS_ALIGN_ECD 350\n#define PITCH_HORIZON_ECD 3412\n")
+                   "#define CHASSIS_FOLLOW_MODE 0\n#define YAW_CHASSIS_ALIGN_ECD 350\n#define PITCH_HORIZON_ECD 3412\n"
+                   "#define CHASSIS_DRIVE_TYPE CHASSIS_DRIVE_OMNI_X\n"
+                   "typedef enum { CHASSIS_ZERO_FORCE=0, CHASSIS_ROTATE, CHASSIS_NO_FOLLOW, CHASSIS_FOLLOW_GIMBAL_YAW } chassis_mode_e;\n"
+                   "typedef enum { GIMBAL_ZERO_FORCE=0, GIMBAL_FREE_MODE, GIMBAL_GYRO_MODE } gimbal_mode_e;\n"
+                   "typedef enum { SHOOT_OFF=0, SHOOT_ON } shoot_mode_e;\n"
+                   "typedef enum { FRICTION_OFF=0, FRICTION_ON } friction_mode_e;\n"
+                   "typedef enum { LOAD_STOP=0, LOAD_REVERSE, LOAD_1_BULLET, LOAD_3_BULLET, LOAD_BURSTFIRE } loader_mode_e;\n")
         self.write("modules/telemetry/usb_telemetry_config.h",
                    "#define USB_TELEMETRY_ENABLE 1\n#define USB_TELEMETRY_PERIOD_MS 20U\n")
 
@@ -264,7 +270,7 @@ class InstanceTests(unittest.TestCase):
         md = index.generate_common(self.root)
         macros = md.split("## 常用宏", 1)[1]
         rows = [line for line in macros.splitlines() if line.startswith("| ")][2:]
-        self.assertEqual(len(rows), 18)
+        self.assertEqual(len(rows), 15)
         self.assertNotIn("拨杆", md)
         self.assertNotIn("RC_SW_", md)
         self.assertNotIn("switch_is_", md)
@@ -278,7 +284,8 @@ class InstanceTests(unittest.TestCase):
         self.assertIn("#else", uart)
         self.assertIn("board_config.h#L9", uart)
         self.assertIn("board_config.h#L11", uart)
-        spin = next(line for line in rows if "`CHASSIS_SPIN_MODE`" in line)
+        mode_rows = md.split("## 模式切换", 1)[1].split("## 常用宏", 1)[0].splitlines()
+        spin = next(line for line in mode_rows if "`CHASSIS_SPIN_MODE`" in line)
         self.assertIn("CHASSIS_SPIN_MODE_ADAPTIVE", spin)
         self.assertIn("CHASSIS_SPIN_MODE_FIXED", spin)
         self.assertNotIn("#ifndef CHASSIS_SPIN_MODE", spin)
@@ -301,6 +308,54 @@ class InstanceTests(unittest.TestCase):
         self.assertNotIn("999", md)
         self.assertNotIn("888", md)
         self.assertIn("`(0)`", md)
+
+    def test_runtime_modes_list_real_constants_fields_and_source_positions(self):
+        self.write_macro_sources()
+        md = index.generate_common(self.root)
+        modes = md.split("## 模式切换", 1)[1].split("## 常用宏", 1)[0]
+        self.assertIn("chassis_cmd_send.chassis_mode", modes)
+        self.assertIn("`CHASSIS_ROTATE`", modes)
+        self.assertIn("`GIMBAL_GYRO_MODE`", modes)
+        self.assertIn("shoot_cmd_send.friction_mode", modes)
+        self.assertIn("`LOAD_1_BULLET`", modes)
+        self.assertIn("`LOAD_BURSTFIRE`", modes)
+        self.assertIn("枚举", modes)
+        self.assertIn("robot_def.h#L5", modes)
+        self.assertIn("robot_def.h#L9", modes)
+        self.assertIn("当前仍用 IMU", modes)
+        self.assertIn("当前按停止处理", modes)
+        self.assertNotIn("拨杆", md)
+
+    def test_available_force_mode_macros_are_included_without_requiring_optional_module(self):
+        self.write_macro_sources()
+        self.assertNotIn("CHASSIS_CONTROL_MODE", index.generate_common(self.root))
+        self.write("modules/algorithm/chassis_control_config.h",
+                   "#define CHASSIS_CONTROL_MODE CHASSIS_CONTROL_SPEED\n"
+                   "#define CHASSIS_FORCE_EXIT_MODE CHASSIS_FORCE_EXIT_COAST\n"
+                   "#define CHASSIS_FORCE_SPIN_MODE CHASSIS_FORCE_SPIN_POWER_ADAPTIVE\n")
+        # A header still being authored is not an exposed build-time switch.
+        self.assertNotIn("`CHASSIS_CONTROL_MODE`", index.generate_common(self.root))
+        self.write("config/atype-options.txt",
+                   "CHASSIS_CONTROL_MODE\nCHASSIS_FORCE_EXIT_MODE\nCHASSIS_FORCE_SPIN_MODE\n")
+        md = index.generate_common(self.root)
+        self.assertIn("`CHASSIS_CONTROL_MODE`", md)
+        self.assertIn("`CHASSIS_CONTROL_SPEED`", md)
+        self.assertIn("`CHASSIS_FORCE_EXIT_MODE`", md)
+        self.assertIn("`CHASSIS_FORCE_SPIN_MODE`", md)
+        self.assertIn("chassis_control_config.h#L3", md)
+
+    def test_renamed_runtime_mode_fails_without_overwriting_reference(self):
+        self.write_macro_sources()
+        args = [sys.executable, str(SCRIPT), "--root", str(self.root)]
+        self.assertEqual(subprocess.run(args, capture_output=True).returncode, 0)
+        output = self.root / ".Doc/指针查找索引.md"
+        old = output.read_bytes()
+        path = self.root / "application/robot_def.h"
+        path.write_text(path.read_text(encoding="utf-8").replace("LOAD_BURSTFIRE", "LOAD_RENAMED"), encoding="utf-8")
+        result = subprocess.run(args, capture_output=True, encoding="utf-8")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("LOAD_BURSTFIRE", result.stderr)
+        self.assertEqual(output.read_bytes(), old)
 
     def test_default_cli_uses_moved_document_and_checks_macro_changes(self):
         self.write_macro_sources()

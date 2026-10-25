@@ -577,9 +577,34 @@ COMMON_MACROS = [
 ]
 
 
-def common_macro_rows(root, sources):
+COMMON_MODE_MACROS = [
+    ("底盘轮型", "CHASSIS_DRIVE_TYPE", "application/robot_def.h", "MECANUM=0 麦克纳姆轮，OMNI_X=1 X 型全向轮"),
+    *(s for s in COMMON_MACROS if s[1] in {"CHASSIS_SPIN_MODE", "CHASSIS_FOLLOW_MODE", "CHASSIS_POWER_SOURCE_MODE"}),
+]
+OPTIONAL_MODE_MACROS = [
+    ("底盘控制方式", "CHASSIS_CONTROL_MODE", "modules/algorithm/chassis_control_config.h", "SPEED=0 速度环，FORCE=1 直接力控"),
+    ("力控退出方式", "CHASSIS_FORCE_EXIT_MODE", "modules/algorithm/chassis_control_config.h", "COAST=0 滑行，BRAKE=1 制动"),
+    ("力控自旋策略", "CHASSIS_FORCE_SPIN_MODE", "modules/algorithm/chassis_control_config.h", "FIXED_TORQUE=0 固定力矩，POWER_ADAPTIVE=1 功率自适应"),
+]
+COMMON_MODES = [
+    ("底盘", "chassis_mode_e", "chassis_cmd_send.chassis_mode",
+     [("CHASSIS_ZERO_FORCE", "零力"), ("CHASSIS_ROTATE", "小陀螺"),
+      ("CHASSIS_NO_FOLLOW", "不跟随"), ("CHASSIS_FOLLOW_GIMBAL_YAW", "跟随档")]),
+    ("云台", "gimbal_mode_e", "gimbal_cmd_send.gimbal_mode",
+     [("GIMBAL_ZERO_FORCE", "零力"), ("GIMBAL_FREE_MODE", "自由模式，当前仍用 IMU 反馈"), ("GIMBAL_GYRO_MODE", "陀螺仪反馈")]),
+    ("发射总开关", "shoot_mode_e", "shoot_cmd_send.shoot_mode",
+     [("SHOOT_OFF", "关闭"), ("SHOOT_ON", "开启")]),
+    ("摩擦轮", "friction_mode_e", "shoot_cmd_send.friction_mode",
+     [("FRICTION_OFF", "关闭"), ("FRICTION_ON", "开启")]),
+    ("拨弹", "loader_mode_e", "shoot_cmd_send.load_mode",
+     [("LOAD_STOP", "停止"), ("LOAD_REVERSE", "反转保留值，当前按停止处理"), ("LOAD_1_BULLET", "单发"),
+      ("LOAD_3_BULLET", "三发"), ("LOAD_BURSTFIRE", "连发")]),
+]
+
+
+def common_macro_rows(root, sources, specifications=COMMON_MACROS):
     rows = []
-    for purpose, name, path, usage in COMMON_MACROS:
+    for purpose, name, path, usage in specifications:
         source = sources.get(path)
         if source is None:
             source = types.Source(types.read_source(Path(root) / path), path)
@@ -603,6 +628,39 @@ def common_macro_rows(root, sources):
             values.append(types.code(" ".join(value.split())) + (f"（{types.code(condition)}）" if condition else ""))
             locations.append(types.source_link(path, line))
         rows.append(f"| {purpose} | {'、'.join(types.code(s) for s in spellings)} | {'<br>'.join(values)}<br>{usage} | {'<br>'.join(locations)} |")
+    return rows
+
+
+def common_mode_rows(sources):
+    path = "application/robot_def.h"
+    source = sources[path]
+    enums = {}
+    for i, token in enumerate(source.tokens):
+        if token.group() != "enum":
+            continue
+        opening = i + 1
+        if opening < len(source.tokens) and types.IDENT.fullmatch(source.tokens[opening].group()):
+            opening += 1
+        if opening >= len(source.tokens) or source.tokens[opening].group() != "{":
+            continue
+        closing = types.closing_token(source, opening)
+        end = closing + 1
+        while end < len(source.tokens) and source.tokens[end].group() != ";":
+            end += 1
+        aliases = [t.group() for t in source.tokens[closing + 1:end]]
+        members = {source.tokens[a].group(): source.line(source.tokens[a].start())
+                   for a, _ in types.split_declarations(source, opening + 1, closing, ",")}
+        for alias in aliases:
+            if types.IDENT.fullmatch(alias):
+                enums[alias] = members
+    rows = []
+    for purpose, enum, field, choices in COMMON_MODES:
+        members = enums.get(enum, {})
+        for name, _ in choices:
+            if name not in members:
+                raise ValueError(f"{path}: 模式 {enum} 的常量 {name} 未找到，请更新 COMMON_MODES")
+        options = "<br>".join(types.code(name) + "：" + meaning for name, meaning in choices)
+        rows.append(f"| {purpose} | {types.code(field)} | {options} | {types.source_link(path, members[choices[0][0]])} |")
     return rows
 
 
@@ -630,11 +688,26 @@ def generate_common(root):
                    + "、".join(types.source_link(p, line) for p, line in definitions) + " |")
     out += ["", "电机同组共用 `measure` 成员，示例中的指针可替换成同一行的其他电机指针。`lf/rf/lb/rb` 分别为左前/右前/左后/右后；`yaw/pitch` 为偏航/俯仰；`friction_l/friction_r/loader` 为左摩擦轮/右摩擦轮/拨弹电机。", "",
             "`rc_data` 指向控制任务中的遥控器快照，示例查看当前数据。`static` 指针在对应源码作用域查看，并需完成相应初始化。", "",
-            "## 常用宏", "",
+            "## 模式切换", ""]
+    # Only expose optional mode switches after their owner integrates them into
+    # the shared build-option list. A new header alone may be unfinished work.
+    options_path = Path(root) / "config/atype-options.txt"
+    exposed = set(options_path.read_text(encoding="utf-8").split()) if options_path.is_file() else set()
+    mode_macros = COMMON_MODE_MACROS + [s for s in OPTIONAL_MODE_MACROS if s[1] in exposed and (Path(root) / s[2]).is_file()]
+    if mode_macros:
+        out += ["编译时模式：修改后需重新构建、烧录。以下是源码默认值，不表示当前固件已启用对应功能。", "",
+                "| 中文用途 | 宏名 | 源码默认值 / 用法 | 定义位置 |", "| --- | --- | --- | --- |"]
+        out.extend(common_macro_rows(root, data.sources, mode_macros))
+        out.append("")
+    out += ["运行时模式值是枚举常量，赋给对应命令字段。例：`chassis_cmd_send.chassis_mode = CHASSIS_ROTATE;`（在命令模块内使用）。", "",
+            "| 模式 | 赋值字段 | 可选模式值 | 定义位置 |", "| --- | --- | --- | --- |"]
+    out.extend(common_mode_rows(data.sources))
+    out += ["", "## 常用宏", "",
             "以下为**源码默认值**及分支条件，构建参数可覆盖配置宏，不代表当前固件的实际值。", "",
             "| 中文用途 | 宏名 | 源码默认值 / 用法 | 定义位置 |", "| --- | --- | --- | --- |"]
-    out.extend(common_macro_rows(root, data.sources))
-    out += ["", "更新：双击 `scripts/update-structure-index.cmd`。指针名单与宏名单在生成脚本的 `COMMON_DATA`、`COMMON_MACROS` 中维护；更新会刷新源码值、条件与位置。", ""]
+    mode_names = {s[1] for s in mode_macros}
+    out.extend(common_macro_rows(root, data.sources, [s for s in COMMON_MACROS if s[1] not in mode_names]))
+    out += ["", "更新：双击 `scripts/update-structure-index.cmd`。指针、宏和模式名单在生成脚本的 `COMMON_DATA`、`COMMON_MACROS`、`COMMON_MODE_MACROS`、`OPTIONAL_MODE_MACROS`、`COMMON_MODES` 中维护；更新会刷新源码值、条件与位置。", ""]
     return "\n".join(out)
 
 

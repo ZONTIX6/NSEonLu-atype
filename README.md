@@ -48,7 +48,7 @@ node tools/usb-telemetry/serve.cjs
 - [接线、CAN、单位、模块与安全条件](docs/atype-integration.md)
 - [验证结果和硬件验收清单](docs/atype-validation.md)
 
-日常查数据和宏，打开“常用指针与宏速查”，用 `Ctrl+F` 搜中文用途、指针名、成员名或宏名即可。表中列出常用指针访问示例，以及 18 个常用宏的源码默认值、用法和定义位置；宏的源码默认值不等于构建覆盖后或当前固件的实际值。字段的完整定义另见类型索引。
+日常查数据和模式，打开“常用指针与宏速查”，用 `Ctrl+F` 搜中文用途、指针名、成员名或模式名即可。表中列出常用指针访问示例、编译模式开关，以及底盘、云台、发射、摩擦轮和拨弹的运行时模式值与赋值字段。宏的源码默认值不等于构建覆盖后或当前固件的实际值。字段的完整定义另见类型索引。
 
 源码变化后，双击 `scripts/update-structure-index.cmd`，或执行下面的命令同时更新 `.Doc/指针查找索引.md` 和类型索引（Python 3.10+，仅标准库，不需要编译固件）：
 
@@ -60,7 +60,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/update-structure-ind
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/update-structure-index.ps1 -Check
 ```
 
-也可跨平台分别执行 `python scripts/generate-structure-index.py` 和 `python scripts/generate-data-instance-index.py`（检查使用 `--check`）。常用指针与宏名单在后者的 `COMMON_DATA`、`COMMON_MACROS` 中维护；缺失宏会明确报错并保留原文档。加 `--full` 可另行生成完整实例表。每份文档在成功生成后原子替换，生成失败返回非零状态。CMD 自动化调用可设置环境变量 `STRUCTURE_INDEX_NO_PAUSE=1` 跳过窗口暂停。
+也可跨平台分别执行 `python scripts/generate-structure-index.py` 和 `python scripts/generate-data-instance-index.py`（检查使用 `--check`）。常用指针、宏和模式名单在后者的 `COMMON_DATA`、`COMMON_MACROS`、`COMMON_MODE_MACROS`、`OPTIONAL_MODE_MACROS`、`COMMON_MODES` 中维护；力控编译模式在对应头文件存在、且接入 `config/atype-options.txt` 构建选项后自动列出。缺失已收录的宏或模式常量会明确报错并保留原文档。加 `--full` 可另行生成完整实例表。每份文档在成功生成后原子替换，生成失败返回非零状态。CMD 自动化调用可设置环境变量 `STRUCTURE_INDEX_NO_PAUSE=1` 跳过窗口暂停。
 
 ```powershell
 ./scripts/validate-atype.ps1 -Python "<Python 3 executable>" -FirmwareMatrix -CMake
