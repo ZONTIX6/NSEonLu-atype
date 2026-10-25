@@ -40,7 +40,7 @@ node tools/usb-telemetry/serve.cjs
 
 ## 配置与验证
 
-- [常用数据指针速查：遥控器、电机、功率计、超级电容、裁判系统等](docs/data-instance-index.md)
+- [常用指针与宏速查：遥控器、电机、功率计、超级电容、裁判系统等](.Doc/指针查找索引.md)
 - [结构体与成员索引：查字段类型、说明与嵌套定义](docs/structure-index.md)
 - [配置与参数指南](docs/configuration-guide.md)
 - [完整宏和初始化参数索引](docs/configuration-index.md)
@@ -48,9 +48,9 @@ node tools/usb-telemetry/serve.cjs
 - [接线、CAN、单位、模块与安全条件](docs/atype-integration.md)
 - [验证结果和硬件验收清单](docs/atype-validation.md)
 
-日常查数据，打开“常用数据指针速查”，用 `Ctrl+F` 搜数据用途、指针名或成员名即可。只保留常用指针、访问示例和源码位置；字段的完整定义另见类型索引。
+日常查数据和宏，打开“常用指针与宏速查”，用 `Ctrl+F` 搜中文用途、指针名、成员名或宏名即可。表中列出常用指针访问示例，以及 24 个常用宏的源码默认值、用法和定义位置；宏的源码默认值不等于构建覆盖后或当前固件的实际值。字段的完整定义另见类型索引。
 
-源码变化后，双击 `scripts/update-structure-index.cmd`，或执行下面的命令同时更新两份索引（Python 3.10+，仅标准库，不需要编译固件）：
+源码变化后，双击 `scripts/update-structure-index.cmd`，或执行下面的命令同时更新 `.Doc/指针查找索引.md` 和类型索引（Python 3.10+，仅标准库，不需要编译固件）：
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/update-structure-index.ps1
@@ -60,7 +60,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/update-structure-ind
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/update-structure-index.ps1 -Check
 ```
 
-也可跨平台分别执行 `python scripts/generate-structure-index.py` 和 `python scripts/generate-data-instance-index.py`（检查使用 `--check`）。常用指针名单在后者的 `COMMON_DATA` 中维护；加 `--full` 可另行生成完整实例表。每份文档在成功生成后原子替换，生成失败返回非零状态。CMD 自动化调用可设置环境变量 `STRUCTURE_INDEX_NO_PAUSE=1` 跳过窗口暂停。
+也可跨平台分别执行 `python scripts/generate-structure-index.py` 和 `python scripts/generate-data-instance-index.py`（检查使用 `--check`）。常用指针与宏名单在后者的 `COMMON_DATA`、`COMMON_MACROS` 中维护；缺失宏会明确报错并保留原文档。加 `--full` 可另行生成完整实例表。每份文档在成功生成后原子替换，生成失败返回非零状态。CMD 自动化调用可设置环境变量 `STRUCTURE_INDEX_NO_PAUSE=1` 跳过窗口暂停。
 
 ```powershell
 ./scripts/validate-atype.ps1 -Python "<Python 3 executable>" -FirmwareMatrix -CMake

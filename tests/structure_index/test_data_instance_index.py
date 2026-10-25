@@ -28,6 +28,52 @@ class InstanceTests(unittest.TestCase):
         self.write("modules/sample.c", source)
         return index.inventory(self.root).variables
 
+    def write_macro_sources(self):
+        self.write("modules/remote/remote_control.h", """#ifndef REMOTE_CONTROL_H
+#define REMOTE_CONTROL_H
+#define RC_SW_UP ((uint16_t)1)
+#define RC_SW_MID ((uint16_t)3)
+#define RC_SW_DOWN ((uint16_t)2)
+#define switch_is_up(s) (s == RC_SW_UP)
+#define switch_is_mid(s) (s == RC_SW_MID)
+#define switch_is_down(s) (s == RC_SW_DOWN)
+#define KEY_PRESS 0
+#endif
+""")
+        self.write("Inc/board_config.h", """#ifndef BOARD_CONFIG_H
+#define BOARD_CONFIG_H
+#define BOARD_REMOTE_UART (&huart1)
+#define BOARD_VTX_UART (&huart8)
+#ifndef REFEREE_UART_PORT
+#define REFEREE_UART_PORT 6
+#endif
+#if REFEREE_UART_PORT == 7
+#define BOARD_REFEREE_UART (&huart7)
+#else
+#define BOARD_REFEREE_UART (&huart6)
+#endif
+#define REFEREE_ENABLE 1
+#define LOG_OUTPUT 1
+#endif
+""")
+        self.write("modules/algorithm/chassis_power_config.h",
+                   "#define POWER_METER_ENABLE 1\n#define CHASSIS_POWER_CONTROL_STAGE 3\n")
+        self.write("modules/algorithm/chassis_energy_config.h",
+                   "#define CHASSIS_POWER_SOURCE_MODE CHASSIS_POWER_SOURCE_DIRECT\n#define CHASSIS_BUFFER_POWER_ENABLE 1\n")
+        self.write("modules/algorithm/chassis_spin_config.h", """#ifndef CHASSIS_SPIN_MODE
+#if CHASSIS_SPIN_ADAPTIVE_ENABLE
+#define CHASSIS_SPIN_MODE CHASSIS_SPIN_MODE_ADAPTIVE
+#else
+#define CHASSIS_SPIN_MODE CHASSIS_SPIN_MODE_FIXED
+#endif
+#endif
+#define CHASSIS_SPIN_FIXED_WZ 8000.0f
+""")
+        self.write("application/robot_def.h",
+                   "#define CHASSIS_FOLLOW_MODE 0\n#define YAW_CHASSIS_ALIGN_ECD 350\n#define PITCH_HORIZON_ECD 3412\n")
+        self.write("modules/telemetry/usb_telemetry_config.h",
+                   "#define USB_TELEMETRY_ENABLE 1\n#define USB_TELEMETRY_PERIOD_MS 20U\n")
+
     def test_global_multi_pointer_array_object_and_extern_declarations(self):
         roots = self.roots('typedef struct { int value; } State;\n'
                            'static State *left, *right;\nState *motors[4];\n'
@@ -189,6 +235,7 @@ class InstanceTests(unittest.TestCase):
         self.assertEqual(index.generate(self.root), index.generate(self.root))
 
     def test_common_index_keeps_useful_pointer_paths_and_omits_unrelated_instances(self):
+        self.write_macro_sources()
         self.write("modules/power_meter/power_meter.c",
                    'typedef struct { float power_w, current_a, bus_voltage_v; bool online; } Status;\n'
                    'typedef struct { Status status; } Meter;\nstatic Meter *power_meter;\n'
@@ -201,11 +248,83 @@ class InstanceTests(unittest.TestCase):
         self.assertNotIn("局部临时实例", md)
 
     def test_common_index_reports_a_stale_curated_member_instead_of_printing_bad_paths(self):
+        self.write_macro_sources()
         self.write("modules/power_meter/power_meter.c",
                    'typedef struct { int renamed; } Status;\n'
                    'typedef struct { Status status; } Meter;\nstatic Meter *power_meter;')
         with self.assertRaisesRegex(ValueError, "power_meter"):
             index.generate_common(self.root)
+
+    def test_macro_table_includes_function_body_conditional_values_and_locations(self):
+        self.write_macro_sources()
+        md = index.generate_common(self.root)
+        macros = md.split("## 常用宏", 1)[1]
+        rows = [line for line in macros.splitlines() if line.startswith("| ")][2:]
+        self.assertEqual(len(rows), 24)
+        function = next(line for line in rows if "`switch_is_up(s)`" in line)
+        self.assertIn("`(s == RC_SW_UP)`", function)
+        self.assertIn("switch_is_up(rc_data->rc.switch_right)", function)
+        self.assertIn("remote_control.h#L6", function)
+        uart = next(line for line in rows if "`BOARD_REFEREE_UART`" in line)
+        self.assertIn("`(&huart7)`", uart)
+        self.assertIn("`(&huart6)`", uart)
+        self.assertIn("#if REFEREE_UART_PORT == 7", uart)
+        self.assertIn("#else", uart)
+        self.assertIn("board_config.h#L9", uart)
+        self.assertIn("board_config.h#L11", uart)
+        spin = next(line for line in rows if "`CHASSIS_SPIN_MODE`" in line)
+        self.assertIn("CHASSIS_SPIN_MODE_ADAPTIVE", spin)
+        self.assertIn("CHASSIS_SPIN_MODE_FIXED", spin)
+        self.assertNotIn("#ifndef CHASSIS_SPIN_MODE", spin)
+        self.assertNotIn("#ifndef BOARD_CONFIG_H", macros)
+        self.assertIn("源码默认值", md)
+        self.assertIn("当前固件", md)
+        period = next(line for line in rows if "`USB_TELEMETRY_PERIOD_MS`" in line)
+        self.assertIn("20U", period)
+        self.assertIn("ms", period)
+
+    def test_macro_extraction_ignores_commented_definitions_and_preserves_continuations(self):
+        self.write_macro_sources()
+        path = "modules/remote/remote_control.h"
+        text = (self.root / path).read_text(encoding="utf-8")
+        text = text.replace("#define KEY_PRESS 0", "// #define KEY_PRESS 999\n/* #define KEY_PRESS 888 */\n#define KEY_PRESS 0")
+        text = text.replace("#define switch_is_up(s) (s == RC_SW_UP)",
+                            "  #define switch_is_up(s) " + "\\" + "\n    ((s) == RC_SW_UP) // actual body")
+        self.write(path, text)
+        md = index.generate_common(self.root)
+        self.assertNotIn("999", md)
+        self.assertNotIn("888", md)
+        self.assertIn("`((s) == RC_SW_UP)`", md)
+
+    def test_default_cli_uses_moved_document_and_checks_macro_changes(self):
+        self.write_macro_sources()
+        args = [sys.executable, str(SCRIPT), "--root", str(self.root)]
+        first = subprocess.run(args, capture_output=True)
+        self.assertEqual(first.returncode, 0, first.stderr)
+        output = self.root / ".Doc/指针查找索引.md"
+        self.assertTrue(output.exists())
+        self.assertFalse((self.root / "docs/data-instance-index.md").exists())
+        self.assertEqual(subprocess.run(args + ["--check"], capture_output=True).returncode, 0)
+        old = output.read_bytes()
+        self.write("modules/telemetry/usb_telemetry_config.h",
+                   "#define USB_TELEMETRY_ENABLE 1\n#define USB_TELEMETRY_PERIOD_MS 50U\n")
+        self.assertNotEqual(subprocess.run(args + ["--check"], capture_output=True).returncode, 0)
+        self.assertEqual(output.read_bytes(), old)
+        self.assertEqual(subprocess.run(args, capture_output=True).returncode, 0)
+        self.assertIn("50U", output.read_text(encoding="utf-8"))
+
+    def test_missing_macro_reports_name_and_keeps_old_document(self):
+        self.write_macro_sources()
+        args = [sys.executable, str(SCRIPT), "--root", str(self.root)]
+        self.assertEqual(subprocess.run(args, capture_output=True).returncode, 0)
+        output = self.root / ".Doc/指针查找索引.md"
+        old = output.read_bytes()
+        self.write("modules/telemetry/usb_telemetry_config.h", "#define USB_TELEMETRY_ENABLE 1\n")
+        result = subprocess.run(args, capture_output=True, encoding="utf-8")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("USB_TELEMETRY_PERIOD_MS", result.stderr)
+        self.assertIn("usb_telemetry_config.h", result.stderr)
+        self.assertEqual(output.read_bytes(), old)
 
 
 if __name__ == "__main__":

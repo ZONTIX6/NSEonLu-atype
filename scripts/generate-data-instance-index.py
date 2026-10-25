@@ -555,10 +555,67 @@ COMMON_DATA = [
 ]
 
 
+COMMON_MACROS = [
+    ("拨杆上档", "RC_SW_UP", "modules/remote/remote_control.h", "拨杆值，无量纲"),
+    ("拨杆中档", "RC_SW_MID", "modules/remote/remote_control.h", "拨杆值，无量纲"),
+    ("拨杆下档", "RC_SW_DOWN", "modules/remote/remote_control.h", "拨杆值，无量纲"),
+    ("判断拨杆上档", "switch_is_up", "modules/remote/remote_control.h", "例：`switch_is_up(rc_data->rc.switch_right)`"),
+    ("判断拨杆中档", "switch_is_mid", "modules/remote/remote_control.h", "例：`switch_is_mid(rc_data->rc.switch_right)`"),
+    ("判断拨杆下档", "switch_is_down", "modules/remote/remote_control.h", "例：`switch_is_down(rc_data->rc.switch_right)`"),
+    ("键盘状态索引", "KEY_PRESS", "modules/remote/remote_control.h", "例：`rc_data->key[KEY_PRESS].w`"),
+    ("遥控器串口", "BOARD_REMOTE_UART", "Inc/board_config.h", "DBUS 使用 USART1"),
+    ("图传串口", "BOARD_VTX_UART", "Inc/board_config.h", "图传键鼠使用 UART8"),
+    ("裁判串口句柄", "BOARD_REFEREE_UART", "Inc/board_config.h", "由 `REFEREE_UART_PORT` 选择"),
+    ("裁判系统开关", "REFEREE_ENABLE", "Inc/board_config.h", "0 关闭，1 开启"),
+    ("裁判串口编号", "REFEREE_UART_PORT", "Inc/board_config.h", "6 为 USART6，7 为 UART7"),
+    ("功率计开关", "POWER_METER_ENABLE", "modules/algorithm/chassis_power_config.h", "0 关闭，1 开启"),
+    ("功控阶段", "CHASSIS_POWER_CONTROL_STAGE", "modules/algorithm/chassis_power_config.h", "0 原控制与诊断，1 快保护，2 启动保护，3 完整慢环"),
+    ("底盘供电模式", "CHASSIS_POWER_SOURCE_MODE", "modules/algorithm/chassis_energy_config.h", "DIRECT=0 直供，SUPERCAP=1 超级电容"),
+    ("缓冲能量增补", "CHASSIS_BUFFER_POWER_ENABLE", "modules/algorithm/chassis_energy_config.h", "0 关闭，1 开启"),
+    ("小陀螺模式", "CHASSIS_SPIN_MODE", "modules/algorithm/chassis_spin_config.h", "FIXED=0 固定，ADAPTIVE=1 自适应，SINE=2 正弦"),
+    ("固定自旋目标", "CHASSIS_SPIN_FIXED_WZ", "modules/algorithm/chassis_spin_config.h", "Wz 命令尺度，非 rpm 或物理角速度"),
+    ("跟随档策略", "CHASSIS_FOLLOW_MODE", "application/robot_def.h", "0 车身跟转，1 云台朝向平移且不主动跟转"),
+    ("云台底盘对齐", "YAW_CHASSIS_ALIGN_ECD", "application/robot_def.h", "单位：编码器计数"),
+    ("俯仰水平标定", "PITCH_HORIZON_ECD", "application/robot_def.h", "单位：编码器计数"),
+    ("USB 遥测开关", "USB_TELEMETRY_ENABLE", "modules/telemetry/usb_telemetry_config.h", "0 关闭，1 开启；USB 视觉需关闭遥测"),
+    ("USB 遥测周期", "USB_TELEMETRY_PERIOD_MS", "modules/telemetry/usb_telemetry_config.h", "单位：ms"),
+    ("日志输出", "LOG_OUTPUT", "Inc/board_config.h", "0 关闭，1 RTT，2 USART2，3 两者"),
+]
+
+
+def common_macro_rows(root, sources):
+    rows = []
+    for purpose, name, path, usage in COMMON_MACROS:
+        source = sources.get(path)
+        if source is None:
+            source = types.Source(types.read_source(Path(root) / path), path)
+            sources[path] = source
+        definitions = source.macros.get(name, [])
+        if not definitions:
+            raise ValueError(f"{path}: 常用宏 {name} 未找到定义，请更新 COMMON_MACROS")
+        # Hide the file guard and the selected macro's #ifndef fallback wrapper;
+        # retain conditions that actually choose among different definitions.
+        comments_removed = re.sub(r"//[^\n]*|/\*[\s\S]*?\*/", "", source.text)
+        guard = re.match(r"\s*(?:#\s*pragma\s+once\s*)?#\s*ifndef\s+(\w+)\s*\n\s*#\s*define\s+\1\b", comments_removed)
+        hidden = {f"#ifndef {name}"}
+        if guard:
+            hidden.add(f"#ifndef {guard.group(1)}")
+        values, locations, spellings = [], [], []
+        for parameters, value, condition, line in definitions:
+            spelling = name + (f"({parameters})" if parameters is not None else "")
+            if spelling not in spellings:
+                spellings.append(spelling)
+            condition = " / ".join(part for part in condition.split(" / ") if part not in hidden)
+            values.append(types.code(" ".join(value.split())) + (f"（{types.code(condition)}）" if condition else ""))
+            locations.append(types.source_link(path, line))
+        rows.append(f"| {purpose} | {'、'.join(types.code(s) for s in spellings)} | {'<br>'.join(values)}<br>{usage} | {'<br>'.join(locations)} |")
+    return rows
+
+
 def generate_common(root):
     data = inventory(Path(root))
-    out = ["# 常用数据指针速查", "",
-           "用 **Ctrl+F** 搜数据用途、指针名或成员名。下表只列日常调试常用的数据入口。", "",
+    out = ["# 常用指针与宏速查", "",
+           "用 **Ctrl+F** 搜中文用途、指针名、成员名或宏名。只列日常调试常用的数据入口和宏。", "",
            "| 数据 | 常用指针 | 常看成员 / 访问示例 | 定义位置 |", "| --- | --- | --- | --- |"]
     for label, path, names, fields in COMMON_DATA:
         variables = [v for name in names for v in data.variables if v.path == path and v.name == name and not v.function and v.storage != "extern"]
@@ -579,7 +636,11 @@ def generate_common(root):
                    + "、".join(types.source_link(p, line) for p, line in definitions) + " |")
     out += ["", "电机同组共用 `measure` 成员，示例中的指针可替换成同一行的其他电机指针。`lf/rf/lb/rb` 分别为左前/右前/左后/右后；`yaw/pitch` 为偏航/俯仰；`friction_l/friction_r/loader` 为左摩擦轮/右摩擦轮/拨弹电机。", "",
             "`rc_data` 指向控制任务中的遥控器快照，示例查看当前数据。`static` 指针在对应源码作用域查看，并需完成相应初始化。", "",
-            "更新：双击 `scripts/update-structure-index.cmd`。常用名单和示例在生成脚本的 `COMMON_DATA` 中维护；更新时会自动刷新源码位置并核对成员路径。", ""]
+            "## 常用宏", "",
+            "以下为**源码默认值**及分支条件，构建参数可覆盖配置宏，不代表当前固件的实际值。", "",
+            "| 中文用途 | 宏名 | 源码默认值 / 用法 | 定义位置 |", "| --- | --- | --- | --- |"]
+    out.extend(common_macro_rows(root, data.sources))
+    out += ["", "更新：双击 `scripts/update-structure-index.cmd`。指针名单与宏名单在生成脚本的 `COMMON_DATA`、`COMMON_MACROS` 中维护；更新会刷新源码值、条件与位置。", ""]
     return "\n".join(out)
 
 
@@ -589,7 +650,7 @@ def main():
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--full", action="store_true", help="generate the optional exhaustive index instead of the common-data quick reference")
     args = parser.parse_args()
-    output = args.root / ("docs/data-instance-index-full.md" if args.full else "docs/data-instance-index.md")
+    output = args.root / ("docs/data-instance-index-full.md" if args.full else ".Doc/指针查找索引.md")
     try:
         markdown = generate(args.root) if args.full else generate_common(args.root)
         if args.check:

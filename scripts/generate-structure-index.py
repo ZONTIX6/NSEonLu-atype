@@ -587,7 +587,7 @@ def generate(root):
     nmember = sum(len(r.members) for r in all_records)
     out = ["# 结构体与成员索引", "",
            f"扫描 **{len(paths)}** 个 C/H 文件，收录 **{nstruct}** 个结构体、**{len(all_records) - nstruct}** 个联合体、**{nmember}** 条直接成员声明（含匿名成员与未命名位域）。", "",
-           "要查实际保存数据的实例指针及访问表达式，请先看[常用数据指针速查](data-instance-index.md)；本文件用于查字段类型、注释和定义。", "",
+           "要查常用实例指针、访问表达式与宏，请先看[常用指针与宏速查](../.Doc/指针查找索引.md)；本文件用于查字段类型、注释和定义。", "",
            "在本文件用 **Ctrl+F** 搜索中文用途、类型名或任意成员名。先从[中文用途导航](#中文用途导航)找模块，或从[成员名反查](#成员名反查)找字段，再跳转到类型详情和源码。", "",
            "更新：在仓库目录执行 `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/update-structure-index.ps1`，或双击 `scripts/update-structure-index.cmd`。解释器不能自动发现时传入 `-Python <python.exe 完整路径>`。", "",
            "本文件由 `scripts/generate-structure-index.py` 自动生成，请勿直接编辑。中文用途关键词在脚本 `PURPOSES` 中维护；字段含义优先使用源码注释，没有注释时明确标注，不推测语义。", "",
