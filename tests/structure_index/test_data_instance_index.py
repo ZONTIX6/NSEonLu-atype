@@ -255,16 +255,22 @@ class InstanceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "power_meter"):
             index.generate_common(self.root)
 
-    def test_macro_table_includes_function_body_conditional_values_and_locations(self):
+    def test_macro_table_includes_conditional_values_and_locations_without_switch_entries(self):
         self.write_macro_sources()
+        self.write("application/cmd/robot_cmd.c",
+                   'typedef union { unsigned keys; } Key;\n'
+                   'typedef struct { struct { int rocker_l_, switch_left; } rc; Key key[3]; } Remote;\n'
+                   'static Remote *rc_data;')
         md = index.generate_common(self.root)
         macros = md.split("## 常用宏", 1)[1]
         rows = [line for line in macros.splitlines() if line.startswith("| ")][2:]
-        self.assertEqual(len(rows), 24)
-        function = next(line for line in rows if "`switch_is_up(s)`" in line)
-        self.assertIn("`(s == RC_SW_UP)`", function)
-        self.assertIn("switch_is_up(rc_data->rc.switch_right)", function)
-        self.assertIn("remote_control.h#L6", function)
+        self.assertEqual(len(rows), 18)
+        self.assertNotIn("拨杆", md)
+        self.assertNotIn("RC_SW_", md)
+        self.assertNotIn("switch_is_", md)
+        self.assertNotIn("rc.switch_left", md)
+        self.assertIn("rc_data->rc.rocker_l_", md)
+        self.assertIn("rc_data->key[0].keys", md)
         uart = next(line for line in rows if "`BOARD_REFEREE_UART`" in line)
         self.assertIn("`(&huart7)`", uart)
         self.assertIn("`(&huart6)`", uart)
@@ -288,13 +294,13 @@ class InstanceTests(unittest.TestCase):
         path = "modules/remote/remote_control.h"
         text = (self.root / path).read_text(encoding="utf-8")
         text = text.replace("#define KEY_PRESS 0", "// #define KEY_PRESS 999\n/* #define KEY_PRESS 888 */\n#define KEY_PRESS 0")
-        text = text.replace("#define switch_is_up(s) (s == RC_SW_UP)",
-                            "  #define switch_is_up(s) " + "\\" + "\n    ((s) == RC_SW_UP) // actual body")
+        text = text.replace("#define KEY_PRESS 0",
+                            "  #define KEY_PRESS " + "\\" + "\n    (0) // actual body")
         self.write(path, text)
         md = index.generate_common(self.root)
         self.assertNotIn("999", md)
         self.assertNotIn("888", md)
-        self.assertIn("`((s) == RC_SW_UP)`", md)
+        self.assertIn("`(0)`", md)
 
     def test_default_cli_uses_moved_document_and_checks_macro_changes(self):
         self.write_macro_sources()

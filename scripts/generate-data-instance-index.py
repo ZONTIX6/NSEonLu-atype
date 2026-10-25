@@ -534,7 +534,7 @@ def generate(root):
 MOTOR_COMMON = [("角速度", "measure.speed_aps"), ("电流反馈", "measure.real_current"), ("累计角度", "measure.total_angle")]
 COMMON_DATA = [
     ("遥控器", "application/cmd/robot_cmd.c", ["rc_data"],
-     [("左摇杆横向", "rc.rocker_l_"), ("左拨杆", "rc.switch_left"), ("键盘", "key[0].keys")]),
+     [("左摇杆横向", "rc.rocker_l_"), ("键盘", "key[0].keys")]),
     ("图传键鼠", "application/cmd/robot_cmd.c", ["vt02_data"],
      [("鼠标横向", "mouse.x"), ("键盘", "key[0].keys"), ("在线", "online")]),
     ("底盘电机", "application/chassis/chassis.c", ["motor_lf", "motor_rf", "motor_lb", "motor_rb"], MOTOR_COMMON),
@@ -556,12 +556,6 @@ COMMON_DATA = [
 
 
 COMMON_MACROS = [
-    ("拨杆上档", "RC_SW_UP", "modules/remote/remote_control.h", "拨杆值，无量纲"),
-    ("拨杆中档", "RC_SW_MID", "modules/remote/remote_control.h", "拨杆值，无量纲"),
-    ("拨杆下档", "RC_SW_DOWN", "modules/remote/remote_control.h", "拨杆值，无量纲"),
-    ("判断拨杆上档", "switch_is_up", "modules/remote/remote_control.h", "例：`switch_is_up(rc_data->rc.switch_right)`"),
-    ("判断拨杆中档", "switch_is_mid", "modules/remote/remote_control.h", "例：`switch_is_mid(rc_data->rc.switch_right)`"),
-    ("判断拨杆下档", "switch_is_down", "modules/remote/remote_control.h", "例：`switch_is_down(rc_data->rc.switch_right)`"),
     ("键盘状态索引", "KEY_PRESS", "modules/remote/remote_control.h", "例：`rc_data->key[KEY_PRESS].w`"),
     ("遥控器串口", "BOARD_REMOTE_UART", "Inc/board_config.h", "DBUS 使用 USART1"),
     ("图传串口", "BOARD_VTX_UART", "Inc/board_config.h", "图传键鼠使用 UART8"),
