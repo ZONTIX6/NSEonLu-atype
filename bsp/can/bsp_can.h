@@ -67,5 +67,8 @@ void CANSetDLC(CANInstance *_instance, uint8_t length);
  * @param _instance* can instance owned by module
  */
 uint8_t CANTransmit(CANInstance *_instance,float timeout);
+/* Wait with interrupts enabled, then guard and enqueue atomically. The guard
+ * may replace the pending payload with a safe zero frame; it must not block. */
+uint8_t CANTransmitGuarded(CANInstance *instance,float timeout,void (*guard)(void *),void *context);
 
 #endif

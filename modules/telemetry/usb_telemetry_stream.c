@@ -3,6 +3,17 @@
 #include <stdbool.h>
 #include "runtime_tuning.h"
 #include "autotune_protocol.h"
+#include "chassis_control_config.h"
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
+#include "chassis_force_telemetry.h"
+#include "dji_force_adapter.h"
+#include "super_cap.h"
+#include "rm_referee.h"
+static ChassisForceCycleOutput_s force_sample;
+static ChassisPowerSnapshot_s force_power;
+static SuperCapSnapshot_s force_cap;
+static RefereePowerSnapshot_s force_referee;
+#endif
 #include <string.h>
 
 static char header[USB_TELEMETRY_BUFFER_SIZE];
@@ -74,7 +85,11 @@ void USBTelemetryStreamInit(void)
     command_length = 0; command_dropping = false;
     RuntimeTuningCancel();
     AutotuneCancel();
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
+    header_length=ChassisForceTelemetryHeader(header,sizeof header);
+#else
     header_length = USBTelemetryFormatHeader(header, sizeof header);
+#endif
     sequence = drop_count = header_tick = 0;
     session = CDC_GetSession_FS();
     rx_session = session;
@@ -128,7 +143,15 @@ void USBTelemetryStreamSend(USBTelemetrySample_s *sample, uint32_t now_ms)
         else ++drop_count;
         return;
     }
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
+    (void)DJIForceAdapterGetSnapshot(&force_sample);
+    (void)ChassisPowerGetSnapshot(&force_power);
+    (void)SuperCapGetSnapshot(now_ms,&force_cap);
+    (void)RefereeGetPowerSnapshot(&force_referee);
+    const size_t length=ChassisForceTelemetryRow(&force_sample,&force_power,&force_cap,&force_referee,row,sizeof row);
+#else
     const size_t length = USBTelemetryFormatRow(sample, row, sizeof row);
+#endif
     /* A reset/reopen during formatting must get its header before a data row. */
     if (!length || CDC_GetSession_FS() != session || !CDC_IsPortOpen_FS() ||
         USBTransmit((uint8_t *)row, (uint16_t)length) != USBD_OK)

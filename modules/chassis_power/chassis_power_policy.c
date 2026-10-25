@@ -1,5 +1,6 @@
 #include "chassis_power_internal.h"
 #include "chassis_power_policy.h"
+#include <stdlib.h>
 
 bool ChassisPowerUpdatePolicy(const ChassisPowerPolicyInput_s *i, ChassisPowerPolicyOutput_s *o)
 {
@@ -27,6 +28,24 @@ bool ChassisPowerUpdatePolicy(const ChassisPowerPolicyInput_s *i, ChassisPowerPo
     (void)ChassisPowerBuildCommand(&command_input,&command);
     SuperCapStatus_s cap=c->use_supercap ? i->cap.status : (SuperCapStatus_s){0};
     SuperCapInputPower_s cap_input=c->use_supercap ? i->cap.input_power : (SuperCapInputPower_s){0};
+    if(c->force_control) {
+        cap.online &= (uint32_t)(i->now_ms-cap.last_rx_tick_ms)<=20;
+        cap_input.online &= (uint32_t)(i->now_ms-cap_input.last_rx_tick_ms)<=20;
+        const uint32_t after_send=cap_input.last_rx_tick_ms-p->cap_sent_ms;
+        const bool matching=p->cap_command_ok && p->cap_sent_command.enable_dcdc &&
+            p->cap_sent_command.input_control_enabled && cap_input.online && cap_input.input_control_active &&
+            i->cap.input_received_frame_count!=p->cap_anchor_frames && after_send>0 && after_send<UINT32_C(0x80000000) &&
+            abs((int)cap_input.input_power_target_w-(int)p->cap_sent_command.input_power_target_w)<=1;
+        if(matching) {p->cap_confirmed=true;p->cap_confirmed_tick_ms=cap_input.last_rx_tick_ms;}
+        if(!cap_input.online || !cap.online || !cap_input.input_control_active || !p->cap_command_ok ||
+            abs((int)cap_input.input_power_target_w-(int)p->cap_sent_command.input_power_target_w)>1 ||
+            (uint32_t)(i->now_ms-p->cap_confirmed_tick_ms)>20) p->cap_confirmed=false;
+        if(p->cap_command_ok && !p->cap_confirmed && (uint32_t)(i->now_ms-p->cap_sent_ms)>50 && !p->cap_timeout_reported) {
+            ++p->cap_confirmation_timeouts;p->cap_timeout_reported=true;
+        }
+        /* Input measurement remains usable for energy accounting even when target confirmation fails. */
+        cap_input.input_control_active &= p->cap_confirmed;
+    }
     if(c->buffer_enabled) cap.online &= (uint32_t)(i->now_ms-cap.last_rx_tick_ms)<=20;
     const bool load_valid=c->meter_enabled && i->meter.online &&
         (uint32_t)(i->now_ms-i->meter.last_rx_tick_ms)<=20;
@@ -52,6 +71,18 @@ bool ChassisPowerUpdatePolicy(const ChassisPowerPolicyInput_s *i, ChassisPowerPo
         }
     }
     if(load_valid && isfinite(i->meter.power_w)) requested=fmaxf(requested,i->meter.power_w);
+    if(c->force_control) {
+        const bool final_fresh=spin_feedback_valid && i->previous_valid && s->cycle_valid && s->final_valid && s->can_submitted &&
+            (uint32_t)(i->now_ms-s->final_tick_ms)<=5 && !i->zero_force;
+        demand_valid=final_fresh && i->force_backend && i->force_operating_valid &&
+            s->transient.drive_mask && !s->transient.brake_mask &&
+            isfinite(i->force_operating_demand_w) && i->force_operating_demand_w>0;
+        requested=demand_valid ? i->force_operating_demand_w : 0;
+        if(demand_valid && i->force_offer_valid && load_valid && !i->spin_capability_limited &&
+            isfinite(i->force_offered_demand_w) && i->force_offered_demand_w>=requested)
+            requested=fminf(i->force_offered_demand_w,fmaxf(requested,p->policy.physical_load_target_w)+20);
+        spin_feedback_valid=final_fresh;
+    }
     const ChassisPowerBudgetInput_s budget_input={.referee_limit_w=command.base_power_limit_w,
         .cap_online=cap.online,.cap_output_enabled=cap.output_enabled,.cap_error_code=cap.error_code,
         .cap_energy_ratio=cap.energy_ratio,.cap_reported_limit_w=cap.available_power_limit_w,
@@ -63,6 +94,7 @@ bool ChassisPowerUpdatePolicy(const ChassisPowerPolicyInput_s *i, ChassisPowerPo
         .measured_input_power_w=c->use_supercap ? cap_input.input_power_w : i->meter.power_w,
         .cap_input_control_ready=cap_input.online && cap_input.input_control_active,
         .load_power_valid=load_valid,.demand_valid=demand_valid,.requested_load_power_w=requested,
+        .constrain_cap_to_demand=c->force_control,
         .confirmed_input_target_w=cap_input.input_power_target_w,
         .spin_power_priority=i->adaptive_spin && !i->zero_force,
         .spin_feedback_valid=spin_feedback_valid,
@@ -76,7 +108,7 @@ bool ChassisPowerUpdatePolicy(const ChassisPowerPolicyInput_s *i, ChassisPowerPo
         .spin_feedback_sequence={s->feedback_sequence[0],s->feedback_sequence[1],
             s->feedback_sequence[2],s->feedback_sequence[3]},
         .spin_braking=s->transient.brake_mask!=0,
-        .now_ms=i->now_ms,.input_power_tick_ms=i->meter.last_rx_tick_ms};
+        .now_ms=i->now_ms,.input_power_tick_ms=c->use_supercap ? cap_input.last_rx_tick_ms : i->meter.last_rx_tick_ms};
     bool valid=isfinite(i->dt_s) && i->dt_s>0 && i->dt_s<=.1f &&
         ChassisPowerBudgetUpdate(&c->budget,&budget_input,i->dt_s,&p->budget_state,&o->budget);
     if(!valid) {
@@ -104,8 +136,8 @@ bool ChassisPowerUpdatePolicy(const ChassisPowerPolicyInput_s *i, ChassisPowerPo
         .measured_power_w=meter.power_w,.predicted_unlimited_power_w=predicted,.meter_online=meter_valid,
         .allow_positive_correction=c->stage==0 ? meter_valid && meter.power_w>=0 && motoring>=0 :
             meter_valid && s->transient.positive_allowed && meter.power_w<=nominal,
-        .hold_positive_learning=i->hold_positive_learning && !s->base_limited,
-        .learning_allowed=meter_valid && s->transient.learning_allowed && meter.power_w<=nominal &&
+        .hold_positive_learning=(i->hold_positive_learning && !s->base_limited) || (c->force_control && i->adaptive_spin),
+        .learning_allowed=!(c->force_control && i->adaptive_spin) && meter_valid && s->transient.learning_allowed && meter.power_w<=nominal &&
             (uint32_t)(i->now_ms-s->tick_ms)<=5,
         .negative_learning_allowed=c->stage==3 && meter_valid && s->transient.negative_learning_allowed &&
             s->transient.negative_learning_threshold_w>=target+c->outer.error_deadband_w &&
@@ -130,7 +162,45 @@ bool ChassisPowerUpdatePolicy(const ChassisPowerPolicyInput_s *i, ChassisPowerPo
         o->control.power_ceiling_w=o->budget.spin_power_ceiling_w;
     if(c->buffer_enabled && c->use_supercap && cap.online && cap.output_enabled && !cap.error_code)
         o->control.power_ceiling_w=fminf(o->control.power_ceiling_w,cap.available_power_limit_w);
+    if(c->force_control) o->control.power_ceiling_w=target; /* Explicit physical watts. */
+    o->physical_load_target_w=target;
+    o->input_confirmed=!c->use_supercap || p->cap_confirmed;
+    o->confirmed_input_target_w=p->cap_confirmed ? cap_input.input_power_target_w : 0;
+    o->confirmed_age_ms=p->cap_confirmed ? i->now_ms-p->cap_confirmed_tick_ms : UINT32_MAX;
+    o->cap_send_failures=p->cap_send_failures;o->cap_confirmation_timeouts=p->cap_confirmation_timeouts;
+    o->force_growth_allowed=valid && !i->zero_force && load_valid && isfinite(i->meter.power_w) &&
+        i->meter.power_w>=0 && !s->transient.brake_mask && !s->transient.fault &&
+        !o->budget.recovering && !i->spin_capability_limited &&
+        (!c->use_supercap || (p->cap_confirmed && cap.online && cap.output_enabled && !cap.error_code));
+    if(c->force_control && i->force_backend!=c->force_control) valid=o->control.control_enabled=false;
     o->valid=valid;
     POWER_LOCK();p->policy=*o;p->policy_tick_ms=i->now_ms;POWER_UNLOCK();
     return valid;
+}
+
+void ChassisPowerCapCommandResult(const SuperCapCommand_s *command,bool submitted,
+    uint32_t now,uint32_t frames,ChassisPowerPolicyOutput_s *o)
+{
+    if(!chassis_power || !command || !o) return;
+    ChassisPowerInstance_s *p=chassis_power;
+    if(!p->slow_config.force_control) return;
+    if(!submitted) {
+        ++p->cap_send_failures;p->cap_command_ok=false;p->cap_confirmed=false;
+        o->force_growth_allowed=false;o->input_confirmed=false;
+        const float base=command->referee_power_limit_w;
+        o->control.nominal_budget_w=fminf(o->control.nominal_budget_w,base);
+        o->control.target_power_w=fminf(o->control.target_power_w,base*p->slow_config.algorithm.safety_factor);
+        o->control.power_ceiling_w=fminf(o->control.power_ceiling_w,o->control.target_power_w);
+        o->physical_load_target_w=o->control.target_power_w;
+    } else {
+        if(!p->cap_command_ok || command->enable_dcdc!=p->cap_sent_command.enable_dcdc ||
+            command->input_control_enabled!=p->cap_sent_command.input_control_enabled ||
+            command->input_power_target_w!=p->cap_sent_command.input_power_target_w) {
+            p->cap_anchor_frames=frames;p->cap_sent_ms=now;p->cap_confirmed=false;p->cap_timeout_reported=false;
+            o->input_confirmed=false;o->force_growth_allowed=false;
+        }
+        p->cap_sent_command=*command;p->cap_command_ok=true;
+    }
+    o->cap_send_failures=p->cap_send_failures;
+    POWER_LOCK();p->policy=*o;POWER_UNLOCK();
 }

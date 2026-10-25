@@ -238,7 +238,18 @@ C_DEFS =  \
 -DSTM32F427xx \
 -DARM_MATH_CM4
 
+# Resolve the same default before source selection and compiler definitions.
+CHASSIS_CONTROL_MODE ?= 0
+ifeq ($(filter $(CHASSIS_CONTROL_MODE),0 1),)
+$(error CHASSIS_CONTROL_MODE must be 0 or 1)
+endif
 include config/atype.mk
+ifeq ($(CHASSIS_CONTROL_MODE),1)
+C_SOURCES := $(filter-out application/chassis/chassis.c modules/algorithm/chassis_spin.c modules/motor/DJImotor/dji_power_adapter.c,$(C_SOURCES))
+C_SOURCES += $(wildcard modules/chassis_force/*.c) application/chassis/chassis_force_app.c application/board_chassis_force.c modules/motor/DJImotor/dji_force_adapter.c modules/telemetry/chassis_force_telemetry.c
+else
+C_SOURCES := $(filter-out modules/chassis_power/chassis_power_force.c,$(C_SOURCES))
+endif
 
 # AS includes
 AS_INCLUDES =  \
@@ -302,6 +313,7 @@ C_INCLUDES =  \
 -Imodules/referee \
 -Imodules/remote \
 -Imodules/chassis_power \
+-Imodules/chassis_force \
 -Imodules/super_cap \
 -Imodules/power_meter \
 -Imodules/can_comm \
@@ -350,6 +362,8 @@ LDFLAGS += $(ATYPE_MODULE_LDFLAGS)
 #######################################
 # list of objects
 OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
+NUMERIC_SOURCES := $(filter modules/chassis_force/% modules/chassis_power/% modules/algorithm/power_model.c modules/algorithm/chassis_power_% modules/algorithm/chassis_spin.c modules/motor/DJImotor/% modules/telemetry/chassis_force_telemetry.c application/chassis/% application/board_chassis_force.c application/cmd/robot_cmd.c,$(C_SOURCES))
+$(addprefix $(BUILD_DIR)/,$(notdir $(NUMERIC_SOURCES:.c=.o))): CFLAGS += -fno-fast-math
 vpath %.c $(sort $(dir $(C_SOURCES)))
 # list of ASM program objects
 OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES:.s=.o)))

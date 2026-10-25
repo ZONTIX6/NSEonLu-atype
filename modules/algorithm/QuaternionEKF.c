@@ -15,6 +15,7 @@
  ******************************************************************************
  */
 #include "QuaternionEKF.h"
+#include <string.h>
 
 QEKF_INS_t QEKF_INS;
 
@@ -481,9 +482,10 @@ static float invSqrt(float x)
 {
     float halfx = 0.5f * x;
     float y = x;
-    long i = *(long *)&y;
+    uint32_t i;
+    memcpy(&i,&y,sizeof i);
     i = 0x5f375a86 - (i >> 1);
-    y = *(float *)&i;
+    memcpy(&y,&i,sizeof y);
     y = y * (1.5f - (halfx * y * y));
     return y;
 }

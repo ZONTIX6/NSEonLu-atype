@@ -1,6 +1,7 @@
 #include "usb_telemetry.h"
 #include "tuning_flash.h"
 #include "runtime_tuning.h"
+#include "chassis_control_config.h"
 
 #if USB_TELEMETRY_ENABLE
 #include "usbd_cdc_if.h"
@@ -18,6 +19,7 @@
 
 /* Only the low-priority telemetry task owns this scratch storage. */
 static USBTelemetrySample_s sample;
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_SPEED
 static ChassisPowerSnapshot_s model;
 static ChassisTelemetrySnapshot_s chassis;
 static RemoteControlSnapshot_s remote;
@@ -185,6 +187,7 @@ static void Collect(uint32_t now_ms)
     USBTelemetryApplyFreshness(&sample, HAL_GetTick());
 }
 #endif
+#endif
 
 void USBTelemetryInit(void)
 {
@@ -199,7 +202,11 @@ void USBTelemetryTask(void)
     /* Let the preceding USB reply finish before a potentially long sector erase. */
     if (!CDC_IsPortOpen_FS() || CDC_IsTransmitIdle_FS()) TuningFlashPoll();
     const uint32_t now_ms = HAL_GetTick();
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_SPEED
     Collect(now_ms);
+#else
+    (void)now_ms;
+#endif
     USBTelemetryStreamSend(&sample, HAL_GetTick());
 #endif
 }

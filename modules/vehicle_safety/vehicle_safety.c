@@ -13,19 +13,28 @@
 static bool valid, ready, bench;
 static bool aux_stopped;
 static uint32_t tick;
+static uint32_t safety_epoch;
 
 void VehicleSafetyPublish(const VehicleSafetyInput_s *input, uint32_t now_ms)
 {
     if (input == NULL) return;
     LOCK();
+    const bool was_ready=ready;
+    const bool expired=valid && (uint32_t)(now_ms-tick)>10U;
     if (valid && (uint32_t)(now_ms-tick)>10U) ready=false;
     if (!input->input_online || input->emergency) ready = false;
     else if (input->reset) ready = true;
+    if(!valid || expired || was_ready!=ready) ++safety_epoch;
     bench = input->bench && input->input_online && !input->emergency;
     aux_stopped=input->aux_stopped;
     tick = now_ms;
     valid = true;
     UNLOCK();
+}
+
+uint32_t VehicleSafetyEpoch(void)
+{
+    LOCK();const uint32_t epoch=safety_epoch;UNLOCK();return epoch;
 }
 
 bool VehicleSafetyAllowsDrive(uint32_t now_ms)

@@ -4,5 +4,6 @@
 #include <stdint.h>
 
 float DWT_GetDeltaT(uint32_t *count);
+uint64_t DWT_GetTimeline_us(void);
 
 #endif

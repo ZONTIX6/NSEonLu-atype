@@ -61,6 +61,13 @@ static uint32_t autotune_trial;
 static PIDInstance autotune_original[4];
 static AutotuneDrive autotune_drive;
 
+static bool OwnsRawCurrent(unsigned index)
+{
+    if(!output_group || !output_group->owns_raw_current) return false;
+    for(unsigned w=0;w<4;++w) if(index==output_group->motor_indices[w]) return true;
+    return false;
+}
+
 static void ResetTrialPID(PIDInstance *pid,float measured)
 {
     pid->Iout=pid->ITerm=pid->Last_ITerm=0;
@@ -73,6 +80,13 @@ static void ApplyAutotuneCycle(void)
 {
     if (!output_group) return;
     const uint32_t now=HAL_GetTick();
+    if(output_group->owns_raw_current) {
+        const PIDAutotuneFeedback denied={.now_ms=now,.permitted=false};
+        AutotuneMotorStep(&denied,&autotune_drive);
+        if(autotune_drive.owned) AutotuneCancel();
+        autotune_owned=false;autotune_inhibit=false;
+        return;
+    }
     PIDAutotuneFeedback f={.now_ms=now,.can_ok=true,.feedback_ok=true,
         .permitted=VehicleSafetyAllowsAutotune(now) && cycle_control.autotune_permitted && cycle_control.control_enabled &&
             (uint32_t)(now-cycle_control.tick_ms)<=10 && !autotune_inhibit};
@@ -189,11 +203,11 @@ static void RegisterPIDTuning(void)
         const float wheel[] = {pid->Kp, pid->Ki, pid->Kd, pid->MaxOut, pid->IntegralLimit, pid->DeadBand};
         memcpy(&values[i * 6], wheel, sizeof wheel);
     }
-    RuntimeTuningRegister(TUNING_PID, values, 0);
+    RuntimeTuningRegister(TUNING_PID, values, output_group->owns_raw_current ? 1 : 0);
 }
 static bool ApplyPIDTuning(const float *v)
 {
-    if (!output_group) return false;
+    if (!output_group || output_group->owns_raw_current) return false;
     for (unsigned i = 0; i < 4; ++i) {
         const float *w = &v[i * 6];
         for (unsigned j = 0; j < 6; ++j)
@@ -440,13 +454,14 @@ bool DJIMotorRegisterOutputGroup(DJIMotorOutputGroup_s *group, const DJIMotorOut
     if (group==NULL || hooks==NULL || output_group!=NULL || hooks->read_control==NULL ||
         hooks->limit==NULL || hooks->record_final==NULL || !isfinite(group->max_current_command) ||
         group->max_current_command<=0 || group->max_current_command>32767) return false;
+    if(group->owns_raw_current && (!hooks->prepare_current || !hooks->validate_current)) return false;
     for(unsigned w=0;w<4;++w) {
         if(group->motor_indices[w]>=idx) return false;
         for(unsigned j=0;j<w;++j) if(group->motor_indices[w]==group->motor_indices[j]) return false;
     }
     output_hooks=*hooks;output_group=group;group->registered=true;
     RegisterPIDTuning();
-    RuntimeTuningRestore(TUNING_PID, ApplyPIDTuning);
+    if(!group->owns_raw_current) RuntimeTuningRestore(TUNING_PID, ApplyPIDTuning);
     return true;
 }
 
@@ -467,6 +482,23 @@ static void ReadMotorCycle(void)
 }
 
 // 为所有电机实例计算三环PID,发送控制报文
+typedef struct {
+    const DJIMotorCycle_s *cycle;
+    int16_t *commands;
+    bool *enabled;
+} MotorEnqueueGuard_s;
+static void ValidateBeforeEnqueue(void *context)
+{
+    MotorEnqueueGuard_s *gate=context;
+    if(output_hooks.validate_current(output_hooks.context,gate->cycle,gate->commands,gate->enabled,HAL_GetTick())) return;
+    for(unsigned w=0;w<4;++w) {
+        const unsigned index=output_group->motor_indices[w];
+        DJIMotorInstance *member=dji_motor_instance[index];
+        gate->commands[index]=0;gate->enabled[index]=false;motor_output[index]=0;
+        sender_assignment[member->sender_group].tx_buff[2*member->message_num]=0;
+        sender_assignment[member->sender_group].tx_buff[2*member->message_num+1]=0;
+    }
+}
 void DJIMotorControl()
 {
     RuntimeTuningProcess(TUNING_PID, ApplyPIDTuning);
@@ -489,7 +521,8 @@ void DJIMotorControl()
         measure = &cycle_measure[i];
         pid_ref = cycle_reference[i];
         speed_reference_aps[i] = 0.0f;
-        speed_feedback_aps[i] = 0.0f;
+        speed_feedback_aps[i] = measure->speed_aps;
+        if(OwnsRawCurrent(i)) {motor_output[i]=0;continue;}
 
         if(cycle_stop[i]==MOTOR_STOP || !cycle_online[i] ||
             cycle_measure[i].rx_sequence==0 ||
@@ -550,6 +583,7 @@ void DJIMotorControl()
         .current=motor_output,.actual_aps=speed_feedback_aps,.target_aps=speed_reference_aps,
         .stop=cycle_stop,.online=cycle_online};
     float raw_output[DJI_MOTOR_CNT];
+    if(output_group && output_hooks.prepare_current) output_hooks.prepare_current(output_hooks.context,&cycle);
     memcpy(raw_output,motor_output,sizeof raw_output);
     if (output_group != NULL) output_hooks.limit(output_hooks.context,&cycle);
 
@@ -594,8 +628,14 @@ void DJIMotorControl()
     {
         if (sender_enable_flag[i])
         {
+            bool contains_output_group=false;
+            if(output_group) for(unsigned w=0;w<4;++w)
+                contains_output_group |= dji_motor_instance[output_group->motor_indices[w]]->sender_group==i;
             submitted_groups |= (uint8_t)(1U<<i);
-            const bool success=CANTransmit(&sender_assignment[i], 1)!=0;
+            MotorEnqueueGuard_s gate={.cycle=&cycle,.commands=final_commands,.enabled=final_enabled};
+            const bool guarded=contains_output_group && output_hooks.validate_current;
+            const bool success=(guarded ? CANTransmitGuarded(&sender_assignment[i],1,ValidateBeforeEnqueue,&gate) :
+                CANTransmit(&sender_assignment[i],1))!=0;
             if (success) successful_groups |= (uint8_t)(1U<<i);
             transmitted &= success;
         }

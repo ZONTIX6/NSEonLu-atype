@@ -9,6 +9,10 @@ INCLUDES = -Istubs -I../chassis_motion/stubs -I../dji_chassis_power_rtt/stubs \
 SOURCES = test_vehicle_motion.c ../../modules/algorithm/user_lib.c \
  ../../modules/heat_control/heat_control.c ../../modules/vehicle_safety/vehicle_safety.c
 .PHONY: test
+test_vehicle_force.exe: $(SOURCES) ../../modules/chassis_force/chassis_force_intent.c $(wildcard ../../application/cmd/*.c)
+	$(CC) $(CFLAGS) $(INCLUDES) -I../../modules/chassis_force -I../../modules/chassis_power -I../../modules/super_cap -I../../modules/power_meter -DCHASSIS_CONTROL_MODE=1 $(SOURCES) ../../modules/chassis_force/chassis_force_intent.c -lm -o $@
+test_force: test_vehicle_force.exe
+	./test_vehicle_force.exe force
 test_vehicle_motion.exe: $(SOURCES) $(wildcard ../../application/cmd/*.c ../../application/gimbal/*.c ../../application/shoot/*.c)
 	$(CC) $(CFLAGS) $(INCLUDES) $(SOURCES) -lm -o $@
 test: test_vehicle_motion.exe

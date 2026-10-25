@@ -21,10 +21,16 @@
 #include "board_config.h"
 #include "dji_motor.h"
 #include "chassis_power.h"
+#include "chassis_control_config.h"
 #include "usb_telemetry.h"
 
 osThreadId insTaskHandle;
 osThreadId robotTaskHandle;
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
+/* Actual execution time is separate from the controller's adjacent-cycle dt. */
+volatile uint32_t chassis_force_motor_max_execution_us;
+volatile UBaseType_t chassis_force_motor_stack_free_words;
+#endif
 osThreadId motorTaskHandle;
 osThreadId daemonTaskHandle;
 osThreadId uiTaskHandle;
@@ -36,6 +42,13 @@ void StartUSBTelemetryTask(void const *argument)
     USBTelemetryInit();
     TickType_t previous_wake = xTaskGetTickCount();
     for (;;) {
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
+        static uint32_t force_stack_sample_tick;
+        if((uint32_t)(HAL_GetTick()-force_stack_sample_tick)>=200) {
+            force_stack_sample_tick=HAL_GetTick();
+            chassis_force_motor_stack_free_words=uxTaskGetStackHighWaterMark(motorTaskHandle);
+        }
+#endif
         USBTelemetryTask();
         vTaskDelayUntil(&previous_wake, pdMS_TO_TICKS(USB_TELEMETRY_PERIOD_MS));
     }
@@ -78,7 +91,12 @@ void OSTaskInit()
     // // 后续修改为读取传感器数据准备好的中断处理,
 
     /* Diagnostic frame exceeds 1 KiB before nested algorithm/CSV calls. */
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
+    /* Bounded allocator call chain exceeds 2 KiB; retain >=128 words headroom. */
+    osThreadDef(motortask, StartMOTORTASK, osPriorityNormal, 0, 1024);
+#else
     osThreadDef(motortask, StartMOTORTASK, osPriorityNormal, 0, 512);
+#endif
     motorTaskHandle = osThreadCreate(osThread(motortask), NULL);
 
     /* Offline callbacks need stack for log formatting and interrupt context. */
@@ -136,6 +154,10 @@ __attribute__((noreturn)) void StartMOTORTASK(void const *argument)
         motor_start = DWT_GetTimeline_ms();
         MotorControlTask();
         motor_dt = DWT_GetTimeline_ms() - motor_start;
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
+        const uint32_t execution_us=(uint32_t)(motor_dt*1000);
+        if(execution_us>chassis_force_motor_max_execution_us) chassis_force_motor_max_execution_us=execution_us;
+#endif
 #if CHASSIS_POWER_CAPTURE_ENABLE && BOARD_LOG_UART_ENABLED
         if (motor_dt > chassis_power_motor_max_dt_ms) chassis_power_motor_max_dt_ms = motor_dt;
 #endif

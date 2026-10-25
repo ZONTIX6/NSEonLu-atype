@@ -78,6 +78,30 @@ static int stopped(void) { return loader->stop_flag==MOTOR_STOP ||
     (loader->motor_settings.outer_loop_type==SPEED_LOOP && loader->motor_controller.pid_ref==0); }
 int main(int argc,char **argv) {
     assert(argc==2); RobotCMDInit(); GimbalInit(); ShootInit(); FreshMotors();
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
+    if(!strcmp(argv[1],"force")) {
+        Subscriber_t *sub=SubRegister("chassis_force_cmd",sizeof(ChassisForceIntentMessage_s));
+        remote_input=(RemoteControlSnapshot_s){.online=1,.has_sample=1,.last_rx_tick_ms=now};
+        remote_input.control.rc.switch_left=RC_SW_DOWN;remote_input.control.rc.switch_right=RC_SW_UP;
+        GimbalTask();RobotCMDTask();
+        ChassisForceIntentMessage_s message;
+        assert(SubGetMessage(sub,&message));assert(message.published_ms==now);
+        remote_input.control.rc.rocker_r1=-660;
+        RobotCMDTask();assert(SubGetMessage(sub,&message));
+        assert(message.intent.input_x==1 && message.intent.input_y==0);
+        assert(message.intent.source_id==CHASSIS_FORCE_SOURCE_REMOTE && message.intent.force_scale==1);
+        rc_snapshot[0].key[0].w=1;rc_snapshot[0].key[0].a=1;rc_snapshot[0].key_count[0][Key_C]=0;
+        MouseKeySet();assert(force_intent.input_x>0 && force_intent.input_y>0);
+        assert(fabsf(force_intent.force_scale-.4f)<.0001f);
+        vt_snapshot.key[0]=rc_snapshot[0].key[0];VideoTransmissionControlSet();
+        assert(force_intent.source_id==CHASSIS_FORCE_SOURCE_VTX);
+        assert(fabsf(force_intent.input_x-.70710678f)<.00001f && fabsf(force_intent.input_y-.70710678f)<.00001f);
+        ChassisForceIntentReceiver_s receiver={0};
+        assert(ChassisForceIntentAccept(&receiver,&message.intent,message.published_ms));
+        now+=11;assert(!ChassisForceIntentFresh(&receiver,now,0));
+        puts("PASS: single-board force input directions/scales and publication age");return 0;
+    }
+#endif
     if(!strcmp(argv[1],"speed")) {
         vt_snapshot.key[0].w=1;
         for(unsigned i=0;i<4;i++) { vt_snapshot.key_count[0][Key_C]=i; VideoTransmissionControlSet();

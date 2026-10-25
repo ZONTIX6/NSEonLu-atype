@@ -16,4 +16,5 @@ bool VehicleSafetyAllowsDrive(uint32_t now_ms);
 bool VehicleSafetyAllowsAutotune(uint32_t now_ms);
 bool VehicleSafetyIsStopped(uint32_t now_ms);
 bool VehicleSafetyAuxStopped(uint32_t now_ms);
+uint32_t VehicleSafetyEpoch(void);
 #endif

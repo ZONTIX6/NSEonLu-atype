@@ -19,6 +19,7 @@ typedef struct
     ChassisPowerTransientConfig_s transient;
     uint8_t stage;
     bool use_supercap, meter_enabled, buffer_enabled;
+    bool force_control;
 } ChassisPower_Init_Config_s;
 
 typedef struct
@@ -38,6 +39,9 @@ typedef struct
     ChassisPowerControlSnapshot_s control;
     SuperCapCommand_s cap_command;
     bool cap_command_valid, valid, buffer_estimate_valid;
+    float physical_load_target_w, confirmed_input_target_w;
+    bool force_growth_allowed, input_confirmed;
+    uint32_t confirmed_age_ms, cap_send_failures, cap_confirmation_timeouts;
 } ChassisPowerPolicyOutput_s;
 
 typedef struct
@@ -72,6 +76,8 @@ typedef struct
     bool previous_valid, zero_force, bench_enabled, hold_positive_learning;
     bool adaptive_spin, spin_capability_limited, spin_hard_margin;
     float bench_limit_w;
+    bool force_backend, force_operating_valid, force_offer_valid;
+    float force_operating_demand_w, force_offered_demand_w;
 } ChassisPowerPolicyInput_s;
 
 typedef struct

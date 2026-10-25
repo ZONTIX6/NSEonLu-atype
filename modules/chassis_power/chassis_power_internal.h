@@ -28,6 +28,10 @@ typedef struct
     ChassisPowerPolicyOutput_s policy;
     uint32_t policy_tick_ms, policy_version;
     uint8_t telemetry_count;
+    SuperCapCommand_s cap_sent_command;
+    uint32_t cap_sent_ms, cap_anchor_frames, cap_confirmed_tick_ms;
+    uint32_t cap_send_failures, cap_confirmation_timeouts;
+    bool cap_command_ok, cap_confirmed, cap_timeout_reported;
 } ChassisPowerInstance_s;
 
 ChassisPowerInstance_s *ChassisPowerPrivate(void);

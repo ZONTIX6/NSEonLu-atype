@@ -117,6 +117,10 @@ CANInstance *CANRegister(CAN_Init_Config_s *config)
 /* 如果让CANinstance保存txbuff,会增加一次复制的开销 */
 uint8_t CANTransmit(CANInstance *_instance, float timeout)
 {
+    return CANTransmitGuarded(_instance,timeout,NULL,NULL);
+}
+uint8_t CANTransmitGuarded(CANInstance *_instance,float timeout,void (*guard)(void *),void *context)
+{
     static uint32_t busy_count;
     static volatile float wait_time __attribute__((unused)); // for cancel warning
     float dwt_start = DWT_GetTimeline_ms();
@@ -131,7 +135,11 @@ uint8_t CANTransmit(CANInstance *_instance, float timeout)
     }
     wait_time = DWT_GetTimeline_ms() - dwt_start;
     // tx_mailbox会保存实际填入了这一帧消息的邮箱,但是知道是哪个邮箱发的似乎也没啥用
-    if (HAL_CAN_AddTxMessage(_instance->can_handle, &_instance->txconf, _instance->tx_buff, &_instance->tx_mailbox))
+    const uint32_t primask=__get_PRIMASK();
+    if(guard) {__disable_irq();guard(context);}
+    const HAL_StatusTypeDef result=HAL_CAN_AddTxMessage(_instance->can_handle, &_instance->txconf, _instance->tx_buff, &_instance->tx_mailbox);
+    if(guard) __set_PRIMASK(primask);
+    if (result)
     {
         LOGWARNING("[bsp_can] CAN bus BUS! cnt:%d", busy_count);
         busy_count++;

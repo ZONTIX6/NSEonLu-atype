@@ -47,6 +47,7 @@ typedef struct
 CANInstance *CANRegister(CAN_Init_Config_s *config);
 int CANBusIndex(const CAN_HandleTypeDef *handle);
 uint8_t CANTransmit(CANInstance *instance, float timeout);
+uint8_t CANTransmitGuarded(CANInstance *instance,float timeout,void (*guard)(void *),void *context);
 uint32_t HAL_GetTick(void);
 
 #endif

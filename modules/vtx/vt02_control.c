@@ -204,6 +204,7 @@ static uint16_t Vt02ReadData(uint8_t *buff, uint16_t remaining)
             memcpy(&raw, buff + VT02_DATA_OFFSET, sizeof(raw));
             Vt02DataDecode(&raw);
             vt02_last_rx_tick=HAL_GetTick();
+            vt02_ctrl.last_rx_tick_ms=vt02_last_rx_tick;
             vt02_has_sample=1;
             vt02_ctrl.online=1;
             DaemonReload(vt02_daemon);

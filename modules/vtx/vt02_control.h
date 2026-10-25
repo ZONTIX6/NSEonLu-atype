@@ -44,6 +44,7 @@ typedef struct
     Key_t key[3];
     uint8_t key_count[3][16];
     uint8_t online;
+    uint32_t last_rx_tick_ms;
 } Vt02_Ctrl_t;
 
 /**

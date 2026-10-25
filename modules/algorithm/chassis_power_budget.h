@@ -72,6 +72,7 @@ typedef struct
     bool cap_input_control_ready;
     bool load_power_valid;
     bool demand_valid;
+    bool constrain_cap_to_demand; /* Force backend: bounded operating/offered physical watts. */
     float requested_load_power_w; /* Physical load power before current limiting. */
     float confirmed_input_target_w; /* Fresh 0x052 target, physical watts. */
     /* Legacy name: selects direct-spin diagnostics, not a separate budget policy.

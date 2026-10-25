@@ -1,5 +1,11 @@
 // app
 #include "robot_def.h"
+#include "board_chassis_force.h"
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
+#include "chassis_force_intent.h"
+static ChassisForceIntent_s force_intent;
+static uint32_t force_command_sequence;
+#endif
 #include "board_config.h"
 #include "vehicle_safety.h"
 #include "runtime_tuning.h"
@@ -76,7 +82,11 @@ void RobotCMDInit()
     HeatControlInit(&heat_control, &heat_config);
 
 #ifdef ONE_BOARD // 双板兼容
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
+    chassis_cmd_pub = PubRegister("chassis_force_cmd", sizeof(ChassisForceIntentMessage_s));
+#else
     chassis_cmd_pub = PubRegister("chassis_cmd", sizeof(Chassis_Ctrl_Cmd_s));
+#endif
     chassis_feed_sub = SubRegister("chassis_feed", sizeof(Chassis_Upload_Data_s));
 #endif // ONE_BOARD
 #ifdef GIMBAL_BOARD
@@ -87,7 +97,11 @@ void RobotCMDInit()
             .rx_id = 0x311,
         },
         .recv_data_len = sizeof(Chassis_Upload_Data_s),
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
+        .send_data_len = CHASSIS_FORCE_WIRE_SIZE,
+#else
         .send_data_len = sizeof(Chassis_Ctrl_Cmd_s),
+#endif
     };
     comm_conf.daemon_count=10;
     cmd_can_comm = CANCommInit(&comm_conf);
@@ -153,8 +167,13 @@ static void RemoteControlSet()
     // 云台软件限位
 
     // 底盘参数,目前没有加入小陀螺(调试似乎暂时没有必要),系数需要调整
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
+    ChassisForceIntentStick(-(float)rc_data[TEMP].rc.rocker_r1,(float)rc_data[TEMP].rc.rocker_r_,660,&force_intent);
+    force_intent.source_id=CHASSIS_FORCE_SOURCE_REMOTE;force_intent.force_scale=1;
+#else
     chassis_cmd_send.vx = -40.0f * (float)rc_data[TEMP].rc.rocker_r1; // 右摇杆竖直方向：前进/后退
     chassis_cmd_send.vy = 40.0f * (float)rc_data[TEMP].rc.rocker_r_; // 右摇杆水平方向：左/右横移
+#endif
 
     // 发射参数
     // if (switch_is_up(rc_data[TEMP].rc.switch_right)) // 右侧开关状态[上],弹舱打开
@@ -180,8 +199,14 @@ static void RemoteControlSet()
  */
 static __attribute__((unused)) void MouseKeySet()
 {
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
+    const Key_t *keys=&rc_data[TEMP].key[KEY_PRESS];
+    ChassisForceIntentKeys(keys->w,keys->s,keys->a,keys->d,&force_intent);
+    force_intent.source_id=CHASSIS_FORCE_SOURCE_DBUS_KEYS;
+#else
     chassis_cmd_send.vx = rc_data[TEMP].key[KEY_PRESS].w * 300 - rc_data[TEMP].key[KEY_PRESS].s * 300; // 系数待测
     chassis_cmd_send.vy = rc_data[TEMP].key[KEY_PRESS].d * 300 - rc_data[TEMP].key[KEY_PRESS].a * 300;
+#endif
 
     gimbal_cmd_send.yaw += (float)rc_data[TEMP].mouse.x / 660 * 10; // 系数待测
     gimbal_cmd_send.pitch += (float)rc_data[TEMP].mouse.y / 660 * 10;
@@ -246,6 +271,9 @@ static __attribute__((unused)) void MouseKeySet()
         chassis_cmd_send.chassis_speed_buff = 100;
         break;
     }
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
+    force_intent.force_scale=chassis_cmd_send.chassis_speed_buff/100.0f;
+#endif
     switch (rc_data[TEMP].key[KEY_PRESS].shift) // 待添加 按shift允许超功率 消耗缓冲能量
     {
     case 1:
@@ -267,8 +295,14 @@ static void VideoTransmissionControlSet()
     chassis_cmd_send.chassis_mode = CHASSIS_NO_FOLLOW;
     gimbal_cmd_send.gimbal_mode = GIMBAL_GYRO_MODE;
 
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
+    const Key_t *keys=&vt02_data->key[KEY_PRESS];
+    ChassisForceIntentKeys(keys->w,keys->s,keys->a,keys->d,&force_intent);
+    force_intent.source_id=CHASSIS_FORCE_SOURCE_VTX;
+#else
     chassis_cmd_send.vx = -vt02_data->key[KEY_PRESS].w * 3000 + vt02_data->key[KEY_PRESS].s * 3000;
     chassis_cmd_send.vy = -vt02_data->key[KEY_PRESS].d * 3000 + vt02_data->key[KEY_PRESS].a * 3000;
+#endif
 
     gimbal_cmd_send.yaw -= (float)vt02_data->mouse.x / 660 * 10;
     gimbal_cmd_send.pitch += (float)vt02_data->mouse.y / 660 * 10;
@@ -336,9 +370,13 @@ static void VideoTransmissionControlSet()
         chassis_cmd_send.chassis_speed_buff = 100;
         break;
     }
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
+    force_intent.force_scale=chassis_cmd_send.chassis_speed_buff/100.0f;
+#else
     const float speed_scale = chassis_cmd_send.chassis_speed_buff / 100.0f;
     chassis_cmd_send.vx *= speed_scale;
     chassis_cmd_send.vy *= speed_scale;
+#endif
     switch (vt02_data->key_count[KEY_PRESS][Key_X] % 4)
     {
     case 0:
@@ -485,15 +523,39 @@ void RobotCMDTask()
     // VisionSetFlag(chassis_fetch_data.enemy_color,,chassis_fetch_data.bullet_speed)
 
     // 推送消息,双板通信,视觉通信等
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
+    const uint32_t force_published_ms=HAL_GetTick();
+    force_intent.command_seq=++force_command_sequence;
+    force_intent.motion_mode=chassis_cmd_send.chassis_mode==CHASSIS_ZERO_FORCE ? CHASSIS_FORCE_ZERO :
+        (chassis_cmd_send.chassis_mode==CHASSIS_ROTATE ? CHASSIS_FORCE_SPIN : CHASSIS_FORCE_TRANSLATE);
+    force_intent.relative_yaw_rad=chassis_cmd_send.offset_angle*.017453292519943295f;
+    force_intent.yaw_age_ms=force_published_ms-gimbal_fetch_data.yaw_feedback_tick_ms;
+    force_intent.source_age_ms=force_published_ms-(force_intent.source_id==CHASSIS_FORCE_SOURCE_VTX ?
+        vt_snapshot.last_rx_tick_ms : remote.last_rx_tick_ms);
+    force_intent.input_permitted=chassis_cmd_send.input_permitted;
+    force_intent.safety_reset=chassis_cmd_send.safety_reset;force_intent.bench_permitted=chassis_cmd_send.bench_permitted;
+    force_intent.spin_direction=1;
+#endif
     // 其他应用所需的控制数据在remotecontrolsetmode和mousekeysetmode中完成设置
 #ifdef ONE_BOARD
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
+    ChassisForceIntentMessage_s force_message={.intent=force_intent,.published_ms=force_published_ms};
+    PubPushMessage(chassis_cmd_pub,&force_message);
+#else
     PubPushMessage(chassis_cmd_pub, (void *)&chassis_cmd_send);
+#endif
 #endif // ONE_BOARD
 #ifdef GIMBAL_BOARD
     uint32_t aux_age=0;
     chassis_cmd_send.aux_stopped=DJIMotorGetStopProof(HAL_GetTick(),&aux_age);
     chassis_cmd_send.aux_feedback_age_ms=aux_age;
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
+    force_intent.aux_stopped=chassis_cmd_send.aux_stopped;force_intent.aux_age_ms=aux_age;
+    uint8_t wire[44]={0};(void)ChassisForceIntentEncode(&force_intent,wire);
+    CANCommSend(cmd_can_comm,wire);
+#else
     CANCommSend(cmd_can_comm, (void *)&chassis_cmd_send);
+#endif
 #endif // GIMBAL_BOARD
     PubPushMessage(shoot_cmd_pub, (void *)&shoot_cmd_send);
     PubPushMessage(gimbal_cmd_pub, (void *)&gimbal_cmd_send);

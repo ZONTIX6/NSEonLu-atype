@@ -82,6 +82,7 @@ typedef struct
     uint8_t motor_indices[4];
     float max_current_command;
     bool registered;
+    bool owns_raw_current; /* Only this registered group bypasses all generic PID/sign paths. */
     DJIMotorGroupControl_s control;
 } DJIMotorOutputGroup_s;
 
@@ -98,7 +99,10 @@ typedef struct
 typedef struct
 {
     void (*read_control)(void *context); /* Called inside the motor snapshot lock. */
+    void (*prepare_current)(void *context, const DJIMotorCycle_s *cycle);
     void (*limit)(void *context, const DJIMotorCycle_s *cycle);
+    bool (*validate_current)(void *context,const DJIMotorCycle_s *cycle,
+                             const int16_t commands[DJI_MOTOR_CNT],const bool enabled[DJI_MOTOR_CNT],uint32_t now_ms);
     void (*record_final)(void *context, const DJIMotorCycle_s *cycle,
                          const int16_t commands[DJI_MOTOR_CNT], const bool enabled[DJI_MOTOR_CNT],
                          uint8_t submitted_groups, uint8_t successful_groups);

@@ -311,6 +311,9 @@ static bool UpdateBufferBudget(const ChassisPowerBudgetConfig_s *config,
         const float headroom = fmaxf(0, board_budget - target_load_budget);
         target_load_budget = fminf(board_budget, target_load_budget +
             factor * fminf(config->max_boost_w, headroom));
+        if(input->constrain_cap_to_demand)
+            target_load_budget=fminf(target_load_budget,fmaxf(state->input_budget_w,
+                (input->requested_load_power_w+config->demand_margin_w)/buffer->safety_factor));
     }
     if (input->use_supercap && cap_healthy)
         target_load_budget = fminf(target_load_budget,
