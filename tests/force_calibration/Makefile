@@ -8,3 +8,8 @@ test_engine.exe: test_engine.c test_support.h $(CORE)
 test_engine: test_engine.exe
 	./test_engine.exe
 test: test_engine
+test_capture.exe: test_capture.c ../../modules/chassis_force_calibration/force_calibration_capture.c
+	$(CC) $(CFLAGS) $(INCLUDES) $^ -lm -o $@
+test_capture: test_capture.exe
+	./test_capture.exe
+test: test_capture
