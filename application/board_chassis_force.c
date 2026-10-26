@@ -1,5 +1,9 @@
 #include "board_chassis_force.h"
 
+/* [沿用] application/chassis/chassis.c 的 speed_PID.MaxOut 和原功率模块上限均为 15000。
+ * 这是已用的 CAN 命令幅值上限，不等于新完成的持续电流/温升标定；不据此放宽其他保护。 */
+#define BOARD_CHASSIS_LEGACY_CURRENT_LIMIT 15000.0f
+
 /*
  * 车辆力控参数填写入口：只在本函数填写车辆参数，不修改 modules/chassis_force 内部算法。
  *
@@ -29,7 +33,8 @@ ChassisForceConfig_s BoardChassisForceConfig(void)
          * k_out_nm_a：输出轴接已知力臂 L(m)，测力 F(N)，tau=F*L；多个低电流正/反向
          *             点拟合 tau-I 的斜率，单位 N*m/A。它是减速器输出端常数，不再乘减速比。
          *             电源输入电流不能代替电机转矩电流；检查摩擦、偏置及正反向拟合误差。
-         * current_limit：根据电机、电调、线束能力及短时电流/温升记录确定；不得超过 16384。
+         * current_limit：沿用原速控/功率配置的 15000；更换硬件或调整持续负载时复核电流/温升，
+         *                不得超过 16384；起步、堵转和温度保护仍需单独填写。
          * force_limit_n：用测力装置和低力加载验证可重复传递的轮缘力，考虑接地滑移后留裕量；
          *                架空轮速或输出轴转矩不能证明真实接地力。
          * current_slew：低电流阶跃/斜坡，记录电流、负载功率和冲击，逐步确定允许变化率。
@@ -37,25 +42,25 @@ ChassisForceConfig_s BoardChassisForceConfig(void)
         .wheel={
             [0]={ /* LF 左前，CAN1 ID 1。几何在下方从原车配置装配。 */
                 .k_out_nm_a=0.0f,   /* [待测] N*m/A，输出轴转矩常数，按上述力臂法拟合。 */
-                .current_limit=0.0f, /* [待测] CAN 命令幅值，逐轮电流/温升验证。 */
+                .current_limit=BOARD_CHASSIS_LEGACY_CURRENT_LIMIT, /* [沿用] CAN 命令幅值，原速控/功率上限。 */
                 .force_limit_n=0.0f, /* [待测] N，保守可传递轮缘力，低力加载验证。 */
                 .current_slew=0.0f,  /* [待测] CAN 命令/s，低电流斜坡验证。 */
             },
             [1]={ /* RF 右前，CAN1 ID 4。 */
                 .k_out_nm_a=0.0f,    /* [待测] N*m/A，单独测量右前轮组。 */
-                .current_limit=0.0f, /* [待测] CAN 命令幅值。 */
+                .current_limit=BOARD_CHASSIS_LEGACY_CURRENT_LIMIT, /* [沿用] CAN 命令幅值，原速控/功率上限。 */
                 .force_limit_n=0.0f, /* [待测] N。 */
                 .current_slew=0.0f,  /* [待测] CAN 命令/s。 */
             },
             [2]={ /* LB 左后，CAN1 ID 2。 */
                 .k_out_nm_a=0.0f,    /* [待测] N*m/A，单独测量左后轮组。 */
-                .current_limit=0.0f, /* [待测] CAN 命令幅值。 */
+                .current_limit=BOARD_CHASSIS_LEGACY_CURRENT_LIMIT, /* [沿用] CAN 命令幅值，原速控/功率上限。 */
                 .force_limit_n=0.0f, /* [待测] N。 */
                 .current_slew=0.0f,  /* [待测] CAN 命令/s。 */
             },
             [3]={ /* RB 右后，CAN1 ID 3。 */
                 .k_out_nm_a=0.0f,    /* [待测] N*m/A，单独测量右后轮组。 */
-                .current_limit=0.0f, /* [待测] CAN 命令幅值。 */
+                .current_limit=BOARD_CHASSIS_LEGACY_CURRENT_LIMIT, /* [沿用] CAN 命令幅值，原速控/功率上限。 */
                 .force_limit_n=0.0f, /* [待测] N。 */
                 .current_slew=0.0f,  /* [待测] CAN 命令/s。 */
             },
@@ -142,7 +147,7 @@ ChassisPower_Init_Config_s BoardChassisForcePowerConfig(void)
             .small_error_threshold_rpm=500,      /* [沿用] rpm，旧速控接口参数，力控不以它生成速度误差。 */
             .reserved_power_threshold_w=54,      /* [沿用] W，旧分配器参数，力控不走旧轮速分配路径。 */
             .per_motor_reserved_power_w=8,       /* [沿用] W，同上，保留共用配置结构兼容性。 */
-            .max_current_command=15000,          /* [沿用] CAN 命令幅值，共用功率配置上限；不能代替上方每轮待测限流。 */
+            .max_current_command=BOARD_CHASSIS_LEGACY_CURRENT_LIMIT, /* [沿用] CAN 命令幅值，与四轮原限流保持一致。 */
         },
         .transient={
             /* [沿用] 与 ChassisPowerTransientDefaultConfig 相同；力控快路径实际读取以下四项。
@@ -158,7 +163,7 @@ ChassisPower_Init_Config_s BoardChassisForcePowerConfig(void)
             .stale_release_w_per_s=20,           /* W/s，旧失联恢复速度；力控失联时不释放负向快修正。 */
             .meter_fresh_ms=20U,                 /* ms，旧功率计新鲜门槛；力控快路径固定检查 <=20 ms。 */
             .feedback_fresh_ms=5U,               /* ms，旧轮反馈门槛；力控快路径固定检查 <=5 ms。 */
-            .max_current_command=15000,          /* CAN 命令幅值，旧限流；校验时使用 algorithm.max_current_command。 */
+            .max_current_command=BOARD_CHASSIS_LEGACY_CURRENT_LIMIT, /* CAN 命令幅值，旧限流；校验时使用 algorithm 值。 */
             .acceleration_tau_s=.010f,           /* s，旧转速增长滤波常数，力控使用实测 speed_prediction_rpm。 */
             .prediction_s=.008f,                 /* s，旧转速预测窗口，复核增长裕量时可参考其时长。 */
             .growth_time_s=.005f,                /* s，旧增长兜底时间，力控不使用。 */

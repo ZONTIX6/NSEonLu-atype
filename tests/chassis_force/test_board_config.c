@@ -10,7 +10,8 @@ int main(void)
     assert(!ChassisForceConfigValid(&c)); /* Unmeasured values still prevent actuation. */
     for(unsigned w=0;w<4;++w) {
         assert(c.wheel[w].radius_m==RADIUS_WHEEL*.001f); /* Reuse existing vehicle geometry. */
-        assert(c.wheel[w].k_out_nm_a==0 && c.wheel[w].current_limit==0);
+        assert(c.wheel[w].k_out_nm_a==0);
+        assert(c.wheel[w].current_limit==15000.0f); /* Reuse the original speed/PID command cap. */
     }
     puts("PASS: unmeasured board calibration stays explicit and locked even with VALID=1");
     return 0;
