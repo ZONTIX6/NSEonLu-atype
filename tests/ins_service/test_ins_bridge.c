@@ -1,5 +1,5 @@
 #include "ins_task.h"
-#include "ins_bridge.h"
+#include "runtime/ins_bridge.h"
 #include <assert.h>
 #include <stdio.h>
 static unsigned ticks,updates,sends;

@@ -1,11 +1,11 @@
 #include "bsp_init.h"
 #include "robot.h"
 #include "robot_def.h"
-#include "robot_task.h"
+#include "runtime/robot_task.h"
 #include "tuning_flash.h"
-#include "tuning_policy.h"
+#include "runtime/tuning_policy.h"
 #include "jscope.h"
-#include "board_devices.h"
+#include "board/board_devices.h"
 
 // 编译warning,提醒开发者修改机器人参数
 #ifndef ROBOT_DEF_PARAM_WARNING

@@ -149,7 +149,7 @@ modules/telemetry/autotune_protocol.c \
 modules/telemetry/tuning_storage.c \
 modules/telemetry/tuning_flash.c \
 bsp/flash/bsp_tuning_flash.c \
-application/tuning_policy.c \
+application/runtime/tuning_policy.c \
 modules/telemetry/chassis_power_capture.c \
 modules/algorithm/power_model.c \
 modules/algorithm/chassis_kinematics.c \
@@ -179,13 +179,14 @@ application/gimbal/gimbal.c \
 application/chassis/chassis.c \
 application/shoot/shoot.c \
 application/cmd/robot_cmd.c \
-application/robot.c
+application/robot.c \
+application/runtime/robot_task.c
 
 C_SOURCES += $(wildcard modules/chassis_power/*.c) modules/motor/DJImotor/dji_power_adapter.c
-C_SOURCES += modules/imu/ins_math.c modules/vehicle_safety/vehicle_safety.c application/board_optional.c application/board_devices.c application/board_analog_key.c Src/syscalls.c Src/sysmem.c modules/oled/oled_spi.c
+C_SOURCES += modules/imu/ins_math.c modules/vehicle_safety/vehicle_safety.c application/board/board_optional.c application/board/board_devices.c application/board/board_analog_key.c Src/syscalls.c Src/sysmem.c modules/oled/oled_spi.c
 C_SOURCES += $(wildcard modules/TFminiPlus/*.c modules/key/*.c modules/jam_detector/*.c)
 
-C_SOURCES += modules/mpu6500/mpu6500_math.c modules/mpu6500/imu_temperature.c modules/imu/ins_service.c application/ins_bridge.c modules/mpu6500/mpu6500driver.c modules/heat_control/heat_control.c modules/vtx/vt02_control.c modules/jscope/jscope.c
+C_SOURCES += modules/mpu6500/mpu6500_math.c modules/mpu6500/imu_temperature.c modules/imu/ins_service.c application/runtime/ins_bridge.c modules/mpu6500/mpu6500driver.c modules/heat_control/heat_control.c modules/vtx/vt02_control.c modules/jscope/jscope.c
 
 # ASM sources
 ASM_SOURCES =  \
@@ -246,7 +247,7 @@ endif
 include config/atype.mk
 ifeq ($(CHASSIS_CONTROL_MODE),1)
 C_SOURCES := $(filter-out application/chassis/chassis.c modules/algorithm/chassis_spin.c modules/motor/DJImotor/dji_power_adapter.c,$(C_SOURCES))
-C_SOURCES += $(wildcard modules/chassis_force/*.c) application/chassis/chassis_force_app.c application/board_chassis_force.c modules/motor/DJImotor/dji_force_adapter.c modules/telemetry/chassis_force_telemetry.c
+C_SOURCES += $(wildcard modules/chassis_force/*.c) application/chassis/chassis_force_app.c application/board/board_chassis_force.c modules/motor/DJImotor/dji_force_adapter.c modules/telemetry/chassis_force_telemetry.c
 else
 C_SOURCES := $(filter-out modules/chassis_power/chassis_power_force.c,$(C_SOURCES))
 endif
@@ -362,7 +363,7 @@ LDFLAGS += $(ATYPE_MODULE_LDFLAGS)
 #######################################
 # list of objects
 OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
-NUMERIC_SOURCES := $(filter modules/chassis_force/% modules/chassis_power/% modules/algorithm/power_model.c modules/algorithm/chassis_power_% modules/algorithm/chassis_spin.c modules/motor/DJImotor/% modules/telemetry/chassis_force_telemetry.c application/chassis/% application/board_chassis_force.c application/cmd/robot_cmd.c,$(C_SOURCES))
+NUMERIC_SOURCES := $(filter modules/chassis_force/% modules/chassis_power/% modules/algorithm/power_model.c modules/algorithm/chassis_power_% modules/algorithm/chassis_spin.c modules/motor/DJImotor/% modules/telemetry/chassis_force_telemetry.c application/chassis/% application/board/board_chassis_force.c application/cmd/robot_cmd.c,$(C_SOURCES))
 $(addprefix $(BUILD_DIR)/,$(notdir $(NUMERIC_SOURCES:.c=.o))): CFLAGS += -fno-fast-math
 vpath %.c $(sort $(dir $(C_SOURCES)))
 # list of ASM program objects

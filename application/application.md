@@ -4,11 +4,9 @@
 
 这是application层的说明。
 
-> todo: 是否有必要将所有电机等模块的初始化参数放到一个头文件？
-
 ## 使用说明
 
-在main函数中包含`robot.h`头文件，这是对整车的抽象。将`INStask`，`motortask`，`ledtask`，`monitortask`这四个task加入`freertos.c`中，创建对应的任务，设置合适的任务运行间隔；然后将`robottask`放入freertos.c中，同样以一定的频率运行。 在初始化实时系统之前，在`main()`中调用`RobotInit()`进行整车的初始化。
+在 `main` 中包含 `robot.h`，并在启动实时系统之前调用 `RobotInit()`。它会完成 BSP、板级设备、调参策略、各应用和基础任务的初始化；业务代码不需要逐个创建 APP 任务。
 
 **关于运行的任务**，INStask的运行频率必须为1kHz，motortask推荐的运行频率为200Hz\~1000Hz（详情见module/motor/motor_task.c），在MotorTask内部，对于高实时性要求的电机可以提升到1kHz，不过要注意CAN总线的负载。monitortask的运行频率为100Hz；robottask的运行频率推荐为150Hz以上，应当高于视觉发送的频率，若后续使用插帧，同样应该保证不低过motortask太多。
 
@@ -19,6 +17,13 @@
 
 
 ## 封装总览
+
+目录按职责划分：
+
+- `cmd/`、`gimbal/`、`chassis/`、`shoot/`：并列的业务应用，通过 `message_center` 交换消息。
+- `board/`：本车硬件、可选外设和车辆标定的装配入口。硬件句柄和模块实例不通过公共头文件暴露。
+- `runtime/`：RTOS 任务、INS/视觉组合调用和整车调参保存策略。任务函数及句柄只在 `robot_task.c` 内可见。
+- `robot.[ch]`：整车唯一入口；`robot_def.h`：跨应用协议和车型参数。
 
 Robot.c是整个机器人的抽象，其下有4个应用：robot_cmd，gimbal，chassis，shoot。此框架当前是针对步兵/英雄/哨兵设计的，其他机器人只需要根据各自的特殊机构进行修改即可。robot_cmd是整个机器人的核心应用，其负责接受遥控器/上位机发来的指令，并将指令转化为实际的运动控制目标，发送给其他三个应用。后者会根据robot_cmd发来的命令，设定电机和其他执行单元的参考值等。
 

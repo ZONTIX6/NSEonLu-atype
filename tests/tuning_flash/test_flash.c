@@ -2,7 +2,7 @@
 #include "chassis.h"
 #include "runtime_tuning.h"
 #include "tuning_flash.h"
-#include "tuning_policy.h"
+#include "runtime/tuning_policy.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -72,7 +72,6 @@ int main(void)
 #ifdef CHASSIS_BOARD
     aux_stopped=false;TuningFlashPoll();assert(!writes);aux_stopped=true;
 #endif
-    assert(TuningPolicyCanSave(NULL,tick));
     invalidate_on_suspend=true;TuningFlashPoll();assert(!writes && !suspended);
     stopped=true;TuningFlashPoll();assert(writes && !suspended);
     TuningStoredImage pending;

@@ -10,7 +10,7 @@ application configuration or dynamic allocation dependency.
 
 Application boundaries:
 
-- `application/board_chassis_force.[ch]` owns vehicle calibration, energy parameters and legal firmware combinations.
+- `application/board/board_chassis_force.[ch]` owns vehicle calibration, energy parameters and legal firmware combinations.
 - `application/chassis/chassis_force_app.c` wires messages, safety, policy and feedback into the existing robot task.
 - `modules/chassis_power/chassis_power_force.[ch]` freezes the shared power budget once per motor cycle and records complete force results.
 - `modules/motor/DJImotor/dji_force_adapter.[ch]` owns the four registered wheels, injects clocks/feedback, bypasses their software PID and gates the shared CAN enqueue.

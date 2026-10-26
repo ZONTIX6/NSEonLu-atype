@@ -1,4 +1,4 @@
-#include "board_analog_key.h"
+#include "board/board_analog_key.h"
 #include "adc.h"
 #include <assert.h>
 #include <stddef.h>

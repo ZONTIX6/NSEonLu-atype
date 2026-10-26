@@ -1,5 +1,4 @@
-/* 注意该文件应只用于任务初始化,只能被robot.c包含*/
-#pragma once
+#include "robot_task.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -7,6 +6,7 @@
 #include "cmsis_os.h"
 
 #include "robot.h"
+#include "robot_def.h"
 #include "ins_task.h"
 #include "ins_bridge.h"
 #include "motor_task.h"
@@ -18,25 +18,28 @@
 #include "key.h"
 
 #include "bsp_log.h"
+#include "bsp_dwt.h"
 #include "board_config.h"
 #include "dji_motor.h"
 #include "chassis_power.h"
 #include "chassis_control_config.h"
 #include "usb_telemetry.h"
 
-osThreadId insTaskHandle;
-osThreadId robotTaskHandle;
+static osThreadId insTaskHandle;
+static osThreadId robotTaskHandle;
 #if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
 /* Actual execution time is separate from the controller's adjacent-cycle dt. */
 volatile uint32_t chassis_force_motor_max_execution_us;
 volatile UBaseType_t chassis_force_motor_stack_free_words;
 #endif
-osThreadId motorTaskHandle;
-osThreadId daemonTaskHandle;
-osThreadId uiTaskHandle;
+static osThreadId motorTaskHandle;
+static osThreadId daemonTaskHandle;
+#if REFEREE_ENABLE && (defined(ONE_BOARD) || defined(CHASSIS_BOARD))
+static osThreadId uiTaskHandle;
+#endif
 #if USB_TELEMETRY_ENABLE
-osThreadId usbTelemetryTaskHandle;
-void StartUSBTelemetryTask(void const *argument)
+static osThreadId usbTelemetryTaskHandle;
+static void StartUSBTelemetryTask(void const *argument)
 {
     (void)argument;
     USBTelemetryInit();
@@ -55,11 +58,11 @@ void StartUSBTelemetryTask(void const *argument)
 }
 #endif
 #if CHASSIS_POWER_CAPTURE_ENABLE && BOARD_LOG_UART_ENABLED
-osThreadId powerCaptureTaskHandle;
+static osThreadId powerCaptureTaskHandle;
 /* Debugger-readable on-board validation; stack values are FreeRTOS words. */
 volatile float chassis_power_motor_max_dt_ms;
 volatile UBaseType_t chassis_power_motor_stack_free_words;
-void StartPowerCaptureTask(void const *argument)
+static void StartPowerCaptureTask(void const *argument)
 {
     (void)argument;
     uint32_t stack_sample_tick = 0;
@@ -74,17 +77,19 @@ void StartPowerCaptureTask(void const *argument)
 }
 #endif
 
-void StartINSTASK(void const *argument);
-void StartMOTORTASK(void const *argument);
-void StartDAEMONTASK(void const *argument);
-void StartROBOTTASK(void const *argument);
-void StartUITASK(void const *argument);
+static void StartINSTASK(void const *argument);
+static void StartMOTORTASK(void const *argument);
+static void StartDAEMONTASK(void const *argument);
+static void StartROBOTTASK(void const *argument);
+#if REFEREE_ENABLE && (defined(ONE_BOARD) || defined(CHASSIS_BOARD))
+static void StartUITASK(void const *argument);
+#endif
 
 /**
  * @brief 初始化机器人任务,所有持续运行的任务都在这里初始化
  *
  */
-void OSTaskInit()
+void OSTaskInit(void)
 {
     osThreadDef(instask, StartINSTASK, osPriorityAboveNormal, 0, 1024);
     insTaskHandle = osThreadCreate(osThread(instask), NULL); // 由于是阻塞读取传感器,为姿态解算设置较高优先级,确保以1khz的频率执行
@@ -125,7 +130,7 @@ void OSTaskInit()
     HTMotorControlInit(); // 没有注册HT电机则不会执行
 }
 
-__attribute__((noreturn)) void StartINSTASK(void const *argument)
+static __attribute__((noreturn)) void StartINSTASK(void const *argument)
 {
     static float ins_start;
     static float ins_dt;
@@ -144,7 +149,7 @@ __attribute__((noreturn)) void StartINSTASK(void const *argument)
     }
 }
 
-__attribute__((noreturn)) void StartMOTORTASK(void const *argument)
+static __attribute__((noreturn)) void StartMOTORTASK(void const *argument)
 {
     static float motor_dt;
     static float motor_start;
@@ -167,7 +172,7 @@ __attribute__((noreturn)) void StartMOTORTASK(void const *argument)
     }
 }
 
-__attribute__((noreturn)) void StartDAEMONTASK(void const *argument)
+static __attribute__((noreturn)) void StartDAEMONTASK(void const *argument)
 {
     static float daemon_dt;
     static float daemon_start;
@@ -187,7 +192,7 @@ __attribute__((noreturn)) void StartDAEMONTASK(void const *argument)
     }
 }
 
-__attribute__((noreturn)) void StartROBOTTASK(void const *argument)
+static __attribute__((noreturn)) void StartROBOTTASK(void const *argument)
 {
     static float robot_dt;
     static float robot_start;
@@ -204,7 +209,8 @@ __attribute__((noreturn)) void StartROBOTTASK(void const *argument)
     }
 }
 
-__attribute__((noreturn)) void StartUITASK(void const *argument)
+#if REFEREE_ENABLE && (defined(ONE_BOARD) || defined(CHASSIS_BOARD))
+static __attribute__((noreturn)) void StartUITASK(void const *argument)
 {
     LOGINFO("[freeRTOS] UI Task Start");
     MyUIInit();
@@ -216,3 +222,4 @@ __attribute__((noreturn)) void StartUITASK(void const *argument)
         osDelay(1); // 即使没有任何UI需要刷新,也挂起一次,防止卡在UITask中无法切换
     }
 }
+#endif

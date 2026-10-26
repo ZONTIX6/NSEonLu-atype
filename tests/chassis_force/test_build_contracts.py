@@ -6,7 +6,7 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[2]
 entries = json.loads((ROOT / "build/cmake-force-release/compile_commands.json").read_text())
-selected = next(e for e in entries if e["file"].endswith("/application/board_chassis_force.c"))
+selected = next(e for e in entries if e["file"].endswith("/application/board/board_chassis_force.c"))
 args = shlex.split(selected["command"])
 flags = []
 skip = False
@@ -41,7 +41,7 @@ for defines, valid in cases:
     command = [args[0], *flags, *(f"-D{k}={v}" for k, v in defines.items()),
                "-fsyntax-only", "-x", "c", "-"]
     result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True,
-                            input='#include "board_chassis_force.h"\n', encoding="utf-8", errors="replace")
+                            input='#include "board/board_chassis_force.h"\n', encoding="utf-8", errors="replace")
     assert (result.returncode == 0) == valid, (defines, result.stderr)
     if not valid:
         assert "error:" in result.stderr
@@ -53,8 +53,10 @@ for entry in entries:
     if any(part in path for part in ("/modules/chassis_force/", "/modules/chassis_power/", "/modules/motor/DJImotor/")):
         command = shlex.split(entry["command"])
         assert command.index("-fno-fast-math") > command.index("-Ofast"), path
-speed = subprocess.check_output(["arm-none-eabi-nm", "build/speed-modular/basic_framework.elf"], cwd=ROOT, text=True)
-force = subprocess.check_output(["arm-none-eabi-nm", "build/force-modular/basic_framework.elf"], cwd=ROOT, text=True)
+speed = subprocess.check_output(
+    ["arm-none-eabi-nm", "build/cmake-speed-debug/basic_framework.elf"], cwd=ROOT, text=True)
+force = subprocess.check_output(
+    ["arm-none-eabi-nm", "build/cmake-force-release/basic_framework.elf"], cwd=ROOT, text=True)
 assert "ChassisForce" not in speed and "DJIForce" not in speed
 assert "ChassisSpinUpdate" not in force and "DJIPowerAdapter" not in force
 print(f"PASS: {len(cases)} macro contracts, backend symbols and Release finite-math options")

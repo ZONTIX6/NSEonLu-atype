@@ -10,9 +10,9 @@ test: test_ins_service.exe test_bridge_one.exe test_bridge_gimbal.exe test_bridg
 	./test_bridge_chassis.exe
 test_ins_service.exe: $(SOURCE) ../../modules/imu/ins_service.c
 	$(CC) $(CFLAGS) $(INCLUDES) $(SOURCE) -lm -o $@
-test_bridge_one.exe: test_ins_bridge.c ../../application/ins_bridge.c
+test_bridge_one.exe: test_ins_bridge.c ../../application/runtime/ins_bridge.c
 	$(CC) $(CFLAGS) -Istubs $(INCLUDES) -I../../application -DROBOT_DEF_H -DONE_BOARD $^ -o $@
-test_bridge_gimbal.exe: test_ins_bridge.c ../../application/ins_bridge.c
+test_bridge_gimbal.exe: test_ins_bridge.c ../../application/runtime/ins_bridge.c
 	$(CC) $(CFLAGS) -Istubs $(INCLUDES) -I../../application -DROBOT_DEF_H -DGIMBAL_BOARD $^ -o $@
-test_bridge_chassis.exe: test_ins_bridge.c ../../application/ins_bridge.c
+test_bridge_chassis.exe: test_ins_bridge.c ../../application/runtime/ins_bridge.c
 	$(CC) $(CFLAGS) -Istubs $(INCLUDES) -I../../application -DROBOT_DEF_H -DCHASSIS_BOARD $^ -o $@

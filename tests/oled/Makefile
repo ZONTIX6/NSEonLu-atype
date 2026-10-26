@@ -14,5 +14,5 @@ test_spi.exe: $(SOURCE) $(wildcard stubs/*.h)
 	$(CC) $(CFLAGS) $(INCLUDES) $(SOURCE) -o $@
 test_i2c.exe: $(SOURCE) $(wildcard stubs/*.h)
 	$(CC) $(CFLAGS) -DOLED_USE_I2C=1 $(INCLUDES) $(SOURCE) -o $@
-test_analog_key.exe: test_analog_key.c ../../application/board_analog_key.c
+test_analog_key.exe: test_analog_key.c ../../application/board/board_analog_key.c
 	$(CC) $(CFLAGS) $(INCLUDES) -I../../application $^ -o $@

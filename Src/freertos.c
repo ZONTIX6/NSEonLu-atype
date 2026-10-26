@@ -25,7 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "board_optional.h"
+#include "board/board_optional.h"
 
 /* USER CODE END Includes */
 

@@ -1,6 +1,6 @@
 // app
 #include "robot_def.h"
-#include "board_chassis_force.h"
+#include "board/board_chassis_force.h"
 #if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
 #include "chassis_force_intent.h"
 static ChassisForceIntent_s force_intent;

@@ -10,62 +10,62 @@
 
 底盘原跟随档由 `application/robot_def.h` 的 `CHASSIS_FOLLOW_MODE` 选择：`0`（默认）恢复原比例跟转，`1` 以云台实测朝向为前方且 `wz=0`。Make 使用 `CHASSIS_FOLLOW_MODE=0/1`，CMake 使用 `-DCHASSIS_FOLLOW_MODE=0/1`；独立目录重新构建并烧录，非法值触发编译错误。详见 [底盘说明](chassis.md#跟随档策略)。本次仅同步底盘策略涉及的三个源码节，2026-10-23 另同步了 Inc/board_config.h 的裁判 USART6 默认值、端口选择与互斥检查；其余条目保留原索引快照。
 
-## application/board_analog_key.h
+## application/board/board_analog_key.h
 
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
-| [1](../application/board_analog_key.h#L1) | 预处理 | `#ifndef BOARD_ANALOG_KEY_H` |
-| [2](../application/board_analog_key.h#L2) | 预处理 | `#define BOARD_ANALOG_KEY_H` |
-| [6](../application/board_analog_key.h#L6) | 预处理 | `#endif` |
+| [1](../application/board/board_analog_key.h#L1) | 预处理 | `#ifndef BOARD_ANALOG_KEY_H` |
+| [2](../application/board/board_analog_key.h#L2) | 预处理 | `#define BOARD_ANALOG_KEY_H` |
+| [6](../application/board/board_analog_key.h#L6) | 预处理 | `#endif` |
 
-## application/board_devices.c
-
-| 行 | 类型 | 源码 |
-| --- | --- | --- |
-| [17](../application/board_devices.c#L17) | 配置初值 | `const PWM_Init_Config_s heater={.htim=&htim3,.channel=TIM_CHANNEL_2,` |
-| [18](../application/board_devices.c#L18) | 配置初值 | `.period=.0001f,.dutyratio=.5f};` |
-| [20](../application/board_devices.c#L20) | 配置初值 | `const MPU6500_Init_Config_s imu={.spi_config={.spi_handle=&hspi5,` |
-| [21](../application/board_devices.c#L21) | 配置初值 | `.GPIOx=GPIOF,.cs_pin=GPIO_PIN_6,.cs_mode=SPI_CS_GPIO,.spi_work_mode=SPI_BLOCK_MODE},` |
-| [22](../application/board_devices.c#L22) | 配置初值 | `.timeout_us=500};` |
-| [26](../application/board_devices.c#L26) | 配置初值 | `const INSServiceConfig_s service={.sample=SampleIMU,.heat=HeatIMU,.context=board_imu};` |
-
-## application/board_devices.h
+## application/board/board_devices.c
 
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
-| [1](../application/board_devices.h#L1) | 预处理 | `#ifndef BOARD_DEVICES_H` |
-| [2](../application/board_devices.h#L2) | 预处理 | `#define BOARD_DEVICES_H` |
-| [7](../application/board_devices.h#L7) | 预处理 | `#endif` |
+| [17](../application/board/board_devices.c#L17) | 配置初值 | `const PWM_Init_Config_s heater={.htim=&htim3,.channel=TIM_CHANNEL_2,` |
+| [18](../application/board/board_devices.c#L18) | 配置初值 | `.period=.0001f,.dutyratio=.5f};` |
+| [20](../application/board/board_devices.c#L20) | 配置初值 | `const MPU6500_Init_Config_s imu={.spi_config={.spi_handle=&hspi5,` |
+| [21](../application/board/board_devices.c#L21) | 配置初值 | `.GPIOx=GPIOF,.cs_pin=GPIO_PIN_6,.cs_mode=SPI_CS_GPIO,.spi_work_mode=SPI_BLOCK_MODE},` |
+| [22](../application/board/board_devices.c#L22) | 配置初值 | `.timeout_us=500};` |
+| [26](../application/board/board_devices.c#L26) | 配置初值 | `const INSServiceConfig_s service={.sample=SampleIMU,.heat=HeatIMU,.context=board_imu};` |
 
-## application/board_optional.c
-
-| 行 | 类型 | 源码 |
-| --- | --- | --- |
-| [13](../application/board_optional.c#L13) | 预处理 | `#if BOARD_AUX_UART2_DEVICE &#124;&#124; BOARD_AUX_UART7_DEVICE` |
-| [20](../application/board_optional.c#L20) | 配置初值 | `Servo_Init_Config_s config={.servo_type=Bus_Servo,._handle=uart,.servo_id=1};` |
-| [26](../application/board_optional.c#L26) | 预处理 | `#endif` |
-| [30](../application/board_optional.c#L30) | 预处理 | `#if BOARD_AUX_UART2_DEVICE` |
-| [32](../application/board_optional.c#L32) | 预处理 | `#endif` |
-| [33](../application/board_optional.c#L33) | 预处理 | `#if BOARD_AUX_UART7_DEVICE` |
-| [35](../application/board_optional.c#L35) | 预处理 | `#endif` |
-| [36](../application/board_optional.c#L36) | 预处理 | `#if BOARD_OLED_ENABLE` |
-| [37](../application/board_optional.c#L37) | 配置初值 | `OLED_Init_Config_s oled={.read_button=BoardAnalogKeyRead};` |
-| [38](../application/board_optional.c#L38) | 预处理 | `#if OLED_USE_I2C` |
-| [41](../application/board_optional.c#L41) | 预处理 | `#else` |
-| [46](../application/board_optional.c#L46) | 预处理 | `#endif` |
-| [48](../application/board_optional.c#L48) | 预处理 | `#endif` |
-| [49](../application/board_optional.c#L49) | 预处理 | `#if BOARD_KEY_ENABLE` |
-| [50](../application/board_optional.c#L50) | 配置初值 | `Key_Config_s key={.key_gpio_config={.GPIOx=KEY_GPIO_Port,.GPIO_Pin=KEY_Pin,` |
-| [51](../application/board_optional.c#L51) | 配置初值 | `.exti_mode=GPIO_EXTI_MODE_RISING}};` |
-| [53](../application/board_optional.c#L53) | 预处理 | `#endif` |
-
-## application/board_optional.h
+## application/board/board_devices.h
 
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
-| [1](../application/board_optional.h#L1) | 预处理 | `#ifndef BOARD_OPTIONAL_H` |
-| [2](../application/board_optional.h#L2) | 预处理 | `#define BOARD_OPTIONAL_H` |
-| [4](../application/board_optional.h#L4) | 预处理 | `#endif` |
+| [1](../application/board/board_devices.h#L1) | 预处理 | `#ifndef BOARD_DEVICES_H` |
+| [2](../application/board/board_devices.h#L2) | 预处理 | `#define BOARD_DEVICES_H` |
+| [5](../application/board/board_devices.h#L5) | 预处理 | `#endif` |
+
+## application/board/board_optional.c
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [13](../application/board/board_optional.c#L13) | 预处理 | `#if BOARD_AUX_UART2_DEVICE &#124;&#124; BOARD_AUX_UART7_DEVICE` |
+| [20](../application/board/board_optional.c#L20) | 配置初值 | `Servo_Init_Config_s config={.servo_type=Bus_Servo,._handle=uart,.servo_id=1};` |
+| [26](../application/board/board_optional.c#L26) | 预处理 | `#endif` |
+| [30](../application/board/board_optional.c#L30) | 预处理 | `#if BOARD_AUX_UART2_DEVICE` |
+| [32](../application/board/board_optional.c#L32) | 预处理 | `#endif` |
+| [33](../application/board/board_optional.c#L33) | 预处理 | `#if BOARD_AUX_UART7_DEVICE` |
+| [35](../application/board/board_optional.c#L35) | 预处理 | `#endif` |
+| [36](../application/board/board_optional.c#L36) | 预处理 | `#if BOARD_OLED_ENABLE` |
+| [37](../application/board/board_optional.c#L37) | 配置初值 | `OLED_Init_Config_s oled={.read_button=BoardAnalogKeyRead};` |
+| [38](../application/board/board_optional.c#L38) | 预处理 | `#if OLED_USE_I2C` |
+| [41](../application/board/board_optional.c#L41) | 预处理 | `#else` |
+| [46](../application/board/board_optional.c#L46) | 预处理 | `#endif` |
+| [48](../application/board/board_optional.c#L48) | 预处理 | `#endif` |
+| [49](../application/board/board_optional.c#L49) | 预处理 | `#if BOARD_KEY_ENABLE` |
+| [50](../application/board/board_optional.c#L50) | 配置初值 | `Key_Config_s key={.key_gpio_config={.GPIOx=KEY_GPIO_Port,.GPIO_Pin=KEY_Pin,` |
+| [51](../application/board/board_optional.c#L51) | 配置初值 | `.exti_mode=GPIO_EXTI_MODE_RISING}};` |
+| [53](../application/board/board_optional.c#L53) | 预处理 | `#endif` |
+
+## application/board/board_optional.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../application/board/board_optional.h#L1) | 预处理 | `#ifndef BOARD_OPTIONAL_H` |
+| [2](../application/board/board_optional.h#L2) | 预处理 | `#define BOARD_OPTIONAL_H` |
+| [4](../application/board/board_optional.h#L4) | 预处理 | `#endif` |
 
 ## application/chassis/chassis.c
 
@@ -425,20 +425,20 @@
 | [2](../application/gimbal/gimbal.h#L2) | 预处理 | `#define GIMBAL_H` |
 | [16](../application/gimbal/gimbal.h#L16) | 预处理 | `#endif // GIMBAL_H` |
 
-## application/ins_bridge.c
+## application/runtime/ins_bridge.c
 
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
-| [9](../application/ins_bridge.c#L9) | 预处理 | `#if defined(ONE_BOARD) &#124;&#124; defined(GIMBAL_BOARD)` |
-| [13](../application/ins_bridge.c#L13) | 预处理 | `#endif` |
+| [9](../application/runtime/ins_bridge.c#L9) | 预处理 | `#if defined(ONE_BOARD) &#124;&#124; defined(GIMBAL_BOARD)` |
+| [13](../application/runtime/ins_bridge.c#L13) | 预处理 | `#endif` |
 
-## application/ins_bridge.h
+## application/runtime/ins_bridge.h
 
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
-| [1](../application/ins_bridge.h#L1) | 预处理 | `#ifndef INS_BRIDGE_H` |
-| [2](../application/ins_bridge.h#L2) | 预处理 | `#define INS_BRIDGE_H` |
-| [4](../application/ins_bridge.h#L4) | 预处理 | `#endif` |
+| [1](../application/runtime/ins_bridge.h#L1) | 预处理 | `#ifndef INS_BRIDGE_H` |
+| [2](../application/runtime/ins_bridge.h#L2) | 预处理 | `#define INS_BRIDGE_H` |
+| [4](../application/runtime/ins_bridge.h#L4) | 预处理 | `#endif` |
 
 ## application/robot.c
 
@@ -579,22 +579,45 @@
 | [307](../application/robot_def.h#L307) | 预处理 | `#endif` |
 | [334](../application/robot_def.h#L334) | 预处理 | `#endif // !ROBOT_DEF_H` |
 
-## application/robot_task.h
+## application/runtime/robot_task.c
 
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
-| [31](../application/robot_task.h#L31) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
-| [43](../application/robot_task.h#L43) | 预处理 | `#endif` |
-| [44](../application/robot_task.h#L44) | 预处理 | `#if CHASSIS_POWER_CAPTURE_ENABLE && BOARD_LOG_UART_ENABLED` |
-| [62](../application/robot_task.h#L62) | 预处理 | `#endif` |
-| [90](../application/robot_task.h#L90) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
-| [94](../application/robot_task.h#L94) | 预处理 | `#endif` |
-| [96](../application/robot_task.h#L96) | 预处理 | `#if CHASSIS_POWER_CAPTURE_ENABLE && BOARD_LOG_UART_ENABLED` |
-| [99](../application/robot_task.h#L99) | 预处理 | `#endif` |
-| [101](../application/robot_task.h#L101) | 预处理 | `#if REFEREE_ENABLE && (defined(ONE_BOARD) &#124;&#124; defined(CHASSIS_BOARD))` |
-| [104](../application/robot_task.h#L104) | 预处理 | `#endif` |
-| [138](../application/robot_task.h#L138) | 预处理 | `#if CHASSIS_POWER_CAPTURE_ENABLE && BOARD_LOG_UART_ENABLED` |
-| [140](../application/robot_task.h#L140) | 预处理 | `#endif` |
+| [30](../application/runtime/robot_task.c#L30) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
+| [34](../application/runtime/robot_task.c#L34) | 预处理 | `#endif` |
+| [37](../application/runtime/robot_task.c#L37) | 预处理 | `#if REFEREE_ENABLE && (defined(ONE_BOARD) &#124;&#124; defined(CHASSIS_BOARD))` |
+| [39](../application/runtime/robot_task.c#L39) | 预处理 | `#endif` |
+| [40](../application/runtime/robot_task.c#L40) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
+| [48](../application/runtime/robot_task.c#L48) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
+| [54](../application/runtime/robot_task.c#L54) | 预处理 | `#endif` |
+| [59](../application/runtime/robot_task.c#L59) | 预处理 | `#endif` |
+| [60](../application/runtime/robot_task.c#L60) | 预处理 | `#if CHASSIS_POWER_CAPTURE_ENABLE && BOARD_LOG_UART_ENABLED` |
+| [78](../application/runtime/robot_task.c#L78) | 预处理 | `#endif` |
+| [84](../application/runtime/robot_task.c#L84) | 预处理 | `#if REFEREE_ENABLE && (defined(ONE_BOARD) &#124;&#124; defined(CHASSIS_BOARD))` |
+| [86](../application/runtime/robot_task.c#L86) | 预处理 | `#endif` |
+| [99](../application/runtime/robot_task.c#L99) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
+| [102](../application/runtime/robot_task.c#L102) | 预处理 | `#else` |
+| [104](../application/runtime/robot_task.c#L104) | 预处理 | `#endif` |
+| [114](../application/runtime/robot_task.c#L114) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
+| [118](../application/runtime/robot_task.c#L118) | 预处理 | `#endif` |
+| [120](../application/runtime/robot_task.c#L120) | 预处理 | `#if CHASSIS_POWER_CAPTURE_ENABLE && BOARD_LOG_UART_ENABLED` |
+| [123](../application/runtime/robot_task.c#L123) | 预处理 | `#endif` |
+| [125](../application/runtime/robot_task.c#L125) | 预处理 | `#if REFEREE_ENABLE && (defined(ONE_BOARD) &#124;&#124; defined(CHASSIS_BOARD))` |
+| [128](../application/runtime/robot_task.c#L128) | 预处理 | `#endif` |
+| [162](../application/runtime/robot_task.c#L162) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
+| [165](../application/runtime/robot_task.c#L165) | 预处理 | `#endif` |
+| [166](../application/runtime/robot_task.c#L166) | 预处理 | `#if CHASSIS_POWER_CAPTURE_ENABLE && BOARD_LOG_UART_ENABLED` |
+| [168](../application/runtime/robot_task.c#L168) | 预处理 | `#endif` |
+| [212](../application/runtime/robot_task.c#L212) | 预处理 | `#if REFEREE_ENABLE && (defined(ONE_BOARD) &#124;&#124; defined(CHASSIS_BOARD))` |
+| [225](../application/runtime/robot_task.c#L225) | 预处理 | `#endif` |
+
+## application/runtime/robot_task.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../application/runtime/robot_task.h#L1) | 预处理 | `#ifndef ROBOT_TASK_H` |
+| [2](../application/runtime/robot_task.h#L2) | 预处理 | `#define ROBOT_TASK_H` |
+| [7](../application/runtime/robot_task.h#L7) | 预处理 | `#endif` |
 
 ## application/shoot/shoot.c
 
@@ -679,20 +702,20 @@
 | [2](../application/shoot/shoot.h#L2) | 预处理 | `#define SHOOT_H` |
 | [16](../application/shoot/shoot.h#L16) | 预处理 | `#endif // SHOOT_H` |
 
-## application/tuning_policy.c
+## application/runtime/tuning_policy.c
 
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
-| [16](../application/tuning_policy.c#L16) | 预处理 | `#if defined(CHASSIS_BOARD)` |
-| [18](../application/tuning_policy.c#L18) | 预处理 | `#endif` |
+| [16](../application/runtime/tuning_policy.c#L16) | 预处理 | `#if defined(CHASSIS_BOARD)` |
+| [18](../application/runtime/tuning_policy.c#L18) | 预处理 | `#endif` |
 
-## application/tuning_policy.h
+## application/runtime/tuning_policy.h
 
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
-| [1](../application/tuning_policy.h#L1) | 预处理 | `#ifndef TUNING_POLICY_H` |
-| [2](../application/tuning_policy.h#L2) | 预处理 | `#define TUNING_POLICY_H` |
-| [7](../application/tuning_policy.h#L7) | 预处理 | `#endif` |
+| [1](../application/runtime/tuning_policy.h#L1) | 预处理 | `#ifndef TUNING_POLICY_H` |
+| [2](../application/runtime/tuning_policy.h#L2) | 预处理 | `#define TUNING_POLICY_H` |
+| [4](../application/runtime/tuning_policy.h#L4) | 预处理 | `#endif` |
 
 ## bsp/bsp_init.h
 

@@ -6,7 +6,7 @@
 #include "dji_motor.h"
 #include <stddef.h>
 
-bool TuningPolicyCanSave(void *context,uint32_t now_ms)
+static bool TuningPolicyCanSave(void *context,uint32_t now_ms)
 {
     (void)context;
     ChassisTelemetrySnapshot_s chassis={0};
