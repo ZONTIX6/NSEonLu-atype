@@ -5,5 +5,7 @@
 
 float DWT_GetDeltaT(uint32_t *count);
 uint64_t DWT_GetTimeline_us(void);
+uint32_t DWT_GetCycleCount(void);
+uint32_t DWT_GetFrequencyHz(void);
 
 #endif

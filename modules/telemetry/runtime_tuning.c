@@ -31,6 +31,7 @@ static TuningStoredImage durable;
 static unsigned dirty_mask;
 static bool persistence_enabled, persistence_failed;
 static bool trial_active;
+static bool calibration_active,flash_active;
 void RuntimeTuningPersistenceInit(const TuningStoredImage *stored)
 {
     durable=stored ? *stored : (TuningStoredImage){0};
@@ -51,7 +52,7 @@ static const char *PersistenceStatus(TuningGroup group,const GroupState *data)
 bool RuntimeTuningPendingImage(TuningStoredImage *image)
 {
     taskENTER_CRITICAL();
-    if (!image || !persistence_enabled || !dirty_mask || persistence_failed || trial_active) {
+    if (!image || !persistence_enabled || !dirty_mask || persistence_failed || trial_active || calibration_active || flash_active) {
         taskEXIT_CRITICAL(); return false;
     }
     *image=(TuningStoredImage){0};
@@ -177,7 +178,7 @@ void RuntimeTuningSubmit(const char *line)
         if (n != 4) mailbox.error = "count";
         return;
     }
-    if (trial_active) {mailbox.error="busy"; return;}
+    if (trial_active || calibration_active || flash_active) {mailbox.error="busy"; return;}
     bool saving=!strcmp(cells[2],"SAVE");
     if (strcmp(cells[2], "SET") && !saving) {mailbox.error = "operation"; return;}
     if (n != (saving ? 5 : counts[group] + 5)) {mailbox.error = "count"; return;}
@@ -270,7 +271,7 @@ void RuntimeTuningCancel(void)
 bool RuntimeTuningBeginTrial(uint32_t revision)
 {
     taskENTER_CRITICAL();
-    bool allowed=!trial_active && mailbox.state==IDLE && groups[TUNING_PID].registered &&
+    bool allowed=!trial_active && !calibration_active && !flash_active && mailbox.state==IDLE && groups[TUNING_PID].registered &&
         groups[TUNING_PID].revision==revision;
     if (allowed) trial_active=true;
     taskEXIT_CRITICAL();
@@ -282,5 +283,21 @@ void RuntimeTuningEndTrial(void)
 }
 bool RuntimeTuningTrialActive(void)
 {
-    taskENTER_CRITICAL(); bool active=trial_active; taskEXIT_CRITICAL(); return active;
+    taskENTER_CRITICAL(); bool active=trial_active || calibration_active; taskEXIT_CRITICAL(); return active;
 }
+bool RuntimeTuningBeginCalibration(void)
+{
+    taskENTER_CRITICAL();
+    bool allowed=!trial_active && !calibration_active && !flash_active &&
+        mailbox.state!=QUEUED && mailbox.state!=APPLYING && !dirty_mask;
+    if(allowed) calibration_active=true;
+    taskEXIT_CRITICAL();return allowed;
+}
+void RuntimeTuningEndCalibration(void) {taskENTER_CRITICAL();calibration_active=false;taskEXIT_CRITICAL();}
+bool RuntimeTuningBeginFlash(void)
+{
+    taskENTER_CRITICAL();bool ok=!trial_active && !calibration_active && !flash_active;
+    if(ok) flash_active=true;
+    taskEXIT_CRITICAL();return ok;
+}
+void RuntimeTuningEndFlash(void) {taskENTER_CRITICAL();flash_active=false;taskEXIT_CRITICAL();}

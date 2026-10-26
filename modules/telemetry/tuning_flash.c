@@ -27,12 +27,12 @@ void TuningFlashInit(void)
 }
 void TuningFlashPoll(void)
 {
-    if(!RuntimeTuningPendingImage(&pending)) return;
+    if(!RuntimeTuningPendingImage(&pending) || !RuntimeTuningBeginFlash()) return;
     /* Recheck the entire vehicle immediately before write while control tasks
      * cannot resume. The guard must not block, allocate, or perform communication. */
     vTaskSuspendAll();
     uint32_t now=HAL_GetTick();
-    if(save_guard==NULL || !save_guard(save_context,now)) {(void)xTaskResumeAll();return;}
+    if(save_guard==NULL || !save_guard(save_context,now)) {(void)xTaskResumeAll();RuntimeTuningEndFlash();return;}
     bool success=false;
     if(BSPTuningFlashBegin()) {
         success=TuningStorageSave(&storage,&pending);
@@ -40,4 +40,5 @@ void TuningFlashPoll(void)
     }
     (void)xTaskResumeAll();
     RuntimeTuningPersistenceComplete(&pending,success);
+    RuntimeTuningEndFlash();
 }

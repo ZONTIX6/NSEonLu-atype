@@ -2,6 +2,10 @@
 #include "chassis_force_intent.h"
 #include "chassis.h"
 #include "dji_force_adapter.h"
+#include "board/board_force_calibration.h"
+#if CHASSIS_FORCE_CALIBRATION_ENABLE
+#include "runtime/force_calibration_app.h"
+#endif
 #include "board_config.h"
 #include "vehicle_safety.h"
 #include "message_center.h"
@@ -57,6 +61,9 @@ void ChassisInit(void)
     calibrated=ChassisForceConfigValid(&force);
     const ChassisPower_Init_Config_s power=BoardChassisForcePowerConfig();
     ready=ChassisPowerInit(&power) && DJIForceAdapterInit(force_motors,&force);
+#if CHASSIS_FORCE_CALIBRATION_ENABLE
+    ready=ready && ForceCalibrationAppInit(force_motors);
+#endif
     (void)ChassisPowerFeedbackInit();
     for(unsigned w=0;w<4;++w) if(force_motors[w]) DJIMotorStop(force_motors[w]);
     heat_pub=PubRegister(HEAT_CONTROL_DATA_TOPIC,sizeof(HeatControlData_s));
@@ -133,6 +140,12 @@ void ChassisTask(void)
         .force_offer_valid=has_final && final.offered_power_w>0 && final.growth_permitted,
         .force_operating_demand_w=has_final ? final.operating_power_w : 0,
         .force_offered_demand_w=has_final ? final.offered_power_w : 0};
+#if CHASSIS_FORCE_CALIBRATION_ENABLE
+    policy_input.zero_force=!ready || !ForceCalibrationAppPermit(&command,now);
+    policy_input.adaptive_spin=false;policy_input.hold_positive_learning=true;
+    policy_input.force_operating_valid=false;policy_input.force_offer_valid=false;
+    policy_input.force_operating_demand_w=0;policy_input.force_offered_demand_w=0;
+#endif
     (void)RefereeGetPowerSnapshot(&policy_input.referee);
 #if POWER_METER_ENABLE
     (void)PowerMeterGetStatus(&policy_input.meter);
@@ -158,7 +171,17 @@ void ChassisTask(void)
     snapshot.power.control_enabled=ready && fresh && VehicleSafetyAllowsDrive(now) &&
         command.intent.motion_mode!=CHASSIS_FORCE_ZERO;
     if(!policy.valid) snapshot.power.control_enabled=false;
+#if CHASSIS_FORCE_CALIBRATION_ENABLE
+    /* Only approved base watts; no boost, offered demand or calibrated flag. */
+    ChassisPowerControlSnapshot_s calibration_power=policy.control;
+    float base=CHASSIS_POWER_BENCH_LIMIT_W;
+    if(policy_input.referee.valid) base=fminf(base,policy_input.referee.chassis_power_limit_w);
+    calibration_power.power_ceiling_w=fminf(base,policy.control.power_ceiling_w);
+    calibration_power.control_enabled=ready && policy.valid && !policy_input.zero_force && policy.input_confirmed;
+    ForceCalibrationAppPublish(&command,&calibration_power,now);
+#else
     (void)DJIForceAdapterPublish(&snapshot);
+#endif
     ChassisVelocityFeedback_s v={0};
     if(has_final && (uint32_t)(now-final.tick_ms)<=5 && final.feedback_valid && calibrated) {
         v.actual=(ChassisVelocity_s){.valid=true,.tick_ms=final.tick_ms,.vx_mps=final.velocity[0],

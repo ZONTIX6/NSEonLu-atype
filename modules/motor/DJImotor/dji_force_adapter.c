@@ -7,6 +7,32 @@
 #include "task.h"
 #include <string.h>
 #include <math.h>
+#if CHASSIS_FORCE_CALIBRATION_ENABLE
+#include "dji_force_calibration.h"
+static DJIMotorOutputGroup_s calibration_group;
+static void fc_read(void *p) {(void)p;DJIForceCalibrationReadControl();}
+static void fc_prepare(void *p,const DJIMotorCycle_s *c) {(void)p;DJIForceCalibrationPrepare(c);}
+static void fc_limit(void *p,const DJIMotorCycle_s *c) {(void)p;(void)c;}
+static bool fc_validate(void *p,const DJIMotorCycle_s *c,const int16_t a[DJI_MOTOR_CNT],const bool e[DJI_MOTOR_CNT],uint32_t t)
+{(void)p;return DJIForceCalibrationValidate(c,a,e,t);}
+static void fc_record(void *p,const DJIMotorCycle_s *c,const int16_t a[DJI_MOTOR_CNT],const bool e[DJI_MOTOR_CNT],uint8_t s,uint8_t ok)
+{(void)p;(void)e;DJIForceCalibrationRecord(c,a,s,ok);}
+bool DJIForceAdapterInit(DJIMotorInstance *const motors[4],const ChassisForceConfig_s *config)
+{
+    if(!config || calibration_group.registered) return false;
+    calibration_group=(DJIMotorOutputGroup_s){.max_current_command=1500,.owns_raw_current=true};
+    for(unsigned w=0;w<4;w++) {
+        if(!motors[w] || motors[w]->motor_type!=M3508 || !DJIMotorFindIndex(motors[w],&calibration_group.motor_indices[w]) ||
+            motors[w]->sender_group!=motors[0]->sender_group) return false;
+        for(unsigned j=0;j<w;j++) if(motors[w]==motors[j]) return false;
+    }
+    const DJIMotorOutputHooks_s hooks={.read_control=fc_read,.prepare_current=fc_prepare,.limit=fc_limit,
+        .validate_current=fc_validate,.record_final=fc_record};
+    return DJIMotorRegisterOutputGroup(&calibration_group,&hooks);
+}
+bool DJIForceAdapterPublish(const ChassisForceActuationSnapshot_s *s) {(void)s;return false;}
+bool DJIForceAdapterGetSnapshot(ChassisForceCycleOutput_s *s) {if(s) memset(s,0,sizeof *s);return false;}
+#else
 
 static DJIMotorOutputGroup_s force_group;
 static DJIMotorInstance *force_motors[4];
@@ -150,3 +176,4 @@ bool DJIForceAdapterGetSnapshot(ChassisForceCycleOutput_s *s)
     if(!s) return false;
     taskENTER_CRITICAL();*s=completed;const bool valid=has_completed;taskEXIT_CRITICAL();return valid;
 }
+#endif

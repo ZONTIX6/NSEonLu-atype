@@ -34,4 +34,8 @@ void RuntimeTuningCancel(void);
 bool RuntimeTuningBeginTrial(uint32_t pid_revision);
 void RuntimeTuningEndTrial(void);
 bool RuntimeTuningTrialActive(void);
+bool RuntimeTuningBeginCalibration(void);
+void RuntimeTuningEndCalibration(void);
+bool RuntimeTuningBeginFlash(void);
+void RuntimeTuningEndFlash(void);
 #endif

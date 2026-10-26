@@ -21,6 +21,7 @@
 #include "stdint.h"
 #include "daemon.h"
 #include <stdbool.h>
+#include "../../chassis_force_calibration/force_calibration_config.h"
 
 #define DJI_MOTOR_CNT 12
 
@@ -43,6 +44,10 @@ typedef struct
     int32_t total_round; // 总圈数,注意方向
     uint32_t rx_sequence;
     uint32_t rx_tick_ms;
+#if CHASSIS_FORCE_CALIBRATION_ENABLE
+    int16_t raw_rpm, raw_current;
+    uint32_t rx_cycles;
+#endif
 } DJI_Motor_Measure_s;
 
 /**
@@ -67,6 +72,10 @@ typedef struct
     uint32_t feed_cnt;
     float dt;
 } DJIMotorInstance;
+#if CHASSIS_FORCE_CALIBRATION_ENABLE
+bool DJIMotorRegisterFeedbackObserver(void (*observer)(const DJIMotorInstance *,int16_t,int16_t,uint32_t));
+bool DJIMotorAuxiliaryStopped(DJIMotorInstance *const wheels[4],uint32_t now_ms);
+#endif
 
 /* Optional group processing. The adapter owns membership and copied permissions;
  * the motor driver retains PID, tuning and the sole CAN output path. */

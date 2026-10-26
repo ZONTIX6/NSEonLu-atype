@@ -317,6 +317,29 @@ static void MotorSenderGrouping(DJIMotorInstance *motor, CAN_Init_Config_s *conf
  *
  * @param _instance 收到数据的instance,通过遍历与所有电机进行对比以选择正确的实例
  */
+#if CHASSIS_FORCE_CALIBRATION_ENABLE
+static void (*feedback_observer)(const DJIMotorInstance *,int16_t,int16_t,uint32_t);
+bool DJIMotorAuxiliaryStopped(DJIMotorInstance *const wheels[4],uint32_t now)
+{
+    bool safe=true;
+    taskENTER_CRITICAL();
+    for(unsigned n=0;n<idx;n++) {
+        DJIMotorInstance *m=dji_motor_instance[n];bool wheel=false;
+        for(unsigned w=0;w<4;w++) wheel |= m==wheels[w];
+        if(wheel) continue;
+        safe &= m->stop_flag==MOTOR_STOP && DaemonIsOnline(m->daemon) &&
+            (m->measure.rx_sequence || m->measure.rx_cycles) && (uint32_t)(now-m->measure.rx_tick_ms)<=5 &&
+            isfinite(m->measure.speed_aps) && fabsf(m->measure.speed_aps)<=120 &&
+            abs(m->measure.raw_rpm)<=20;
+    }
+    taskEXIT_CRITICAL();return safe;
+}
+bool DJIMotorRegisterFeedbackObserver(void (*observer)(const DJIMotorInstance *,int16_t,int16_t,uint32_t))
+{
+    if(!observer || feedback_observer) return false;
+    feedback_observer=observer;return true;
+}
+#endif
 static void DecodeDJIMotor(CANInstance *_instance)
 {
     // 这里对can instance的id进行了强制转换,从而获得电机的instance实例地址
@@ -346,6 +369,12 @@ static void DecodeDJIMotor(CANInstance *_instance)
     measure->total_angle = measure->total_round * 360 + measure->angle_single_round;
     measure->rx_tick_ms = HAL_GetTick();
     ++measure->rx_sequence;
+#if CHASSIS_FORCE_CALIBRATION_ENABLE
+    measure->raw_rpm=(int16_t)((uint16_t)rxbuff[2]<<8|rxbuff[3]);
+    measure->raw_current=(int16_t)((uint16_t)rxbuff[4]<<8|rxbuff[5]);
+    measure->rx_cycles=DWT_GetCycleCount();
+    if(feedback_observer) feedback_observer(motor,measure->raw_rpm,measure->raw_current,measure->rx_cycles);
+#endif
 }
 
 static void DJIMotorLostCallback(void *motor_ptr)
