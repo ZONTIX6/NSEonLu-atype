@@ -1,12 +1,14 @@
 # 单轮力控标定与高速记录工具实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 默认在当前会话逐项执行；本文件编写不代表工具代码已经实现。
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking. 默认在当前会话逐项执行；本文件编写不代表工具代码已经实现。
 
 **Goal:** 交付独立封装的单轮限流加载、板端高速记录和中文网页操作工具，使用户可以按已有标定方法实测、观察和导出数据。
 
 **Architecture:** 纯 C 状态机与缓存放入 `modules/chassis_force_calibration/`，硬件所有权由独立 DJI 适配器处理，USB 协议负责慢任务命令及冻结数据读取。板级限值和应用装配分别置于 `application/board/`、`application/runtime/`，网页复用现有本地服务和串口封装。
 
 **Tech Stack:** C11、STM32F427、FreeRTOS/CMSIS-RTOS、GNU Make/CMake、主机 GCC、原生 JavaScript、Web Serial、Node 内置测试、现有 Playwright 浏览器验证工具；不新增前端框架或电脑串口库。
+
+执行状态：软件实施与主机/构建验收完成，未烧录或实机加载；网页最终入口为原仪表盘“力控标定”标签。
 
 日期：2026-10-26。依据 [已确认设计](../specs/2026-10-26-chassis-force-calibration-tools-design.md)，关联 [力控主体计划](2026-10-25-chassis-direct-force-control.md)。主体已实现，本计划只增加标定工具，不重做主体。
 
@@ -113,7 +115,7 @@ void FcGetStatus(const FcEngine *engine, FcStatus *status);
 FcLimits BoardForceCalibrationLimits(void);
 ```
 
-- [ ] **1.1 写核心行为测试并运行红灯。** 测试夹具 `ready_engine()` 先按真实接口生成 100 ms 连续静止输入并取得会话；它不直接写 READY 状态。`permitted_input()` 给出新鲜四轮反馈、在线 USB、台架许可、辅助电机已停止、有效 50 W 预算和 2 W 测量。第一条测试的关键断言如下：
+- [x] **1.1 写核心行为测试并运行红灯。** 测试夹具 `ready_engine()` 先按真实接口生成 100 ms 连续静止输入并取得会话；它不直接写 READY 状态。`permitted_input()` 给出新鲜四轮反馈、在线 USB、台架许可、辅助电机已停止、有效 50 W 预算和 2 W 测量。第一条测试的关键断言如下：
 
 ```c
 FcEngine e; FcInput in; uint32_t session;
@@ -132,11 +134,11 @@ assert(d.current[1]==0 && d.state==FC_TAIL);
 
 `advance_ms()` 每次增加 1 ms，刷新反馈和许可、每 50 ms 心跳一次，调用真实 `FcStep()` 与成功/失败可控的 `FcRecordSubmission()`，返回最后一次输出；不能一次跳过 75 ms 而绕过周期检查。预期先因为缺少实现不能构建；补齐空接口后必须看到断言失败，再编写状态机。执行：`make -C tests/force_calibration test_engine`。
 
-- [ ] **1.2 实现最小状态机，通过单轮/正负/时序测试。** 输入越界、非法轮号、零电流、零上升/保持/下降段或总通电超过 500 ms 均拒绝；整段电流函数以本次开始时间计算，不按假定固定周期累加。时钟基准未建立时保持零输出；每次实际周期必须不超过 5000 us。
-- [ ] **1.3 逐项补红灯再实现终止。** 表驱动改变 USB 世代/开关、台架许可、操作源年龄、辅助停止证明、反馈年龄 5001 us、温度 50 ℃、转速 1000 rpm、心跳 150001 us、CAN 失败；均立即归零。预算无效/降低、实测超预算、任意转速/功率 NaN 或无穷也终止，不等待下降斜率。验证四轮任何非选定输出、过大输出、过期输入或已到脉冲截止时刻仍非零的命令在 `FcValidateFinal()` 被拒绝。
-- [ ] **1.4 验证尾段与重新开始。** 正常结束记录 100 ms 尾段；异常归零后尽可能记录尾段，原因不可被后续错误覆盖。没有成功提交零电流时不能标为可导出。冻结/异常不会自动回 READY，旧会话/旧世代不能启动；下一次显式 ARM 重新确认静止，再显式 START。时钟、会话和反馈序号回绕各写测试。
-- [ ] **1.5 验证板级限值与锁定独立。** 通过实际板级配置函数取得限值，拒绝非法限值；普通 `BoardChassisForceConfig()` 三组待测项仍为 0，`VALID=1` 时仍无法驱动正常力控。运行 `make -C tests/chassis_force test`。
-- [ ] **1.6 提交本任务。** 只暂存上述新文件及测试，提交 `feat: add bounded single-wheel calibration engine`，记录实际哈希。
+- [x] **1.2 实现最小状态机，通过单轮/正负/时序测试。** 输入越界、非法轮号、零电流、零上升/保持/下降段或总通电超过 500 ms 均拒绝；整段电流函数以本次开始时间计算，不按假定固定周期累加。时钟基准未建立时保持零输出；每次实际周期必须不超过 5000 us。
+- [x] **1.3 逐项补红灯再实现终止。** 表驱动改变 USB 世代/开关、台架许可、操作源年龄、辅助停止证明、反馈年龄 5001 us、温度 50 ℃、转速 1000 rpm、心跳 150001 us、CAN 失败；均立即归零。预算无效/降低、实测超预算、任意转速/功率 NaN 或无穷也终止，不等待下降斜率。验证四轮任何非选定输出、过大输出、过期输入或已到脉冲截止时刻仍非零的命令在 `FcValidateFinal()` 被拒绝。
+- [x] **1.4 验证尾段与重新开始。** 正常结束记录 100 ms 尾段；异常归零后尽可能记录尾段，原因不可被后续错误覆盖。没有成功提交零电流时不能标为可导出。冻结/异常不会自动回 READY，旧会话/旧世代不能启动；下一次显式 ARM 重新确认静止，再显式 START。时钟、会话和反馈序号回绕各写测试。
+- [x] **1.5 验证板级限值与锁定独立。** 通过实际板级配置函数取得限值，拒绝非法限值；普通 `BoardChassisForceConfig()` 三组待测项仍为 0，`VALID=1` 时仍无法驱动正常力控。运行 `make -C tests/chassis_force test`。
+- [x] **1.6 提交本任务。** 只暂存上述新文件及测试，提交 `feat: add bounded single-wheel calibration engine`，记录实际哈希。
 
 ## 任务 2：原始事件记录、CCM 缓存与冻结读取
 
@@ -173,7 +175,7 @@ RX 不适用的字段为 0；CONTROL 同时保留当次使用的反馈、准备�
 
 `FcCaptureMeta` 在缓存头定义，包含 `uint32_t capture_id, session, generation`、`FcPulse pulse`、`FcLimits limits` 和滤波设置。它在成功 START 时复制，此后冻结记录的身份不随新 ARM 或 USB 重连改变；CAP 中当前连接 generation 与 DATA 中冻结记录 session/capture_id 必须分开验证。
 
-- [ ] **2.1 红灯验证原始编码。** 使用人工固定值（负转速 -123、负电流 -300、时间戳 `0x01020304`、滤波值 12.5）断言确切字节，包括 `04 03 02 01`、`85 ff`、`d4 fe`、float32 `00 00 48 41`；反例改一个字节应被 JS/协议侧解码测试识别。命令：`make -C tests/force_calibration test_capture`。
+- [x] **2.1 红灯验证原始编码。** 使用人工固定值（负转速 -123、负电流 -300、时间戳 `0x01020304`、滤波值 12.5）断言确切字节，包括 `04 03 02 01`、`85 ff`、`d4 fe`、float32 `00 00 48 41`；反例改一个字节应被 JS/协议侧解码测试识别。命令：`make -C tests/force_calibration test_capture`。
 
 ```c
 /* FcRecord 语义字段名与网页对象一致，不使用 packed 结构体发送。 */
@@ -186,11 +188,11 @@ assert(bytes[18]==0xd4 && bytes[19]==0xfe);
 assert(bytes[20]==0 && bytes[21]==0 && bytes[22]==0x48 && bytes[23]==0x41);
 ```
 
-- [ ] **2.2 实现编码与有界追加。** 默认 1280 条 × 48 字节 = 61440 字节；状态元数据与缓存合计必须小于等于 65536 字节，用 `_Static_assert` 验证。每次先验证空间再写整条；冻结后拒绝写入，越界读取拒绝，无动态分配。
-- [ ] **2.3 红灯验证容量与历史保留。** 用 4 条小缓存测试第 5 条追加失败、既有字节不变、完整性为 false；重复块读取字节一致，未冻结时不可导出。新的 START 只有参数与许可全部通过后才清掉旧记录；失败的 START 不丢失历史。
-- [ ] **2.4 实现容量控制。** 预记录 50 ms、最大加载 500 ms、尾段 100 ms；一次仅记录所选轮 RX 和每个控制周期一次 CONTROL。保留至少 8 个终止/零提交标记槽，在可用槽接近下限时原子置容量取消标志；任务/最终复查看到标志后归零，已有数据完整性为 false。硬满时后续事件计入丢弃计数，不能覆盖旧记录或等待腾空。
-- [ ] **2.5 频率与质量统计。** 从时间戳计算实际 RX/控制间隔、反馈序号间隙和剩余空间；理论容量可按 `1280/(RX每秒+CONTROL每秒)` 显示，但不得保证 1 kHz 或固定可记录秒数。计数器回绕、缺反馈、同序号重复、尾段不足都须留下质量信息。
-- [ ] **2.6 提交。** 验证核心与缓存测试通过，提交 `feat: capture calibration feedback and final control events`。
+- [x] **2.2 实现编码与有界追加。** 默认 1280 条 × 48 字节 = 61440 字节；状态元数据与缓存合计必须小于等于 65536 字节，用 `_Static_assert` 验证。每次先验证空间再写整条；冻结后拒绝写入，越界读取拒绝，无动态分配。
+- [x] **2.3 红灯验证容量与历史保留。** 用 4 条小缓存测试第 5 条追加失败、既有字节不变、完整性为 false；重复块读取字节一致，未冻结时不可导出。新的 START 只有参数与许可全部通过后才清掉旧记录；失败的 START 不丢失历史。
+- [x] **2.4 实现容量控制。** 预记录 50 ms、最大加载 500 ms、尾段 100 ms；一次仅记录所选轮 RX 和每个控制周期一次 CONTROL。保留至少 8 个终止/零提交标记槽，在可用槽接近下限时原子置容量取消标志；任务/最终复查看到标志后归零，已有数据完整性为 false。硬满时后续事件计入丢弃计数，不能覆盖旧记录或等待腾空。
+- [x] **2.5 频率与质量统计。** 从时间戳计算实际 RX/控制间隔、反馈序号间隙和剩余空间；理论容量可按 `1280/(RX每秒+CONTROL每秒)` 显示，但不得保证 1 kHz 或固定可记录秒数。计数器回绕、缺反馈、同序号重复、尾段不足都须留下质量信息。
+- [x] **2.6 提交。** 验证核心与缓存测试通过，提交 `feat: capture calibration feedback and final control events`。
 
 ## 任务 3：四轮驱动接入、许可与能源预算
 
@@ -228,7 +230,7 @@ void RuntimeTuningEndCalibration(void);
 
 引擎和命令邮箱由电机适配器持有；ARM/START/PING/CLEAR 经 `Submit()` 入队，在 `Prepare()` 中处理，不让慢任务直接改引擎。结果由 `Reply()` 拷贝，USB 接受后才调用 `ReplyAccepted()` 释放；停止/USB 世代变化/缓存满使用单独取消标志，最终复查必须看到最新值。这样任务 3 可以通过真实 Submit/Reply 接口独立测试，不依赖任务 4 尚未实现的协议代码。
 
-- [ ] **3.1 用真实驱动测试支架写红灯。** 复用 `tests/chassis_force/test_adapter.c` 中已有 HAL/CAN 支架，实际执行 `DJIMotorControl()`。普通配置仍未标定；标定输入允许时只 RF 非零、四轮 PID 调用为 0，四轮 CAN ID 1/4/2/3 的字节与最终记录一致；第五个辅助电机保持停用。不存在真实第二次发送调用。
+- [x] **3.1 用真实驱动测试支架写红灯。** 复用 `tests/chassis_force/test_adapter.c` 中已有 HAL/CAN 支架，实际执行 `DJIMotorControl()`。普通配置仍未标定；标定输入允许时只 RF 非零、四轮 PID 调用为 0，四轮 CAN ID 1/4/2/3 的字节与最终记录一致；第五个辅助电机保持停用。不存在真实第二次发送调用。
 
 ```c
 /* 已通过公开 Submit 接口开始 RF 测试并推进到保持段后检查。 */
@@ -242,15 +244,15 @@ for(unsigned w=0;w<4;++w) {
 assert(packed[0]==0 && packed[1]==300 && packed[2]==0 && packed[3]==0);
 ```
 
-- [ ] **3.2 实现编译分支与所有权委托。** `ENABLE=1` 时 `dji_force_adapter.c` 的 read/prepare/validate/record 四钩子分别委托独立适配器，`Publish()` 接收独立许可并设定标定所需 stop 状态。`ENABLE=0` 完全保留原行为。普通驾驶请求不能进入标定电流路径，空闲/异常/退出会话归零。
-- [ ] **3.3 加入原始 RX 观察。** `dji_motor.[ch]` 在标定编译分支提供 `bool DJIMotorRegisterFeedbackObserver(void (*observer)(const DJIMotorInstance *, int16_t, int16_t, uint32_t))`，只注册一次，参数依次是电机、原始 rpm、原始电流、接收周期。解码时在低通前取得原始 rpm/电流，完成原有滤波和序号更新后通知记录器。仅接纳所选电机；保留当前控制快照所用的原始值/接收周期以关联 CONTROL，不能在控制完成时取最新 ISR 数据冒充旧快照。
-- [ ] **3.4 实现统一相对时钟与短临界区。** 会话记录开始时保存 `DWT_GetCycleCount()` 原点，记录事件以无符号周期差除以 `DWT_GetFrequencyHz()/1000000` 换算相对 us，检查频率非零且记录期限短于一个周期计数回绕。RX/控制的槽位分配、完整写入和取消标志使用保存/恢复 PRIMASK 的短临界区，不修改原始 DWT 共享累计器，不在锁中格式化或遍历整缓存。
-- [ ] **3.5 接入 CCM。** 仅标定固件定义 `static uint8_t storage[1280][48] __attribute__((section(".ccmram"), aligned(4)));`；CCM 不作为 USB 端点发送缓冲。初始化只清有效数量/元数据，读取前验证所有槽已经写满；不依赖启动代码自动初始化该段。核对链接 map 的 CCM 容量、普通 RAM、堆栈预留和镜像大小，禁止为塞下缓存缩减原任务栈/堆。
-- [ ] **3.6 单独装配标定许可。** `ForceCalibrationAppPermit()` 保留新鲜命令、源/yaw 累计 10 ms、`VehicleSafetyAllowsAutotune()`、当前安全 epoch 和辅助电机静止证明；`force_calibration_app.c` 负责遍历辅助电机状态，chassis 只调用。读 USB 端口/世代的快照通过适配器初始化时注入的回调取得，最终复查重新读取，不能只相信慢任务 20 ms 前的缓存。
-- [ ] **3.7 红灯覆盖预算引导与掉额。** 现有 `!calibrated` 会把 `policy_input.zero_force` 置真；仅 `ENABLE=1` 的装配分支改用独立标定许可，普通分支保持原式。标定分支关闭自适应申请与正向模型学习，只使用已批准的基础能源预算，附加 boost/offer 为零；现有台架功率宏默认 50 W，最终标定预算取该宏与有效裁判/政策限额的较小者。要求负载功率计有效且不超过 20 ms，政策快照不超过 10 ms；实际功率超预算、预算下降、裁判禁用或电容确认失效时撤力。不得用合成 `ChassisForceCycleOutput_s.valid/calibrated` 去触发旧增补流程。
-- [ ] **3.8 红灯覆盖发送前变化。** 在 CAN 邮箱等待支架中注入急停、USB 关闭/世代变更或取消标志，当前帧四轮字节都应归零。CAN 返回失败时记录尝试命令与失败结果，不将其计为已生效；至少一帧零电流成功提交之前，状态不能允许导出。提交成功表示进入发送邮箱，不声称电调已经收到/执行。
-- [ ] **3.9 实现试验与 Flash 互斥。** 用临时试验 owner 区分 PID 和标定；`RuntimeTuningBeginCalibration()` 要求无 PID 试调、无 QUEUED/APPLYING 控制修改和无进行中的 Flash 操作。校准会话期间阻止 SET/SAVE 及 Flash poll，GET 仍可读；原 PID `BeginTrial/EndTrial` 不能释放标定 owner。准备失败和所有退出路径释放本会话锁，已冻结数据保留不占驱动会话。
-- [ ] **3.10 回归并提交。** 运行 `tests/force_calibration`、`tests/chassis_force`、`tests/dji_chassis_power_rtt`、`tests/pid_autotune`、`tests/tuning_flash`；提交 `feat: integrate isolated calibration with motor and power permissions`。此提交不能宣称网页或 USB 命令已经可用。
+- [x] **3.2 实现编译分支与所有权委托。** `ENABLE=1` 时 `dji_force_adapter.c` 的 read/prepare/validate/record 四钩子分别委托独立适配器，`Publish()` 接收独立许可并设定标定所需 stop 状态。`ENABLE=0` 完全保留原行为。普通驾驶请求不能进入标定电流路径，空闲/异常/退出会话归零。
+- [x] **3.3 加入原始 RX 观察。** `dji_motor.[ch]` 在标定编译分支提供 `bool DJIMotorRegisterFeedbackObserver(void (*observer)(const DJIMotorInstance *, int16_t, int16_t, uint32_t))`，只注册一次，参数依次是电机、原始 rpm、原始电流、接收周期。解码时在低通前取得原始 rpm/电流，完成原有滤波和序号更新后通知记录器。仅接纳所选电机；保留当前控制快照所用的原始值/接收周期以关联 CONTROL，不能在控制完成时取最新 ISR 数据冒充旧快照。
+- [x] **3.4 实现统一相对时钟与短临界区。** 会话记录开始时保存 `DWT_GetCycleCount()` 原点，记录事件以无符号周期差除以 `DWT_GetFrequencyHz()/1000000` 换算相对 us，检查频率非零且记录期限短于一个周期计数回绕。RX/控制的槽位分配、完整写入和取消标志使用保存/恢复 PRIMASK 的短临界区，不修改原始 DWT 共享累计器，不在锁中格式化或遍历整缓存。
+- [x] **3.5 接入 CCM。** 仅标定固件定义 `static uint8_t storage[1280][48] __attribute__((section(".ccmram"), aligned(4)));`；CCM 不作为 USB 端点发送缓冲。初始化只清有效数量/元数据，读取前验证所有槽已经写满；不依赖启动代码自动初始化该段。核对链接 map 的 CCM 容量、普通 RAM、堆栈预留和镜像大小，禁止为塞下缓存缩减原任务栈/堆。
+- [x] **3.6 单独装配标定许可。** `ForceCalibrationAppPermit()` 保留新鲜命令、源/yaw 累计 10 ms、`VehicleSafetyAllowsAutotune()`、当前安全 epoch 和辅助电机静止证明；`force_calibration_app.c` 负责遍历辅助电机状态，chassis 只调用。读 USB 端口/世代的快照通过适配器初始化时注入的回调取得，最终复查重新读取，不能只相信慢任务 20 ms 前的缓存。
+- [x] **3.7 红灯覆盖预算引导与掉额。** 现有 `!calibrated` 会把 `policy_input.zero_force` 置真；仅 `ENABLE=1` 的装配分支改用独立标定许可，普通分支保持原式。标定分支关闭自适应申请与正向模型学习，只使用已批准的基础能源预算，附加 boost/offer 为零；现有台架功率宏默认 50 W，最终标定预算取该宏与有效裁判/政策限额的较小者。要求负载功率计有效且不超过 20 ms，政策快照不超过 10 ms；实际功率超预算、预算下降、裁判禁用或电容确认失效时撤力。不得用合成 `ChassisForceCycleOutput_s.valid/calibrated` 去触发旧增补流程。
+- [x] **3.8 红灯覆盖发送前变化。** 在 CAN 邮箱等待支架中注入急停、USB 关闭/世代变更或取消标志，当前帧四轮字节都应归零。CAN 返回失败时记录尝试命令与失败结果，不将其计为已生效；至少一帧零电流成功提交之前，状态不能允许导出。提交成功表示进入发送邮箱，不声称电调已经收到/执行。
+- [x] **3.9 实现试验与 Flash 互斥。** 用临时试验 owner 区分 PID 和标定；`RuntimeTuningBeginCalibration()` 要求无 PID 试调、无 QUEUED/APPLYING 控制修改和无进行中的 Flash 操作。校准会话期间阻止 SET/SAVE 及 Flash poll，GET 仍可读；原 PID `BeginTrial/EndTrial` 不能释放标定 owner。准备失败和所有退出路径释放本会话锁，已冻结数据保留不占驱动会话。
+- [x] **3.10 回归并提交。** 运行 `tests/force_calibration`、`tests/chassis_force`、`tests/dji_chassis_power_rtt`、`tests/pid_autotune`、`tests/tuning_flash`；提交 `feat: integrate isolated calibration with motor and power permissions`。此提交不能宣称网页或 USB 命令已经可用。
 
 ## 任务 4：USB 命令、取消优先和冻结数据协议
 
@@ -301,7 +303,7 @@ STATUS、ARM、START、PING、STOP、CLEAR 的成功回复统一为：
 
 每块最多 2 条记录，即最多 96 字节二进制、192 个十六进制字符；整行必须小于现有 512 字节命令/回执容量。`crc16` 是四位十六进制，计算范围为从 `@FC1` 到 `hex` 末字符的 ASCII 字节，不包括最后的逗号、CRC 和 CRLF；算法沿用工程已有 CRC16：初值 0xffff、反射多项式 0xa001。格式版本来自 CAP 的 format=1，记录类型在每条字节 0 中区分。
 
-- [ ] **4.1 写红灯协议用例。** `@FC1,7,START,9,3,1,-300,50,100,50` 解码为 RF/负 300/200 ms；多一字段、wheel=4、current=1501、`4294967296`、NaN、空字段均拒绝。旧 generation、错误 session 和普通邮箱忙返回明确错误，不能产生电机动作。执行 `make -C tests/force_calibration test_protocol`。
+- [x] **4.1 写红灯协议用例。** `@FC1,7,START,9,3,1,-300,50,100,50` 解码为 RF/负 300/200 ms；多一字段、wheel=4、current=1501、`4294967296`、NaN、空字段均拒绝。旧 generation、错误 session 和普通邮箱忙返回明确错误，不能产生电机动作。执行 `make -C tests/force_calibration test_protocol`。
 
 ```c
 ForceCalibrationProtocolInit();
@@ -312,10 +314,10 @@ assert(strcmp(reply,"@FC1,7,ERR,9,format\r\n")==0);
 /* 十进制字段超出解析整数范围，不能截断为合法电流命令。 */
 ```
 
-- [ ] **4.2 接入慢任务分发。** 在 `ReadCommands()` 识别 `@FC1,`，其余既有 `@A1/@A2/@T1` 路径保持兼容；标定编译关闭时 CAP 回复 enabled=0，变更命令回复 disabled，不引入缓存。新协议回复拥有独立已发送确认，不消耗或误清旧协议回执。
-- [ ] **4.3 测试取消与忙重试。** 先排队 START，再提交同 generation 的 STOP，输出仍为零，START 不得延后重放。USB 关闭/世代变化、RX 溢出、丢弃超长/含 NUL 的 `@FC1` 命令都置取消标志；仅保留旧数据。端点忙时 `Reply()` 重复得到相同内容，只有 USB 接受后 `ReplySent()` 才释放；不能在端点仍占用数组时改写回执缓冲。
-- [ ] **4.4 检查导出门槛。** READ 仅在缓存冻结且最终零电流已成功提交时成功；不能把“stop_flag 为 STOP”当作成功提交证明。按固定 capture_id、索引读取，允许重读；错误 CRC、错误索引或不同 capture 的块在电脑端拒绝。固件不因读取或重连恢复驱动。
-- [ ] **4.5 完成集成并提交。** 验证 `make -C tests/force_calibration test`、`make -C tests/usb_telemetry test`、`make -C tests/pid_autotune test`；提交 `feat: expose calibration control and frozen capture over USB`。
+- [x] **4.2 接入慢任务分发。** 在 `ReadCommands()` 识别 `@FC1,`，其余既有 `@A1/@A2/@T1` 路径保持兼容；标定编译关闭时 CAP 回复 enabled=0，变更命令回复 disabled，不引入缓存。新协议回复拥有独立已发送确认，不消耗或误清旧协议回执。
+- [x] **4.3 测试取消与忙重试。** 先排队 START，再提交同 generation 的 STOP，输出仍为零，START 不得延后重放。USB 关闭/世代变化、RX 溢出、丢弃超长/含 NUL 的 `@FC1` 命令都置取消标志；仅保留旧数据。端点忙时 `Reply()` 重复得到相同内容，只有 USB 接受后 `ReplySent()` 才释放；不能在端点仍占用数组时改写回执缓冲。
+- [x] **4.4 检查导出门槛。** READ 仅在缓存冻结且最终零电流已成功提交时成功；不能把“stop_flag 为 STOP”当作成功提交证明。按固定 capture_id、索引读取，允许重读；错误 CRC、错误索引或不同 capture 的块在电脑端拒绝。固件不因读取或重连恢复驱动。
+- [x] **4.5 完成集成并提交。** 验证 `make -C tests/force_calibration test`、`make -C tests/usb_telemetry test`、`make -C tests/pid_autotune test`；提交 `feat: expose calibration control and frozen capture over USB`。
 
 ## 任务 5：网页协议、数据分析和可导出报告
 
@@ -346,10 +348,10 @@ toJson(report);             // -> string，原始值与元数据，无自动参�
 
 `Caps/Status` 对应任务 4 固定字段，client 校验 format/record_bytes/轮 ID、真实限值和权限。`records` 的对象字段与任务 2 的表一一对应；缺失值为 null/质量错误，不用 0 冒充。时序分析全部以记录的相对 us 为准，不使用浏览器收到数据的时间。
 
-- [ ] **5.1 独立字节/协议红灯。** 用手写 48 字节固定向量验证负数、float32、四轮顺序和字段单位；用完整 DATA 行的固定 CRC 断言，通过任意字节分片输入 parser。CRC 算法另用 ASCII `123456789` 的独立已知结果 0x4b37 验证；不使用被测编码器来生成同一个测试的预期结果。
-- [ ] **5.2 会话与心跳红灯。** 串口测试替身仅替代硬件字节流，运行真实 client/parser：连接不 ARM、不 START；只有明确点击/调用才开始；50 ms PING，不并发堆积；START 超时返回结果未确认，不重试 START。STOP 取消未发送的普通请求并优先发送，断开后停止心跳、清除未确认请求，重新连接只 CAP/STATUS；迟到旧 generation/session/id 的回执不完成新请求。
-- [ ] **5.3 实现冻结数据读取。** 只在状态允许时按 2 条一块顺序读取；每块核对 capture/session、first/count/total、CRC 和返回字节数。READ 超时可重读相同索引，重复数据不追加两次；未读完只允许导出明确标注不完整的原始报告，不给标定完成结论。
-- [ ] **5.4 红灯验证增长分析。** 手工记录：CONTROL 在 t=0 使用 100 rpm，RX 在 5 ms 为 140、10 ms 为 180，窗口 10 ms、额外裕量 20，候选应为 100 rpm；覆盖负转速、反转过零、重复序号、时间无序、5 ms 中间缺口、尾部不满窗口。分析用绝对转速，排除窗口边界之外的数据；无足够窗口返回 valid=false，不能返回“0 rpm 已标定”。
+- [x] **5.1 独立字节/协议红灯。** 用手写 48 字节固定向量验证负数、float32、四轮顺序和字段单位；用完整 DATA 行的固定 CRC 断言，通过任意字节分片输入 parser。CRC 算法另用 ASCII `123456789` 的独立已知结果 0x4b37 验证；不使用被测编码器来生成同一个测试的预期结果。
+- [x] **5.2 会话与心跳红灯。** 串口测试替身仅替代硬件字节流，运行真实 client/parser：连接不 ARM、不 START；只有明确点击/调用才开始；50 ms PING，不并发堆积；START 超时返回结果未确认，不重试 START。STOP 取消未发送的普通请求并优先发送，断开后停止心跳、清除未确认请求，重新连接只 CAP/STATUS；迟到旧 generation/session/id 的回执不完成新请求。
+- [x] **5.3 实现冻结数据读取。** 只在状态允许时按 2 条一块顺序读取；每块核对 capture/session、first/count/total、CRC 和返回字节数。READ 超时可重读相同索引，重复数据不追加两次；未读完只允许导出明确标注不完整的原始报告，不给标定完成结论。
+- [x] **5.4 红灯验证增长分析。** 手工记录：CONTROL 在 t=0 使用 100 rpm，RX 在 5 ms 为 140、10 ms 为 180，窗口 10 ms、额外裕量 20，候选应为 100 rpm；覆盖负转速、反转过零、重复序号、时间无序、5 ms 中间缺口、尾部不满窗口。分析用绝对转速，排除窗口边界之外的数据；无足够窗口返回 valid=false，不能返回“0 rpm 已标定”。
 
 ```javascript
 const result = R.analyzeGrowth({records: [
@@ -363,9 +365,9 @@ assert.equal(result.max_growth_rpm,80);
 assert.equal(result.candidate_rpm,100);
 ```
 
-- [ ] **5.5 记录质量与计算范围。** 实际样本间隔、反馈序号缺口、容量终止、未成功提交命令、时间饱和都在报告出现。`max_gap_us` 是分析输入，不能用插值弥补；候选明确绑定所选轮、测试电流/转速/电压观察范围及 T。多份四轮记录导入后取有效候选的共同包络，缺一轮时不标记四轮完成。
-- [ ] **5.6 测量表与导出。** 质量含容器/挂件，力臂用 m；示例 `m=0.5,L=0.1` 得 0.4905 N·m，CAN=8192 得 10 A 指令等效值。用户输入上下阈值、重复测量和方向后生成待复核表；摩擦/误差大的结果标注，不能由轮速自动推算 K_out。JSON 包含 CAP、脉冲、原始记录、完整性、失败原因、T、裕量、用户输入条件、源码提交号（未填写则 null）及未知电压 null，导出不调用 `/api/tuning` 或任何参数写入。
-- [ ] **5.7 执行并提交。** `node --test tools/usb-telemetry/tests/force-calibration.test.cjs` 后运行全部既有 `*.test.cjs`；提交 `feat: decode and analyze force calibration captures`。
+- [x] **5.5 记录质量与计算范围。** 实际样本间隔、反馈序号缺口、容量终止、未成功提交命令、时间饱和都在报告出现。`max_gap_us` 是分析输入，不能用插值弥补；候选明确绑定所选轮、测试电流/转速/电压观察范围及 T。多份四轮记录导入后取有效候选的共同包络，缺一轮时不标记四轮完成。
+- [x] **5.6 测量表与导出。** 质量含容器/挂件，力臂用 m；示例 `m=0.5,L=0.1` 得 0.4905 N·m，CAN=8192 得 10 A 指令等效值。用户输入上下阈值、重复测量和方向后生成待复核表；摩擦/误差大的结果标注，不能由轮速自动推算 K_out。JSON 包含 CAP、脉冲、原始记录、完整性、失败原因、T、裕量、用户输入条件、源码提交号（未填写则 null）及未知电压 null，导出不调用 `/api/tuning` 或任何参数写入。
+- [x] **5.7 执行并提交。** `node --test tools/usb-telemetry/tests/force-calibration.test.cjs` 后运行全部既有 `*.test.cjs`；提交 `feat: decode and analyze force calibration captures`。
 
 ## 任务 6：独立中文页面与可运行使用入口
 
@@ -373,8 +375,8 @@ assert.equal(result.candidate_rpm,100);
 
 **接口：** 页面通过任务 5 的三个模块和现有 `SerialSession` 工作；本地服务增加精确允许的 `/force-calibration.html`，保持只监听 localhost。页面样式复用既有工具的色彩/按钮/卡片约定，避免引入第二套应用框架。
 
-- [ ] **6.1 页面启动与能力检查测试。** 使用当前可用 UI/Playwright 技能说明进行浏览器验证。入口是 `node tools/usb-telemetry/serve.cjs` 后访问 `http://127.0.0.1:4173/force-calibration.html`；无 Web Serial、串口被其他页面占用、旧固件和 disabled 能力各显示明确中文原因。用服务测试验证精确 HTML/JS/CSS 路径 200，任意新 HTML、路径穿越和现有 `/api/tuning` 同源约束不被放宽。
-- [ ] **6.2 写模拟串口操作检查后实现页面。** 布局顺序：连接与固件状态、准备条件/真实限值、选轮和脉冲输入、手动准备/开始/停止、实时读数、冻结记录曲线、测量条件/窗口/导出。开始前明确显示轮名与 CAN ID、命令及等效 A、持续时间和夹具确认，按钮不能仅凭已连接启用。
+- [x] **6.1 页面启动与能力检查测试。** 使用当前可用 UI/Playwright 技能说明进行浏览器验证。入口是 `node tools/usb-telemetry/serve.cjs` 后访问 `http://127.0.0.1:4173/force-calibration.html`；无 Web Serial、串口被其他页面占用、旧固件和 disabled 能力各显示明确中文原因。用服务测试验证精确 HTML/JS/CSS 路径 200，任意新 HTML、路径穿越和现有 `/api/tuning` 同源约束不被放宽。
+- [x] **6.2 写模拟串口操作检查后实现页面。** 布局顺序：连接与固件状态、准备条件/真实限值、选轮和脉冲输入、手动准备/开始/停止、实时读数、冻结记录曲线、测量条件/窗口/导出。开始前明确显示轮名与 CAN ID、命令及等效 A、持续时间和夹具确认，按钮不能仅凭已连接启用。
 
 ```javascript
 const check=(ok,message)=>{if(!ok)throw new Error(message);};
@@ -387,19 +389,19 @@ check(await page.evaluate(()=>!window.__fcCommands.some(x=>x.includes(',START,')
       '连接不能启动电机');
 ```
 
-- [ ] **6.3 显示实时监测与原始数据区别。** 测试中显示所选轮、请求和最终电流、原始/滤波转速、温度、负载功率、状态与停止原因；统计来自 STATUS 的读数标注监测更新率。记录读取完成后，曲线横轴使用板端相对时间，分别显示原始 rpm、控制使用 rpm、请求/最终电流和失败提交标记，能缩放/查看原始点；曲线不能由网页收包时间重采样制造高速细节。
-- [ ] **6.4 停止和重连浏览器检查。** 覆盖 RUNNING 时按停止、断连、重新连接、页面刷新、隐到后台和关闭页面；本地尽力发 STOP，但板端心跳/端口许可是最终保护。重连不 ARM/START，旧数据可手动读取。选择新轮/改脉冲、清数据和开始下一次均需明确操作；不能存在自动换轮/自动重试 START 的代码路径。
-- [ ] **6.5 导出与离线检查。** 下载实际 CSV/JSON 并验证内容和完整性；历史文件导入仅分析，不能向串口发送 START。离线示例用明显 synthetic 标志，不能采用参数、不能解除锁定。记录不完整时可保存证据但标定计算结论禁用。T 和额外裕量初始为空，不能默认套用文档演示的 10 ms/300 rpm。
-- [ ] **6.6 可读性检查。** 浏览器测试记录 console 错误、键盘可达、运行时始终可见的停止按钮、390 px 和桌面截图、无横向溢出、图表单位和颜色以外的状态文字。模拟串口测试不能枚举/打开真实板端口，不实发电流指令。
-- [ ] **6.7 提交。** 页面、服务和下载测试通过，提交 `feat: add standalone Chinese force calibration page`。
+- [x] **6.3 显示实时监测与原始数据区别。** 测试中显示所选轮、请求和最终电流、原始/滤波转速、温度、负载功率、状态与停止原因；统计来自 STATUS 的读数标注监测更新率。记录读取完成后，曲线横轴使用板端相对时间，分别显示原始 rpm、控制使用 rpm、请求/最终电流和失败提交标记，能缩放/查看原始点；曲线不能由网页收包时间重采样制造高速细节。
+- [x] **6.4 停止和重连浏览器检查。** 覆盖 RUNNING 时按停止、断连、重新连接、页面刷新、隐到后台和关闭页面；本地尽力发 STOP，但板端心跳/端口许可是最终保护。重连不 ARM/START，旧数据可手动读取。选择新轮/改脉冲、清数据和开始下一次均需明确操作；不能存在自动换轮/自动重试 START 的代码路径。
+- [x] **6.5 导出与离线检查。** 下载实际 CSV/JSON 并验证内容和完整性；历史文件导入仅分析，不能向串口发送 START。离线示例用明显 synthetic 标志，不能采用参数、不能解除锁定。记录不完整时可保存证据但标定计算结论禁用。T 和额外裕量初始为空，不能默认套用文档演示的 10 ms/300 rpm。
+- [x] **6.6 可读性检查。** 浏览器测试记录 console 错误、键盘可达、运行时始终可见的停止按钮、390 px 和桌面截图、无横向溢出、图表单位和颜色以外的状态文字。模拟串口测试不能枚举/打开真实板端口，不实发电流指令。
+- [x] **6.7 提交。** 页面、服务和下载测试通过，提交 `feat: add standalone Chinese force calibration page`。
 
 ## 任务 7：构建隔离、整体回归与交付说明
 
 **文件：** 修改 `Makefile`、`CMakeLists.txt`、`config/atype-options.txt`、`board_force_calibration.h`、`tests/architecture/test_layers.py`；创建 `tests/force_calibration/test_build_contracts.py`、`docs/superpowers/verification/2026-10-26-chassis-force-calibration-tools.md`；更新 `docs/chassis-direct-force.md`、`docs/chassis-force-calibration.md`、工具 README。
 
-- [ ] **7.1 默认关闭与宏校验。** `CHASSIS_FORCE_CALIBRATION_ENABLE` 只接受 0/1。Make/CMake 共用选项清单；ENABLE=0 不编入标定引擎/适配器/缓存和 ARM/START 实现，USB 只提供轻量 disabled 回复。ENABLE=1 必须同时满足 ONE_BOARD、OMNI_X、MODE=1、STAGE=3、ATYPE_BENCH_MODE=1、USB=1、POWER_METER_ENABLE=1；标定编译分支不运行普通自旋逻辑，交付构建命令统一指定 SPIN=0。非法组合包括 ENABLE=2、速控后端、双板角色、非 OMNI_X、关闭台架/USB/功率计及 STAGE!=3，逐项通过真实交叉编译器验证失败原因。
-- [ ] **7.2 在实际构建清单加入隔离。** Make 不只加源码，还加纯模块 include 路径和数值源 `-fno-fast-math`；CMake 的递归 GLOB 必须显式在默认分支排除新模块、board/runtime/adapter 文件，防止 disabled 固件带入大缓存。任务 1～6 的测试 Makefile 在各自任务内创建，最终生产构建清单在本任务统一验收。
-- [ ] **7.3 运行主机回归。** 执行以下命令，遇到失败先按调试技能定位原因，不能通过放宽断言或删测试交付：
+- [x] **7.1 默认关闭与宏校验。** `CHASSIS_FORCE_CALIBRATION_ENABLE` 只接受 0/1。Make/CMake 共用选项清单；ENABLE=0 不编入标定引擎/适配器/缓存和 ARM/START 实现，USB 只提供轻量 disabled 回复。ENABLE=1 必须同时满足 ONE_BOARD、OMNI_X、MODE=1、STAGE=3、ATYPE_BENCH_MODE=1、USB=1、POWER_METER_ENABLE=1；标定编译分支不运行普通自旋逻辑，交付构建命令统一指定 SPIN=0。非法组合包括 ENABLE=2、速控后端、双板角色、非 OMNI_X、关闭台架/USB/功率计及 STAGE!=3，逐项通过真实交叉编译器验证失败原因。
+- [x] **7.2 在实际构建清单加入隔离。** Make 不只加源码，还加纯模块 include 路径和数值源 `-fno-fast-math`；CMake 的递归 GLOB 必须显式在默认分支排除新模块、board/runtime/adapter 文件，防止 disabled 固件带入大缓存。任务 1～6 的测试 Makefile 在各自任务内创建，最终生产构建清单在本任务统一验收。
+- [x] **7.3 运行主机回归。** 执行以下命令，遇到失败先按调试技能定位原因，不能通过放宽断言或删测试交付：
 
 ```powershell
 make -C tests/force_calibration -B test
@@ -413,7 +415,7 @@ node --test tools/usb-telemetry/tests/*.test.cjs
 
 纯 C 新测试再以 `-Ofast -fno-fast-math` 运行一次，确认 NaN/有限数及边界行为不因 Release 优化消失。架构扫描将 `modules/chassis_force_calibration/` 纳入纯 C 范围，并用临时反例验证能抓到 RTOS/硬件/application 反向依赖。
 
-- [ ] **7.4 独立目录构建。** 从下述 Make 命令开始，不共用已有 `.d` 和对象文件；每条都在完成前检查退出码：
+- [x] **7.4 独立目录构建。** 从下述 Make 命令开始，不共用已有 `.d` 和对象文件；每条都在完成前检查退出码：
 
 ```powershell
 make -j4 PROFILE=atype-vehicle BUILD_DIR=build/fc-tool-speed CHASSIS_CONTROL_MODE=0
@@ -434,10 +436,10 @@ $fcCmake = 'C:/Users/20802/AppData/Local/stm32cube/bundles/cmake/4.2.3+st.1/bin/
 & $fcCmake --build build/cmake-fc-bench -j4
 ```
 
-- [ ] **7.5 核对产物与内存。** 从实际 `compile_commands.json`、ELF 和 map 检查：默认两个后端不含标定存储/驱动入口；标定只保留一条 CAN 路径、无轮速 PID 替代；新数值源最后的选项为 `-fno-fast-math`；CCM 缓存约 60 KiB、整个采集对象不超过 64 KiB，USB 缓冲位于普通 RAM，现有堆/栈预留未缩减。标定功能关闭后不能仅靠链接 gc 的偶然结果隐藏编译分支错误。
-- [ ] **7.6 写实际工具使用步骤。** 将旧文档“工具尚未提供”替换为真实构建命令、网页地址、遥控器准备、选轮/脉冲、停止、读取和导出步骤；实测参数仍为 0。写明 1500/500 ms 只覆盖低幅短时测试，实际器材稳定时间不够时先改进测量装置，不能延长加载绕过限制。辅助电机、功率计/裁判条件不满足时按明确故障提示处理，不建议关闭保护。
-- [ ] **7.7 记录首次上板验收项。** 明确区分已通过的软件检查和待测硬件项：急停与端口关闭响应、最终零提交、真实采样间隔/漏帧、ISR 与控制耗时、任务栈余量、负载功率测量、CCM/USB 行为以及夹具。首次使用先最小电流、短脉冲，确认方向和归零；不自动开展实机验收。
-- [ ] **7.8 独立审查与提交。** 使用代码审查技能，提供实际范围和已通过测试，重点审查默认关闭、最终发送保护、锁/中断、内存和协议恢复；修正重要问题后再完成对应回归。最终文档列出每项实际结果、截图/报告位置和提交号；只提交本次相关改动，报告最后提交编号。
+- [x] **7.5 核对产物与内存。** 从实际 `compile_commands.json`、ELF 和 map 检查：默认两个后端不含标定存储/驱动入口；标定只保留一条 CAN 路径、无轮速 PID 替代；新数值源最后的选项为 `-fno-fast-math`；CCM 缓存约 60 KiB、整个采集对象不超过 64 KiB，USB 缓冲位于普通 RAM，现有堆/栈预留未缩减。标定功能关闭后不能仅靠链接 gc 的偶然结果隐藏编译分支错误。
+- [x] **7.6 写实际工具使用步骤。** 将旧文档“工具尚未提供”替换为真实构建命令、网页地址、遥控器准备、选轮/脉冲、停止、读取和导出步骤；实测参数仍为 0。写明 1500/500 ms 只覆盖低幅短时测试，实际器材稳定时间不够时先改进测量装置，不能延长加载绕过限制。辅助电机、功率计/裁判条件不满足时按明确故障提示处理，不建议关闭保护。
+- [x] **7.7 记录首次上板验收项。** 明确区分已通过的软件检查和待测硬件项：急停与端口关闭响应、最终零提交、真实采样间隔/漏帧、ISR 与控制耗时、任务栈余量、负载功率测量、CCM/USB 行为以及夹具。首次使用先最小电流、短脉冲，确认方向和归零；不自动开展实机验收。
+- [x] **7.8 独立审查与提交。** 使用代码审查技能，提供实际范围和已通过测试，重点审查默认关闭、最终发送保护、锁/中断、内存和协议恢复；修正重要问题后再完成对应回归。最终文档列出每项实际结果、截图/报告位置和提交号；只提交本次相关改动，报告最后提交编号。
 
 ## 完成判据与执行交接
 
@@ -450,4 +452,4 @@ $fcCmake = 'C:/Users/20802/AppData/Local/stm32cube/bundles/cmake/4.2.3+st.1/bin/
 | 无测力计记录表及转速包络候选 | 5、7 | 手工算例、缺口拒绝和数据范围说明 |
 | 宏隔离、默认无缓存、两种供电、旧功能兼容 | 7 | Make/CMake、符号/内存检查、完整回归 |
 
-执行顺序固定为 1→2→3→4→5→6→7；每项先失败测试，再最小实现、验证和本地提交。当前只完成设计及实施计划，以上实施复选框保持未勾选。默认在当前会话逐项执行；若另行选择子代理方式，仍由主代理统一处理共享驱动/构建文件和提交，避免多个任务同时移动或覆盖文件。
+执行顺序固定为 1→2→3→4→5→6→7；每项先失败测试，再最小实现、验证和本地提交。本计划的软件交付与验证已完成，实际结果、审查修正、内存、截图和首次硬件待验项目见 [验证记录](../verification/2026-10-26-chassis-force-calibration-tools.md)。用户后续追加的统一四标签/共享串口要求已按 [补充计划](2026-10-26-force-calibration-dashboard-tab.md) 实施，取代任务 6 的独立连接页面；旧地址保留跳转。默认在当前会话逐项执行；若另行选择子代理方式，仍由主代理统一处理共享驱动/构建文件和提交，避免多个任务同时移动或覆盖文件。
