@@ -1,6 +1,6 @@
 # 单轮力控标定与高速记录工具设计
 
-日期：2026-10-26。本文是待审核的工具设计，尚未实现工具；已有力控及标定文档见 [力控方案](../../chassis-direct-force.md) 和 [标定方法](../../chassis-force-calibration.md)。
+日期：2026-10-26。用户已确认本设计，现进入[实施计划](../plans/2026-10-26-chassis-force-calibration-tools.md)阶段，尚未实现工具；已有力控及标定文档见 [力控方案](../../chassis-direct-force.md) 和 [标定方法](../../chassis-force-calibration.md)。
 
 ## 目标与使用流程
 
