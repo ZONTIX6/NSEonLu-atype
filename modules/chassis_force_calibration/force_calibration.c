@@ -52,6 +52,10 @@ bool FcStart(FcEngine *e,uint32_t session,const FcPulse *p,const FcInput *i)
        p->wheel>=4 || !p->current || abs(p->current)>e->status.limits.max_current ||
        !p->rise_ms || !p->hold_ms || !p->fall_ms ||
        (uint32_t)p->rise_ms+p->hold_ms+p->fall_ms>e->status.limits.max_on_ms) return false;
+    for(unsigned w=0;w<4;w++) if(abs(i->raw_rpm[w])>e->status.limits.stationary_rpm ||
+        fabsf(i->used_rpm[w])>e->status.limits.stationary_rpm) {
+        e->stationary=false;e->status.state=FC_PREPARING;return false;
+    }
     do {++e->next_capture;} while(!e->next_capture);
     e->status.capture_id=e->next_capture;e->status.capture_session=session;
     e->status.capture_generation=i->usb_generation;e->status.pulse=*p;

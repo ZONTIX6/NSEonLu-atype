@@ -43,6 +43,8 @@ static void guards(void)
 static void ranges_final_and_wrap(void)
 {
     FcEngine e;FcInput in;uint32_t session;ready_engine(&e,&in,&session);
+    in.raw_rpm[0]=100;assert(!FcStart(&e,session,&pulse,&in));assert(e.status.state==FC_PREPARING);
+    in.raw_rpm[0]=0;advance_ms(&e,&in,session,101);
     for(unsigned k=0;k<7;k++) {
         FcPulse bad=pulse;
         switch(k) {case 0:bad.wheel=4;break;case 1:bad.current=0;break;

@@ -65,7 +65,7 @@ function createServer(root = __dirname, configPath = path.join(__dirname, '../..
     try {
       const url = new URL(request.url, 'http://localhost');
       const asset = url.pathname === '/' ? '/index.html' : url.pathname;
-      if (!/^\/(?:index\.html|[a-z][a-z0-9-]*\.(?:css|js|svg))$/.test(asset)) {
+      if (!/^\/(?:index\.html|force-calibration\.html|[a-z][a-z0-9-]*\.(?:css|js|svg))$/.test(asset)) {
         response.writeHead(404); response.end('Not found'); return;
       }
       const content = await fs.readFile(path.join(root, asset.slice(1)));
