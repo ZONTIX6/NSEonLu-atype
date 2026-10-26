@@ -151,6 +151,14 @@ int main(void)
     USBTelemetryStreamSend(&sample, 1300);
     assert(memcmp(cdc.TxBuffer, "@T1,21,OK,pid", 12) == 0);
     complete();
+    receive("@FC1,30,CAP\r\n");
+    USBTelemetryStreamSend(&sample,1320);
+    assert(memcmp(cdc.TxBuffer,"@FC1,30,CAP,",12)==0);
+    assert(strstr((char *)cdc.TxBuffer,",0,1,48,0,")!=NULL);
+    memcpy(saved,cdc.TxBuffer,cdc.TxLength);length=cdc.TxLength;
+    receive("@T1,31,GET,pid\r\n");USBTelemetryStreamSend(&sample,1340);
+    assert(!memcmp(saved,cdc.TxBuffer,length));complete();
+    USBTelemetryStreamSend(&sample,1360);assert(!memcmp(cdc.TxBuffer,"@T1,31,OK,pid",12));complete();
     puts("USB telemetry transport tests passed");
     return 0;
 }

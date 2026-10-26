@@ -22,3 +22,8 @@ test_adapter.exe: test_adapter.c test_power_permission.c $(CORE) ../../modules/c
 test_adapter: test_adapter.exe
 	./test_adapter.exe
 test: test_adapter
+test_protocol.exe: test_protocol.c $(CORE) ../../modules/chassis_force_calibration/force_calibration_capture.c ../../modules/motor/DJImotor/dji_force_calibration.c ../../application/runtime/force_calibration_app.c ../../modules/telemetry/force_calibration_protocol.c $(POWER_SOURCES) $(wildcard ../../modules/chassis_force/*.c) $(ADAPTER_SOURCES)
+	$(CC) $(filter-out -pedantic,$(CFLAGS)) -Istubs -include test_irq.h -DCHASSIS_CONTROL_MODE=1 -DCHASSIS_FORCE_CALIBRATION_ENABLE=1 -ffunction-sections -fdata-sections $(INCLUDES) $(POWER_INCLUDES) $(DRIVER_INCLUDES) $^ -Wl,--gc-sections -lm -o $@
+test_protocol: test_protocol.exe
+	./test_protocol.exe
+test: test_protocol

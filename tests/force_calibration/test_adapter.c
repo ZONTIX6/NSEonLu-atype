@@ -47,7 +47,10 @@ static void packed_zero(void)
         assert(sender_assignment[1].tx_buff[2*slot]==0 && sender_assignment[1].tx_buff[2*slot+1]==0);
     }
 }
-int main(void)
+#ifndef FC_ADAPTER_MAIN
+#define FC_ADAPTER_MAIN main
+#endif
+int FC_ADAPTER_MAIN(void)
 {
     PreparePowerGroup();output_group=NULL;
     for(unsigned w=0;w<4;w++) {adapter_motors[w]->motor_type=M3508;adapter_motors[w]->message_num=(uint8_t[]){0,3,1,2}[w];}

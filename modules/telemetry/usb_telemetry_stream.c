@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include "runtime_tuning.h"
 #include "autotune_protocol.h"
+#include "force_calibration_protocol.h"
 #include "chassis_control_config.h"
 #if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
 #include "chassis_force_telemetry.h"
@@ -53,6 +54,7 @@ static void ReadCommands(void)
         const uint32_t primask = __get_PRIMASK();
         __disable_irq();
         if (rx_overflow) {
+            ForceCalibrationProtocolCancel(CDC_GetSession_FS(),FC_REASON_PROTOCOL);
             rx_tail = rx_head; rx_overflow = false;
             command_length = 0; command_dropping = true;
         }
@@ -64,12 +66,14 @@ static void ReadCommands(void)
             if (!command_dropping) {
                 if (command_length && command[command_length - 1] == '\r') --command_length;
                 command[command_length] = 0;
-                if (!strncmp(command,"@A1,",4) || !strncmp(command,"@A2,",4)) AutotuneSubmit(command);
+                if (!strncmp(command,"@FC1,",5)) ForceCalibrationProtocolSubmit(command,CDC_GetSession_FS());
+                else if (!strncmp(command,"@A1,",4) || !strncmp(command,"@A2,",4)) AutotuneSubmit(command);
                 else RuntimeTuningSubmit(command);
             }
             command_length = 0; command_dropping = false;
         } else if (!command_dropping) {
             if (byte == 0 || command_length >= sizeof command - 1) {
+                ForceCalibrationProtocolCancel(CDC_GetSession_FS(),FC_REASON_PROTOCOL);
                 command_length = 0; command_dropping = true;
             } else command[command_length++] = (char)byte;
         }
@@ -85,6 +89,7 @@ void USBTelemetryStreamInit(void)
     command_length = 0; command_dropping = false;
     RuntimeTuningCancel();
     AutotuneCancel();
+    ForceCalibrationProtocolInit();
 #if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
     header_length=ChassisForceTelemetryHeader(header,sizeof header);
 #else
@@ -109,6 +114,7 @@ void USBTelemetryStreamSend(USBTelemetrySample_s *sample, uint32_t now_ms)
         header_needed = true;
         RuntimeTuningCancel();
         AutotuneCancel();
+        ForceCalibrationProtocolCancel(current_session,FC_REASON_USB);
         command_length = 0; command_dropping = false;
         const uint32_t primask = __get_PRIMASK();
         __disable_irq();
@@ -117,7 +123,7 @@ void USBTelemetryStreamSend(USBTelemetrySample_s *sample, uint32_t now_ms)
         }
         __set_PRIMASK(primask);
     }
-    if (!CDC_IsPortOpen_FS()) {AutotuneCancel();return;}
+    if (!CDC_IsPortOpen_FS()) {AutotuneCancel();ForceCalibrationProtocolCancel(current_session,FC_REASON_USB);return;}
     ReadCommands();
     /* Never format into a buffer while the endpoint still owns its bytes. */
     if (!CDC_IsTransmitIdle_FS()) {
@@ -133,12 +139,15 @@ void USBTelemetryStreamSend(USBTelemetrySample_s *sample, uint32_t now_ms)
         }
         return;
     }
-    size_t reply_length = RuntimeTuningReply(reply, sizeof reply);
+    size_t reply_length=ForceCalibrationProtocolReply(reply,sizeof reply);
+    bool calibration_reply=reply_length>0;
+    if(!reply_length) reply_length = RuntimeTuningReply(reply, sizeof reply);
     bool autotune_reply=false;
     if (!reply_length) {reply_length=AutotuneReply(reply,sizeof reply);autotune_reply=reply_length>0;}
     if (reply_length) {
         if (USBTransmit((uint8_t *)reply, (uint16_t)reply_length) == USBD_OK) {
-            if (autotune_reply) AutotuneReplySent();else RuntimeTuningReplySent();
+            if(calibration_reply) ForceCalibrationProtocolReplySent();
+            else if (autotune_reply) AutotuneReplySent();else RuntimeTuningReplySent();
         }
         else ++drop_count;
         return;
