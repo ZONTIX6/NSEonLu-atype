@@ -48,6 +48,15 @@ test('torque, equivalent command current and report retain unknown values',()=>{
   const json=JSON.parse(R.toJson(report));assert.equal(json.voltage_v,null);assert.equal(json.quality.complete,false);
   assert.match(R.toCsv(report),/time_us/);assert.match(R.toCsv(report),/CONTROL/);
 });
+test('four-wheel envelope cannot trust synthetic reports, mismatched wheels or stored conclusions',()=>{
+  const fake=Array.from({length:4},(_,wheel)=>({synthetic:true,records:[],quality:{complete:true},pulse:{wheel},analysis:{valid:true,candidate_rpm:0}}));
+  assert.equal(R.envelope(fake).four_wheels_complete,false);
+  assert.equal(R.envelope(fake.map((r,wheel)=>({...r,synthetic:false,records:records.map(r=>({...r,wheel:1})),pulse:{wheel}}))).four_wheels_complete,false);
+  const malformed={records:[{type:'CONTROL',wheel:1,time_us:0,used_rpm:100,requested:0,final:[]},...records.filter(r=>r.type==='RX')],
+    quality:{complete:true},status:{complete:1,zero_submitted:1,reason:0,records:4},
+    caps:{format:1,record_bytes:48},pulse:{wheel:1,current:300,rise_ms:50,hold_ms:100,fall_ms:50},window_us:10000,margin_rpm:20,max_gap_us:5000};
+  assert.equal(R.validateReport(malformed).complete,false);
+});
 class SerialFake {
   constructor(){this.state='connected';this.lines=[];this.generation=9;this.auto=true;}
   async send(line) {
@@ -58,8 +67,12 @@ class SerialFake {
   }
   async disconnect(){this.state='idle';this.onState?.('idle');}
 }
+function makeClient(serial,options={}){
+  const c=new Client({send:line=>serial.send(line),isConnected:()=>serial.state==='connected',...options});
+  serial.onChunk=bytes=>c.push(bytes);serial.onState=state=>c.setConnected(state==='connected');return c;
+}
 test('connecting only queries, explicit arm leases, STOP preempts and disconnect cancels',async()=>{
-  const serial=new SerialFake(),errors=[];const c=new Client({serialSession:serial,onError:e=>errors.push(e),timeout_ms:35});
+  const serial=new SerialFake(),errors=[];const c=makeClient(serial,{onError:e=>errors.push(e),timeout_ms:35});
   await c.capabilities();assert.equal(serial.lines.length,1);assert.match(serial.lines[0],/,CAP/);
   await c.arm();await new Promise(r=>setTimeout(r,62));assert(serial.lines.some(x=>x.includes(',PING,')));
   serial.auto=false;const one=c.status().catch(e=>e),two=c.status().catch(e=>e);
@@ -69,7 +82,7 @@ test('connecting only queries, explicit arm leases, STOP preempts and disconnect
   await c.disconnect();const count=serial.lines.length;await new Promise(r=>setTimeout(r,60));assert.equal(serial.lines.length,count);
 });
 test('START timeout never retries or accepts an old session',async()=>{
-  const serial=new SerialFake();const c=new Client({serialSession:serial,timeout_ms:20});
+  const serial=new SerialFake();const c=makeClient(serial,{timeout_ms:20});
   await c.capabilities();await c.arm();serial.auto=false;
   const start=c.start({wheel:1,current:300,rise_ms:50,hold_ms:100,fall_ms:50});
   await assert.rejects(start,/未确认/);assert.equal(serial.lines.filter(x=>x.includes(',START,')).length,1);

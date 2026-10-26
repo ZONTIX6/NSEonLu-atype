@@ -6,7 +6,8 @@
   const conclusions={accepted:'多转速台架验收通过',no_improvement:'未发现稳定改善',score_floor:'基线已接近评分下限，无充分改善证据',no_candidate:'无通过硬门槛的候选',baseline_invalid:'基线无效，请调整试验条件',baseline_unstable:'基线不稳定',drift:'工况漂移，已停止',invalid_candidates:'连续三个候选无效',budget:'预算不足，仅保留探索报告',aborted:'试验中止',end_unconfirmed:'结束未确认，不可采用'};
   const fmt=n=>Number.isFinite(n)?Number(n.toPrecision(5)).toString():'—';
   const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-  window.createAutotuneUI=function({client,tuningClient,lockManual,getSamples}){
+  window.createAutotuneUI=function({client,tuningClient,lockManual,getSamples,coordinator}){
+    let externallyLocked=false;
     let connected=false,busy=false,controller=null,original=null,results=[],rows=[],demo=false,session=0,selected=0,epoch=0,pollTimer=null,adopted=null,syncPending=null,demoSamples=[];
     let snapshot=null,report=null,continueNext=null;
     const status=(text,error=false)=>{$('auto-status').textContent=text;$('auto-status').classList.toggle('error',error);};
@@ -16,9 +17,10 @@
       $('auto-sync').hidden=!syncPending;$('auto-sync').disabled=busy;
       $('auto-save').hidden=!adopted||!['error','volatile'].includes(adopted.storage);$('auto-save').disabled=busy;
       $('auto-json').disabled=!report||busy;$('auto-csv').disabled=!rows.length||busy;
-      $('auto-continue').hidden=!continueNext;
+      $('auto-continue').hidden=!continueNext;$('auto-continue').disabled=!continueNext;
       document.querySelectorAll('#auto-settings input,#auto-settings select').forEach(el=>{el.disabled=busy;});
       $('auto-mode').textContent=demo?'演示 · 合成台架':busy?'台架试验进行中':connected?'真实设备':'尚未连接';
+      if(externallyLocked)for(const id of ['auto-start','auto-adopt','auto-sync','auto-save','auto-demo','auto-continue'])$(id).disabled=true;
     }
     function appendCells(parent,values){const tr=document.createElement('tr');for(const value of values){const td=document.createElement('td');td.textContent=value;tr.append(td);}parent.append(tr);}
     function addRow(row){
@@ -65,13 +67,14 @@
       continueNext=null;controls();A.check(signal);
     }
     async function start(isDemo){
-      if(busy)return;let options;
+      if(busy||externallyLocked)return;let options;
       try{options=settings();if(!isDemo&&!$('auto-confirm').checked)throw new Error('请先确认底盘已架空固定、四轮离地。');}catch(e){status(e.message,true);return;}
+      if(!isDemo&&coordinator){try{coordinator.acquire('pid');coordinator.activate('pid',null);}catch(e){status(e.message,true);return;}}
       const token=epoch,aborter=new AbortController();busy=true;demo=isDemo;controller=aborter;results=[];rows=[];adopted=null;syncPending=null;session=0;demoSamples=[];snapshot=null;clearTimeout(pollTimer);
       report={version:2,algorithm:A.rules.version,rules:A.rules,started:new Date().toISOString(),synthetic:isDemo,settings:options,supplyVoltage:'未观测',scope:'正向、架空台架；反向及带载尚未验证',results,records:rows};
       $('auto-trials').replaceChildren();$('auto-results').replaceChildren();$('auto-comparisons').replaceChildren();$('auto-persistence').textContent='候选参数仅用于试验，尚未采用。';$('auto-progress').max=50;$('auto-progress').value=0;
       lockManual(true);controls();status(isDemo?'演示整定中，不连接设备、不保存参数。':'正在读取原参数并建立台架会话…');
-      let completed=false;
+      let completed=false,beginAttempted=false,endConfirmed=false;
       try{
         while(tuningClient.pending){A.check(aborter.signal);await wait(30);}
         if(isDemo)original={revision:0,values:Array.from({length:4},()=>[.75,0,0,15000,3000,0]).flat()};
@@ -81,17 +84,19 @@
         for(const wheel of wheels){
           A.check(aborter.signal);selected=wheel;
           if(wheel!==wheels[0]&&!isDemo)await nextWheel(wheel,aborter.signal);
-          if(!isDemo){ensureSnapshot(await readSnapshot());A.check(aborter.signal);const begun=await client.begin(original.revision);session=begun.session;}
+          if(!isDemo){ensureSnapshot(await readSnapshot());A.check(aborter.signal);beginAttempted=true;endConfirmed=false;const begun=await client.begin(original.revision);session=begun.session;}
           status((isDemo?'演示 · 合成数据 · ':'')+'正在整定 '+names[wheel]+'，Kd 保持原值。');
-          const result=await A.searchWheelV2(isDemo?demoTrial:hardwareTrial,original.values,{...options,wheel,elapsed:0,signal:aborter.signal,onTrial:addRow,onProgress:progress});
-          if(session){try{await client.end(session);session=0;result.endConfirmed=true;}catch(e){result.recommended=false;result.reason='end_unconfirmed';results.push(result);compare();throw e;}}
+          const result=await A.searchWheelV2(isDemo?demoTrial:hardwareTrial,original.values,{...options,wheel,elapsed:0,signal:aborter.signal,onTrial:row=>{if(token===epoch)addRow(row);},onProgress:p=>{if(token===epoch)progress(p);}});
+          if(session){try{await client.end(session);session=0;result.endConfirmed=true;endConfirmed=true;}catch(e){result.recommended=false;result.reason='end_unconfirmed';results.push(result);compare();throw e;}}
           results.push(result);compare();
           if(['aborted','drift','invalid_candidates','baseline_invalid','baseline_unstable','budget'].includes(result.reason)){status(conclusions[result.reason]+'。已结束本轮，保留探索报告。',true);break;}
         }
         completed=true;
       }catch(e){report.error=e.message;if(token===epoch)status(e.message+' 请进入零力模式后重新准备。',true);}
       finally{
-        if(session&&connected)try{while(client.pending)await wait(25);await client.end(session);}catch(e){report.endError=e.message;if(token===epoch)status('结束未确认：'+e.message+' 请进入零力模式。',true);}
+        if(token!==epoch)return;
+        if(session&&connected)try{while(client.pending)await wait(25);await client.end(session);endConfirmed=true;}catch(e){report.endError=e.message;if(token===epoch)status('结束未确认：'+e.message+' 请进入零力模式。',true);}
+        if(token===epoch&&!isDemo&&coordinator){if(!beginAttempted||endConfirmed)coordinator.release('pid',true);else coordinator.unknown('pid');}
         session=0;controller=null;continueNext=null;busy=false;lockManual(false);report.finished=new Date().toISOString();
         if(token!==epoch){controls();return;}
         if(completed){const improved=results.filter(r=>r.recommended).length,last=results.at(-1);
@@ -104,6 +109,7 @@
       $('auto-persistence').textContent=state==='saved'?'已保存到板端，重启后恢复。':state==='pending'?'等待板端保存：请进入零力模式，保持电机停止。':state==='error'?'板端保存失败，可停机后重试。':state==='unsupported'?'旧固件未提供保存状态，请升级。':'尚未确认板端保存。';controls();}
     function schedulePoll(){clearTimeout(pollTimer);if(connected&&adopted?.storage==='pending')pollTimer=setTimeout(pollSave,1000);}
     async function pollSave(){
+      if(externallyLocked)return;
       if(busy||tuningClient.pending){schedulePoll();return;}const token=epoch,record=adopted;
       try{const state=await tuningClient.get('pid');if(token!==epoch)return;
         if(adopted!==record)return;
@@ -112,21 +118,32 @@
       schedulePoll();
     }
     async function synchronize(token=epoch){
+      if(externallyLocked&&coordinator?.owner!=='tuning')throw Error('当前控制会话禁止参数文件同步');
       const record=syncPending;if(!record)return;
       const response=await fetch('/api/tuning',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group:'pid',...record})});
       const data=await response.json();if(!response.ok||!data.saved)throw new Error(data.error||'本地文件同步失败。');
       if(token!==epoch)return;
       if(syncPending===record)syncPending=null;status('候选参数已采用，项目参数文件已同步。');
     }
+    async function parameterOperation(work){
+      if(busy||externallyLocked)return;
+      if(coordinator){try{coordinator.acquire('tuning');coordinator.activate('tuning',null);}catch(e){status(e.message,true);return;}}
+      const token=epoch,context={writing:false,confirmed:false};busy=true;lockManual(true);controls();
+      try{await work(context,token);}catch(e){if(e.confirmed)context.confirmed=true;if(token===epoch)status((adopted?'板端已生效，文件尚未同步：':'')+e.message,true);}
+      finally{
+        if(token===epoch&&coordinator){if(!context.writing||context.confirmed)coordinator.release('tuning',true);else coordinator.unknown('tuning');}
+        if(token===epoch){busy=false;lockManual(false);controls();schedulePoll();}
+      }
+    }
     async function adopt(){
-      if(busy||demo||!original)return;busy=true;lockManual(true);controls();const token=epoch;
-      try{while(tuningClient.pending)await wait(30);const currentSnapshot=await readSnapshot(),current=currentSnapshot.pid;
+      if(demo||!original)return;
+      return parameterOperation(async(context,token)=>{
+        while(tuningClient.pending)await wait(30);const currentSnapshot=await readSnapshot(),current=currentSnapshot.pid;
         if(token!==epoch)throw new Error('连接已改变，请重新整定。');
         ensureSnapshot(currentSnapshot);
-        adopted=await tuningClient.set('pid',current.revision,A.mergeResults(original.values,results));if(token!==epoch)return;
+        context.writing=true;adopted=await tuningClient.set('pid',current.revision,A.mergeResults(original.values,results));context.confirmed=true;if(token!==epoch)return;
         syncPending=adopted;savedText();await synchronize(token);
-      }catch(e){if(token===epoch)status((adopted?'板端已生效，文件尚未同步：':'')+e.message,true);}
-      finally{busy=false;lockManual(false);controls();if(token===epoch)schedulePoll();}
+      });
     }
     $('auto-start').addEventListener('click',()=>start(false));$('auto-demo').addEventListener('click',()=>start(true));
     $('auto-continue').addEventListener('click',()=>continueNext?.());
@@ -135,15 +152,18 @@
     $('auto-csv').addEventListener('click',()=>download(A.reportCSV(rows),'text/csv;charset=utf-8','csv'));
     document.querySelectorAll('#auto-settings input,#auto-settings select').forEach(el=>el.addEventListener('change',()=>{if(!busy&&results.length){invalidate('测试配置改变，结果失效');controls();}}));
     $('auto-stop').addEventListener('click',()=>{controller?.abort();status('正在结束试调并恢复原参数…');});$('auto-adopt').addEventListener('click',adopt);
-    $('auto-sync').addEventListener('click',async()=>{busy=true;lockManual(true);controls();const token=epoch,record=syncPending;
-      try{const current=await tuningClient.get('pid');if(token!==epoch)return;
+    $('auto-sync').addEventListener('click',()=>parameterOperation(async(context,token)=>{
+      const record=syncPending;const current=await tuningClient.get('pid');if(token!==epoch)return;
         if(current.revision!==record.revision||current.values.some((v,i)=>v!==record.values[i]))throw new Error('参数已改变，请重新读取。');await synchronize(token);
-      }catch(e){if(token===epoch)status(e.message,true);}finally{busy=false;lockManual(false);controls();}});
-    $('auto-save').addEventListener('click',async()=>{busy=true;lockManual(true);controls();const token=epoch;
-      try{const state=await tuningClient.save('pid',adopted.revision);if(token!==epoch)return;adopted=state;savedText();}catch(e){if(token===epoch)status(e.message,true);}finally{busy=false;lockManual(false);controls();if(token===epoch)schedulePoll();}});
+    }));
+    $('auto-save').addEventListener('click',()=>parameterOperation(async(context,token)=>{
+      context.writing=true;const state=await tuningClient.save('pid',adopted.revision);context.confirmed=true;if(token!==epoch)return;adopted=state;savedText();
+    }));
     controls();
     return {
+      setLocked(value){externallyLocked=value;if(value)clearTimeout(pollTimer);else schedulePoll();controls();},
       setConnected(value){if(connected===value)return;connected=value;++epoch;clearTimeout(pollTimer);
+        controller?.abort();controller=null;continueNext=null;session=0;busy=false;lockManual(false);
         if(!value){controller?.abort();client.disconnect();invalidate('连接改变，未采用结果失效');results=[];adopted=null;syncPending=null;status('串口已断开；板端将停止试调。请进入零力模式，重连后重新读取。',true);}
         else{demo=false;results=[];original=null;status('先架空固定底盘，再按说明准备遥控器。');}controls();},
       renderChart(){if($('autotune-panel').hidden)return;const samples=demo?demoSamples:getSamples(),key=keys[selected],now=demoSamples.length&&demo?demoSamples.at(-1).arrivalMs:performance.now();

@@ -7,17 +7,35 @@
   let mode = 'idle', demoTimer = null, demoSequence = 0, lastRender = -Infinity, lastChartRender = -Infinity, lastRendered = null, lastValues = null, hadError = false;
   let tuningUI = null;
   let autotuneUI = null;
-  const autotuneClient = new window.TelemetryAutotune.AutotuneClient({send: line => session.send(line)});
-  const tuningClient = new window.TelemetryTuning.TuningClient({send: line => session.send(line)});
+  let forceUI=null,session=null,source='csv',selectedPanel='monitor',switchTarget=null,switching=null,manualLocked=false,linkEpoch=0;
+  const forceStore=new window.ForceTelemetry.Store();
+  const forceView=new P.DisplayState(forceStore);
+  const displayView=()=>source==='force'?forceView:view;
+  const displayStore=()=>source==='force'?forceStore:store;
+  const coordinator=new window.TelemetryControlCoordinator.Coordinator({send:line=>session.send(line),onChange:controlChanged});
+  const autotuneClient = new window.TelemetryAutotune.AutotuneClient({send: line => coordinator.send('pid',line)});
+  const tuningClient = new window.TelemetryTuning.TuningClient({send: line => coordinator.send('tuning',line)});
+  const forceClient=new window.ForceCalibrationClient.Client({send:line=>coordinator.send('force',line),isConnected:()=>session?.state==='connected',
+    onStatus:(s,operation)=>{forceUI?.showStatus(s,operation);controlChanged();},onError:e=>forceUI?.showError(e)});
   const clock = () => performance.now();
   const setText = (id, text) => {if ($(id).textContent !== String(text)) $(id).textContent = text;};
   const format = (value, digits = 2) => value === null || value === undefined || !Number.isFinite(value) ? '—' : value.toFixed(digits);
   const ageText = value => value === null || value === undefined || value >= P.UINT_MAX ? '—' : String(Math.round(value));
   function message(text, error = false) {setText('message', text); $('message').classList.toggle('error', error);}
-  const parser = new P.StreamParser({onSample(sample) {store.add(sample, clock());}, onControl: line => {if(!autotuneClient.receive(line)){const pending=tuningClient.pending;tuningClient.receive(line);if(pending&&!tuningClient.pending&&pending.operation==='SET'&&line.split(',')[2]==='OK')autotuneUI?.configurationChanged();}}, onError(kind) {
+  function tuningReply(line){const pending=tuningClient.pending;tuningClient.receive(line);if(pending&&!tuningClient.pending&&pending.operation==='SET'&&line.split(',')[2]==='OK')autotuneUI?.configurationChanged();}
+  const parser = new P.StreamParser({onSample(sample) {if(source!=='csv'){source='csv';view.resume();lastValues=lastRendered=null;}store.add(sample, clock());}, onControl: line => {if(!autotuneClient.receive(line))tuningReply(line);}, onError(kind) {
     if (kind === 'version') message('遥测版本与表头不匹配。请使用 CSV v1–v5 遥测固件。', true);
   }});
-  const session = new window.TelemetrySerial.SerialSession({serial: navigator.serial, onChunk: chunk => parser.push(chunk), onState(state) {
+  const router=window.TelemetrySerialRouter.createRouter({onTelemetry:line=>{
+      if(line.startsWith('version,')&&source!=='csv'){source='csv';store.latest=null;view.resume();lastValues=lastRendered=null;}
+      parser.push(line+'\r\n');},onTuning:tuningReply,
+    onAutotune:line=>autotuneClient.receive(line),onCalibration:line=>forceClient.receiveLine(line),onForce:line=>{
+      try{const sample=window.ForceTelemetry.parseLine(line);if(source!=='force'){source='force';forceStore.latest=null;view.resume();forceView.resume();lastValues=lastRendered=null;}if(sample)forceStore.add(sample,clock());}
+      catch(e){message(e.message,true);}
+    },onErrors:()=>{message('串口行损坏，已丢弃整行并从下一行恢复。',true);if(coordinator.owner==='force')forceUI?.stopAndConfirm().catch(()=>{});}});
+  session = new window.TelemetrySerial.SerialSession({serial: navigator.serial, onChunk: chunk => router.push(chunk), onState(state) {
+    const connected=state==='connected';++linkEpoch;router.reset();parser.fields=null;parser.version=null;
+    coordinator.setConnected(connected);forceClient.setConnected(connected);forceUI?.setConnected(connected);
     tuningUI?.setConnected(state === 'connected');
     autotuneUI?.setConnected(state === 'connected');
     if (state === 'connected') {hadError = false; message('串口已打开，等待遥测数据。IMU 显示需要支持 CSV v2 的固件；若持续无数据，请确认启用了 USB 遥测模式。');}
@@ -27,11 +45,27 @@
     hadError = true;
     const hints = {NetworkError: '串口读取中断或设备被拔出，请检查 USB 连接后重连。', InvalidStateError: '串口可能正被其他程序占用，请关闭串口助手或调试器后重试。', SecurityError: '浏览器拒绝串口访问。请使用 Chrome / Edge，并允许此 localhost 页面访问串口。'};
     message(hints[error.name] || `无法连接或读取串口：${error.message}`, true);
+    forceUI?.showError(error);
   }});
-  tuningUI = window.createTuningUI(tuningClient);
-  autotuneUI = window.createAutotuneUI({client:autotuneClient,tuningClient,lockManual:value=>tuningUI.setLocked(value),getSamples:()=>store.samples});
-  const workspaceNames=['monitor','tuning','autotune'];
+  tuningUI = window.createTuningUI(tuningClient,{coordinator});
+  autotuneUI = window.createAutotuneUI({client:autotuneClient,tuningClient,coordinator,lockManual:value=>{manualLocked=value;controlChanged();},getSamples:()=>store.samples});
+  forceUI=window.createForceCalibrationUI({client:forceClient,coordinator,isConnected:()=>session.state==='connected',getOtherBusy:()=>!!autotuneUI?.busy||!!tuningUI?.busy});
+  function controlChanged(){
+    tuningUI?.setLocked(manualLocked||!!coordinator.owner);
+    autotuneUI?.setLocked(!!coordinator.owner&&coordinator.owner!=='pid');forceUI?.refresh();
+    const owner=coordinator.owner,s=forceClient?.latest;
+    $('control-status-bar').hidden=!owner;
+    $('fc-stop').disabled=session.state!=='connected';
+    $('fc-stop-note').textContent=owner==='force'?`力控标定 · ${['LF','RF','LB','RB'][forceClient.pulse?.wheel??Number($('fc-wheel').value)]} · ${window.ForceCalibrationProtocol.states[s?.state??0]} · ${window.ForceCalibrationProtocol.reasons[s?.reason??0]}${['unknown','stopping'].includes(coordinator.phase)?' · 停止或操作结果尚未确认':''}`:owner==='pid'?`PID 自动整定${coordinator.phase==='unknown'?' · 结束未确认':''}`:owner?'参数操作结果尚未确认，请重新连接读取':'无控制会话';
+  }
+  async function stopControl(){
+    if(coordinator.owner==='force'||forceUI.active)return forceUI.stopAndConfirm();
+    if(coordinator.owner==='pid'||autotuneUI.busy){autotuneUI.stop();const deadline=Date.now()+2500;while(coordinator.owner==='pid'&&Date.now()<deadline)await new Promise(r=>setTimeout(r,50));if(coordinator.owner==='pid')throw Error('PID 停止尚未确认，请保持零力模式');}
+  }
+  $('fc-stop').addEventListener('click',()=>stopControl().catch(e=>message(e.message,true)));
+  const workspaceNames=['monitor','tuning','autotune','force-calibration'];
   function showPanel(key) {
+    selectedPanel=key;
     for (const name of workspaceNames) {
       const selected = name === key;
       $(name+'-panel').hidden = !selected;
@@ -39,15 +73,23 @@
       $(name+'-tab').tabIndex = selected ? 0 : -1;
     }
     if (chartDialog.open) chartDialog.close();
+    forceUI.setVisible(key==='force-calibration');
     lastRendered = null;
   }
+  function selectPanel(key){
+    switchTarget=key;if(switching)return switching;
+    if(selectedPanel==='force-calibration'&&key!==selectedPanel&&forceUI.active){
+      const epoch=linkEpoch;switching=stopControl().then(()=>{if(epoch===linkEpoch&&switchTarget)showPanel(switchTarget);}).catch(e=>message(e.message,true)).finally(()=>{switching=null;switchTarget=null;});return switching;
+    }
+    showPanel(key);return Promise.resolve();
+  }
   for (const name of workspaceNames) {
-    $(name+'-tab').addEventListener('click', () => showPanel(name));
+    $(name+'-tab').addEventListener('click', () => selectPanel(name));
     $(name+'-tab').addEventListener('keydown', event => {
       if (['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) {
         event.preventDefault();
         const next = event.key==='Home' ? workspaceNames[0] : event.key==='End' ? workspaceNames.at(-1) : workspaceNames[(workspaceNames.indexOf(name)+(event.key==='ArrowRight'?1:workspaceNames.length-1))%workspaceNames.length];
-        showPanel(next);$(next+'-tab').focus();
+        selectPanel(next).then(()=>$(selectedPanel+'-tab').focus());
       }
     });
   }
@@ -96,7 +138,7 @@
   let expandedChart = null, chartOpener = null, chartRange = [-60000, 0], pan = null;
   function earliestStart(snapshot, duration) {return Math.min(-duration, (snapshot.samples[0]?.arrivalMs ?? snapshot.at) - snapshot.at);}
   function setChartStart(start, duration = chartRange[1] - chartRange[0]) {
-    const snapshot = view.snapshot(clock());
+    const snapshot = displayView().snapshot(clock());
     start = Math.max(earliestStart(snapshot, duration), Math.min(-duration, start));
     chartRange = [start, start + duration];renderExpandedChart(snapshot);
   }
@@ -104,10 +146,10 @@
     const pointerId = pan?.pointerId;pan = null;expandedCanvas.classList.remove('panning');
     if (pointerId !== undefined && expandedCanvas.hasPointerCapture(pointerId)) expandedCanvas.releasePointerCapture(pointerId);
   }
-  function pauseDisplay() {if (!view.paused) {const now = clock();view.pause(now);lastRendered = null;renderToolbar(now);}}
+  function pauseDisplay() {if (!displayView().paused) {const now = clock();displayView().pause(now);lastRendered = null;renderToolbar(now);}}
   function resumeDisplay() {
-    stopPan();view.resume();chartRange = [-60000, 0];charts.forEach(chart => {chart.historyRange = null;});
-    lastRendered = null;renderToolbar(clock());renderExpandedChart(view.snapshot(clock()));
+    stopPan();displayView().resume();chartRange = [-60000, 0];charts.forEach(chart => {chart.historyRange = null;});
+    lastRendered = null;renderToolbar(clock());renderExpandedChart(displayView().snapshot(clock()));
   }
   function drawChartView(canvas, chart, snapshot, range) {
     window.TelemetryCharts.drawChart(canvas, snapshot.samples, chart.traces, {now: snapshot.at, unit: chart.unit, rightUnit: chart.rightUnit, range});
@@ -132,7 +174,7 @@
     chart.traces = chart.allTraces.filter(trace => chart.selected.has(trace.key));
     document.querySelectorAll(`[data-chart="${chart.id}"] input[data-trace-key]`).forEach(input => {input.checked = chart.selected.has(input.dataset.traceKey);});
     lastRendered = null;
-    const snapshot = view.snapshot(clock());
+    const snapshot = displayView().snapshot(clock());
     renderLegend(chart.legend, chart);
     drawChartView($(chart.id), chart, snapshot);
     if (expandedChart === chart) {renderLegend($('expanded-chart-legend'), chart);renderExpandedChart(snapshot);}
@@ -159,7 +201,7 @@
   }
   function renderExpandedChart(snapshot) {
     if (!expandedChart || !chartDialog.open) return;
-    if (view.paused) expandedChart.historyRange = chartRange.slice();
+    if (displayView().paused) expandedChart.historyRange = chartRange.slice();
     setText('expanded-chart-unit', [...new Set(expandedChart.traces.map(trace => trace.unit))].join(' / ') || expandedChart.unit);
     drawChartView(expandedCanvas, expandedChart, snapshot, chartRange);
     setText('expanded-chart-range', `显示 ${Number(((chartRange[1] - chartRange[0]) / 1000).toFixed(3))} s · Ctrl + 滚轮缩放`);
@@ -167,9 +209,9 @@
     const duration = chartRange[1] - chartRange[0], minimum = earliestStart(snapshot, duration), position = $('history-position');
     position.min = String(Math.floor(minimum));position.max = String(Math.ceil(-duration));position.value = String(chartRange[0]);
     position.disabled = !snapshot.latest || minimum >= -duration;
-    setText('history-mode', view.paused ? '历史回看 · 已暂停' : '实时跟随');
+    setText('history-mode', displayView().paused ? '历史回看 · 已暂停' : '实时跟随');
     setText('history-readout', `末端前 ${(-chartRange[0] / 1000).toFixed(2)} s ～ ${(-chartRange[1] / 1000).toFixed(2)} s`);
-    $('return-live-button').disabled = !store.latest || !view.paused && chartRange[0] === -60000 && chartRange[1] === 0;
+    $('return-live-button').disabled = !displayStore().latest || !displayView().paused && chartRange[0] === -60000 && chartRange[1] === 0;
   }
   function zoomChart(factor, fraction = .5) {
     stopPan();
@@ -177,15 +219,15 @@
     const anchor = chartRange[0] + fraction * duration;
     setChartStart(anchor - fraction * next, next);
   }
-  function resetChartZoom() {stopPan();chartRange = [-60000, 0];renderExpandedChart(view.snapshot(clock()));}
+  function resetChartZoom() {stopPan();chartRange = [-60000, 0];renderExpandedChart(displayView().snapshot(clock()));}
   function openChart(chart, opener) {
     if (chartDialog.open) return;
-    expandedChart = chart;chartOpener = opener;chartRange = view.paused && chart.historyRange ? chart.historyRange.slice() : [-60000, 0];
+    expandedChart = chart;chartOpener = opener;chartRange = displayView().paused && chart.historyRange ? chart.historyRange.slice() : [-60000, 0];
     setText('expanded-chart-title', chart.title);
     setText('expanded-chart-unit', chart.unit);
     renderLegend($('expanded-chart-legend'), chart);
     $('expanded-trace-picker').replaceChildren(createTracePicker(chart));
-    chartDialog.showModal();lastRendered = null;renderExpandedChart(view.snapshot(clock()));
+    chartDialog.showModal();lastRendered = null;renderExpandedChart(displayView().snapshot(clock()));
   }
   charts.forEach(chart => {
     const canvas = $(chart.id), card = canvas.closest('.chart-card') || canvas.closest('.motor-plot');
@@ -206,7 +248,7 @@
   $('history-position').addEventListener('pointerdown', pauseDisplay);
   $('history-position').addEventListener('input', event => {pauseDisplay();setChartStart(Number(event.currentTarget.value));});
   expandedCanvas.addEventListener('pointerdown', event => {
-    if (event.button !== 0 || !store.latest) return;
+    if (event.button !== 0 || !displayStore().latest) return;
     const rect = expandedCanvas.getBoundingClientRect(), bounds = window.TelemetryCharts.getPlotBounds(expandedCanvas);
     if (!bounds || event.clientX < rect.left + bounds.left || event.clientX > rect.left + bounds.left + bounds.width || event.clientY < rect.top + bounds.top || event.clientY > rect.top + bounds.top + bounds.height) return;
     event.preventDefault();
@@ -302,58 +344,59 @@
     renderToolbar(clock());
   }
   $('connect-button').addEventListener('click', () => {
-    if (session.state === 'connected') {session.disconnect(); return;}
+    if (session.state === 'connected') {coordinator.cancelQueued();stopControl().catch(e=>message(e.message,true)).finally(()=>session.disconnect());return;}
     if (session.state !== 'idle') return;
-    stopDemo();resetData();mode = 'real';
+    stopDemo();if(mode==='demo')resetData();else{router.reset();parser.fields=null;parser.version=null;view.resume();forceView.resume();store.latest=null;forceStore.latest=null;}mode = 'real';
     // Keep requestPort within this user gesture; no await precedes connect().
     session.connect();
   });
   $('demo-button').addEventListener('click', () => {if (demoTimer !== null) stopDemo();else startDemo();});
   $('stop-demo-button').addEventListener('click', stopDemo);
-  $('pause-button').addEventListener('click', () => {if (view.paused) resumeDisplay();else pauseDisplay();});
+  $('pause-button').addEventListener('click', () => {if (displayView().paused) resumeDisplay();else pauseDisplay();});
   $('export-button').addEventListener('click', () => {
-    if (!store.samples.length) return;
-    const url = URL.createObjectURL(new Blob([store.exportCSV()], {type: 'text/csv;charset=utf-8'}));
+    const exportStore=source==='force'?forceStore:store;if (!exportStore.samples.length) return;
+    const url = URL.createObjectURL(new Blob([exportStore.exportCSV()], {type: 'text/csv;charset=utf-8'}));
     const link = document.createElement('a');link.href = url;link.download = `a-board-${mode === 'demo' ? 'DEMO-' : ''}${new Date().toISOString().replace(/[:.]/g, '-')}.csv`;
     document.body.append(link);link.click();link.remove();setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
 
   function renderToolbar(now) {
-    const connected = session.state === 'connected', busy = session.state === 'connecting' || session.state === 'disconnecting', stale = store.isStale(now);
+    const currentStore=displayStore();
+    const connected = session.state === 'connected', busy = session.state === 'connecting' || session.state === 'disconnecting', stale = currentStore.isStale(now);
     $('connect-button').disabled = busy;
     $('connect-button').querySelector('span').textContent = session.state === 'connecting' ? '选择 / 打开中' : session.state === 'disconnecting' ? '正在断开' : connected ? '断开连接' : '连接 A 板';
     $('demo-button').disabled = session.state !== 'idle';
     setText('demo-button', demoTimer === null ? '演示数据' : '停止演示');
     $('demo-notice').hidden = mode !== 'demo';
-    $('connection-dot').className = 'connection-dot' + (mode === 'demo' ? ' demo' : connected ? stale && store.latest ? ' stale' : ' connected' : '');
-    setText('connection-status', mode === 'demo' ? demoTimer === null ? '演示已结束 · 保留模拟记录' : '演示模式 · 模拟数据' : connected ? stale && store.latest ? 'A 板已连接 · 数据陈旧' : 'A 板已连接' : busy ? '正在连接 A 板' : '尚未连接 A 板');
-    setText('connection-detail', mode === 'demo' ? 'SIMULATION · 非真实设备数据' : 'USB CDC 虚拟串口 · 50 Hz 遥测');
-    $('pause-button').disabled = !store.latest;
-    setText('pause-button', view.paused ? '恢复显示' : '暂停显示');
-    $('pause-button').classList.toggle('active', view.paused);
-    $('pause-button').setAttribute('aria-pressed', String(view.paused));
-    $('export-button').disabled = !store.samples.length;
-    setText('sample-age', store.latest ? Math.max(0, Math.round(now - store.latest.arrivalMs)) : '—');
-    setText('sample-count', store.samples.length);
-    setText('missing-count', store.stats.missing);
+    $('connection-dot').className = 'connection-dot' + (mode === 'demo' ? ' demo' : connected ? stale && currentStore.latest ? ' stale' : ' connected' : '');
+    setText('connection-status', mode === 'demo' ? demoTimer === null ? '演示已结束 · 保留模拟记录' : '演示模式 · 模拟数据' : connected ? stale && currentStore.latest ? 'A 板已连接 · 数据陈旧' : 'A 板已连接' : busy ? '正在连接 A 板' : '尚未连接 A 板');
+    setText('connection-detail', mode === 'demo' ? 'SIMULATION · 非真实设备数据' : source==='force'?'force-v1 · 公共缺失字段不可用；标定实时数据来自 FC1':'USB CDC 虚拟串口 · CSV v1–v5');
+    $('pause-button').disabled = !(source==='force'?forceStore.latest:currentStore.latest);
+    setText('pause-button', displayView().paused ? '恢复显示' : '暂停显示');
+    $('pause-button').classList.toggle('active', displayView().paused);
+    $('pause-button').setAttribute('aria-pressed', String(displayView().paused));
+    $('export-button').disabled = !(source==='force'?forceStore.samples.length:currentStore.samples.length);
+    setText('sample-age', currentStore.latest ? Math.max(0, Math.round(now - currentStore.latest.arrivalMs)) : '—');
+    setText('sample-count', currentStore.samples.length);
+    setText('missing-count', currentStore.stats.missing);
     setText('bad-count', parser.stats.bad + parser.stats.unsupported);
-    setText('tx-drop-count', store.latest ? store.latest.tx_drop_count : '—');
-    let firstRecent = store.samples.length;
-    while (firstRecent > 0 && now - store.samples[firstRecent - 1].arrivalMs <= 1000) firstRecent--;
-    const recentCount = store.samples.length - firstRecent;
-    const frequency = recentCount > 1 ? (recentCount - 1) * 1000 / (store.latest.arrivalMs - store.samples[firstRecent].arrivalMs) : null;
+    setText('tx-drop-count', currentStore.latest?.tx_drop_count??'—');
+    let firstRecent = currentStore.samples.length;
+    while (firstRecent > 0 && now - currentStore.samples[firstRecent - 1].arrivalMs <= 1000) firstRecent--;
+    const recentCount = currentStore.samples.length - firstRecent;
+    const frequency = currentStore.latest && recentCount > 1 ? (recentCount - 1) * 1000 / (currentStore.latest.arrivalMs - currentStore.samples[firstRecent].arrivalMs) : null;
     setText('rx-rate', !stale && frequency !== null && Number.isFinite(frequency) ? frequency.toFixed(1) : '—');
-    setText('display-status', view.paused ? '显示已暂停 · 采集继续' : !store.latest ? '等待数据' : stale ? '超过 500 ms 无新数据' : '● 实时更新');
-    $('display-status').className = 'display-status' + (view.paused || stale && store.latest ? ' warning' : store.latest ? ' live' : '');
+    setText('display-status', displayView().paused ? '显示已暂停 · 采集继续' : !currentStore.latest ? '等待数据' : stale ? '超过 500 ms 无新数据' : '● 实时更新');
+    $('display-status').className = 'display-status' + (displayView().paused || stale && currentStore.latest ? ' warning' : currentStore.latest ? ' live' : '');
   }
   function pill(id, label, state) {setText(id, label);$(id).className = `status-pill ${state}`;}
   function renderValues(snapshot) {
     const sample = snapshot.latest, stale = !sample || snapshot.at - sample.arrivalMs > 500;
     const lag = sample ? Math.max(0, Math.round(snapshot.at - sample.arrivalMs)) : 0;
-    const normalized = P.normalizeForDisplay(sample, snapshot.at);
+    const normalized = sample?.force?window.ForceTelemetry.normalize(sample,lag):P.normalizeForDisplay(sample, snapshot.at);
     const v = normalized ? normalized.values : {}, valid = normalized ? normalized.valid : {};
     const ages = normalized ? Object.fromEntries(Object.entries(normalized.ages).map(([key, age]) => [key, age === P.UINT_MAX ? P.UINT_MAX : Math.min(P.UINT_MAX, age + lag)])) : {};
-    const velocityLegacy=sample && sample.version<4;
+    const velocityLegacy=sample && !sample.force && sample.version<4;
     pill('velocity-status',!sample?'等待数据':velocityLegacy?'固件未提供速度':valid.velocityActual?'轮速估算有效':'反馈无效 / 过期',valid.velocityActual?'good':sample&&!velocityLegacy?'bad':'neutral');
     for(const kind of ['actual','target']) for(const axis of ['vx','vy','wz'])
       setText('velocity-'+kind+'-'+axis,format(v['velocity_'+kind+'_'+axis+(axis==='wz'?'_rpm':'_mmps')],3));
@@ -376,7 +419,7 @@
       `${limitReasons.filter((_,bit)=>v.spin_block_reasons&(1<<bit)).join('、')||'无升速阻塞'}；Wz 为指令单位。`);
     setText('spin-latch-detail',v.spin_capability_latched==null?'缓冲能力状态：—':v.spin_capability_latched?
       `缓冲能力锁定 · 健康释放确认 ${format(v.spin_capability_release_ms,0)} / 500 ms，解锁后重新确认基础功率。`:'缓冲能力未锁定');
-    const legacy = sample?.version === 1;
+    const legacy = sample?.version === 1 || sample?.force;
     pill('imu-status', !sample ? '等待数据' : legacy ? '固件未提供 IMU' : valid.imu ? '在线' : '无效 / 过期', valid.imu ? 'good' : sample && !legacy ? 'bad' : 'neutral');
     for (const [id, key, digits] of [
       ['yaw', 'yaw_mdeg', 2], ['pitch', 'pitch_mdeg', 2], ['roll', 'roll_mdeg', 2], ['yaw-total', 'yaw_total_mdeg', 2],
@@ -444,7 +487,7 @@
     if (now - lastRender >= 50) {
       lastRender = now;renderToolbar(now);
       autotuneUI.renderChart();
-      const snapshot = view.snapshot(now);
+      const snapshot = displayView().snapshot(now);
       if (snapshot !== lastValues) {renderValues(snapshot);lastValues = snapshot;}
     }
     // Draw scrolling traces on animation frames; keep the heavier DOM readings at 20 Hz.
@@ -452,7 +495,7 @@
     if (chartElapsed >= chartInterval - 1) {
       // Retain the remainder so 75/90/144 Hz displays can still render about 60 fps.
       lastChartRender = now - (Number.isFinite(chartElapsed) ? Math.max(0, chartElapsed - chartInterval) % chartInterval : 0);
-      const snapshot = view.snapshot(now);
+      const snapshot = displayView().snapshot(now);
       if (snapshot !== lastRendered && (lastRendered === null || snapshot.latest || lastRendered.latest)) {
         if (chartDialog.open) renderExpandedChart(snapshot);
         else if (!$('monitor-panel').hidden) charts.forEach(chart => {if (chart.visible) drawChartView($(chart.id), chart, snapshot);});
@@ -462,8 +505,12 @@
     requestAnimationFrame(render);
   }
   window.addEventListener('resize', () => {stopPan();lastRendered = null;});
-  window.addEventListener('pagehide', () => {autotuneUI.stop();stopDemo();session.disconnect();});
-  window.telemetryApp = {store, parser, session, view, get mode() {return mode;}, get paused() {return view.paused;}};
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)stopControl().catch(()=>{});});
+  window.addEventListener('pagehide', () => {stopControl().catch(()=>{}).finally(()=>session.disconnect());stopDemo();});
+  window.addEventListener('beforeunload',()=>{stopControl().catch(()=>{});});
+  window.addEventListener('hashchange',()=>{const key=location.hash.slice(1);if(workspaceNames.includes(key))selectPanel(key);});
+  if(workspaceNames.includes(location.hash.slice(1)))showPanel(location.hash.slice(1));
+  window.telemetryApp = {store,forceStore,parser,router,session,view,coordinator,forceClient,forceUI,get source(){return source;}, get mode() {return mode;}, get paused() {return displayView().paused;}};
   if (!('serial' in navigator)) message('此浏览器不支持 Web Serial。请用桌面版 Chrome / Edge 打开 localhost 页面；演示数据仍可使用。');
   renderToolbar(clock());requestAnimationFrame(render);
 })();

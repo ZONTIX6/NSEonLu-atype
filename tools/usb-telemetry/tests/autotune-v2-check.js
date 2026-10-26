@@ -24,6 +24,8 @@ async (page)=>{
         this.readable=new ReadableStream({start:c=>{this.controller=c;}});
         this.writable=new WritableStream({write:bytes=>{
           const line=new TextDecoder().decode(bytes).trim();__commands.push(line);const c=line.split(',');let reply;
+          if(c[0]==='@FC1')return;
+          if(window.__dropParameterWrite&&c[0]==='@T1'&&['SET','SAVE'].includes(c[2]))return;
           if(c[0]==='@T1'){
             const board=__groups[c[3]];
             if(c[2]==='SET'){board.values=c.slice(5).map(TelemetryTuning.decodeFloat);++board.revision;board.storage='pending';}
@@ -65,6 +67,17 @@ async (page)=>{
   for(let wheel=1;wheel<4;++wheel){await page.waitForFunction(()=>!document.querySelector('#auto-continue').hidden);const count=await page.evaluate(()=>__commands.filter(l=>l.includes(',BEGIN,')).length);await page.waitForTimeout(350);check(await page.evaluate(()=>__commands.filter(l=>l.includes(',BEGIN,')).length)===count,'no automatic session restart');await page.locator('#auto-continue').click();}
   await page.waitForFunction(()=>document.querySelector('#auto-status').textContent.includes('试调完成'));
   check(await page.locator('#auto-results tr').count()===4,'four actual sessions retained');
+  await page.locator('#auto-wheel').selectOption('0');
+  await page.evaluate(()=>{__groups.pid.values[0]=.75;__groups.pid.values[1]=0;++__groups.pid.revision;});
+  await page.locator('#auto-start').click();
+  await page.waitForFunction(()=>document.querySelector('#auto-status').textContent.includes('试调完成'));
+  await page.evaluate(()=>{__dropParameterWrite=true;});await page.locator('#auto-adopt').click();
+  await page.waitForFunction(()=>telemetryApp.coordinator.phase==='unknown');
+  check(await page.locator('#tuning-apply').isDisabled(),'unknown adoption must keep other parameter controls locked');
+  await page.locator('#connect-button').click();await page.waitForFunction(()=>telemetryApp.session.state==='idle');
+  await page.evaluate(()=>{__dropParameterWrite=false;});await page.locator('#connect-button').click();
+  await page.waitForFunction(()=>!document.querySelector('#auto-start').disabled);
+  check(await page.evaluate(()=>telemetryApp.coordinator.owner===null),'reconnection clears local unknown owner without restoring a trial');
   await page.evaluate(()=>{__legacy=true;});await page.locator('#auto-start').click();await page.waitForFunction(()=>document.querySelector('#auto-status').textContent.includes('旧固件'));
   check(await page.locator('#auto-adopt').isDisabled(),'legacy cannot claim V2 acceptance');
   await page.evaluate(()=>{__legacy=false;});await page.locator('#auto-start').click();await page.waitForFunction(()=>document.querySelector('#auto-trials').children.length>0);await page.evaluate(()=>telemetryApp.session.disconnect());

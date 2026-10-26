@@ -1,14 +1,14 @@
 (function(root,factory){const api=factory(typeof module==='object'&&module.exports?require('./force-calibration-protocol.js'):root.ForceCalibrationProtocol);if(typeof module==='object'&&module.exports)module.exports=api;else root.ForceCalibrationClient=api;})(globalThis,function(P){
   'use strict';
   class Client{
-    constructor({serialSession,onStatus=()=>{},onError=()=>{},timeout_ms=600}){
-      this.serial=serialSession;this.onStatus=onStatus;this.onError=onError;this.timeout_ms=timeout_ms;
+    constructor({send,isConnected=()=>false,onStatus=()=>{},onError=()=>{},timeout_ms=600}){
+      this.send=send;this.isConnected=isConnected;this.connected=isConnected();this.onStatus=onStatus;this.onError=onError;this.timeout_ms=timeout_ms;
       this.nextId=0;this.queue=[];this.pending=null;this.caps=null;this.latest=null;this.pulse=null;this.lease=null;this.heartbeat=null;
       this.parser=P.createParser({onReply:r=>this.receive(r),onError:e=>this.onError(e)});
-      const oldChunk=serialSession.onChunk,oldState=serialSession.onState;
-      serialSession.onChunk=bytes=>{oldChunk?.(bytes);this.parser.push(bytes);};
-      serialSession.onState=state=>{if(state==='idle'||state==='disconnecting'){this.endLease();this.cancelAll(Error('串口已断开'));this.caps=null;this.latest=null;this.pulse=null;this.pulseCaptureId=null;this.parser.reset();}oldState?.(state);};
     }
+    setConnected(value){this.connected=value;this.endLease();this.cancelAll(Error('连接世代已改变'));this.caps=null;this.latest=null;this.pulse=null;this.pulseCaptureId=null;this.parser.reset();}
+    receiveLine(line){try{const r=P.parseLine(line);if(r)this.receive(r);}catch(e){this.onError(e);}}
+    push(bytes){this.parser.push(bytes);}
     cancelAll(error){if(this.pending){clearTimeout(this.pending.timer);this.pending.reject(error);this.pending=null;}for(const q of this.queue)q.reject(error);this.queue=[];}
     endLease(){clearTimeout(this.heartbeat);this.heartbeat=null;this.lease=null;}
     renewLoop(){
@@ -25,16 +25,16 @@
       if(q.op!=='CAP'&&r.generation!==q.generation)return;
       if(r.type==='OK'&&q.session&&q.op!=='STOP'&&r.session!==q.session)return;
       clearTimeout(q.timer);this.pending=null;
-      if(r.type==='ERR')q.reject(Error(`固件拒绝：${r.error}`));
-      else if((q.op==='CAP'&&r.type!=='CAP')||(q.op==='READ'&&r.type!=='DATA')||(!['CAP','READ'].includes(q.op)&&r.type!=='OK'))q.reject(Error('回执类型错误'));
+      if(r.type==='ERR'){const error=Error(`固件拒绝：${r.error}`);error.confirmed=true;error.wireError=r.error;q.reject(error);}
+      else if((q.op==='CAP'&&r.type!=='CAP')||(q.op==='READ'&&r.type!=='DATA')||(q.op==='META'&&r.type!=='META')||(!['CAP','READ','META'].includes(q.op)&&r.type!=='OK'))q.reject(Error('回执类型错误'));
       else{
-        if(r.type==='OK'){this.latest=r;if(r.state>=8)this.endLease();this.onStatus(r);}
+        if(r.type==='OK'){this.latest=r;if(r.state>=8)this.endLease();this.onStatus(r,q.op);}
         q.resolve(r);
       }
       this.pump();
     }
     request(op,args=[],options={}){
-      if(this.serial.state!=='connected')return Promise.reject(Error('串口未连接'));
+      if(!this.connected||!this.isConnected())return Promise.reject(Error('串口未连接'));
       if(op!=='CAP'&&!this.caps)return Promise.reject(Error('请先读取固件能力'));
       return new Promise((resolve,reject)=>{
         const q={id:++this.nextId,op,args,resolve,reject,generation:this.caps?.generation,...options};
@@ -48,7 +48,7 @@
         if(this.pending!==q)return;this.pending=null;
         q.reject(Error(q.op==='START'?'START 结果未确认；不会自动重试，请停止并检查板端状态':`${q.op} 回执超时`));this.pump();
       },this.timeout_ms);
-      this.serial.send(values.join(',')+'\r\n').catch(e=>{if(this.pending===q){clearTimeout(q.timer);this.pending=null;q.reject(e);this.pump();}});
+      this.send(values.join(',')+'\r\n').catch(e=>{if(this.pending===q){clearTimeout(q.timer);this.pending=null;q.reject(e);this.pump();}});
     }
     async capabilities(){
       const caps=await this.request('CAP');
@@ -71,14 +71,17 @@
     }
     stop(){
       this.endLease();this.cancelAll(Error('请求已由停止取消'));
-      if(!this.caps||this.serial.state!=='connected')return Promise.reject(Error('串口未连接，板端依靠许可与心跳归零'));
+      if(!this.caps||!this.connected||!this.isConnected())return Promise.reject(Error('串口未连接，板端依靠许可与心跳归零'));
       return this.request('STOP',[0],{priority:true});
     }
     clear(){if(!this.latest)throw Error('请读取状态');return this.request('CLEAR',[this.latest.capture_id]);}
     async readCapture(){
-      const s=await this.status();if(![8,9].includes(s.state)||!s.zero_submitted||!s.capture_id)throw Error('需先冻结记录并成功提交零电流');
+      const s=await this.status();if((s.state>2&&s.state<8)||!s.zero_submitted||!s.capture_id)throw Error('需先冻结记录并成功提交零电流');
       const report={caps:{...this.caps},status:s,pulse:s.capture_id===this.pulseCaptureId?this.pulse:null,records:[],quality:{complete:false,issues:[]},source_commit:null,voltage_v:null};
       try{
+        const meta=await this.request('META',[s.capture_id]);
+        if(meta.capture_id!==s.capture_id||meta.capture_session!==s.capture_session||meta.capture_generation!==s.capture_generation)throw Error('冻结元数据身份不匹配');
+        report.capture_meta=meta;report.pulse=Object.fromEntries(['wheel','current','rise_ms','hold_ms','fall_ms'].map(key=>[key,meta[key]]));
         for(let first=0;first<s.records;){
           let block;for(let attempt=0;attempt<2;attempt++){
             try{block=await this.request('READ',[s.capture_id,first,Math.min(2,s.records-first)]);break;}
@@ -91,12 +94,11 @@
         report.quality.complete=!!s.complete&&report.records.length===s.records;
         if(!s.complete)report.quality.issues.push('板端记录不完整或异常终止');
       }catch(e){report.quality.issues.push(e.message);this.onError(e);}
-      if(!report.pulse)report.quality.issues.push('本连接未观察到 START，脉冲条件未知；仅保存原始证据');
+      if(!report.pulse)report.quality.issues.push('冻结脉冲条件未知；仅保存原始证据');
       return report;
     }
     async disconnect(){
-      if(this.caps&&this.serial.state==='connected')try{await this.stop();}catch(_){/* Closing DTR independently revokes permission. */}
-      this.endLease();this.cancelAll(Error('串口已断开'));this.caps=null;await this.serial.disconnect();
+      this.setConnected(false);
     }
   }
   return {Client};

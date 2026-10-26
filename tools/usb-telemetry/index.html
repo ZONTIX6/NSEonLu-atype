@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="tuning.css">
   <link rel="stylesheet" href="autotune.css">
+  <link rel="stylesheet" href="force-calibration.css">
   <script src="protocol.js" defer></script>
   <script src="serial.js" defer></script>
   <script src="charts.js" defer></script>
@@ -21,10 +22,16 @@
   <script src="autotune-runner.js" defer></script>
   <script src="autotune.js" defer></script>
   <script src="autotune-ui.js" defer></script>
+  <script src="serial-router.js" defer></script>
+  <script src="control-coordinator.js" defer></script>
+  <script src="force-telemetry.js" defer></script>
+  <script src="force-calibration-protocol.js" defer></script>
+  <script src="force-calibration-client.js" defer></script>
+  <script src="force-calibration-report.js" defer></script>
+  <script src="force-calibration-ui.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
-  <a href="/force-calibration.html" style="display:block;padding:10px 40px;color:#205fc7;background:#edf3ff">单轮力控标定工具 →</a>
   <header class="app-header">
     <a class="brand" href="./" aria-label="A 板遥测主页"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M3 17h5l4-10 6 18 4-12 3 4h4"/></svg></span><span><span class="brand-name">A 板遥测<span class="brand-tag">USB TELEMETRY</span></span><span class="brand-description">底盘、IMU、遥控器与能量，一眼掌握。</span></span></a>
     <span class="local-badge"><i></i>本地运行 · 数据留在本机</span>
@@ -50,6 +57,7 @@
       <button type="button" id="monitor-tab" role="tab" aria-selected="true" aria-controls="monitor-panel">实时监测</button>
       <button type="button" id="tuning-tab" role="tab" aria-selected="false" aria-controls="tuning-panel" tabindex="-1">在线调参 <span>PID · 功控 · 小陀螺</span></button>
       <button type="button" id="autotune-tab" role="tab" aria-selected="false" aria-controls="autotune-panel" tabindex="-1">自动整定 <span>单轮 PID · 台架</span></button>
+      <button type="button" id="force-calibration-tab" role="tab" aria-selected="false" aria-controls="force-calibration-panel" tabindex="-1">力控标定</button>
     </nav>
     <div id="monitor-panel" role="tabpanel" aria-labelledby="monitor-tab">
     <div class="dashboard-grid">
@@ -150,7 +158,52 @@
       <article class="card auto-results-card"><h3>试验记录与报告</h3><p>限流超过 5% 或覆盖质量不足的试验会剔除。未完成验收时仅提供探索记录，不能采用。</p><div class="auto-buttons auto-exports"><button id="auto-json" class="secondary-button" type="button" disabled>导出 JSON 完整报告</button><button id="auto-csv" class="secondary-button" type="button" disabled>导出 CSV 逐试验记录</button></div><div class="auto-table-wrap"><table class="auto-table"><thead><tr><th>#</th><th>电机</th><th>阶段 / rpm</th><th>Kp</th><th>Ki</th><th>Kd</th><th>RMSE · rpm</th><th>超调 · rpm</th><th>稳态误差 · rpm</th><th>稳定时间</th><th>状态 / 门槛</th></tr></thead><tbody id="auto-trials"></tbody></table></div></article>
     </section>
     <footer class="app-footer"><span>USB CDC · CSV v1 / v2 / v3 / v4 · 最近 10 分钟历史 · 默认显示 60 秒</span><span>在线调参 · 单轮自动整定 · 板端确认后同步项目文件</span></footer>
+    <section id="force-calibration-panel" class="fc-page fc-workspace" role="tabpanel" aria-labelledby="force-calibration-tab" hidden>
+    <section class="card fc-section"><h2>固件能力与准备条件</h2><strong id="fc-status" role="status">未连接</strong><p id="fc-message" role="alert">请使用顶部公共连接栏；首次进入只查询能力与状态。</p><p id="fc-limits">连接后读取真实限值，连接不会准备或启动电机。</p></section>
+    <section class="card fc-section" aria-labelledby="fc-pulse-title">
+      <h2 id="fc-pulse-title">准备条件与单次脉冲</h2>
+      <p>固定夹具，遥控器保持台架中位，辅助电机停止；四轮需连续静止确认。正常力控仍受未标定锁定。</p>
+      <fieldset id="fc-pulse-fields"><legend>选择轮子与电流</legend><div class="fc-fields">
+        <label>本次轮子<select id="fc-wheel"><option value="0">LF 左前 · CAN ID 1</option><option value="1" selected>RF 右前 · CAN ID 4</option><option value="2">LB 左后 · CAN ID 2</option><option value="3">RB 右后 · CAN ID 3</option></select></label>
+        <label>有符号电流命令 / CAN 单位<input id="fc-current" type="number" value="300" min="-1500" max="1500" step="1"></label>
+        <label>上升 / ms<input id="fc-rise" type="number" value="50" min="1" max="500" step="1"></label>
+        <label>保持 / ms<input id="fc-hold" type="number" value="100" min="1" max="500" step="1"></label>
+        <label>下降 / ms<input id="fc-fall" type="number" value="50" min="1" max="500" step="1"></label>
+      </div></fieldset>
+      <p id="fc-preview"></p><label class="fc-confirm"><input type="checkbox" id="fc-fixture">我已核对本次轮子、方向和夹具，确认可以执行一次短脉冲。</label>
+      <div class="fc-actions"><button id="fc-arm" class="secondary-button" disabled>手动准备</button><button id="fc-start" class="primary-button" disabled>开始一次脉冲</button><span>不会自动换轮或重复加载</span></div>
+    </section>
+    <section class="card fc-section" aria-labelledby="fc-monitor-title">
+      <h2 id="fc-monitor-title">实时监测 <small>网页每 100 ms 查询；高速采样在板端独立进行</small></h2>
+      <dl class="fc-monitor"><div><dt>状态</dt><dd id="fc-state">未准备</dd></div><div><dt>停止原因</dt><dd id="fc-reason">无</dd></div><div><dt>请求 / 最终电流 · CAN 单位</dt><dd id="fc-output">—</dd></div><div><dt>原始 / 控制使用转速 · rpm</dt><dd id="fc-rpm">—</dd></div><div><dt>温度 / 反馈年龄</dt><dd id="fc-temperature">—</dd></div><div><dt>负载 / 预算 · W</dt><dd id="fc-power">—</dd></div></dl>
+      <p id="fc-zero">等待板端零电流提交证明。</p>
+    </section>
+    <section class="card fc-section" aria-labelledby="fc-record-title">
+      <div class="fc-heading"><h2 id="fc-record-title">冻结记录</h2><div class="fc-actions"><button id="fc-read" class="secondary-button" disabled>读取冻结数据</button><button id="fc-clear" class="secondary-button" disabled>清除板端记录</button></div></div>
+      <p id="fc-quality" role="status">尚未读取记录。记录不完整时可保存原始证据，候选计算禁用。</p>
+      <div class="fc-fields fc-view"><label>视窗开始 / ms<input id="fc-view-from" type="number" value="0" min="0" step="1"></label><label>视窗结束 / ms<input id="fc-view-to" type="number" value="350" min="1" step="1"></label><button id="fc-fit" class="secondary-button">显示全部</button></div>
+      <p class="fc-legend">实线：原始转速 / 请求电流　虚线：控制使用转速 / 最终电流　叉号：未成功提交</p>
+      <figure><figcaption>转子转速 / rpm</figcaption><canvas id="fc-speed-chart" role="img" aria-label="板端转速记录，横轴为相对时间毫秒"></canvas></figure>
+      <figure><figcaption>电流命令 / CAN 单位</figcaption><canvas id="fc-current-chart" role="img" aria-label="请求和最终电流，横轴为相对时间毫秒"></canvas></figure>
+      <label>查看原始事件<input id="fc-point" type="range" min="0" max="0" value="0" disabled></label><pre id="fc-point-detail">读数保留原始事件，不按网页收包时间插值。</pre>
+    </section>
+    <section class="card fc-section" aria-labelledby="fc-analysis-title">
+      <h2 id="fc-analysis-title">测量条件与待复核候选</h2>
+      <p>转速增长候选仅覆盖本次轮子、电流、转速和观察条件。轮速不能直接测得输出轴转矩常数。</p>
+      <div class="fc-fields"><label>预测窗口 T / ms<input id="fc-window" type="number" min="0.001" step="0.001" placeholder="由测量方法确定"></label><label>额外裕量 / rpm<input id="fc-margin" type="number" min="0" step="1" placeholder="由测量方法确定"></label><label>最大允许反馈间隔 / μs<input id="fc-gap" type="number" value="5000" min="1" step="1"></label><label>实测电压 / V（未测留空）<input id="fc-voltage" type="number" min="0" step="0.01"></label><label>源码提交号（未知留空）<input id="fc-commit" type="text" maxlength="64"></label></div>
+      <label class="fc-wide">夹具、地面、误差及观察范围<textarea id="fc-conditions" rows="2" placeholder="填写负载和固定方式，未知条件保留为空"></textarea></label>
+      <button id="fc-analyze" class="secondary-button" disabled>计算增长裕量候选</button><p id="fc-analysis" role="status">请先读取完整记录，再填写 T 和额外裕量。</p>
+      <h3>转矩测量表</h3><p>质量应包含容器与挂件；力臂使用 m。反馈原始电流不直接换算为 A。</p>
+      <div class="fc-fields"><label>方向<select id="fc-direction"><option>正向</option><option>负向</option></select></label><label>总质量 / kg<input id="fc-mass" type="number" min="0" step="0.001"></label><label>实测拉力 / N（可选）<input id="fc-force" type="number" min="0" step="0.001"></label><label>力臂 / m<input id="fc-arm-length" type="number" min="0" step="0.001"></label><label>下阈值 / CAN 单位<input id="fc-lower" type="number" step="1"></label><label>上阈值 / CAN 单位<input id="fc-upper" type="number" step="1"></label></div>
+      <button id="fc-add-measurement" class="secondary-button">加入一次测量</button><div class="fc-table-wrap"><table><thead><tr><th>方向</th><th>总质量 / kg</th><th>拉力 / N</th><th>力臂 / m</th><th>转矩 / N·m</th><th>指令等效 / A</th><th>误差与复核</th></tr></thead><tbody id="fc-measurements"></tbody></table></div>
+    </section>
+    <section class="card fc-section" aria-labelledby="fc-export-title"><h2 id="fc-export-title">导出与离线分析</h2>
+      <div class="fc-actions"><button id="fc-csv" class="secondary-button" disabled>下载原始 CSV</button><button id="fc-json" class="primary-button" disabled>下载完整 JSON 报告</button><label class="secondary-button fc-import">导入历史 JSON<input id="fc-import" type="file" accept=".json,application/json" multiple></label><button id="fc-example" class="secondary-button">离线示例 · synthetic</button></div>
+      <p id="fc-envelope">每轮分别测量；缺少任一轮时不标记四轮完成。导出不会写入参数或解除锁定。</p>
+    </section>
+  </section>
   </main>
+  <footer class="fc-stop-bar" id="control-status-bar" hidden><span id="fc-stop-note" role="status">板端许可与心跳负责最终保护</span><button id="fc-stop" disabled>立即停止</button></footer>
   <dialog id="chart-dialog" class="chart-dialog" aria-labelledby="expanded-chart-title">
     <div class="section-heading"><div><span class="eyebrow">WAVEFORM DETAIL</span><h2><span id="expanded-chart-title">波形详情</span> <small id="expanded-chart-unit"></small></h2></div><div class="chart-dialog-actions"><button type="button" class="secondary-button" id="reset-chart-button" disabled>恢复全图</button><button type="button" class="secondary-button" id="close-chart-button" autofocus>关闭 <span aria-hidden="true">×</span></button></div></div>
     <div class="chart-legend" id="expanded-chart-legend"></div>

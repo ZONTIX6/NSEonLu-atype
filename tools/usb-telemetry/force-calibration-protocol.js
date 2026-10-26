@@ -4,6 +4,7 @@
   const reasons=['无','手动停止','USB 断开或世代变化','心跳超时','安全/台架许可失效','反馈失效','超速','超温','功率/预算失效','控制周期超时','CAN 提交失败','记录容量不足','协议错误'];
   const capKeys=['generation','enabled','format','record_bytes','record_capacity','max_current','max_on_ms','max_rpm','stop_temperature_c','stationary_rpm','stationary_ms','heartbeat_ms','pre_ms','tail_ms','source_mode','power_stage','bench_mode','normal_calibrated','lf_id','rf_id','lb_id','rb_id','speed_lpf_pm','current_lpf_pm'];
   const statusKeys=['generation','session','capture_id','capture_session','capture_generation','state','reason','records','complete','zero_submitted','requested','final_lf','final_rf','final_lb','final_rb','raw_rpm','used_rpm_milli','temperature','feedback_age_us','load_mw','budget_mw'];
+  const metaKeys=['generation','capture_id','capture_session','capture_generation','wheel','current','rise_ms','hold_ms','fall_ms','max_current','max_on_ms','max_rpm','stop_temperature_c','stationary_rpm','stationary_ms','heartbeat_ms','pre_ms','tail_ms','speed_lpf_pm','current_lpf_pm'];
   function integer(s,signed=false){
     if(!(signed?/^-?\d+$/:/^\d+$/).test(s))throw Error('协议整数字段格式错误');
     const n=Number(s);if(!Number.isSafeInteger(n)||n<(signed?-2147483648:0)||n>(signed?2147483647:4294967295))throw Error('协议整数越界');return n;
@@ -36,6 +37,12 @@
       if(count<1||count>2||first+count>total||!/^[0-9a-fA-F]+$/.test(f[9])||f[9].length!==count*96)throw Error('记录块长度或索引错误');
       const bytes=Uint8Array.from(f[9].match(/../g),x=>parseInt(x,16));
       return {id,type,generation,session,capture_id,first,count,total,bytes};
+    }
+    if(type==='META'){
+      if(f.length!==metaKeys.length+3)throw Error('元数据字段数量错误');
+      const r={id,type};metaKeys.forEach((key,i)=>{r[key]=integer(f[i+3],key==='current');});
+      if(r.wheel>3||!r.current||Math.abs(r.current)>r.max_current||r.max_current>1500||r.rise_ms<1||r.hold_ms<1||r.fall_ms<1||r.rise_ms+r.hold_ms+r.fall_ms>r.max_on_ms||r.max_on_ms>500)throw Error('冻结脉冲元数据越界');
+      return r;
     }
     const keys=type==='CAP'?capKeys:type==='OK'?statusKeys:null;
     if(!keys||f.length!==keys.length+3)throw Error('回执字段数量错误');

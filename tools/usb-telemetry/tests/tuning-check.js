@@ -21,6 +21,7 @@ async (page) => {
         this.readable=new ReadableStream({start:c=>{this.controller=c;}});
         this.writable=new WritableStream({write:bytes=>{
           const line=new TextDecoder().decode(bytes).trim();window.__tuningWrites.push(line);
+          if(line.startsWith('@FC1,'))return; // Older tuning-only firmware ignores FC1 capability queries.
           const [,id,operation,group,revision,...cells]=line.split(','),record=board[group];
           if (window.__dropTuningReply) return;
           if (operation==='SET') {

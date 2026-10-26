@@ -82,7 +82,7 @@
       if (!line.startsWith('@T1,')) return false;
       const cells=line.split(','), p=this.pending;
       if (!p || cells[1]!==String(p.id) || cells[3]!==p.group) return true;
-      if (cells[2]==='ERR') {p.finish(new Error(errors[cells[4]] || '板端拒绝请求：'+cells[4]));return true;}
+      if (cells[2]==='ERR') {const error=new Error(errors[cells[4]] || '板端拒绝请求：'+cells[4]);error.confirmed=true;p.finish(error);return true;}
       try {
         const count=groups[p.group].fields.length;
         if (cells[2]!=='OK' || ![count+6,count+7].includes(cells.length) || !/^\d+$/.test(cells[4]) || !/^[0-3]$/.test(cells[5])) throw new Error('参数回执格式与网页不一致。');

@@ -18,6 +18,7 @@ async (page) => {
         this.readable=new ReadableStream({start:c=>{this.controller=c;}});
         this.writable=new WritableStream({write:bytes=>{
           const line=new TextDecoder().decode(bytes).trim();__commands.push(line);
+          if(line.startsWith('@FC1,'))return;
           const [,id,operation,group,revision,...fields]=line.split(',');
           if (operation==='SET') {
             __board.values=fields.map(TelemetryTuning.decodeFloat);

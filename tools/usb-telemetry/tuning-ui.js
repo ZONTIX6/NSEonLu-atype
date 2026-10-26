@@ -3,7 +3,7 @@
   const {groups,validate}=window.TelemetryTuning;
   const $=id=>document.getElementById(id);
   const number=value=>Number(value.toPrecision(7)).toString();
-  window.createTuningUI=function(client) {
+  window.createTuningUI=function(client,{coordinator}={}) {
     let connected=false,busy=false,active='pid',epoch=0,polling=false,pollTimer=null,locked=false;
     const states=Object.fromEntries(Object.keys(groups).map(key=>[key,{data:null,draft:null,status:'连接 A 板后读取当前参数。',error:false,sync:null,persistError:null}]));
     function renderPersistence() {
@@ -95,6 +95,7 @@
       renderPersistence();
     }
     async function sync(key,record,token) {
+      if(coordinator?.owner&&coordinator.owner!=='tuning')throw Error('当前控制会话禁止参数文件同步');
       const state=states[key];
       try {
         const response=await fetch('/api/tuning',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({group:key,...record})});
@@ -109,18 +110,22 @@
     }
     async function operate(kind) {
       if (busy || polling || !connected || locked) return;
+      const writing=kind!=='read';
+      if(writing&&coordinator) {try{coordinator.acquire('tuning');coordinator.activate('tuning',null);}catch(error){states[active].status=error.message;render();return;}}
       const key=active,state=states[key],token=epoch;
       let values;
       try {
         if (kind==='apply') values=validate(key,state.draft,state.data.mode);
-      } catch(error) {state.status=error.message;state.error=true;render();return;}
+      } catch(error) {coordinator?.release('tuning',true);state.status=error.message;state.error=true;render();return;}
       busy=true;state.error=false;state.status=kind==='read' ? '正在读取板端参数…' : kind==='sync' ? '正在重试文件同步…' : '等待板端校验并应用…';render();
+      let confirmed=false;
       try {
         if (kind==='sync') await sync(key,state.sync,token);
         else {
           const result=await (kind==='read' ? client.get(key) : kind==='save' ? client.save(key,state.data.revision) : client.set(key,state.data.revision,values));
           if (token!==epoch) return;
           state.data=result;
+          confirmed=true;
           if (kind!=='save') state.draft=result.values.slice();
           state.error=false;state.persistError=null;
           if (kind==='read' && state.sync) state.sync=result;
@@ -128,9 +133,11 @@
           if (kind==='apply') {state.sync=result;render();await sync(key,result,token);}
         }
       } catch(error) {
+        if(error.confirmed)confirmed=true;
         if (token!==epoch) return;
         state.status=error.message;state.error=true;
       } finally {
+        if(token===epoch&&writing&&coordinator){if(confirmed||kind==='sync')coordinator.release('tuning',true);else coordinator.unknown('tuning');}
         if (token===epoch) {busy=false;render();schedulePoll();}
       }
     }
@@ -160,6 +167,7 @@
         render();if (connected) operate('read');
       },
       get active() {return active;}
+      ,get busy(){return busy||polling||!!client.pending;}
     };
   };
 })();
