@@ -183,6 +183,7 @@ void DJIForceCalibrationRecord(const DJIMotorCycle_s *cycle,const int16_t comman
     FcRecordSubmission(&engine,clock_now(),control_record.final,(attempted&successful&mask)==mask);
     control_record.state=(uint8_t)engine.status.state;control_record.reason=(uint16_t)engine.status.reason;
     if(recording) {
+        control_record.time_us=relative(DWT_GetCycleCount());
         if(!FcCaptureAppend(&capture,&control_record)) FcCancel(&engine,FC_REASON_CAPACITY,now_us);
         if(engine.status.state==FC_FROZEN || engine.status.state==FC_ABORTED) {
             FcCaptureFreeze(&capture,engine.status.reason,engine.status.complete);recording=false;
