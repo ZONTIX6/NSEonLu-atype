@@ -4,7 +4,7 @@
   const $ = id => document.getElementById(id);
   const store = new P.TelemetryStore();
   const view = new P.DisplayState(store);
-  let mode = 'idle', demoTimer = null, demoSequence = 0, lastRender = -Infinity, lastRendered = null, hadError = false;
+  let mode = 'idle', demoTimer = null, demoSequence = 0, lastRender = -Infinity, lastChartRender = -Infinity, lastRendered = null, lastValues = null, hadError = false;
   let tuningUI = null;
   let autotuneUI = null;
   const autotuneClient = new window.TelemetryAutotune.AutotuneClient({send: line => session.send(line)});
@@ -83,6 +83,14 @@
     chart.traces.forEach(trace => {trace.unit ??= chart.unit;trace.digits ??= chart.unit === 'rpm' ? 0 : 2;});
     chart.traces = chart.allTraces.filter(trace => chart.selected.has(trace.key));
   });
+  const chartByCanvas = new Map(charts.map(chart => [$(chart.id), chart]));
+  const chartVisibility = new IntersectionObserver(entries => {
+    for (const entry of entries) {
+      const chart = chartByCanvas.get(entry.target);
+      if (chart.visible !== entry.isIntersecting) {chart.visible = entry.isIntersecting;lastRendered = null;}
+    }
+  });
+  chartByCanvas.forEach((chart, canvas) => {chart.visible = false;chartVisibility.observe(canvas);});
   const chartDialog = $('chart-dialog');
   const expandedCanvas = $('expanded-chart');
   let expandedChart = null, chartOpener = null, chartRange = [-60000, 0], pan = null;
@@ -330,8 +338,10 @@
     setText('missing-count', store.stats.missing);
     setText('bad-count', parser.stats.bad + parser.stats.unsupported);
     setText('tx-drop-count', store.latest ? store.latest.tx_drop_count : '—');
-    const recent = store.samples.filter(sample => now - sample.arrivalMs <= 1000);
-    const frequency = recent.length > 1 ? (recent.length - 1) * 1000 / (recent.at(-1).arrivalMs - recent[0].arrivalMs) : null;
+    let firstRecent = store.samples.length;
+    while (firstRecent > 0 && now - store.samples[firstRecent - 1].arrivalMs <= 1000) firstRecent--;
+    const recentCount = store.samples.length - firstRecent;
+    const frequency = recentCount > 1 ? (recentCount - 1) * 1000 / (store.latest.arrivalMs - store.samples[firstRecent].arrivalMs) : null;
     setText('rx-rate', !stale && frequency !== null && Number.isFinite(frequency) ? frequency.toFixed(1) : '—');
     setText('display-status', view.paused ? '显示已暂停 · 采集继续' : !store.latest ? '等待数据' : stale ? '超过 500 ms 无新数据' : '● 实时更新');
     $('display-status').className = 'display-status' + (view.paused || stale && store.latest ? ' warning' : store.latest ? ' live' : '');
@@ -435,10 +445,17 @@
       lastRender = now;renderToolbar(now);
       autotuneUI.renderChart();
       const snapshot = view.snapshot(now);
-      if (!view.paused || snapshot !== lastRendered) {
-        renderValues(snapshot);
-        if (!$('monitor-panel').hidden) charts.forEach(chart => drawChartView($(chart.id), chart, snapshot));
-        renderExpandedChart(snapshot);
+      if (snapshot !== lastValues) {renderValues(snapshot);lastValues = snapshot;}
+    }
+    // Draw scrolling traces on animation frames; keep the heavier DOM readings at 20 Hz.
+    const chartInterval = 1000 / 60, chartElapsed = now - lastChartRender;
+    if (chartElapsed >= chartInterval - 1) {
+      // Retain the remainder so 75/90/144 Hz displays can still render about 60 fps.
+      lastChartRender = now - (Number.isFinite(chartElapsed) ? Math.max(0, chartElapsed - chartInterval) % chartInterval : 0);
+      const snapshot = view.snapshot(now);
+      if (snapshot !== lastRendered && (lastRendered === null || snapshot.latest || lastRendered.latest)) {
+        if (chartDialog.open) renderExpandedChart(snapshot);
+        else if (!$('monitor-panel').hidden) charts.forEach(chart => {if (chart.visible) drawChartView($(chart.id), chart, snapshot);});
         lastRendered = snapshot;
       }
     }

@@ -25,13 +25,15 @@ async (page) => {
     }
     view.pause(end);window.dispatchEvent(new Event('resize'));
   });
-  await page.waitForFunction(() => document.querySelector('#rpm-chart').getAttribute('aria-label').includes('3000'));
+  await page.locator('#rpm-chart').scrollIntoViewIfNeeded();
+  await page.waitForFunction(() => document.querySelector('#rpm-chart').getAttribute('aria-label')?.includes('3000'));
   const hover = async selector => {
     await page.locator(selector).scrollIntoViewIfNeeded();
     const box = await page.locator(selector).boundingBox();
     const plot = await page.locator(selector).evaluate(canvas => TelemetryCharts.getPlotBounds(canvas));
     const point = {x: box.x + plot.left + plot.width * .5, y: box.y + plot.top + 40};
     await page.mouse.move(point.x, point.y);
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
     return point;
   };
   const tooltip = selector => page.locator(selector).locator('..').locator('.chart-tooltip');

@@ -156,6 +156,8 @@ IMU 姿态、角速度、加速度分图显示；累计 Yaw 默认不选中，�
 
 每张图旁的“显示数据”列出该图全部曲线，勾选哪些就显示哪些，可用“全选”“清空”批量操作。普通图与放大图共享选择，暂停时也可改选，已有缩放范围保持不变；悬停只显示已选数据。窄屏时选择区移到图下方。
 
+实时波形按浏览器动画帧刷新，上限约 60 帧/秒；数值面板保持约 20 次/秒更新。常态刷新跳过屏幕外的图表，放大弹窗打开时只绘制大图，暂停后按交互和尺寸变化重画。密集波形按像素列保留首尾与峰谷，并保留无效值和通信断点；此优化只简化绘制，悬停仍读取完整真实采样，CSV 保留原始数据。
+
 转速图可分别选择四轮实际转速、四轮目标转速（加粗虚线）和底盘旋转目标 Wz。轮速使用左轴 rpm，Wz 使用右轴“指令值”，取自固件上报的最终 Wz 控制指令；它不是电机 rpm 或底盘实测转速。各轴独立适配有效数据，底盘数据无效时 Wz 留空。
 
 鼠标放在普通图或大图内，可查看定位线对应的最近真实采样，包括距窗口末端的秒数、板端 tick（ms）、各条曲线名称和数值。功率为 W，能量为 J，转速为 rpm；读数已经换算，CSV 导出仍保留原始整数单位。无效来源显示“—”，通信断点和距离采样超过 500 ms 的空白不显示读数。无数据或遥控器过期时，键盘和鼠标按键保持熄灭。
@@ -223,6 +225,7 @@ playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/chart-check.
 playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/zoom-check.js
 playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/selection-check.js
 playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/history-check.js
+playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/performance-check.js
 playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/tuning-check.js
 playwright-cli -s=usb run-code --filename tools/usb-telemetry/tests/persistence-check.js
 playwright-cli -s=usb close

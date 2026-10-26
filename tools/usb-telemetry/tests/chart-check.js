@@ -35,10 +35,12 @@ async (page) => {
   };
   const hover = async (selector, fraction = .5) => {
     await page.locator(selector).scrollIntoViewIfNeeded();
+    await page.waitForFunction(selector => TelemetryCharts.getPlotBounds(document.querySelector(selector)), selector);
     const box = await page.locator(selector).boundingBox();
     const plot = await page.locator(selector).evaluate(canvas => TelemetryCharts.getPlotBounds(canvas));
     const point = {x: box.x + plot.left + plot.width * fraction, y: box.y + plot.top + 45};
     await page.mouse.move(point.x, point.y);
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
     return point;
   };
   const tooltip = selector => page.locator(selector).locator('..').locator('.chart-tooltip');

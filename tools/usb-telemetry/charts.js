@@ -8,11 +8,11 @@
     const tooltip = document.createElement('div');tooltip.className = 'chart-tooltip';tooltip.setAttribute('role', 'tooltip');
     const heading = document.createElement('strong'), rows = document.createElement('div');rows.className = 'chart-tooltip-values';
     tooltip.append(heading, rows);layer.append(guide, tooltip);canvas.parentElement.append(layer);
-    const state = {layer, guide, tooltip, heading, rows, pointer: null, traces: null};
+    const state = {layer, guide, tooltip, heading, rows, pointer: null, traces: null, frame: null};
     canvas.addEventListener('pointermove', event => {
       state.bounds = canvas.getBoundingClientRect();
       state.pointer = {clientX: event.clientX, clientY: event.clientY};
-      renderHover(state);
+      if (state.frame === null) state.frame = requestAnimationFrame(() => {state.frame = null;renderHover(state);});
     });
     canvas.addEventListener('pointerleave', () => {state.pointer = null;layer.hidden = true;});
     hoverStates.set(canvas, state);
@@ -59,6 +59,48 @@
     const state = hoverStates.get(canvas);
     return state ? {left: state.pad.left, top: state.pad.top, width: state.plotWidth, height: state.plotHeight} : null;
   }
+  // Arrival times are ordered, including when multiple rows arrive in one USB chunk.
+  function timeIndex(samples, time, after = false) {
+    let left = 0, right = samples.length;
+    while (left < right) {
+      const middle = (left + right) >>> 1, value = samples[middle].arrivalMs;
+      if (value < time || after && value === time) left = middle + 1;else right = middle;
+    }
+    return left;
+  }
+  function strokeTrace(ctx, samples, trace, x, y) {
+    let first = -1, last, minimum, maximum, column, previous = null, connected = false;
+    const value = index => samples[index].normalized.values[trace.key];
+    const flush = () => {
+      if (first < 0) return;
+      // Preserve temporal order: extrema can occur in either order in a pixel.
+      const indices = first === last ? [first] : [first, minimum, maximum, last].sort((a, b) => a - b);
+      let emitted = -1;
+      for (const index of indices) {
+        if (index === emitted) continue;
+        const pointX = x(samples[index].arrivalMs), pointY = y(value(index), trace);
+        if (connected) ctx.lineTo(pointX, pointY);else ctx.moveTo(pointX, pointY);
+        connected = true;emitted = index;
+      }
+      first = -1;
+    };
+    for (let index = 0; index < samples.length; index++) {
+      const sample = samples[index], current = value(index);
+      if (!Number.isFinite(current)) {flush();previous = null;connected = false;continue;}
+      const nextColumn = Math.floor(x(sample.arrivalMs));
+      const gap = !previous || previous.segment !== sample.segment || sample.arrivalMs - previous.arrivalMs > 500;
+      if (gap || nextColumn !== column) {
+        flush();if (gap) connected = false;
+        first = last = minimum = maximum = index;column = nextColumn;
+      } else {
+        last = index;
+        if (current < value(minimum)) minimum = index;
+        if (current > value(maximum)) maximum = index;
+      }
+      previous = sample;
+    }
+    flush();return previous;
+  }
   function drawChart(canvas, samples, traces, {now, unit = '', rightUnit = '', range = [-60000, 0]} = {}) {
     const bounds = canvas.getBoundingClientRect();
     const width = bounds.width, height = bounds.height;
@@ -71,7 +113,7 @@
     const leftTraces = traces.filter(trace => trace.axis !== 'right'), rightTraces = traces.filter(trace => trace.axis === 'right');
     const pad = {left: 42, right: rightTraces.length ? 66 : 12, top: 15, bottom: 25}, plotWidth = width - pad.left - pad.right, plotHeight = height - pad.top - pad.bottom;
     const start = now + range[0], end = now + range[1], duration = end - start, fullRange = duration === 60000;
-    const visible = samples.filter(sample => sample.arrivalMs >= start && sample.arrivalMs <= end);
+    const visible = samples.slice(timeIndex(samples, start), timeIndex(samples, end, true));
     const leftScale = valueRange(visible, leftTraces, fullRange), rightScale = valueRange(visible, rightTraces, fullRange);
     const y = (value, trace) => {const scale = trace.axis === 'right' ? rightScale : leftScale;return pad.top + plotHeight * (1 - (value - scale.low) / (scale.high - scale.low));};
     const x = time => pad.left + (time - start) / duration * plotWidth;
@@ -102,15 +144,7 @@
     ctx.save();ctx.beginPath();ctx.rect(pad.left, pad.top, plotWidth, plotHeight);ctx.clip();
     for (const trace of traces) {
       ctx.beginPath();ctx.strokeStyle = trace.color;ctx.lineWidth = trace.width || (trace.dash ? 1.2 : 1.6);ctx.setLineDash(trace.dash ? trace.dashPattern || [4, 4] : []);
-      let previous = null;
-      for (const sample of visible) {
-        const value = sample.normalized.values[trace.key];
-        if (value === null || !Number.isFinite(value)) {previous = null; continue;}
-        const pointX = x(sample.arrivalMs), pointY = y(value, trace);
-        if (!previous || previous.segment !== sample.segment || sample.arrivalMs - previous.arrivalMs > 500) ctx.moveTo(pointX, pointY);
-        else ctx.lineTo(pointX, pointY);
-        previous = sample;
-      }
+      const previous = strokeTrace(ctx, visible, trace, x, y);
       ctx.stroke();
       if (previous && end - previous.arrivalMs <= 500) {
         ctx.setLineDash([]);ctx.beginPath();ctx.arc(x(previous.arrivalMs), y(previous.normalized.values[trace.key], trace), 2.2, 0, Math.PI * 2);ctx.fillStyle = trace.color;ctx.fill();
