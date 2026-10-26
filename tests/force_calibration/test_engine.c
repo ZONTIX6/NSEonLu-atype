@@ -19,6 +19,10 @@ static void waveform(void)
 }
 static void guards(void)
 {
+    const FcReason expected[]={FC_REASON_USB,FC_REASON_USB,FC_REASON_PERMISSION,FC_REASON_PERMISSION,
+        FC_REASON_PERMISSION,FC_REASON_FEEDBACK,FC_REASON_TEMPERATURE,FC_REASON_OVERSPEED,FC_REASON_POWER,
+        FC_REASON_POWER,FC_REASON_POWER,FC_REASON_FEEDBACK,FC_REASON_POWER,FC_REASON_POWER,FC_REASON_TIMING,
+        FC_REASON_FEEDBACK,FC_REASON_STOP,FC_REASON_CAN};
     for(unsigned fault=0;fault<18;fault++) {
         FcEngine e;FcInput in;uint32_t session;ready_engine(&e,&in,&session);
         assert(FcStart(&e,session,&pulse,&in));advance_ms(&e,&in,session,110);
@@ -36,7 +40,7 @@ static void guards(void)
         case 17:FcRecordSubmission(&e,in.now_us,e.status.final,false);break;
         }
         FcDrive d=FcStep(&e,&in);for(unsigned w=0;w<4;w++) assert(d.current[w]==0);
-        assert(d.reason!=FC_REASON_NONE);FcReason reason=d.reason;
+        assert(d.reason==expected[fault]);FcReason reason=d.reason;
         FcCancel(&e,FC_REASON_PROTOCOL,in.now_us);assert(e.status.reason==reason);
     }
 }
@@ -66,4 +70,16 @@ static void ranges_final_and_wrap(void)
     in.now_us+=150001;assert(FcStep(&e,&in).current[1]==0);
     limits.max_current=0;FcInit(&e,&limits);assert(!FcArm(&e,&in,&session));
 }
-int main(void) {waveform();guards();ranges_final_and_wrap();puts("calibration engine: OK");return 0;}
+static void missing_zero_proof(void)
+{
+    FcEngine e;FcInput in;uint32_t session;ready_engine(&e,&in,&session);
+    assert(FcStart(&e,session,&pulse,&in));advance_ms(&e,&in,session,249);
+    for(unsigned k=0;k<102;k++) {
+        in.now_us+=1000;assert(FcHeartbeat(&e,session,in.usb_generation,in.now_us));
+        FcDrive d=FcStep(&e,&in);FcRecordSubmission(&e,in.now_us,d.current,false);
+        assert(e.status.state==FC_TAIL && !e.status.zero_submitted && !e.status.complete);
+    }
+    int16_t zero[4]={0};FcRecordSubmission(&e,in.now_us,zero,true);
+    ++in.now_us;assert(FcStep(&e,&in).state==FC_ABORTED);
+}
+int main(void) {waveform();guards();ranges_final_and_wrap();missing_zero_proof();puts("calibration engine: OK");return 0;}

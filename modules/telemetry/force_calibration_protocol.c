@@ -80,7 +80,6 @@ void ForceCalibrationProtocolSubmit(const char *line,uint32_t generation)
     if(count<3 || !integer(fields[1],false,&id)) {ForceCalibrationProtocolCancel(generation,FC_REASON_PROTOCOL);return;}
     const bool stop=!strcmp(fields[2],"STOP");
     if((response_size || waiting) && !stop) return; /* Keep the original reply stable until accepted. */
-    if(stop) {response_size=0;waiting=false;adapter_reply=false;}
     if(!strcmp(fields[2],"CAP") && count==3) {
 #if CHASSIS_FORCE_CALIBRATION_ENABLE
         FcLimits l=BoardForceCalibrationLimits();
@@ -100,21 +99,41 @@ void ForceCalibrationProtocolSubmit(const char *line,uint32_t generation)
     unsigned required=0;
     const char *op=fields[2];
     if(!strcmp(op,"STATUS") || !strcmp(op,"ARM")) required=4;
-    else if(!strcmp(op,"PING") || stop || !strcmp(op,"CLEAR")) required=5;
+    else if(!strcmp(op,"PING") || stop || !strcmp(op,"CLEAR") || !strcmp(op,"META")) required=5;
     else if(!strcmp(op,"START")) required=10;
     else if(!strcmp(op,"READ")) required=7;
-    if(!format || count!=required) {error((uint32_t)id,"format");
+    if(!format || count!=required) {
+        if(stop && (response_size || waiting)) return;
+        error((uint32_t)id,"format");
 #if CHASSIS_FORCE_CALIBRATION_ENABLE
         DJIForceCalibrationCancel(FC_REASON_PROTOCOL);
 #endif
         return;
     }
-    if((uint32_t)values[0]!=generation) {error((uint32_t)id,"generation");return;}
+    if((uint32_t)values[0]!=generation) {
+        if(stop && (response_size || waiting)) return;
+        error((uint32_t)id,"generation");return;
+    }
 #if CHASSIS_FORCE_CALIBRATION_ENABLE
     FcStatus s;DJIForceCalibrationGetStatus(&s);
+    if(stop) {
+        if(values[1] && (uint32_t)values[1]!=s.session && (response_size || waiting)) return;
+    }
     if(!strcmp(op,"STATUS")) {ok((uint32_t)id,&s);return;}
+    if(!strcmp(op,"META")) {
+        FcCaptureMeta meta;
+        if(!DJIForceCalibrationMetadata((uint32_t)values[1],&meta)) {error((uint32_t)id,"capture");return;}
+        const FcLimits *l=&meta.limits;const FcPulse *p=&meta.pulse;
+        int n=snprintf(response,sizeof response,
+            "@FC1,%lu,META,%lu,%lu,%lu,%lu,%u,%d,%u,%u,%u,%d,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\r\n",
+            (unsigned long)id,(unsigned long)generation,(unsigned long)meta.capture_id,(unsigned long)meta.session,
+            (unsigned long)meta.generation,p->wheel,p->current,p->rise_ms,p->hold_ms,p->fall_ms,
+            l->max_current,l->max_on_ms,l->max_rpm,l->stop_temperature_c,l->stationary_rpm,l->stationary_ms,
+            l->heartbeat_ms,l->pre_ms,l->tail_ms,meta.speed_lpf_pm,meta.current_lpf_pm);
+        response_size=n>0 && (size_t)n<sizeof response ? (size_t)n : 0;return;
+    }
     if(!strcmp(op,"READ")) {
-        if(s.state!=FC_FROZEN && s.state!=FC_ABORTED) {error((uint32_t)id,"not_frozen");return;}
+        if(!DJIForceCalibrationCaptureFrozen()) {error((uint32_t)id,"not_frozen");return;}
         if(!s.zero_submitted) {error((uint32_t)id,"not_zero");return;}
         if((uint32_t)values[1]!=s.capture_id) {error((uint32_t)id,"capture");return;}
         uint8_t bytes[96];
@@ -140,7 +159,11 @@ void ForceCalibrationProtocolSubmit(const char *line,uint32_t generation)
     else if(stop) r.op=FC_OP_STOP;
     else {r.op=FC_OP_CLEAR;r.capture_id=(uint32_t)values[1];}
     if(r.op!=FC_OP_ARM && r.op!=FC_OP_CLEAR && r.session!=s.session && !(stop && !r.session)) {error(r.request_id,"session");return;}
-    if(!DJIForceCalibrationSubmit(&r)) {error(r.request_id,"busy");return;}
+    if(!DJIForceCalibrationSubmit(&r)) {
+        if(stop && (response_size || waiting)) return;
+        error(r.request_id,"busy");return;
+    }
+    if(stop) {response_size=0;adapter_reply=false;}
     waiting=true;waiting_id=r.request_id;
 #else
     error((uint32_t)id,"disabled");

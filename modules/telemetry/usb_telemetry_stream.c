@@ -4,6 +4,9 @@
 #include "runtime_tuning.h"
 #include "autotune_protocol.h"
 #include "force_calibration_protocol.h"
+#if CHASSIS_FORCE_CALIBRATION_ENABLE
+#include "dji_force_calibration.h"
+#endif
 #include "chassis_control_config.h"
 #if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
 #include "chassis_force_telemetry.h"
@@ -43,7 +46,14 @@ static void Receive(uint16_t length)
     }
     for (uint32_t i = 0; i < length; ++i) {
         unsigned next = (rx_head + 1U) % sizeof rx_ring;
-        if (next == rx_tail) {rx_overflow = true; break;}
+        if (next == rx_tail) {
+            rx_overflow = true;
+#if CHASSIS_FORCE_CALIBRATION_ENABLE
+            /* Bounded latch only: final CAN guard observes overflow immediately. */
+            DJIForceCalibrationCancel(FC_REASON_PROTOCOL);
+#endif
+            break;
+        }
         rx_ring[rx_head] = receive_buffer[i];
         rx_head = next;
     }

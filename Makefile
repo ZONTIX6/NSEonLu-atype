@@ -146,6 +146,7 @@ modules/telemetry/usb_telemetry_stream.c \
 modules/telemetry/runtime_tuning.c \
 modules/telemetry/pid_autotune.c \
 modules/telemetry/autotune_protocol.c \
+modules/telemetry/force_calibration_protocol.c \
 modules/telemetry/tuning_storage.c \
 modules/telemetry/tuning_flash.c \
 bsp/flash/bsp_tuning_flash.c \
@@ -245,6 +246,13 @@ ifeq ($(filter $(CHASSIS_CONTROL_MODE),0 1),)
 $(error CHASSIS_CONTROL_MODE must be 0 or 1)
 endif
 include config/atype.mk
+CHASSIS_FORCE_CALIBRATION_ENABLE ?= 0
+ifneq ($(filter $(CHASSIS_FORCE_CALIBRATION_ENABLE),0 1),$(CHASSIS_FORCE_CALIBRATION_ENABLE))
+$(error CHASSIS_FORCE_CALIBRATION_ENABLE must be 0 or 1)
+endif
+ifeq ($(CHASSIS_FORCE_CALIBRATION_ENABLE),1)
+C_SOURCES += $(wildcard modules/chassis_force_calibration/*.c) application/board/board_force_calibration.c application/runtime/force_calibration_app.c modules/motor/DJImotor/dji_force_calibration.c
+endif
 ifeq ($(CHASSIS_CONTROL_MODE),1)
 C_SOURCES := $(filter-out application/chassis/chassis.c modules/algorithm/chassis_spin.c modules/motor/DJImotor/dji_power_adapter.c,$(C_SOURCES))
 C_SOURCES += $(wildcard modules/chassis_force/*.c) application/chassis/chassis_force_app.c application/board/board_chassis_force.c modules/motor/DJImotor/dji_force_adapter.c modules/telemetry/chassis_force_telemetry.c
@@ -315,6 +323,7 @@ C_INCLUDES =  \
 -Imodules/remote \
 -Imodules/chassis_power \
 -Imodules/chassis_force \
+-Imodules/chassis_force_calibration \
 -Imodules/super_cap \
 -Imodules/power_meter \
 -Imodules/can_comm \
@@ -363,7 +372,7 @@ LDFLAGS += $(ATYPE_MODULE_LDFLAGS)
 #######################################
 # list of objects
 OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
-NUMERIC_SOURCES := $(filter modules/chassis_force/% modules/chassis_power/% modules/algorithm/power_model.c modules/algorithm/chassis_power_% modules/algorithm/chassis_spin.c modules/motor/DJImotor/% modules/telemetry/chassis_force_telemetry.c application/chassis/% application/board/board_chassis_force.c application/cmd/robot_cmd.c,$(C_SOURCES))
+NUMERIC_SOURCES := $(filter modules/chassis_force_calibration/% modules/chassis_force/% modules/chassis_power/% modules/algorithm/power_model.c modules/algorithm/chassis_power_% modules/algorithm/chassis_spin.c modules/motor/DJImotor/% modules/telemetry/chassis_force_telemetry.c modules/telemetry/force_calibration_protocol.c application/runtime/force_calibration_app.c application/chassis/% application/board/board_chassis_force.c application/board/board_force_calibration.c application/cmd/robot_cmd.c,$(C_SOURCES))
 $(addprefix $(BUILD_DIR)/,$(notdir $(NUMERIC_SOURCES:.c=.o))): CFLAGS += -fno-fast-math
 vpath %.c $(sort $(dir $(C_SOURCES)))
 # list of ASM program objects

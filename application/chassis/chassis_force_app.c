@@ -163,6 +163,7 @@ void ChassisTask(void)
     }
     /* Fault recovery may observe neutral fresh commands with zero energy allowance.
      * It never bypasses the independent VehicleSafety permission. */
+#if !CHASSIS_FORCE_CALIBRATION_ENABLE
     ChassisForceActuationSnapshot_s snapshot={.intent=command.intent,.power=policy.control,
         .command_received_ms=command.received_ms,.config_version=1,.safety_epoch=VehicleSafetyEpoch(),
         .transport_margin_ms=margin,.growth_allowed=policy.force_growth_allowed,
@@ -171,6 +172,7 @@ void ChassisTask(void)
     snapshot.power.control_enabled=ready && fresh && VehicleSafetyAllowsDrive(now) &&
         command.intent.motion_mode!=CHASSIS_FORCE_ZERO;
     if(!policy.valid) snapshot.power.control_enabled=false;
+#endif
 #if CHASSIS_FORCE_CALIBRATION_ENABLE
     /* Only approved base watts; no boost, offered demand or calibrated flag. */
     ChassisPowerControlSnapshot_s calibration_power=policy.control;

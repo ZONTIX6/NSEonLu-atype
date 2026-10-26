@@ -78,7 +78,8 @@ void DJIForceCalibrationPublish(const FcPermit *p)
 void DJIForceCalibrationReadControl(void) {cycle_permit=published;}
 void DJIForceCalibrationCancel(FcReason reason)
 {
-    uint32_t key=lock();if(!cancellation) cancellation=reason;queued=false;unlock(key);
+    uint32_t key=lock();if(!cancellation) cancellation=reason;
+    queued=false;stop_queued=false;result_ready=false;unlock(key);
 }
 bool DJIForceCalibrationSubmit(const FcRequest *r)
 {
@@ -224,4 +225,15 @@ bool DJIForceCalibrationRead(uint32_t id,uint16_t first,uint8_t count,uint8_t *b
 {
     uint32_t key=lock();bool ok=id==capture.meta.capture_id && engine.status.zero_submitted &&
         FcCaptureRead(&capture,first,count,bytes,capacity);unlock(key);return ok;
+}
+bool DJIForceCalibrationCaptureFrozen(void)
+{
+    uint32_t key=lock();bool frozen=capture.frozen;unlock(key);return frozen;
+}
+bool DJIForceCalibrationMetadata(uint32_t id,FcCaptureMeta *metadata)
+{
+    if(!metadata) return false;
+    uint32_t key=lock();bool ok=id==capture.meta.capture_id && capture.frozen && engine.status.zero_submitted;
+    if(ok) *metadata=capture.meta;
+    unlock(key);return ok;
 }

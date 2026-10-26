@@ -24,5 +24,19 @@ int main(void)
     assert(ForceCalibrationProtocolReply(reply,sizeof reply) && strstr(reply,",generation"));ForceCalibrationProtocolReplySent();
     run();ForceCalibrationProtocolSubmit("@FC1,11,STATUS,10",generation);
     assert(ForceCalibrationProtocolReply(reply,sizeof reply) && strstr(reply,",OK,10,"));ForceCalibrationProtocolReplySent();
-    puts("FC1 protocol: strict integers, generations, repeatable replies OK");return 0;
+    ForceCalibrationProtocolSubmit("@FC1,12,STOP,10,0",generation);
+    ++generation;ForceCalibrationProtocolCancel(generation,FC_REASON_USB);run();
+    ForceCalibrationProtocolSubmit("@FC1,13,ARM,11",generation);run();
+    assert(ForceCalibrationProtocolReply(reply,sizeof reply) && strstr(reply,",OK,11,"));
+    ForceCalibrationProtocolReplySent();
+    ForceCalibrationProtocolSubmit("@FC1,14,READ,11,1,0,2",generation);
+    assert(ForceCalibrationProtocolReply(reply,sizeof reply) && strstr(reply,",DATA,11,"));ForceCalibrationProtocolReplySent();
+    ForceCalibrationProtocolSubmit("@FC1,15,META,11,1",generation);
+    assert(ForceCalibrationProtocolReply(reply,sizeof reply) && strstr(reply,"@FC1,15,META,11,1,1,9,1,300,50,100,50,1500,"));ForceCalibrationProtocolReplySent();
+    FcStatus status;DJIForceCalibrationGetStatus(&status);
+    snprintf(saved,sizeof saved,"@FC1,16,PING,11,%lu",(unsigned long)status.session);
+    ForceCalibrationProtocolSubmit(saved,generation);run();
+    ForceCalibrationProtocolSubmit("@FC1,17,STOP,10,0",generation);
+    assert(ForceCalibrationProtocolReply(reply,sizeof reply) && strstr(reply,"@FC1,16,OK,11,"));ForceCalibrationProtocolReplySent();
+    puts("FC1 protocol: strict integers, generations, reconnect, old capture and stable replies OK");return 0;
 }

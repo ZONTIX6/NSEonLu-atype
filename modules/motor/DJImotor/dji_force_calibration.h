@@ -23,4 +23,6 @@ bool DJIForceCalibrationSubmit(const FcRequest *request);
 bool DJIForceCalibrationReply(FcCommandResult *reply);
 void DJIForceCalibrationReplyAccepted(uint32_t request_id);
 bool DJIForceCalibrationRead(uint32_t capture_id,uint16_t first,uint8_t count,uint8_t *bytes,size_t capacity);
+bool DJIForceCalibrationCaptureFrozen(void);
+bool DJIForceCalibrationMetadata(uint32_t capture_id,FcCaptureMeta *metadata);
 #endif

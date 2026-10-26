@@ -15,7 +15,7 @@ STANDARD = {"stdint.h", "stdbool.h", "stddef.h", "stdlib.h", "stdio.h", "string.
 HARDWARE = re.compile(r'\b(?:HAL_(?:SPI|GPIO|I2C|ADC|DMA|TIM|FLASH|CAN|UART|USART)\w*|__HAL_\w+|h(?:spi|uart|adc|can|tim|i2c)\d+)\b')
 REGISTER = re.compile(r'\b(GPIO[A-K]|SPI[1-6]|TIM\d+|DMA\w*|FLASH|ADC\d+|USART\d+|UART\d+)\s*->')
 TARGETS = ("modules/chassis_power", "modules/super_cap", "modules/power_meter",
-           "modules/chassis_force",
+           "modules/chassis_force", "modules/chassis_force_calibration",
            "modules/mpu6500", "modules/vtx", "modules/oled",
            "modules/vehicle_safety")
 FILES = ("modules/imu/ins_service.c", "modules/imu/ins_task.h",
@@ -59,8 +59,10 @@ def scan(root):
             dest = candidates[0].relative_to(root).as_posix()
             if dest.startswith("application/"):
                 found[(rel, "application-include", dest)] += 1
-            if rel.startswith(("modules/algorithm/", "modules/chassis_force/")) and (
+            if rel.startswith(("modules/algorithm/", "modules/chassis_force/", "modules/chassis_force_calibration/")) and (
                     dest.startswith("Drivers/") or dest == "Inc/main.h" or "FreeRTOS" in dest):
+                found[(rel, "algorithm-hardware", dest)] += 1
+            if rel.startswith("modules/chassis_force_calibration/") and dest.startswith('bsp/'):
                 found[(rel, "algorithm-hardware", dest)] += 1
             if rel.startswith("modules/chassis_power/") and path.suffix == ".h" and (
                     candidates[0].name == "dji_motor.h"):
@@ -79,6 +81,17 @@ def records(counter):
 
 
 class BoundaryTests(unittest.TestCase):
+    def test_calibration_core_rejects_rtos_and_application_dependencies(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for directory in ('modules/chassis_force_calibration', 'application', 'Inc'):
+                (root / directory).mkdir(parents=True)
+            (root / 'Inc/main.h').write_text('')
+            (root / 'application/policy.h').write_text('')
+            (root / 'modules/chassis_force_calibration/x.c').write_text(
+                '#include "../../Inc/main.h"\n#include "../../application/policy.h"')
+            self.assertEqual(sum(scan(root).values()), 2)
+
     def test_main_header_is_a_hardware_dependency(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

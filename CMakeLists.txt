@@ -78,6 +78,12 @@ foreach(OPTION IN LISTS ATYPE_OPTIONS)
 endforeach()
 
 # add inc
+if(NOT DEFINED CHASSIS_FORCE_CALIBRATION_ENABLE)
+    set(CHASSIS_FORCE_CALIBRATION_ENABLE 0)
+endif()
+if(NOT CHASSIS_FORCE_CALIBRATION_ENABLE MATCHES "^[01]$")
+    message(FATAL_ERROR "CHASSIS_FORCE_CALIBRATION_ENABLE must be 0 or 1")
+endif()
 # 递归包含头文件的函数
 function(include_sub_directories_recursively root_dir)
     if (IS_DIRECTORY ${root_dir})               # 当前路径是一个目录吗，是的话就加入到包含目录
@@ -115,6 +121,11 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
 )
 
 list(FILTER SOURCES EXCLUDE REGEX "/modules/imu/(ins_task|BMI088driver|BMI088Middleware)\\.c$")
+if(NOT CHASSIS_FORCE_CALIBRATION_ENABLE STREQUAL "1")
+    list(FILTER SOURCES EXCLUDE REGEX "/modules/chassis_force_calibration/")
+    list(FILTER SOURCES EXCLUDE REGEX "/modules/motor/DJImotor/dji_force_calibration\\.c$")
+    list(FILTER SOURCES EXCLUDE REGEX "/application/(board/board_force_calibration|runtime/force_calibration_app)\\.c$")
+endif()
 if(CHASSIS_CONTROL_MODE STREQUAL "1")
     list(FILTER SOURCES EXCLUDE REGEX "/application/chassis/chassis\\.c$")
     list(FILTER SOURCES EXCLUDE REGEX "/modules/algorithm/chassis_spin\\.c$")
@@ -124,7 +135,7 @@ else()
     list(FILTER SOURCES EXCLUDE REGEX "/application/board/board_chassis_force\\.c$")
 endif()
 foreach(NUMERIC_SOURCE IN LISTS SOURCES)
-    if(NUMERIC_SOURCE MATCHES "/(modules/algorithm/(chassis_power_|power_model|chassis_spin)|modules/chassis_force/|modules/chassis_power/|modules/motor/DJImotor/|modules/telemetry/chassis_force_telemetry|application/chassis/|application/board/board_chassis_force|application/cmd/robot_cmd)")
+    if(NUMERIC_SOURCE MATCHES "/(modules/algorithm/(chassis_power_|power_model|chassis_spin)|modules/chassis_force_calibration/|modules/chassis_force/|modules/chassis_power/|modules/motor/DJImotor/|modules/telemetry/(chassis_force_telemetry|force_calibration_protocol)|application/runtime/force_calibration_app|application/chassis/|application/board/(board_chassis_force|board_force_calibration)|application/cmd/robot_cmd)")
         set_property(SOURCE "${NUMERIC_SOURCE}" APPEND PROPERTY COMPILE_OPTIONS -fno-fast-math)
     endif()
 endforeach()

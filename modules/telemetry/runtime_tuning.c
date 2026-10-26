@@ -188,6 +188,9 @@ void RuntimeTuningSubmit(const char *line)
     if (saving) {
         if (!persistence_enabled) {mailbox.error="unsupported"; return;}
         taskENTER_CRITICAL();
+        if(trial_active || calibration_active || flash_active) {
+            mailbox.error="busy";taskEXIT_CRITICAL();return;
+        }
         if (!IsSaved(group,&groups[group])) dirty_mask |= 1U<<group;
         persistence_failed=false;
         taskEXIT_CRITICAL();
@@ -198,6 +201,9 @@ void RuntimeTuningSubmit(const char *line)
             mailbox.error = "value"; return;
         }
     taskENTER_CRITICAL();
+    if(trial_active || calibration_active || flash_active) {
+        mailbox.error="busy";taskEXIT_CRITICAL();return;
+    }
     mailbox.state = QUEUED;
     taskEXIT_CRITICAL();
 }
