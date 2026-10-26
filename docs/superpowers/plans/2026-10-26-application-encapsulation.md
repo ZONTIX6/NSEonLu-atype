@@ -34,8 +34,8 @@
 - [x] 补充目录职责和公共/私有边界，更新当前文档中的路径，保留历史计划。
 - [x] 更新索引生成器路径提示并生成索引，单独暂存原来已有修改的文档中的本次差异。
 - [x] 执行架构检查与索引测试；CMake 构建速度/力控并核对后端排除与有限浮点选项。
-- [ ] 请求独立代码审查，修复有效问题，再检查暂存差异。
-- [ ] 将验证结果写入 `docs/superpowers/verification/2026-10-26-application-encapsulation.md`，本地提交并报告编号。
+- [x] 请求独立代码审查，修复有效问题，再检查暂存差异。
+- [x] 将验证结果写入 `docs/superpowers/verification/2026-10-26-application-encapsulation.md`，本地提交并报告编号。
 
 ## 验证命令
 

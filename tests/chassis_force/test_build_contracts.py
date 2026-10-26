@@ -48,9 +48,13 @@ for defines, valid in cases:
 
 files = {e["file"].replace("\\", "/") for e in entries}
 assert not any(p.endswith(("/chassis/chassis.c", "/algorithm/chassis_spin.c", "/DJImotor/dji_power_adapter.c")) for p in files)
+finite_math_paths = ("/modules/chassis_force/", "/modules/chassis_power/",
+                     "/modules/motor/DJImotor/", "/application/chassis/",
+                     "/application/board/board_chassis_force.c",
+                     "/application/cmd/robot_cmd.c")
 for entry in entries:
     path = entry["file"].replace("\\", "/")
-    if any(part in path for part in ("/modules/chassis_force/", "/modules/chassis_power/", "/modules/motor/DJImotor/")):
+    if any(part in path for part in finite_math_paths):
         command = shlex.split(entry["command"])
         assert command.index("-fno-fast-math") > command.index("-Ofast"), path
 speed = subprocess.check_output(

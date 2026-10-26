@@ -9,15 +9,14 @@ ROOT = Path(__file__).resolve().parents[2]
 
 class ApplicationHeaders(unittest.TestCase):
     def test_public_entries_can_be_included_by_multiple_consumers(self):
-        includes = ["-I" + str(ROOT / "application" / directory)
-                    for directory in (".", "board", "runtime")]
+        includes = ["-I" + str(ROOT / "application")]
         source = '''
-        #include "robot_task.h"
-        #include "board_devices.h"
-        #include "tuning_policy.h"
-        #include "robot_task.h"
-        #include "board_devices.h"
-        #include "tuning_policy.h"
+        #include "runtime/robot_task.h"
+        #include "board/board_devices.h"
+        #include "runtime/tuning_policy.h"
+        #include "runtime/robot_task.h"
+        #include "board/board_devices.h"
+        #include "runtime/tuning_policy.h"
         void (*task_entry_{name})(void) = OSTaskInit;
         bool (*board_entry_{name})(void) = BoardDevicesInit;
         void (*tuning_entry_{name})(void) = TuningPolicyInit;
@@ -30,7 +29,8 @@ class ApplicationHeaders(unittest.TestCase):
                 path.write_text(source.format(name=name), encoding="utf-8")
                 result = subprocess.run(
                     ["gcc", "-std=c11", "-Wall", "-Wextra", "-Werror",
-                     "-Wstrict-prototypes", *includes, "-c", str(path), "-o", str(obj)],
+                     "-Wstrict-prototypes", "-fno-common", *includes,
+                     "-c", str(path), "-o", str(obj)],
                     capture_output=True, text=True)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 objects.append(str(obj))
