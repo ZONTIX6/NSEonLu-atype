@@ -123,6 +123,46 @@ int main(int argc,char **argv)
     input.raw_current[1]=5000;input.dt_s=0;assert(!ChassisPowerLimit(&input,&output));
     input.dt_s=.002f;input.now_ms=111;assert(!ChassisPowerLimit(&input,&output));
     assert(!ChassisPowerGetSnapshot(NULL));
+    if(config.buffer_enabled && !config.use_supercap && config.meter_enabled) {
+        policy_input=(ChassisPowerPolicyInput_s){.now_ms=1000,.dt_s=.005f,.previous_valid=true,
+            .referee={.valid=true,.chassis_output_valid=true,.chassis_output_enabled=true,
+                .chassis_power_limit_w=50,.buffer_energy_j=60,.buffer_tick_ms=1000},
+            .meter={.online=true,.power_w=49,.last_rx_tick_ms=1000},
+            .previous={.registered=true,.cycle_valid=true,.final_valid=true,.can_submitted=false,
+                .tick_ms=1000,.final_tick_ms=1000,.online_mask=15,
+                .telemetry.motor_enabled_mask=15,.transient.drive_mask=15}};
+        for(unsigned w=0;w<4;++w) {
+            policy_input.previous.feedback_tick_ms[w]=1000;
+            policy_input.previous.power.predicted_unlimited_power_w[w]=30;
+        }
+        policy_input.previous.can_submitted=true;
+        for(unsigned k=0;k<500;++k) {
+            policy_input.now_ms+=5;
+            policy_input.referee.buffer_tick_ms=policy_input.meter.last_rx_tick_ms=policy_input.now_ms;
+            policy_input.previous.tick_ms=policy_input.previous.final_tick_ms=policy_input.now_ms;
+            for(unsigned w=0;w<4;++w) policy_input.previous.feedback_tick_ms[w]=policy_input.now_ms;
+            assert(ChassisPowerUpdatePolicy(&policy_input,&policy_output));
+        }
+        assert(policy_output.budget.applied_budget_w>50);
+        policy_input.previous.can_submitted=false;
+        assert(ChassisPowerUpdatePolicy(&policy_input,&policy_output));
+        assert(policy_output.budget.applied_budget_w<=50);
+    }
+    if(config.use_supercap) {
+        SuperCapCommand_s command={.enable_dcdc=true,.referee_power_limit_w=50,
+            .input_control_enabled=true,.input_power_target_w=80};
+        policy_output.control.nominal_budget_w=100;
+        policy_output.control.target_power_w=95;
+        policy_output.control.legacy_budget_w=108;
+        policy_output.control.slow_correction_w=8;
+        policy_output.control.power_ceiling_w=100;
+        ChassisPowerCapCommandResult(&command,false,1000,0,&policy_output);
+        assert(policy_output.cap_send_failures==1);
+        assert(policy_output.control.nominal_budget_w<=50);
+        assert(policy_output.control.target_power_w<=50*config.algorithm.safety_factor);
+        assert(policy_output.control.legacy_budget_w<=50);
+        assert(policy_output.control.slow_correction_w<=0);
+    }
     puts("PASS: standalone chassis power module tests");
     return 0;
 }

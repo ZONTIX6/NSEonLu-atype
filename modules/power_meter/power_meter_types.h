@@ -12,6 +12,7 @@ typedef struct
     float current_a;
     float power_w;
     uint32_t last_rx_tick_ms;
+    uint32_t rx_sequence; /* Accepted receive events, including same-tick frames. */
 } PowerMeterStatus_s;
 
 #endif

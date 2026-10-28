@@ -47,6 +47,12 @@ bool ChassisPowerUpdatePolicy(const ChassisPowerPolicyInput_s *i, ChassisPowerPo
         cap_input.input_control_active &= p->cap_confirmed;
     }
     if(c->buffer_enabled) cap.online &= (uint32_t)(i->now_ms-cap.last_rx_tick_ms)<=20;
+    if(!c->force_control && c->use_supercap) {
+        /* Legacy feedback has no command identity. A successful send only permits
+         * the existing restricted policy; it never constitutes a strong ACK. */
+        cap_input.online &= (uint32_t)(i->now_ms-cap_input.last_rx_tick_ms)<=20;
+        cap_input.input_control_active &= p->cap_command_ok;
+    }
     const bool load_valid=c->meter_enabled && i->meter.online &&
         (uint32_t)(i->now_ms-i->meter.last_rx_tick_ms)<=20;
     bool demand_valid=i->previous_valid && s->registered && s->power.status==POWER_MODEL_STATUS_OK &&
@@ -57,6 +63,12 @@ bool ChassisPowerUpdatePolicy(const ChassisPowerPolicyInput_s *i, ChassisPowerPo
         s->power.status==POWER_MODEL_STATUS_OK && !s->numeric_error && !s->transient.fault &&
         s->online_mask==15 && s->telemetry.motor_enabled_mask==15 &&
         (uint32_t)(i->now_ms-s->tick_ms)<=5 && !i->zero_force;
+    if(!c->force_control) {
+        const bool submitted=s->cycle_valid && s->final_valid && s->can_submitted &&
+            (uint32_t)(i->now_ms-s->final_tick_ms)<=5;
+        demand_valid &= submitted;
+        spin_feedback_valid &= submitted;
+    }
     float requested=0, predicted=0, motoring=0;
     for(unsigned w=0;w<4;++w) {
         spin_feedback_valid &= (uint32_t)(i->now_ms-s->feedback_tick_ms[w])<=5 &&
@@ -183,7 +195,7 @@ void ChassisPowerCapCommandResult(const SuperCapCommand_s *command,bool submitte
 {
     if(!chassis_power || !command || !o) return;
     ChassisPowerInstance_s *p=chassis_power;
-    if(!p->slow_config.force_control) return;
+    if(!p->slow_config.use_supercap) return;
     if(!submitted) {
         ++p->cap_send_failures;p->cap_command_ok=false;p->cap_confirmed=false;
         o->force_growth_allowed=false;o->input_confirmed=false;
@@ -192,6 +204,17 @@ void ChassisPowerCapCommandResult(const SuperCapCommand_s *command,bool submitte
         o->control.target_power_w=fminf(o->control.target_power_w,base*p->slow_config.algorithm.safety_factor);
         o->control.power_ceiling_w=fminf(o->control.power_ceiling_w,o->control.target_power_w);
         o->physical_load_target_w=o->control.target_power_w;
+        if(!p->slow_config.force_control) {
+            /* No verified bypass path is configured for this speed backend. */
+            o->control.control_enabled=false;
+            o->control.slow_correction_w=fminf(0,o->control.slow_correction_w);
+            o->control.legacy_budget_w=fminf(o->control.legacy_budget_w,base);
+            o->budget.applied_budget_w=fminf(o->budget.applied_budget_w,base);
+            o->budget.target_budget_w=fminf(o->budget.target_budget_w,base);
+            o->budget.input_target_w=fminf(o->budget.input_target_w,base);
+            p->budget_state.applied_budget_w=fminf(p->budget_state.applied_budget_w,base);
+            ChassisPowerOuterLoopReset(&p->outer_state);
+        }
     } else {
         if(!p->cap_command_ok || command->enable_dcdc!=p->cap_sent_command.enable_dcdc ||
             command->input_control_enabled!=p->cap_sent_command.input_control_enabled ||

@@ -172,14 +172,15 @@ static void PredictedDemandCanUseBufferBelowMeasuredBase(ChassisPower_Init_Confi
         .referee={.valid=true,.chassis_output_enabled=true,.chassis_output_valid=true,
             .chassis_power_limit_w=50,.buffer_energy_j=60},
         .meter={.online=true,.power_w=42},
-        .previous={.registered=true,.online_mask=15,.meter_online=true,.measured_power_w=42,
+        .previous={.registered=true,.cycle_valid=true,.final_valid=true,.can_submitted=true,
+            .online_mask=15,.meter_online=true,.measured_power_w=42,
             .power={.status=POWER_MODEL_STATUS_OK},.telemetry={.motor_enabled_mask=15},
             .transient={.guard_scale=.9f,.mode=CHASSIS_POWER_TRANSIENT_RUN,
                 .drive_mask=15,.feedback_fresh=true,.timing_valid=true,.meter_fresh=true}}};
     ChassisPowerPolicyOutput_s o={0};
     for(unsigned n=0;n<60;++n) {
         i.now_ms+=5;i.referee.buffer_tick_ms=i.meter.last_rx_tick_ms=i.now_ms;
-        i.previous.tick_ms=i.previous.meter_tick_ms=i.now_ms;
+        i.previous.tick_ms=i.previous.final_tick_ms=i.previous.meter_tick_ms=i.now_ms;
         for(unsigned w=0;w<4;++w) {
             i.previous.feedback_tick_ms[w]=i.now_ms;i.previous.feedback_sequence[w]=n+1;
             i.previous.telemetry.actual_speed_rpm[w]=1000;
@@ -228,14 +229,15 @@ int main(int argc, char **argv)
     ChassisPowerPolicyInput_s i={.now_ms=100,.dt_s=.005f,.adaptive_spin=true,.previous_valid=true,
         .referee={.valid=true,.chassis_output_enabled=true,.chassis_output_valid=true,.chassis_power_limit_w=80,
             .buffer_energy_j=60},.meter={.online=true,.power_w=20},
-        .previous={.registered=true,.online_mask=15,.meter_online=true,
+        .previous={.registered=true,.cycle_valid=true,.final_valid=true,.can_submitted=true,
+            .online_mask=15,.meter_online=true,
             .power={.status=POWER_MODEL_STATUS_OK},.telemetry={.motor_enabled_mask=15},
             .transient={.guard_scale=1,.mode=CHASSIS_POWER_TRANSIENT_RUN,.positive_allowed=true,
                 .drive_mask=15,.feedback_fresh=true,.timing_valid=true,.meter_fresh=true}}};
     ChassisPowerPolicyOutput_s o={0};
     for(unsigned n=0;n<200;++n) {
         i.now_ms+=5;i.referee.buffer_tick_ms=i.now_ms;i.meter.last_rx_tick_ms=i.now_ms;
-        i.previous.tick_ms=i.previous.meter_tick_ms=i.now_ms;
+        i.previous.tick_ms=i.previous.final_tick_ms=i.previous.meter_tick_ms=i.now_ms;
         i.previous.measured_power_w=i.meter.power_w;
         for(unsigned w=0;w<4;++w) {
             i.previous.feedback_tick_ms[w]=i.now_ms;
@@ -250,7 +252,7 @@ int main(int argc, char **argv)
     i.meter.power_w=78.4f;
     for(unsigned n=0;n<200;++n) {
         i.now_ms+=5;i.referee.buffer_tick_ms=i.now_ms;i.meter.last_rx_tick_ms=i.now_ms;
-        i.previous.tick_ms=i.previous.meter_tick_ms=i.now_ms;i.previous.measured_power_w=78.4f;
+        i.previous.tick_ms=i.previous.final_tick_ms=i.previous.meter_tick_ms=i.now_ms;i.previous.measured_power_w=78.4f;
         for(unsigned w=0;w<4;++w) i.previous.feedback_tick_ms[w]=i.now_ms;
         assert(ChassisPowerUpdatePolicy(&i,&o));
     }

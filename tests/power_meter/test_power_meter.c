@@ -357,6 +357,10 @@ static void TestFrameCounterWrapKeepsFreshMeterOnline(void)
 
     ASSERT_EQ_U32(0U, meter->received_frame_count);
     ASSERT_TRUE(PowerMeterGetStatus(&status));
+    ASSERT_EQ_U32(0U, status.rx_sequence);
+    DeliverFrame(frame, 8U); /* Multiple receive events in the same millisecond. */
+    ASSERT_TRUE(PowerMeterGetStatus(&status));
+    ASSERT_EQ_U32(1U, status.rx_sequence);
     ASSERT_TRUE(status.online);
 }
 

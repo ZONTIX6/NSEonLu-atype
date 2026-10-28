@@ -582,10 +582,14 @@ static void UpdateChassisPowerBudget(void)
 #endif
     ChassisPowerPolicyOutput_s output;
     (void)ChassisPowerUpdatePolicy(&input,&output);
+    if(output.cap_command_valid) {
+        const bool submitted=SuperCapSendCommand(&output.cap_command);
+        ChassisPowerCapCommandResult(&output.cap_command,submitted,HAL_GetTick(),
+            input.cap.input_received_frame_count,&output);
+    }
     chassis_budget_output=output.budget;
     pending_power_control=output.control;
     pending_power_control.control_enabled &= chassis_power_ready;
-    if(output.cap_command_valid) (void)SuperCapSendCommand(&output.cap_command);
 #if CHASSIS_SPIN_DYNAMIC_ENABLED && POWER_METER_ENABLE
     const ChassisPowerSnapshot_s power_state=input.previous;
     const bool power_state_valid=input.previous_valid;
