@@ -1,4 +1,5 @@
 #include "chassis_power_internal.h"
+#include "chassis_power_shadow.h"
 
 bool ChassisPowerLimit(const ChassisPowerCycleInput_s *i, ChassisPowerCycleOutput_s *o)
 {
@@ -81,6 +82,9 @@ bool ChassisPowerLimit(const ChassisPowerCycleInput_s *i, ChassisPowerCycleOutpu
     state->cycle_valid=o->valid=valid;
     state->transient.fault |= !inputs_valid || state->numeric_error;
     o->control_version=i->control.version;o->model=state->power;o->transient=state->transient;
+#if CHASSIS_PREDICTIVE_POWER_MODE == CHASSIS_PREDICTIVE_SHADOW
+    ChassisPowerShadowCycle(i,&p->config,o);
+#endif
     /* Only RecordFinal publishes a complete motor cycle to the slow task. */
     return valid;
 }
@@ -109,6 +113,9 @@ bool ChassisPowerRecordFinal(const ChassisPowerFinalInput_s *i)
     state->final_valid=true;state->final_tick_ms=i->now_ms;state->can_submitted=i->can_submitted;
     ChassisPowerTransientRecordSent(&p->transient,current);
     POWER_LOCK();p->state=*state;POWER_UNLOCK();
+#if CHASSIS_PREDICTIVE_POWER_MODE == CHASSIS_PREDICTIVE_SHADOW
+    ChassisPowerShadowRecord(i);
+#endif
     ChassisPowerTelemetryFinal(p);
     return true;
 }

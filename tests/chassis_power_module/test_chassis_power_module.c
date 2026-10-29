@@ -162,6 +162,10 @@ int main(int argc,char **argv)
         assert(policy_output.control.target_power_w<=50*config.algorithm.safety_factor);
         assert(policy_output.control.legacy_budget_w<=50);
         assert(policy_output.control.slow_correction_w<=0);
+        assert(!policy_output.control.control_enabled);
+        assert(policy_output.control.telemetry.nominal_budget_w==policy_output.control.nominal_budget_w);
+        assert(policy_output.control.telemetry.target_power_w==policy_output.control.target_power_w);
+        assert(policy_output.control.telemetry.corrected_budget_w==policy_output.control.legacy_budget_w);
     }
     puts("PASS: standalone chassis power module tests");
     return 0;

@@ -7,6 +7,15 @@
 unsigned BSPLogWrite(const void *data,unsigned length) {(void)data;return length;}
 unsigned BSPLogWriteString(const char *text) {return (unsigned)strlen(text);}
 static void Near(float a,float b) {assert(isfinite(b) && fabsf(a-b)<.02f);}
+#ifdef PP_TRACE_ACTUATION
+static bool TraceFinal(const ChassisPowerFinalInput_s *f)
+{
+    printf("final,%lu,%u,%d,%d,%d,%d,%u\n",(unsigned long)f->now_ms,f->enabled_mask,
+        f->current_command[0],f->current_command[1],f->current_command[2],f->current_command[3],f->can_submitted);
+    return ChassisPowerRecordFinal(f);
+}
+#define ChassisPowerRecordFinal TraceFinal
+#endif
 
 /* Exercise idle -> real motor demand -> demand-driven buffer assist through
  * all production controllers. The independent motor has finite inertia and drag. */

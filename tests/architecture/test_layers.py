@@ -15,6 +15,7 @@ STANDARD = {"stdint.h", "stdbool.h", "stddef.h", "stdlib.h", "stdio.h", "string.
 HARDWARE = re.compile(r'\b(?:HAL_(?:SPI|GPIO|I2C|ADC|DMA|TIM|FLASH|CAN|UART|USART)\w*|__HAL_\w+|h(?:spi|uart|adc|can|tim|i2c)\d+)\b')
 REGISTER = re.compile(r'\b(GPIO[A-K]|SPI[1-6]|TIM\d+|DMA\w*|FLASH|ADC\d+|USART\d+|UART\d+)\s*->')
 TARGETS = ("modules/chassis_power", "modules/super_cap", "modules/power_meter",
+           "modules/predictive_power",
            "modules/chassis_force", "modules/chassis_force_calibration",
            "modules/mpu6500", "modules/vtx", "modules/oled",
            "modules/vehicle_safety")
@@ -59,7 +60,7 @@ def scan(root):
             dest = candidates[0].relative_to(root).as_posix()
             if dest.startswith("application/"):
                 found[(rel, "application-include", dest)] += 1
-            if rel.startswith(("modules/algorithm/", "modules/chassis_force/", "modules/chassis_force_calibration/")) and (
+            if rel.startswith(("modules/algorithm/", "modules/predictive_power/", "modules/chassis_force/", "modules/chassis_force_calibration/")) and (
                     dest.startswith("Drivers/") or dest == "Inc/main.h" or "FreeRTOS" in dest):
                 found[(rel, "algorithm-hardware", dest)] += 1
             if rel.startswith("modules/chassis_force_calibration/") and dest.startswith('bsp/'):

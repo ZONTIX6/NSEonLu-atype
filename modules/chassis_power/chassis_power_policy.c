@@ -1,5 +1,6 @@
 #include "chassis_power_internal.h"
 #include "chassis_power_policy.h"
+#include "chassis_power_shadow.h"
 #include <stdlib.h>
 
 bool ChassisPowerUpdatePolicy(const ChassisPowerPolicyInput_s *i, ChassisPowerPolicyOutput_s *o)
@@ -187,6 +188,9 @@ bool ChassisPowerUpdatePolicy(const ChassisPowerPolicyInput_s *i, ChassisPowerPo
     if(c->force_control && i->force_backend!=c->force_control) valid=o->control.control_enabled=false;
     o->valid=valid;
     POWER_LOCK();p->policy=*o;p->policy_tick_ms=i->now_ms;POWER_UNLOCK();
+#if CHASSIS_PREDICTIVE_POWER_MODE == CHASSIS_PREDICTIVE_SHADOW
+    if(!c->force_control) ChassisPowerShadowEnergyUpdate(i,c,o);
+#endif
     return valid;
 }
 
@@ -209,6 +213,10 @@ void ChassisPowerCapCommandResult(const SuperCapCommand_s *command,bool submitte
             o->control.control_enabled=false;
             o->control.slow_correction_w=fminf(0,o->control.slow_correction_w);
             o->control.legacy_budget_w=fminf(o->control.legacy_budget_w,base);
+            o->control.telemetry.nominal_budget_w=o->control.nominal_budget_w;
+            o->control.telemetry.target_power_w=o->control.target_power_w;
+            o->control.telemetry.corrected_budget_w=o->control.legacy_budget_w;
+            o->control.telemetry.correction_w=o->control.slow_correction_w;
             o->budget.applied_budget_w=fminf(o->budget.applied_budget_w,base);
             o->budget.target_budget_w=fminf(o->budget.target_budget_w,base);
             o->budget.input_target_w=fminf(o->budget.input_target_w,base);

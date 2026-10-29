@@ -1,0 +1,5 @@
+sample_ms,meter_sequence,submitted,load_w,current0,current1,current2,current3,omega0,omega1,omega2,omega3,command0,command1,command2,command3
+0,1,1,2,0,0,0,0,0,0,0,0,0,0,0,0
+10,2,1,2,0,0,0,0,0,0,0,0,0,0,0,0
+20,3,1,2,0,0,0,0,0,0,0,0,0,0,0,0
+30,4,1,2,0,0,0,0,0,0,0,0,0,0,0,0

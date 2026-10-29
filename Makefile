@@ -184,6 +184,7 @@ application/robot.c \
 application/runtime/robot_task.c
 
 C_SOURCES += $(wildcard modules/chassis_power/*.c) modules/motor/DJImotor/dji_power_adapter.c
+C_SOURCES += $(wildcard modules/predictive_power/*.c)
 C_SOURCES += modules/imu/ins_math.c modules/vehicle_safety/vehicle_safety.c application/board/board_optional.c application/board/board_devices.c application/board/board_analog_key.c Src/syscalls.c Src/sysmem.c modules/oled/oled_spi.c
 C_SOURCES += $(wildcard modules/TFminiPlus/*.c modules/key/*.c modules/jam_detector/*.c)
 
@@ -322,6 +323,7 @@ C_INCLUDES =  \
 -Imodules/referee \
 -Imodules/remote \
 -Imodules/chassis_power \
+-Imodules/predictive_power \
 -Imodules/chassis_force \
 -Imodules/chassis_force_calibration \
 -Imodules/super_cap \
@@ -373,6 +375,7 @@ LDFLAGS += $(ATYPE_MODULE_LDFLAGS)
 # list of objects
 OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
 NUMERIC_SOURCES := $(filter modules/chassis_force_calibration/% modules/chassis_force/% modules/chassis_power/% modules/algorithm/power_model.c modules/algorithm/chassis_power_% modules/algorithm/chassis_spin.c modules/motor/DJImotor/% modules/telemetry/chassis_force_telemetry.c modules/telemetry/force_calibration_protocol.c application/runtime/force_calibration_app.c application/chassis/% application/board/board_chassis_force.c application/board/board_force_calibration.c application/cmd/robot_cmd.c,$(C_SOURCES))
+NUMERIC_SOURCES += $(filter modules/predictive_power/%,$(C_SOURCES))
 $(addprefix $(BUILD_DIR)/,$(notdir $(NUMERIC_SOURCES:.c=.o))): CFLAGS += -fno-fast-math
 vpath %.c $(sort $(dir $(C_SOURCES)))
 # list of ASM program objects
