@@ -20,6 +20,7 @@
 #include "chassis_power.h"
 #include "dji_power_adapter.h"
 #include "chassis_power_config.h"
+#include "chassis_power_model_config.h"
 #include "chassis_spin_config.h"
 #include "chassis_spin.h"
 #include "runtime_tuning.h"
@@ -180,15 +181,8 @@ static ChassisPowerOuterLoopConfig_s chassis_outer_loop_config = {
     .low_demand_decay_w_per_s = 1,
 };
 
-static const MotorPowerModelConfig_s m3508_power_model = {
-    .k0 = 1.3123816,
-    .k1 = -0.25836727,
-    .k2 = 0.0007424524,
-    .k3 = 0.0024271158,
-    .k4 = 0.081198552,
-    .k5 = 3.890596e-08,
-    .current_conversion = 1000.0f,// 电流单位转换,功率模型使用A,电机模块使用mA
-};
+static const MotorPowerModelConfig_s m3508_power_model =
+    CHASSIS_SPEED_POWER_MODEL_INITIALIZER;
 
 /* 用于自旋变速策略的时间变量 */
 // static float t;

@@ -1,4 +1,5 @@
 #include "power_model.h"
+#include "chassis_power_model_config.h"
 
 #include <float.h>
 #include <math.h>
@@ -55,6 +56,7 @@ _Static_assert(offsetof(Chassis_Power_Control_Data_s, predicted_limited_power_w)
 _Static_assert(offsetof(Chassis_Power_Control_Data_s, effective_limit_w) == 2U * sizeof(float),
                "unexpected effective limit offset");
 
+/* Historical fit retained for the original generic algorithm regressions. */
 static const MotorPowerModelConfig_s m3508_model = {
     .k0 = 1.10671243f,
     .k1 = -0.275458501f,
@@ -64,6 +66,9 @@ static const MotorPowerModelConfig_s m3508_model = {
     .k5 = 1.11735923e-7f,
     .current_conversion = 1000.0f,
 };
+
+static const MotorPowerModelConfig_s production_model =
+    CHASSIS_SPEED_POWER_MODEL_INITIALIZER;
 
 static const ChassisPowerAlgorithmConfig_s algorithm_config = {
     .safety_factor = 0.98f,
@@ -197,10 +202,82 @@ static void TestInvalidBenchFallbackIsIgnored(void)
     ASSERT_NEAR(0.0f, PowerModelSelectLimit(0.0f, -40.0f), 1.0e-6f);
 }
 
-static void TestPredictionMatchesRecalibratedM3508Sample(void)
+static void TestHistoricalPredictionMatchesM3508Sample(void)
 {
     const float actual = PowerModelPredict(&m3508_model, 5000.0f, 3000.0f);
     ASSERT_NEAR(32.81542f, actual, 1.0e-4f);
+}
+
+static void TestProductionPredictionAndSoftwareDomain(void)
+{
+    /* Independently evaluated from the current production calibration. */
+    ASSERT_NEAR(41.03475689f, PowerModelPredict(&production_model, 5000, 3000), 1e-4f);
+    const float commands[] = {-15000, -5000, -1591, -1, 0, 1, 1591, 5000, 15000};
+    const float speeds[] = {-10000, -6000, -3000, -100, 0, 100, 3000, 6000, 10000};
+    for (size_t c = 0; c < sizeof commands / sizeof commands[0]; ++c)
+        for (size_t n = 0; n < sizeof speeds / sizeof speeds[0]; ++n) {
+            const float prediction = PowerModelPredict(&production_model, commands[c], speeds[n]);
+            ASSERT_TRUE(isfinite(prediction) && prediction >= 0);
+            ASSERT_NEAR(prediction, PowerModelPredict(&production_model, -commands[c], -speeds[n]), 1e-5f);
+        }
+    /* These are numerical software bounds, not a hardware calibration domain. */
+}
+
+static void TestProductionNonmonotonicLowSpeedAndInfeasibleBudget(void)
+{
+    ASSERT_TRUE(PowerModelPredict(&production_model, 1000, 0) <
+                PowerModelPredict(&production_model, 0, 0));
+    ASSERT_TRUE(PowerModelPredict(&production_model, 3000, 0) >
+                PowerModelPredict(&production_model, 2000, 0));
+    const float desired = 4000, budget = 1.15f;
+    const float x = desired / production_model.current_conversion;
+    const float a = production_model.k4 * x * x;
+    const float b = production_model.k1 * x;
+    float scale = 0;
+    /* Zero current is infeasible, but a nonzero feasible interval exists. */
+    ASSERT_TRUE(PowerModelPredict(&production_model, 0, 0) > budget);
+    ASSERT_TRUE(PowerModelFindFeasibleScale(a, b, production_model.k0 - budget, 1, &scale));
+    ASSERT_TRUE(scale > 0 && scale < 1);
+    ASSERT_TRUE(PowerModelPredict(&production_model, desired * scale, 0) <= budget + 1e-5f);
+    ASSERT_TRUE(PowerModelPredict(&production_model, desired * (scale + .001f), 0) > budget);
+    /* The production curve's zero-speed minimum is about 1.10686 W. */
+    ASSERT_FALSE(PowerModelFindFeasibleScale(a, b, production_model.k0 - 1.0f, 1, &scale));
+    ASSERT_NEAR(0, scale, 1e-6f);
+}
+
+static void TestProductionIntegerCommandsRespectFeasibleBudget(void)
+{
+    MotorPowerModelConfig_s models[4];
+    FillModels(models, production_model);
+    const float speeds[] = {200, 1000, 3000, 6000, 10000};
+    const float budgets[] = {40, 80, 160};
+    for (size_t n = 0; n < sizeof speeds / sizeof speeds[0]; ++n)
+        for (size_t b = 0; b < sizeof budgets / sizeof budgets[0]; ++b) {
+            ChassisPowerInput_s input = ValidInput();
+            input.referee_power_limit_w = budgets[b];
+            for (unsigned w = 0; w < 4; ++w) {
+                input.desired_current[w] = w % 2 ? -15000 : 15000;
+                input.speed_rpm[w] = w % 2 ? -speeds[n] : speeds[n];
+            }
+            ChassisPowerOutput_s output;
+            ASSERT_TRUE(PowerModelApply(models, &algorithm_config, &input, &output));
+            float quantized_total = 0;
+            for (unsigned w = 0; w < 4; ++w) {
+                ASSERT_TRUE(fabsf(output.limited_current[w]) <= 15000);
+                ASSERT_TRUE(output.limited_current[w] * input.desired_current[w] >= 0);
+                const int16_t command = (int16_t)output.limited_current[w];
+                quantized_total += PowerModelPredict(&models[w], command, input.speed_rpm[w]);
+            }
+            const float passive_total = 4 * PowerModelPredict(&production_model, 0, speeds[n]);
+            if (passive_total <= output.effective_limit_w)
+                ASSERT_TRUE(quantized_total <= output.effective_limit_w + 1e-4f);
+            else {
+                /* The legacy API returns zero drive, not a zero-loss guarantee. */
+                for (unsigned w = 0; w < 4; ++w)
+                    ASSERT_NEAR(0, output.limited_current[w], 1e-6f);
+                ASSERT_TRUE(quantized_total > output.effective_limit_w);
+            }
+        }
 }
 
 static void TestSmallErrorEvenlySplitsBudget(void)
@@ -673,7 +750,10 @@ int main(void)
     TestBenchFallbackReplacesInvalidRefereeLimit();
     TestRefereeLimitHasPriorityOverBenchFallback();
     TestInvalidBenchFallbackIsIgnored();
-    TestPredictionMatchesRecalibratedM3508Sample();
+    TestHistoricalPredictionMatchesM3508Sample();
+    TestProductionPredictionAndSoftwareDomain();
+    TestProductionNonmonotonicLowSpeedAndInfeasibleBudget();
+    TestProductionIntegerCommandsRespectFeasibleBudget();
     TestSmallErrorEvenlySplitsBudget();
     TestLargeErrorUsesReservedPower();
     TestLowBudgetUsesPureErrorRatio();

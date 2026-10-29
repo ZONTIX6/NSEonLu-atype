@@ -111,7 +111,9 @@ bool ChassisPowerRecordFinal(const ChassisPowerFinalInput_s *i)
         state->telemetry.actual_speed_rpm[w]=actual_rpm[w];
     }
     state->final_valid=true;state->final_tick_ms=i->now_ms;state->can_submitted=i->can_submitted;
-    ChassisPowerTransientRecordSent(&p->transient,current);
+    /* Failed attempts remain in diagnostics, not in the growth-limit baseline.
+     * A successful submission is still not an acknowledgement of execution. */
+    if (i->can_submitted) ChassisPowerTransientRecordSent(&p->transient,current);
     POWER_LOCK();p->state=*state;POWER_UNLOCK();
 #if CHASSIS_PREDICTIVE_POWER_MODE == CHASSIS_PREDICTIVE_SHADOW
     ChassisPowerShadowRecord(i);

@@ -1,4 +1,5 @@
 #include "chassis_power_transient.h"
+#include "chassis_power_model_config.h"
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -248,9 +249,7 @@ static void TestQuantizationRetreatKeepsNearbyFeasibleCommands(void)
     /* Regression with the unchanged production six-coefficient model. */
     Prepare(); input.meter_enabled = false;
     for (unsigned w = 0; w < 4; ++w) {
-        models[w] = (MotorPowerModelConfig_s){.k0 = 1.3123816f, .k1 = -.25836727f,
-            .k2 = .0007424524f, .k3 = .0024271158f, .k4 = .081198552f,
-            .k5 = 3.890596e-08f, .current_conversion = 1000};
+        models[w] = (MotorPowerModelConfig_s)CHASSIS_SPEED_POWER_MODEL_INITIALIZER;
         input.actual_rpm[w] = 0;
     }
     Tick(100, true);

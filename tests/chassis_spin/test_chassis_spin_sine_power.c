@@ -2,6 +2,7 @@
 #include "chassis_spin_config.h"
 #include "chassis_power_budget.h"
 #include "power_model.h"
+#include "chassis_power_model_config.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -41,11 +42,7 @@ static void DefaultSineRecoversItsActualWaveAfterPowerLimiting(bool dynamic_buff
     };
     MotorPowerModelConfig_s models[4];
     for (unsigned w = 0; w < 4; ++w)
-        models[w] = (MotorPowerModelConfig_s){
-            .k0 = 1.3123816f, .k1 = -.25836727f, .k2 = .0007424524f,
-            .k3 = .0024271158f, .k4 = .081198552f, .k5 = 3.890596e-8f,
-            .current_conversion = 1000,
-        };
+        models[w] = (MotorPowerModelConfig_s)CHASSIS_SPEED_POWER_MODEL_INITIALIZER;
     ChassisPowerTransientConfig_s guard_config = ChassisPowerTransientDefaultConfig();
     guard_config.eta = algorithm.safety_factor;
     ChassisPowerTransientState_s guard_state = {0};

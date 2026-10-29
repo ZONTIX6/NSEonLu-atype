@@ -26,7 +26,7 @@ test_chassis_spin_adaptive.exe: $(SOURCE) $(HEADERS)
 test_chassis_spin_sine.exe: $(SINE_SOURCE) $(HEADERS) ../../modules/algorithm/chassis_power_transient.h ../../modules/algorithm/power_model.h
 	$(CC) $(CFLAGS) $(INCLUDES) -DCHASSIS_SPIN_MODE=2 -DCHASSIS_SPIN_ADAPTIVE_ENABLE=0 $(SINE_SOURCE) -lm -o $@
 
-test_chassis_spin_sine_power.exe: $(SINE_POWER_SOURCE) $(HEADERS) ../../modules/algorithm/chassis_power_transient.h ../../modules/algorithm/power_model.h ../../modules/algorithm/chassis_power_budget.h
+test_chassis_spin_sine_power.exe: $(SINE_POWER_SOURCE) $(HEADERS) ../../modules/algorithm/chassis_power_transient.h ../../modules/algorithm/power_model.h ../../modules/algorithm/chassis_power_model_config.h ../../modules/algorithm/chassis_power_budget.h
 	$(CC) $(CFLAGS) $(INCLUDES) -DCHASSIS_SPIN_MODE=2 $(SINE_POWER_SOURCE) -lm -o $@
 
 test_chassis_spin_buffer.exe: $(BUFFER_SOURCE) $(HEADERS) ../../modules/algorithm/chassis_power_budget.h
