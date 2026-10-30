@@ -4,6 +4,8 @@ import ctypes as ct
 import importlib.util
 import json
 import math
+import os
+import subprocess
 from pathlib import Path
 import sys
 import unittest
@@ -20,7 +22,8 @@ SPEC.loader.exec_module(replay)
 def config():
     return dict(version=1, max_gap_us=20000, max_age_us=20000, max_horizon_us=20000,
                 q=10, r=.1, initial_p00=1, initial_p11=100, gate_squared=10000,
-                max_rejections=3, units='rotor_rad_s', synthetic=True)
+                max_rejections=3, units='rotor_rad_s', synthetic=True,
+                comparison_lpf_tau_s=.01, score_tolerance_us=500)
 
 
 def records(count=24, capture_id=1, base=100000):
@@ -58,7 +61,7 @@ def records(count=24, capture_id=1, base=100000):
 class Tests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.lib=replay.load_library(ROOT/'build/speed-replay-tests')
+        cls.lib=replay.load_library(os.environ.get('SPEED_REPLAY_TEST_BUILD_DIR',ROOT/'build/speed-replay-tests'))
 
     def manifest(self, **extra):
         return capture.build_manifest(dict(synthetic=True, trajectory_id='synthetic-ramp',
@@ -171,13 +174,31 @@ class Tests(unittest.TestCase):
                     input_power_w=5,load_power_w=3)
         model=dict(k0=.5,k1=0,k2=0,k3=0,k4=0,k5=0,current_conversion=1000)
         manifest=self.manifest(wiring=dict(input_boundary_verified=True,load_boundary_verified=True),
-            timing_alignment=dict(verified=True),model=dict(models=[model]*4,calibration_evidence='synthetic'),
+            timing_alignment=dict(verified=True,sampling_delay_us=0),model=dict(models=[model]*4,calibration_evidence='synthetic'),
             power_limits_w=dict(input=4,load=1))
         result=replay.replay(self.lib,rows,manifest,config())
         self.assertTrue(result['power']['available'])
         self.assertAlmostEqual(result['power']['underprediction_w']['kf']['max'],1)
         self.assertAlmostEqual(result['power']['excess_energy_j']['input'],.046)
         self.assertAlmostEqual(result['power']['excess_energy_j']['load'],.092)
+
+    def test_power_uses_manifest_alignment_without_inventing_wire_flags(self):
+        rows=records()
+        for row in rows[1:-1]:
+            p=row['payload'];p['diagnostics'].update(input_flags=3,load_flags=3,
+                input_sequence=p['cycle_index']+1,load_sequence=p['cycle_index']+1,
+                input_power_w=5,load_power_w=3)
+        model=dict(k0=.5,k1=0,k2=0,k3=0,k4=0,k5=0,current_conversion=1000)
+        metadata=dict(wiring=dict(input_boundary_verified=True,load_boundary_verified=True),
+            model=dict(models=[model]*4,calibration_evidence='synthetic'))
+        manifest=self.manifest(**metadata,timing_alignment=dict(verified=True,sampling_delay_us=0))
+        report=replay.replay(self.lib,rows,manifest,config())
+        self.assertTrue(report['power']['available'])
+        self.assertEqual(report['power']['underprediction_w']['kf']['samples'],24)
+        self.assertEqual(rows[1]['payload']['diagnostics']['load_flags'],3)
+        for delay in (None,1000):
+            manifest=self.manifest(**metadata,timing_alignment=dict(verified=True,sampling_delay_us=delay))
+            self.assertFalse(replay.replay(self.lib,rows,manifest,config())['power']['available'])
 
     def test_complete_trajectory_annotation_enables_integrals_only_for_covered_interval(self):
         rows=records()
@@ -208,6 +229,150 @@ class Tests(unittest.TestCase):
         result=replay.replay(self.lib,rows,self.manifest(),config())
         self.assertEqual(result['windows']['incomplete'],1)
         self.assertFalse(result['trials'][0]['complete'])
+
+    def test_forecasts_do_not_score_across_missing_cycles_or_dataset_splits(self):
+        rows=records();rows.pop(13)  # Lost cycle 12: segments have 12 and 11 samples.
+        result=replay.replay(self.lib,rows,self.manifest(),config())
+        self.assertEqual(result['wheels']['LF']['horizons']['20000']['kf']['samples'],3)
+        manifest=self.manifest(splits=[
+            dict(capture_id=1,split='train',start_us=100000,end_us=124000),
+            dict(capture_id=1,split='test',start_us=124000,end_us=148000)])
+        result=replay.replay(self.lib,records(),manifest,config(),include_predictions=True)
+        self.assertEqual(result['wheels']['LF']['horizons']['20000']['kf']['samples'],4)
+        self.assertEqual({p['split'] for p in result['predictions']},{'train','test'})
+
+    def test_offline_event_identity_is_consumed_before_same_frame_recovery(self):
+        rows=records(4)
+        rows[2]['payload']['online_mask']=0
+        for w in rows[3]['payload']['wheels']:
+            w.update(sequence=2,rx_cycles=102000,rx_tick_ms=102)
+        result=replay.replay(self.lib,rows,self.manifest(),config(),include_predictions=True)
+        # C consumes offline sequence 2, so its later online duplicate cannot reinitialize.
+        self.assertEqual(result['wheels']['LF']['accepted_events'],2)
+        self.assertEqual(result['wheels']['LF']['rejected']['duplicate'],1)
+        self.assertTrue(all(p['values']['kf'] is None for p in result['predictions'] if p['cycle_index']==2))
+
+    def test_synthetic_capture_or_parameters_cannot_be_relabelled_by_manifest(self):
+        manifest=capture.build_manifest(dict(synthetic=False))
+        result=replay.replay(self.lib,records(),manifest,config())
+        self.assertTrue(result['synthetic'])
+
+    def test_lpf_predictions_include_feedback_age_and_expose_warmup(self):
+        rows=records(4)
+        for row in rows[1:-1]:
+            p=row['payload'];p['observation_now_us']+=1000
+            p['diagnostics']['observation_cycles']+=1000;p['tick_ms']+=1
+            for wheel in p['wheels']:wheel['raw_rpm']=wheel['filtered_rpm']=p['cycle_index']*60
+        result=replay.replay(self.lib,rows,self.manifest(),config(),include_predictions=True)
+        prediction=next(p for p in result['predictions'] if p['cycle_index']==1 and p['wheel']=='LF' and p['horizon_us']==2000)
+        # Last LPF=1/6 * 2*pi; derivative=(pi/3)/.002; project 1ms age + 2ms horizon.
+        self.assertAlmostEqual(prediction['values']['dt_lpf'],5*math.pi/6)
+        self.assertTrue(prediction['lpf_warmup'])
+
+    def test_capture_artifact_hash_is_checked_by_cli(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            d=Path(directory);data=d/'capture.jsonl';data.write_text('original',encoding='utf-8')
+            manifest=capture.build_manifest(dict(synthetic=True,artifacts={'capture':str(data)}))
+            data.write_text('\n'.join(json.dumps(row) for row in records()),encoding='utf-8')
+            m=d/'manifest.json';m.write_text(json.dumps(manifest),encoding='utf-8')
+            c=d/'config.json';c.write_text(json.dumps(config()),encoding='utf-8')
+            result=subprocess.run([sys.executable,'-B',str(ROOT/'scripts/wheel-speed-replay.py'),
+                '--capture',str(data),'--manifest',str(m),'--kf-config',str(c),
+                '--output',str(d/'report.json'),'--build-dir',str(d/'build')],capture_output=True,text=True)
+            self.assertNotEqual(result.returncode,0)
+            self.assertIn('hash',result.stderr)
+
+    def test_all_events_keeps_innovation_rejections_as_scoring_truth(self):
+        rows=records();raw=[]
+        for n in range(48):
+            for w in range(4):
+                raw.append(dict(kind='raw',capture_id=1,record_index=n*4+w,
+                    payload=dict(wheel=w,sequence=n+1,event_index=n*4+w,rx_cycles=100000+n*1000,
+                        rx_tick_ms=100+n,raw_rpm=30000 if n==20 else 100,filtered_rpm=100)))
+        rows[1:1]=raw;rows[-1]['payload']['raw_count']=192
+        result=replay.replay(self.lib,rows,self.manifest(),config())
+        metric=result['all_events']['wheels']['LF']['horizons']['8000']
+        self.assertEqual(metric['samples'],40)
+        self.assertGreater(metric['observed_future_rmse_rad_s'],400)
+
+    def test_paused_cycles_do_not_replay_as_online_kf_corrections(self):
+        rows=records()
+        for row in rows:
+            if row['kind']=='cycle' and 5<=row['payload']['cycle_index']<10:
+                p=row['payload'];p['flags']|=8
+                if p['cycle_index']>=6:p['diagnostics']['kf_us']=None if p['cycle_index']%2 else 0xffffffff
+        result=replay.replay(self.lib,rows,self.manifest(),config(),include_predictions=True)
+        self.assertEqual(result['wheels']['LF']['accepted_events'],20)
+        self.assertEqual(result['wheels']['LF']['rejected']['paused'],4)
+        self.assertTrue(all(p['values']['kf'] is None for p in result['predictions'] if 6<=p['cycle_index']<10))
+
+    def test_missing_lpf_parameter_does_not_install_a_guessed_comparator(self):
+        cfg=config();cfg.pop('comparison_lpf_tau_s')
+        result=replay.replay(self.lib,records(),self.manifest(),cfg)
+        self.assertIsNone(result['comparison']['lpf_tau_s'])
+        self.assertEqual(result['wheels']['LF']['horizons']['2000']['dt_lpf']['samples'],0)
+
+    def test_lpf_recovery_does_not_reuse_pre_gap_acceleration(self):
+        rows=records()
+        for row in rows[1:-1]:
+            n=row['payload']['cycle_index']
+            for wheel in row['payload']['wheels']:wheel['raw_rpm']=100+n*10 if n<5 else 200
+        rows[6]['payload']['online_mask']=0
+        report=replay.replay(self.lib,rows,self.manifest(),config(),include_predictions=True)
+        resumed=[p for p in report['predictions'] if p['cycle_index']==6]
+        self.assertTrue(resumed)
+        for prediction in resumed:
+            self.assertAlmostEqual(prediction['values']['dt_lpf'],200*replay.SCALE)
+
+    def test_annotated_stationary_noise_excludes_lpf_warmup(self):
+        rows=records(32)
+        manifest=self.manifest(steady_segments=[dict(capture_id=1,start_us=100000,end_us=164000)])
+        result=replay.replay(self.lib,rows,manifest,config())
+        noise=result['wheels']['LF']['steady_state_noise']
+        self.assertTrue(noise['available'])
+        self.assertEqual(noise['methods']['dt_lpf']['samples'],7)
+
+    def test_complete_trajectory_with_feedback_holes_is_not_observable(self):
+        rows=records();rows[10]['payload']['online_mask']=0
+        manifest=self.manifest(trajectory=dict(complete=True,start_us=100000,end_us=146000))
+        result=replay.replay(self.lib,rows,manifest,config())
+        self.assertFalse(result['trajectory']['available'])
+
+    def test_split_condition_metrics_keep_scoring_counts_and_denominators(self):
+        manifest=self.manifest(splits=[
+            dict(capture_id=1,split='train',condition='ramp',start_us=100000,end_us=124000),
+            dict(capture_id=1,split='test',condition='ramp',start_us=124000,end_us=148000)])
+        result=replay.replay(self.lib,records(),manifest,config())
+        self.assertEqual(len(result['by_split_condition']),2)
+        for group in result['by_split_condition']:
+            metric=group['wheels']['LF']['horizons']['20000']['kf']
+            self.assertEqual(metric['samples'],2)
+            self.assertEqual(metric['attempted_origins'],12)
+            self.assertEqual(metric['prediction_valid_fraction'],1)
+
+    def test_invalid_initial_period_and_offline_gap_do_not_enter_scores(self):
+        rows=records();rows[1]['payload']['flags']&=~1
+        rows[1]['payload']['period_us']=0
+        rows[13]['payload']['online_mask']=0
+        result=replay.replay(self.lib,rows,self.manifest(),config())
+        self.assertEqual(result['timing']['period_us']['samples'],23)
+        self.assertEqual(result['wheels']['LF']['horizons']['20000']['kf']['samples'],3)
+
+    def test_complete_step_reports_response_overshoot_and_recovery(self):
+        rows=records(12)
+        for row in rows[1:-1]:
+            p=row['payload'];n=p['cycle_index']
+            for w in p['wheels']:
+                w['target_rpm']=0 if n<2 else 100
+                w['raw_rpm']=[0,0,20,80,120,100,100,100,100,100,100,100][n]
+        manifest=self.manifest(trajectory=dict(complete=True,start_us=100000,end_us=122000,
+            settling_tolerance_rpm=5,settling_hold_us=4000))
+        result=replay.replay(self.lib,rows,manifest,config())
+        response=result['trajectory']['wheels']['LF']['step_responses'][0]
+        self.assertAlmostEqual(response['t90_s'],.004)
+        self.assertEqual(response['overshoot_rpm'],20)
+        self.assertAlmostEqual(response['recovery_s'],.006)
 
 
 if __name__=='__main__':unittest.main()

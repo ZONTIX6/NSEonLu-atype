@@ -33,6 +33,20 @@ class ManifestTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 csc.build_manifest({'artifacts':{'capture':str(sample)}},ROOT)
 
+    def test_empty_evidence_and_missing_actual_sources_are_insufficient(self):
+        metadata={name:{} for name in csc.MEASURED_FIELDS}
+        manifest=csc.build_manifest(metadata,ROOT)
+        self.assertEqual(manifest['hardware_gate'],'insufficient_evidence')
+        self.assertIn('pid_actual',manifest['missing_evidence'])
+        metadata.update(pid_actual={'Kp':1},flash_actual={'checksum':'1234'},
+                        wiring={'input_boundary_verified':False,'load_boundary_verified':False},
+                        timing_alignment={'verified':False})
+        manifest=csc.build_manifest(metadata,ROOT)
+        self.assertIn('pid_actual.source',manifest['missing_evidence'])
+        self.assertIn('flash_actual.source',manifest['missing_evidence'])
+        self.assertIn('wiring.verified_boundaries',manifest['missing_evidence'])
+        self.assertIn('timing_alignment.sampling_delay_us',manifest['missing_evidence'])
+
     def test_nonfinite_wrong_units_invalid_parameters_are_rejected(self):
         for update in ({'r':0},{'q':float('nan')},{'max_rejections':0},{'max_age_us':-1},
                        {'max_age_us':0x80000000},{'max_gap_us':0xffffffff},

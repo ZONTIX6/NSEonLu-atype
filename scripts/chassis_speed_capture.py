@@ -109,11 +109,18 @@ def decode_cycle(data):
         row['sample_time_source']='unknown';row['sample_time_us']=None
         row['kf_valid']=bool(row['flags']&2)
         row['raw_time_valid']=bool(row['flags']&1)
+        if row['accepted_age_us']==0xffffffff:row['accepted_age_us']=None
         wheels.append(row)
     out['wheels']=wheels
     diagnostics=_unpack_named('f3If3I4f4I3I5I3fI',data,400,
         'input_power_w input_sequence input_tick_ms input_flags load_power_w load_sequence load_tick_ms load_flags old_guard_rpm0 old_guard_rpm1 old_guard_rpm2 old_guard_rpm3 kf_us allocator_us fast_shadow_us slow_shadow_us observation_cycles execution_max_us control_to_submit_end_us motor_stack_free_words robot_stack_free_words observation_stack_free_words heap_free_bytes heap_min_bytes old_candidate_power_w old_guard_power_w physical_budget_w shadow_reason')
     diagnostics['old_guard_rpm']=[diagnostics.pop('old_guard_rpm'+str(w)) for w in range(4)]
+    for name in ('period_us','execution_us'):
+        if out[name]==0xffffffff:out[name]=None
+    for name in ('kf_us','allocator_us','fast_shadow_us','slow_shadow_us',
+                 'execution_max_us','control_to_submit_end_us','motor_stack_free_words',
+                 'robot_stack_free_words','observation_stack_free_words','heap_free_bytes','heap_min_bytes'):
+        if diagnostics[name]==0xffffffff:diagnostics[name]=None
     for source in ('input','load'):
         if diagnostics[source+'_flags']&3!=3:diagnostics[source+'_power_w']=None
     out['diagnostics']=diagnostics
@@ -227,13 +234,45 @@ def emit_kf_header(config):
         'static const bool chassis_speed_experiment_kf_synthetic = '+('true' if config.get('synthetic',False) else 'false')+';\n#endif\n')
 
 
-MEASURED_FIELDS=('firmware','build_options','toolchain','pid_actual','model','sensors','wiring',
+MEASURED_FIELDS=('firmware','build_options','toolchain','pid_actual','flash_actual','model','sensors','wiring',
     'trajectory_id','initial_energy_j','final_energy_j','temperature_c','load','wheel_geometry',
-    'timing_alignment','splits','frozen_thresholds','capture_integrity')
+    'timing_alignment','splits','frozen_thresholds','frozen_at','kf_config','capture_integrity')
 
 
 def _canonical(value):
     return json.dumps(value,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode('utf-8')
+
+
+def _has_evidence(value):
+    if value is None or value == '' or value == {} or value == []:return False
+    if isinstance(value,dict):
+        if value.get('status') in ('unmeasured','unknown','unverified'):return False
+        if 'value' in value:return _has_evidence(value['value'])
+    return True
+
+
+def missing_evidence(manifest):
+    """Check declarations, not whether their physical claims have been proven.
+
+    A hash proves integrity only. Empty placeholders and an absent measured
+    source must never move an experiment into hardware review.
+    """
+    missing=[name for name in MEASURED_FIELDS if not _has_evidence(manifest.get(name))]
+    for name in ('pid_actual','flash_actual'):
+        value=manifest.get(name)
+        if _has_evidence(value) and (not isinstance(value,dict) or not _has_evidence(value.get('source'))):
+            missing.append(name+'.source')
+    wiring=manifest.get('wiring')
+    if not isinstance(wiring,dict) or not all(wiring.get(n) is True for n in
+            ('input_boundary_verified','load_boundary_verified')):
+        missing.append('wiring.verified_boundaries')
+    alignment=manifest.get('timing_alignment')
+    if not isinstance(alignment,dict) or alignment.get('verified') is not True:
+        missing.append('timing_alignment.verified')
+    delay=alignment.get('sampling_delay_us') if isinstance(alignment,dict) else None
+    if not isinstance(delay,(int,float)) or isinstance(delay,bool) or not math.isfinite(delay) or delay<0:
+        missing.append('timing_alignment.sampling_delay_us')
+    return missing
 
 
 def build_manifest(metadata, root=ROOT):
@@ -269,7 +308,7 @@ def build_manifest(metadata, root=ROOT):
                 'untracked_files':untracked,
                 'metadata_sha256':hashlib.sha256(_canonical(metadata)).hexdigest()})
     result['artifact_hashes']=hashes
-    result['missing_evidence']=[n for n in MEASURED_FIELDS if isinstance(result[n],dict) and result[n].get('status')=='unmeasured']
+    result['missing_evidence']=missing_evidence(result)
     result['hardware_gate']='insufficient_evidence' if result['synthetic'] or result['missing_evidence'] else 'pending_review'
     result.pop('manifest_sha256',None)
     result['manifest_sha256']=hashlib.sha256(_canonical(result)).hexdigest()

@@ -73,6 +73,18 @@ class DecoderTests(unittest.TestCase):
         subprocess.run([str(ROOT/'tests/speed_observation/test_capture.exe'),
                         '--check-raw',str(independent)],check=True)
 
+    def test_unknown_timing_and_resources_are_missing_not_large_measurements(self):
+        payload=bytearray(512)
+        for offset in (12,16,80+68,448,452,456,460,468,472,476,480,484,488,492):
+            struct.pack_into('<I',payload,offset,0xffffffff)
+        row=csc.decode_cycle(payload)
+        self.assertIsNone(row['period_us']);self.assertIsNone(row['execution_us'])
+        self.assertIsNone(row['wheels'][0]['accepted_age_us'])
+        for name in ('kf_us','allocator_us','fast_shadow_us','slow_shadow_us',
+                     'execution_max_us','control_to_submit_end_us','motor_stack_free_words',
+                     'robot_stack_free_words','observation_stack_free_words','heap_free_bytes','heap_min_bytes'):
+            self.assertIsNone(row['diagnostics'][name],name)
+
 
 if __name__ == '__main__':
     unittest.main()
