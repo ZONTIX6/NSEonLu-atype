@@ -39,12 +39,18 @@ typedef struct {
 
 /* The caller serializes Arm/Append/Freeze/BeginDrain with a bounded critical
  * section. Append only copies one pre-encoded record and publishes counters;
- * it never waits, computes CRC, allocates or transmits. Prepare metadata before
- * entering the critical section. Drain operates only on frozen immutable data.
+ * it never waits, computes CRC, allocates or transmits. While IDLE, prepare
+ * metadata in c->metadata before entering the critical section, then pass that
+ * address to Arm to publish without copying it. Other metadata pointers are
+ * supported for callers without a critical-section latency requirement.
+ * Drain operates only on frozen immutable data.
  * No instance is allocated here: disabled firmware need not reserve capture RAM. */
 bool CSCArm(CSCCapture *,uint32_t capture_id,const CSCMetadata *);
 bool CSCAppendRaw(CSCCapture *,const CSCRawRecord *);
 bool CSCAppendCycle(CSCCapture *,const CSCCycleRecord *);
+/* The wire tick is the observation clock tick. Runtime supplies the distinct
+ * task endpoints here for the window's actual start/end timestamps. */
+bool CSCAppendCycleTimed(CSCCapture *,const CSCCycleRecord *,uint32_t begin_tick_ms,uint32_t end_tick_ms);
 void CSCFreeze(CSCCapture *);
 void CSCFreezeReason(CSCCapture *,uint8_t reason);
 bool CSCBeginDrain(CSCCapture *);

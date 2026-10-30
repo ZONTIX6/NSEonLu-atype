@@ -56,6 +56,12 @@ void ChassisPowerShadowResume(void)
 void ChassisPowerShadowRecordElapsed(uint32_t elapsed_us)
 {
     working.elapsed_us=elapsed_us;
+    if(elapsed_us==UINT32_MAX) {
+        working.eligible=false;working.reason=PP_INVALID_INPUT;
+        consecutive_overruns=0;
+        working.wheel_kf.consecutive_overruns=0;
+        return;
+    }
     if(elapsed_us>working.max_elapsed_us) working.max_elapsed_us=elapsed_us;
     if(elapsed_us>300) {
         ++working.overruns;working.eligible=false;working.reason=PP_TIMEOUT;
@@ -73,9 +79,15 @@ static void observe_wheels(const ChassisPowerCycleInput_s *i)
         active_kf_config=pending_kf_config;kf_pending=false;kf_configured=true;
         memset(wheel_kf,0,sizeof wheel_kf);memset(corrections,0,sizeof corrections);
         memset(skipped,0,sizeof skipped);paused=false;consecutive_overruns=0;
+        ChassisPowerShadowEnergyResume();
     }
     POWER_UNLOCK();
     working.wheel_kf.configured=kf_configured;
+    for(unsigned w=0;w<4;++w) {
+        working.wheel_kf.corrected[w]=wheel_kf[w].corrected;
+        working.wheel_kf.corrected_count[w]=corrections[w];
+        working.wheel_kf.skipped_events[w]=skipped[w];
+    }
     if(!kf_configured || paused) return;
 #ifdef STM32F427xx
     const uint32_t start=DWT_GetCycleCount();
@@ -140,7 +152,10 @@ static void cycle(const ChassisPowerCycleInput_s *i,const ChassisPower_Init_Conf
     working=(ChassisPowerShadowSnapshot){.tick_ms=i->now_ms,.dt_s=i->dt_s,.cycles=cycles,
         .max_elapsed_us=max_us,.overruns=overruns,.control_version=i->control.version,
         .config_version=i->control.config_version,.meter_sequence=i->meter.rx_sequence,
-        .measured_w=i->meter.power_w,.reason=PP_INVALID_INPUT};
+        .measured_w=i->meter.power_w,.reason=PP_INVALID_INPUT,.elapsed_us=UINT32_MAX};
+    working.allocation.elapsed_us=UINT32_MAX;
+    working.wheel_kf.kf_elapsed_us=UINT32_MAX;
+    for(unsigned w=0;w<4;++w) working.wheel_kf.accepted_age_us[w]=UINT32_MAX;
     POWER_LOCK();
     if(pending) {model=pending_model;pending=false;memset(&observer,0,sizeof observer);}
     POWER_UNLOCK();

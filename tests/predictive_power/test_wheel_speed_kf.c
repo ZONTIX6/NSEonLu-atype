@@ -145,6 +145,25 @@ static void invalid_numeric(void)
     assert(!PPWheelKFPredict(&k,&c,UINT64_MAX-1,10,&e));
     PPWheelKFReset(&k); assert(!k.initialized && !k.seen);
 }
+static void offline_always_invalidates(void)
+{
+    PPWheelKFConfig c=config(); PPWheelKF k={0}; PPWheelEstimate out;
+    PPWheelSample s=sample(1,100000,10);
+    assert(PPWheelKFCorrect(&k,&c,&s)==PP_KF_INITIALIZED);
+    s.online=false;s.source_epoch=0;
+    (void)PPWheelKFCorrect(&k,&c,&s);
+    assert(!k.initialized && !k.corrected.valid);
+    assert(!PPWheelKFPredict(&k,&c,100001,0,&out));
+    assert(k.seen_sequence==1 && k.seen_time_us==100000);
+    s=sample(1,100000,10);
+    assert(PPWheelKFCorrect(&k,&c,&s)==PP_KF_DUPLICATE);
+    assert(!k.initialized); /* Online alone is not a new feedback event. */
+    s=sample(2,101000,10);
+    assert(PPWheelKFCorrect(&k,&c,&s)==PP_KF_INITIALIZED);
+    s.source_epoch=UINT32_MAX;s.online=false;
+    (void)PPWheelKFCorrect(&k,&c,&s);
+    assert(!k.corrected.valid && k.seen_source_epoch==1);
+}
 static void constant_acceleration_and_quantization(void)
 {
     PPWheelKFConfig c=config(); c.q=10; c.r=.01f; c.gate_squared=10000;
@@ -170,6 +189,7 @@ static void constant_acceleration_and_quantization(void)
 int main(void)
 {
     initial_and_prediction(); exact_update(); watermarks_and_wrap();
-    rejection_and_recovery(); invalid_numeric(); constant_acceleration_and_quantization();
+    rejection_and_recovery(); invalid_numeric(); offline_always_invalidates();
+    constant_acceleration_and_quantization();
     puts("wheel speed KF: PASS"); return 0;
 }

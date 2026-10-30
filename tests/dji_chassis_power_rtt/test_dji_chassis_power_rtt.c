@@ -472,7 +472,20 @@ static void TestCaptureRecordsActualFeedbackAndFinalBytes(void)
         dji_motor_instance[w]->motor_settings.outer_loop_type=SPEED_LOOP;
     }
     DJIPowerAdapterPublish(&c);
+#if CHASSIS_SPEED_KF_SHADOW_ENABLE
+    uint32_t model_version,kf_version;
+    ASSERT_TRUE(ChassisPowerShadowVersions(&model_version,&kf_version));
+    PPWheelKFConfig kf_config={.version=kf_version+1U,.max_gap_us=20000,.max_age_us=20000,
+        .max_horizon_us=20000,.q=1,.r=1,.initial_p00=1,.initial_p11=1,.gate_squared=25,.max_rejections=3};
+    ASSERT_TRUE(ChassisPowerShadowSetWheelKFConfig(&kf_config));
+#endif
     test_cycles=test_tick*1000U+500U;DJIMotorControl();
+    CSCCycleRecord row;
+#if CHASSIS_SPEED_KF_SHADOW_ENABLE
+    ASSERT_TRUE(DJIPowerAdapterTakeSpeedCycle(&row));
+    ASSERT_TRUE(CSCReadU32(row.bytes+36)==kf_config.version);
+    ASSERT_TRUE((row.bytes[80+39]&2U)==0); /* LF has no usable raw timestamp yet. */
+#endif
     CSCMetadata meta;CSCMetadataInit(&meta,18,DWT_GetFrequencyHz());
     ASSERT_TRUE(DJIPowerAdapterDescribeSpeedCapture(&meta));
     ASSERT_TRUE(CSCArm(&captured,18,&meta));
@@ -484,7 +497,6 @@ static void TestCaptureRecordsActualFeedbackAndFinalBytes(void)
         test_cycles=test_tick*1000U+600U+w*20U;DecodeDJIMotor(&f);
     }
     test_cycles=test_tick*1000U+800U;DJIMotorControl();
-    CSCCycleRecord row;
     ASSERT_TRUE(DJIPowerAdapterTakeSpeedCycle(&row));
     ASSERT_TRUE(!DJIPowerAdapterTakeSpeedCycle(&row));
     ASSERT_TRUE(captured.raw_count==4);
@@ -502,6 +514,34 @@ static void TestCaptureRecordsActualFeedbackAndFinalBytes(void)
     uint8_t frame[CSC_MAX_FRAME_BYTES];uint16_t length=0;
     ASSERT_TRUE(CSCPeekFrame(&captured,frame,sizeof frame,&length) && length==CSC_MAX_FRAME_BYTES);
     ASSERT_TRUE(CSCFrameIsValid(frame,length));
+#if CHASSIS_SPEED_KF_SHADOW_ENABLE
+    ChassisPowerShadowRecordElapsed(301);ChassisPowerShadowRecordElapsed(301);ChassisPowerShadowRecordElapsed(301);
+    DJIMotorControl();ASSERT_TRUE(DJIPowerAdapterTakeSpeedCycle(&row));
+    ASSERT_TRUE((CSCReadU32(row.bytes+64)&8U)!=0);
+    for(unsigned w=0;w<4;++w)ASSERT_TRUE((row.bytes[80+80*w+39]&2U)==0);
+    ChassisPowerShadowResume();
+#endif
+    SuperCapSnapshot_s invalid_power={0};
+    invalid_power.input_received_frame_count=1;
+    invalid_power.input_power.input_power_w=NAN;
+    invalid_power.input_power.last_rx_tick_ms=test_tick;
+    invalid_power.input_power.online=true;
+    DJIPowerAdapterPublishInputPower(&invalid_power);
+    SetMeter(NAN,true,test_tick);test_meter.rx_sequence=1;
+    DJIMotorControl();ASSERT_TRUE(DJIPowerAdapterTakeSpeedCycle(&row));
+    ASSERT_TRUE(CSCReadF32(row.bytes+400)==0 && CSCReadU32(row.bytes+412)==0);
+    ASSERT_TRUE(CSCReadF32(row.bytes+416)==0 && CSCReadU32(row.bytes+428)==0);
+    /* The ISR can run before the next motor cycle notices a DWT discontinuity.
+     * Such an event must not enter a window carrying the old clock epoch. */
+    memset(&captured,0,sizeof captured);CSCMetadataInit(&meta,19,DWT_GetFrequencyHz());
+    ASSERT_TRUE(DJIPowerAdapterDescribeSpeedCapture(&meta));
+    ASSERT_TRUE(CSCArm(&captured,19,&meta));
+    const uint32_t saved_tick=test_tick,saved_cycles=test_cycles;
+    CANInstance late={0};late.id=dji_motor_instance[0];
+    test_tick+=5000000U;test_cycles+=100U;DecodeDJIMotor(&late);
+    ASSERT_TRUE(captured.state==CSC_FROZEN && captured.freeze_reason==CSC_FREEZE_VERSION);
+    ASSERT_TRUE(captured.raw_count==0 && captured.outside_window==1);
+    test_tick=saved_tick;test_cycles=saved_cycles;
     speed_capture=NULL;ASSERT_TRUE(DJIMotorSetSpeedFeedbackObserver(NULL,NULL));
     PreparePowerGroup();
 }

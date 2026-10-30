@@ -70,6 +70,9 @@ PPWheelKFReason PPWheelKFCorrect(PPWheelKF *k,const PPWheelKFConfig *c,const PPW
         return reject(k,PP_KF_CONFIG,false);
     }
     if(!s) return reject(k,PP_KF_VALUE,false);
+    /* Loss of permission to use this wheel invalidates prediction even when
+     * the accompanying event has an unknown or older time source. */
+    if(!s->online) {k->initialized=false;k->corrected.valid=false;}
     if(k->initialized && k->corrected.config_version!=c->version) {
         k->initialized=false;k->corrected.valid=false;
     }
@@ -82,7 +85,6 @@ PPWheelKFReason PPWheelKFCorrect(PPWheelKF *k,const PPWheelKFConfig *c,const PPW
     bool time_ok=true;
     if(k->seen) {
         const uint32_t advance=s->sequence-k->seen_sequence;
-        if(!s->online) {k->initialized=false;k->corrected.valid=false;}
         if(!advance) return reject(k,s->online ? PP_KF_DUPLICATE : PP_KF_STALE,false);
         if(advance>=UINT32_C(0x80000000)) return reject(k,PP_KF_TIME,false);
         time_ok=s->rx_time_us>k->seen_time_us;

@@ -29,7 +29,8 @@ bool CSCArm(CSCCapture *c,uint32_t id,const CSCMetadata *m)
 {
     if(!c||!m||c->state!=CSC_IDLE)return false;
     /* Do not clear the large record arrays: counts bound all later reads. */
-    c->metadata=*m;CSCWriteU32(c->metadata.bytes+4,id);
+    if(m!=&c->metadata)c->metadata=*m;
+    CSCWriteU32(c->metadata.bytes+4,id);
     c->capture_id=id;c->raw_count=0;c->cycle_count=0;c->drain_index=0;c->drain_kind=0;
     c->rejected_records=0;c->outside_window=0;c->transport_retries=0;c->freeze_reason=0;
     c->start_tick_ms=0;c->end_tick_ms=0;c->start_cycles=0;c->end_cycles=0;
@@ -47,10 +48,25 @@ static bool writable(CSCCapture *c,bool present)
     if(!present){++c->rejected_records;return false;}
     return true;
 }
-static void stamp(CSCCapture *c,uint32_t tick,uint32_t begin,uint32_t end)
+static bool later(uint32_t tick,uint32_t cycles,uint32_t other_tick,uint32_t other_cycles)
 {
-    if(c->state==CSC_ARMED){c->start_tick_ms=tick;c->start_cycles=begin;c->state=CSC_RECORDING;}
-    c->end_tick_ms=tick;c->end_cycles=end;
+    return (int32_t)(tick-other_tick)>0 || (tick==other_tick && (int32_t)(cycles-other_cycles)>0);
+}
+static void stamp(CSCCapture *c,uint32_t begin_tick,uint32_t end_tick,uint32_t begin,uint32_t end)
+{
+    if(c->state==CSC_ARMED) {
+        c->start_tick_ms=begin_tick;c->start_cycles=begin;
+        c->end_tick_ms=end_tick;c->end_cycles=end;c->state=CSC_RECORDING;
+        return;
+    }
+    if(later(c->start_tick_ms,c->start_cycles,begin_tick,begin)) {
+        c->start_tick_ms=begin_tick;c->start_cycles=begin;
+    }
+    /* An IRQ after MotorEnd samples its timestamp can precede the task's
+     * append; publishing that cycle must not move the window end backward. */
+    if(later(end_tick,end,c->end_tick_ms,c->end_cycles)) {
+        c->end_tick_ms=end_tick;c->end_cycles=end;
+    }
 }
 void CSCFreezeReason(CSCCapture *c,uint8_t reason)
 {
@@ -64,15 +80,20 @@ bool CSCAppendRaw(CSCCapture *c,const CSCRawRecord *r)
 {
     if(!writable(c,r!=NULL))return false;
     if(r->bytes[0]>=4||r->bytes[2]!=0){++c->rejected_records;return false;}
-    stamp(c,CSCReadU32(r->bytes+8),CSCReadU32(r->bytes+12),CSCReadU32(r->bytes+12));
+    stamp(c,CSCReadU32(r->bytes+8),CSCReadU32(r->bytes+8),CSCReadU32(r->bytes+12),CSCReadU32(r->bytes+12));
     c->raw[c->raw_count++]=*r;
     if(c->raw_count==CSC_RAW_CAPACITY)CSCFreezeReason(c,CSC_FREEZE_RAW_FULL);
     return true;
 }
 bool CSCAppendCycle(CSCCapture *c,const CSCCycleRecord *r)
 {
+    const uint32_t tick=r ? CSCReadU32(r->bytes):0;
+    return CSCAppendCycleTimed(c,r,tick,tick);
+}
+bool CSCAppendCycleTimed(CSCCapture *c,const CSCCycleRecord *r,uint32_t begin_tick,uint32_t end_tick)
+{
     if(!writable(c,r!=NULL))return false;
-    stamp(c,CSCReadU32(r->bytes),CSCReadU32(r->bytes+4),CSCReadU32(r->bytes+8));
+    stamp(c,begin_tick,end_tick,CSCReadU32(r->bytes+4),CSCReadU32(r->bytes+8));
     c->cycle[c->cycle_count++]=*r;
     if(c->cycle_count==CSC_CYCLE_CAPACITY)CSCFreezeReason(c,CSC_FREEZE_CYCLE_FULL);
     return true;

@@ -7,6 +7,7 @@
 #include "chassis_power_config.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include <math.h>
 #include <string.h>
 
 static DJIMotorOutputGroup_s adapter_group;
@@ -172,6 +173,17 @@ static void RawFeedback(void *context,unsigned index,const DJI_Motor_Measure_s *
     unsigned w;
     for(w=0;w<4 && adapter_group.motor_indices[w]!=index;++w) {}
     if(w==4) return;
+    bool source_changed=false;
+    if((speed_capture->state==CSC_ARMED || speed_capture->state==CSC_RECORDING) &&
+       (CSCReadU32(speed_capture->metadata.bytes+44)&1U)) {
+        const uint8_t *meta=speed_capture->metadata.bytes;
+        PPObservationClock clock={.now_us=CSCReadU64(meta+48),.cycles=CSCReadU32(meta+36),
+            .tick_ms=CSCReadU32(meta+40),.hz=CSCReadU32(meta+8),.fraction=CSCReadU32(meta+56),
+            .source_epoch=CSCReadU32(meta+32),.initialized=true};
+        /* Raw IRQs can resume before AdapterLimit notices a stopped/rebased
+         * clock. Never place those events under the prior metadata epoch. */
+        source_changed=!PPObservationClockUpdate(&clock,m->rx_cycles,m->rx_tick_ms,DWT_GetFrequencyHz());
+    }
     CSCRawRecord r={{0}};uint8_t *b=r.bytes;
     b[0]=(uint8_t)w;b[1]=m->temperature;
     CSCWriteU32(b+4,m->rx_sequence);CSCWriteU32(b+8,m->rx_tick_ms);CSCWriteU32(b+12,m->rx_cycles);
@@ -180,6 +192,7 @@ static void RawFeedback(void *context,unsigned index,const DJI_Motor_Measure_s *
     /* Driver callback is an ISR; PRIMASK preserves nesting and excludes all
      * interrupt writers while publishing this one bounded record. */
     uint32_t irq=__get_PRIMASK();__disable_irq();
+    if(source_changed)CSCFreezeReason(speed_capture,CSC_FREEZE_VERSION);
     CSCWriteU32(b+36,speed_capture->raw_count);
     (void)CSCAppendRaw(speed_capture,&r);__set_PRIMASK(irq);
 }
@@ -245,9 +258,11 @@ static void CaptureFinal(const DJIMotorCycle_s *cycle,const ChassisPowerFinalInp
         capture_shadow.wheel_kf.kf_elapsed_us=UINT32_MAX;
         for(unsigned w=0;w<4;++w)capture_shadow.wheel_kf.accepted_age_us[w]=UINT32_MAX;
     }
-    CSCWriteU32(b,final->now_ms);CSCWriteU32(b+20,adapter_cycle_control.config_version);
+    CSCWriteU32(b,adapter_input.now_ms);CSCWriteU32(b+20,adapter_cycle_control.config_version);
     CSCWriteU32(b+24,final->control_version);CSCWriteU32(b+28,capture_shadow.model_version);
-    CSCWriteU32(b+36,capture_shadow.wheel_kf.corrected[0].config_version);
+    uint32_t model_version,kf_version;
+    (void)ChassisPowerShadowVersions(&model_version,&kf_version);
+    CSCWriteU32(b+36,kf_version);
     CSCWriteU32(b+40,observation_clock.source_epoch);CSCWriteU32(b+44,observation_cycle++);
     CSCWriteU64(b+48,adapter_input.observation_now_us);
     uint32_t flags=(adapter_input.raw_time_valid_mask ? 2U:0U)|
@@ -266,7 +281,8 @@ static void CaptureFinal(const DJIMotorCycle_s *cycle,const ChassisPowerFinalInp
         CSCWriteU16(d+22,(uint16_t)final->current_command[w]);
         CSCWriteF32(d+24,adapter_input.target_rpm[w]);CSCWriteF32(d+28,adapter_input.raw_current[w]);
         CSCWriteF32(d+32,adapter_output.current[w]);d[36]=m->temperature;d[37]=(uint8_t)g;d[38]=(uint8_t)k->reason;
-        d[39]=(adapter_input.raw_time_valid_mask&(1U<<w) ? 1:0)|(k->valid ? 2:0)|
+        d[39]=(adapter_input.raw_time_valid_mask&(1U<<w) ? 1:0)|
+            (capture_shadow.wheel_kf.current[w].valid && !capture_shadow.wheel_kf.paused ? 2:0)|
             (final->submitted_groups&(1U<<g) ? 8:0)|(final->successful_groups&(1U<<g) ? 16:0);
         const float f[7]={k->omega,k->alpha,k->p00,k->p01,k->p11,k->innovation,k->innovation_variance};
         for(unsigned j=0;j<7;++j) CSCWriteF32(d+40+j*4,f[j]);
@@ -284,16 +300,20 @@ static void CaptureFinal(const DJIMotorCycle_s *cycle,const ChassisPowerFinalInp
     CSCWriteU32(b+56,first);CSCWriteU32(b+60,last);CSCWriteU32(b+68,skipped);
     uint8_t *d=b+400;
     taskENTER_CRITICAL();
-    CSCWriteF32(d,observed_input_power.input_power.input_power_w);
+    const uint32_t input_flags=observed_input_power.input_received_frame_count &&
+        isfinite(observed_input_power.input_power.input_power_w) ?
+        1U|((observed_input_power.input_power.online &&
+             (uint32_t)(final->now_ms-observed_input_power.input_power.last_rx_tick_ms)<=20) ? 2U:0U):0;
+    CSCWriteF32(d,(input_flags&3U)==3U ? observed_input_power.input_power.input_power_w:0);
     CSCWriteU32(d+4,observed_input_power.input_received_frame_count);
     CSCWriteU32(d+8,observed_input_power.input_power.last_rx_tick_ms);
-    CSCWriteU32(d+12,observed_input_power.input_received_frame_count ?
-        1U|((observed_input_power.input_power.online && (uint32_t)(final->now_ms-observed_input_power.input_power.last_rx_tick_ms)<=20) ? 2U:0U):0);
+    CSCWriteU32(d+12,input_flags);
     taskEXIT_CRITICAL();
-    CSCWriteF32(d+16,adapter_input.meter.power_w);CSCWriteU32(d+20,adapter_input.meter.rx_sequence);
+    const uint32_t load_flags=adapter_input.meter.rx_sequence && isfinite(adapter_input.meter.power_w) ?
+        1U|((adapter_input.meter.online && (uint32_t)(final->now_ms-adapter_input.meter.last_rx_tick_ms)<=20) ? 2U:0U):0;
+    CSCWriteF32(d+16,(load_flags&3U)==3U ? adapter_input.meter.power_w:0);CSCWriteU32(d+20,adapter_input.meter.rx_sequence);
     CSCWriteU32(d+24,adapter_input.meter.last_rx_tick_ms);
-    CSCWriteU32(d+28,adapter_input.meter.rx_sequence ? 1U|((adapter_input.meter.online &&
-        (uint32_t)(final->now_ms-adapter_input.meter.last_rx_tick_ms)<=20) ? 2U:0U):0);
+    CSCWriteU32(d+28,load_flags);
     for(unsigned w=0;w<4;++w) CSCWriteF32(d+32+4*w,adapter_output.transient.guard_rpm[w]);
     CSCWriteU32(d+48,capture_shadow.wheel_kf.kf_elapsed_us);
     CSCWriteU32(d+52,capture_shadow.allocation.elapsed_us);CSCWriteU32(d+56,capture_shadow.elapsed_us);

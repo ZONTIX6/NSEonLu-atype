@@ -33,9 +33,16 @@ static void test_wheel_shadow(void)
     ChassisPowerShadowCycle(&i,&c,&legacy);ChassisPowerShadowRecord(&f);
     assert(ChassisPowerShadowGet(&s));
     assert(s.wheel_kf.corrected_count[0]==1);
+    assert(s.elapsed_us==UINT32_MAX && s.allocation.elapsed_us==UINT32_MAX);
     PPWheelKF state[4];PPWheelKFConfig installed;
     assert(ChassisPowerShadowGetWheelKFCheckpoint(state,&installed));
     assert(state[0].corrected.corrected_time_us==99000 && installed.version==1);
+    ChassisPowerShadowRecordElapsed(299);
+    ChassisPowerShadowRecord(&f);assert(ChassisPowerShadowGet(&s));
+    assert(s.wheel_kf.consecutive_overruns==0);
+    ChassisPowerShadowRecordElapsed(UINT32_MAX);
+    ChassisPowerShadowRecord(&f);assert(ChassisPowerShadowGet(&s));
+    assert(s.elapsed_us==UINT32_MAX && s.max_elapsed_us==299 && s.overruns==0);
     ChassisPowerShadowRecordElapsed(301);
     ChassisPowerShadowRecordElapsed(300);
     ChassisPowerShadowRecordElapsed(301);
@@ -43,6 +50,10 @@ static void test_wheel_shadow(void)
     ChassisPowerShadowRecordElapsed(301);
     ChassisPowerShadowCycle(&i,&c,&legacy);ChassisPowerShadowRecord(&f);
     assert(ChassisPowerShadowGet(&s));assert(s.wheel_kf.paused);
+    assert(s.wheel_kf.corrected_count[0]==1);
+    assert(s.wheel_kf.accepted_age_us[0]==UINT32_MAX);
+    assert(!s.wheel_kf.current[0].valid && s.wheel_kf.future_valid_mask[0]==0);
+    assert(s.wheel_kf.kf_elapsed_us==UINT32_MAX && s.allocation.elapsed_us==UINT32_MAX);
     ChassisPowerShadowResume();
     ChassisPowerShadowCycle(&i,&c,&legacy);ChassisPowerShadowRecord(&f);
     assert(ChassisPowerShadowGet(&s));assert(!s.wheel_kf.paused);

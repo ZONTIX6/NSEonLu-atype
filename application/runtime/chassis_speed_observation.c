@@ -18,15 +18,25 @@ volatile ChassisSpeedObservationDiagnostics chassis_speed_observation_diagnostic
 #include "bsp_uart_log.h"
 #include "super_cap.h"
 static CSCCapture capture;
-static CSCMetadata metadata;
 static CSCCycleRecord record;
 static uint8_t frame[CSC_MAX_FRAME_BYTES];
 static uint32_t capture_config,capture_epoch,capture_model,capture_kf;
 #endif
-static uint32_t begin_cycles,begin_tick,last_begin,last_begin_tick,period_us;
+static uint32_t begin_cycles,begin_tick,begin_hz,last_begin,last_begin_tick,last_begin_hz,period_us;
 static bool started;
-static uint32_t elapsed(uint32_t delta)
-{uint32_t hz=DWT_GetFrequencyHz();return hz ? (uint32_t)((uint64_t)delta*1000000U/hz):UINT32_MAX;}
+static uint32_t elapsed(uint32_t start_cycles,uint32_t start_tick,uint32_t start_hz,
+                        uint32_t cycles,uint32_t tick,uint32_t hz)
+{
+    if(!hz || hz!=start_hz)return UINT32_MAX;
+    const uint32_t coarse=tick-start_tick;
+    const uint64_t coarse_us=(uint64_t)coarse*1000U;
+    const uint64_t wrap_us=(UINT64_C(1)<<32)*1000000U/hz;
+    const uint64_t us=(uint64_t)(uint32_t)(cycles-start_cycles)*1000000U/hz;
+    const uint64_t difference=us>coarse_us ? us-coarse_us:coarse_us-us;
+    if(coarse>=UINT32_C(0x80000000) || coarse_us+2000U>=wrap_us ||
+       difference>2000U || us>=UINT32_MAX)return UINT32_MAX;
+    return (uint32_t)us;
+}
 static unsigned histogram_bucket(uint32_t us)
 {const uint32_t limits[7]={100,300,500,1000,2000,3000,5000};unsigned b=0;while(b<7&&us>limits[b])++b;return b;}
 void ChassisSpeedObservationInit(void)
@@ -53,17 +63,20 @@ bool ChassisSpeedObservationArm(uint32_t id)
 {
 #if CHASSIS_SPEED_CAPTURE_ENABLE
     if(capture.state!=CSC_IDLE || !ChassisPowerShadowVersions(&capture_model,&capture_kf)) return false;
-    CSCMetadataInit(&metadata,id,DWT_GetFrequencyHz());
-    if(!DJIPowerAdapterDescribeSpeedCapture(&metadata))return false;
-    CSCWriteU16(metadata.bytes+552,crc_16(metadata.bytes+64,40));
+    /* IDLE storage cannot be drained or appended. Prepare in place so Arm's
+     * publication lock does not copy the 1 KiB metadata block. */
+    CSCMetadata *metadata=&capture.metadata;
+    CSCMetadataInit(metadata,id,DWT_GetFrequencyHz());
+    if(!DJIPowerAdapterDescribeSpeedCapture(metadata))return false;
+    CSCWriteU16(metadata->bytes+552,crc_16(metadata->bytes+64,40));
 #if CHASSIS_SPEED_KF_EXPERIMENT_CONFIG
     if(chassis_speed_experiment_kf_synthetic)
-        CSCWriteU32(metadata.bytes+44,CSCReadU32(metadata.bytes+44)|32U);
+        CSCWriteU32(metadata->bytes+44,CSCReadU32(metadata->bytes+44)|32U);
 #endif
     /* Metadata is prepared outside the publication lock. */
-    taskENTER_CRITICAL();bool ok=CSCArm(&capture,id,&metadata);taskEXIT_CRITICAL();
+    taskENTER_CRITICAL();bool ok=CSCArm(&capture,id,metadata);taskEXIT_CRITICAL();
     if(ok){
-        capture_epoch=CSCReadU32(metadata.bytes+32);capture_config=CSCReadU32(metadata.bytes+624);
+        capture_epoch=CSCReadU32(metadata->bytes+32);capture_config=CSCReadU32(metadata->bytes+624);
         ChassisPowerShadowResume();
     }return ok;
 #else
@@ -78,13 +91,9 @@ void ChassisSpeedObservationFreeze(void)
 }
 void ChassisSpeedObservationMotorBegin(uint32_t cycles,uint32_t tick_ms)
 {
-    begin_cycles=cycles;begin_tick=tick_ms;
-    period_us=started ? elapsed(cycles-last_begin):UINT32_MAX;
-    uint32_t coarse=tick_ms-last_begin_tick;
-    if(started && (coarse>UINT32_MAX/1000U ||
-        (uint64_t)coarse*1000U>(uint64_t)period_us+2000U ||
-        (uint64_t)period_us>(uint64_t)coarse*1000U+2000U))period_us=UINT32_MAX;
-    last_begin=cycles;last_begin_tick=tick_ms;started=true;
+    begin_cycles=cycles;begin_tick=tick_ms;begin_hz=DWT_GetFrequencyHz();
+    period_us=started ? elapsed(last_begin,last_begin_tick,last_begin_hz,cycles,tick_ms,begin_hz):UINT32_MAX;
+    last_begin=cycles;last_begin_tick=tick_ms;last_begin_hz=begin_hz;started=true;
     chassis_speed_observation_diagnostics.period_us=period_us;
     if(period_us!=UINT32_MAX) {
         if(period_us>chassis_speed_observation_diagnostics.period_max_us)chassis_speed_observation_diagnostics.period_max_us=period_us;
@@ -104,15 +113,18 @@ void ChassisSpeedObservationMotorBegin(uint32_t cycles,uint32_t tick_ms)
 }
 void ChassisSpeedObservationMotorEnd(uint32_t cycles,uint32_t tick_ms)
 {
-    (void)tick_ms;
-    uint32_t us=elapsed(cycles-begin_cycles);
+    uint32_t us=elapsed(begin_cycles,begin_tick,begin_hz,cycles,tick_ms,DWT_GetFrequencyHz());
     chassis_speed_observation_diagnostics.execution_us=us;
-    if(us>chassis_speed_observation_diagnostics.execution_max_us)chassis_speed_observation_diagnostics.execution_max_us=us;
-    ++chassis_speed_observation_diagnostics.execution_histogram[histogram_bucket(us)];
-    if(us>2000)++chassis_speed_observation_diagnostics.overruns;
+    if(us!=UINT32_MAX) {
+        if(us>chassis_speed_observation_diagnostics.execution_max_us)chassis_speed_observation_diagnostics.execution_max_us=us;
+        ++chassis_speed_observation_diagnostics.execution_histogram[histogram_bucket(us)];
+        if(us>2000)++chassis_speed_observation_diagnostics.overruns;
+    }
 #if CHASSIS_SPEED_CAPTURE_ENABLE
     if(DJIPowerAdapterTakeSpeedCycle(&record)) {
-        uint8_t *b=record.bytes;CSCWriteU32(b,begin_tick);CSCWriteU32(b+4,begin_cycles);CSCWriteU32(b+8,cycles);
+        /* tick_ms belongs to the adapter observation clock, which may be later
+         * than MotorBegin. Preserve its pairing with observation_cycles. */
+        uint8_t *b=record.bytes;CSCWriteU32(b+4,begin_cycles);CSCWriteU32(b+8,cycles);
         CSCWriteU32(b+12,period_us);CSCWriteU32(b+16,us);
         uint32_t flags=CSCReadU32(b+64);
         if(period_us!=UINT32_MAX)flags|=1U;
@@ -131,7 +143,7 @@ void ChassisSpeedObservationMotorEnd(uint32_t cycles,uint32_t tick_ms)
         taskENTER_CRITICAL();
         if(config!=capture_config || epoch!=capture_epoch || CSCReadU32(b+28)!=capture_model ||
             CSCReadU32(b+36)!=capture_kf)CSCFreezeReason(&capture,CSC_FREEZE_VERSION);
-        (void)CSCAppendCycle(&capture,&record);taskEXIT_CRITICAL();
+        (void)CSCAppendCycleTimed(&capture,&record,begin_tick,tick_ms);taskEXIT_CRITICAL();
     }
 #endif
 }
@@ -154,8 +166,14 @@ void ChassisSpeedObservationTask(void)
     if(!draining)return;
     uint16_t length;
     if(CSCPeekFrame(&capture,frame,sizeof frame,&length)) {
-        if(BSPUARTLogWrite(frame,length)==length)CSCFrameAccepted(&capture);
-        else CSCTransportRetry(&capture);
+        /* Drive permission is published by tasks. Serialize its final check
+         * with the nonblocking enqueue; IRQs stay enabled during this section. */
+        vTaskSuspendAll();
+        if(DJIPowerAdapterDriveStopped(HAL_GetTick())) {
+            if(BSPUARTLogWrite(frame,length)==length)CSCFrameAccepted(&capture);
+            else CSCTransportRetry(&capture);
+        }
+        (void)xTaskResumeAll();
     }
     taskENTER_CRITICAL();CSCDrainComplete(&capture,BSPUARTLogIsIdle());taskEXIT_CRITICAL();
 #endif
