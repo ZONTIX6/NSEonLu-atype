@@ -537,7 +537,7 @@ COMMON_DATA = [
      [("左摇杆横向", "rc.rocker_l_"), ("键盘", "key[0].keys")]),
     ("图传键鼠", "application/cmd/robot_cmd.c", ["vt02_data"],
      [("鼠标横向", "mouse.x"), ("键盘", "key[0].keys"), ("在线", "online")]),
-    ("底盘电机", "application/chassis/chassis.c", ["motor_lf", "motor_rf", "motor_lb", "motor_rb"], MOTOR_COMMON),
+    ("底盘电机", "application/chassis/chassis_init.c", ["motor_lf", "motor_rf", "motor_lb", "motor_rb"], MOTOR_COMMON),
     ("云台电机", "application/gimbal/gimbal.c", ["yaw_motor", "pitch_motor"], MOTOR_COMMON),
     ("发射电机", "application/shoot/shoot.c", ["friction_l", "friction_r", "loader"], MOTOR_COMMON),
     ("功率计", "modules/power_meter/power_meter.c", ["power_meter"],

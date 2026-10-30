@@ -10,6 +10,7 @@ import subprocess
 parser=argparse.ArgumentParser()
 parser.add_argument("build_dir",type=pathlib.Path)
 parser.add_argument("--modules",action="store_true")
+parser.add_argument("--backend",choices=("speed","force","calibration"),default="speed")
 args=parser.parse_args()
 elf=args.build_dir/"basic_framework.elf"
 raw=subprocess.check_output(["arm-none-eabi-nm",str(elf)],text=True)
@@ -35,9 +36,25 @@ for name in ("INS_Init","INS_Task","INSGetSnapshot","OLED_init","ChassisPowerIni
     if name in symbols:
         assert definitions[name]==1,("duplicate implementation",name)
 if "ChassisPowerInit" in symbols:
-    for name in ("ChassisPowerLimit","ChassisPowerRecordFinal","ChassisPowerUpdatePolicy",
-                 "ChassisPowerGetSnapshot","DJIPowerAdapterInit","DJIPowerAdapterPublish"):
+    required=["ChassisPowerUpdatePolicy","ChassisPowerGetSnapshot"]
+    if args.backend == "speed":
+        required += ["ChassisPowerLimit","ChassisPowerRecordFinal",
+                     "DJIPowerAdapterInit","DJIPowerAdapterPublish"]
+    else:
+        required += ["DJIForceAdapterInit"]
+        if args.backend == "force":
+            required += ["ChassisPowerForceBegin","ChassisPowerForceRecord",
+                         "ChassisForceControlStep","DJIForceAdapterPublish"]
+        else:
+            required += ["DJIForceCalibrationInit","DJIForceCalibrationPrepare",
+                         "DJIForceCalibrationValidate","DJIForceCalibrationRecord",
+                         "ForceCalibrationProtocolConfigure"]
+        assert "DJIPowerAdapterInit" not in symbols, "Speed backend linked into force firmware"
+    for name in required:
         assert name in symbols and symbols[name][1] in "Tt",("missing power implementation",name)
+        assert definitions[name] == 1,("duplicate implementation",name)
+else:
+    assert args.backend == "speed", "Requested force backend has no chassis power module"
 for name in ("DJIChassisPowerRegister","DJIChassisPowerPublishControl","DJIChassisPowerGetSnapshot",
              "SuperCapGetStatus","SuperCapGetInputPower","PowerControl"):
     assert name not in symbols,("obsolete implementation",name)
@@ -63,7 +80,7 @@ if args.modules:
         assert name in symbols and symbols[name][1] in "Tt",("module was discarded",name)
 assert elf.with_suffix(".hex").exists() and elf.with_suffix(".bin").exists()
 assert elf.with_suffix(".bin").stat().st_size<=1792*1024
-print(json.dumps({"build":str(args.build_dir),"flash_image_bytes":flash_end-0x08000000,
+print(json.dumps({"build":str(args.build_dir),"backend":args.backend,"flash_image_bytes":flash_end-0x08000000,
     "static_ram_bytes":symbols["_ebss"][0]-symbols["_sdata"][0],
     "ram_with_reserved_heap_stack_bytes":ram_end-0x20000000,
     "bin_sha256":hashlib.sha256(elf.with_suffix(".bin").read_bytes()).hexdigest(),

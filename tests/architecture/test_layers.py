@@ -44,6 +44,11 @@ def scan(root):
     paths.update(root / name for name in FILES if (root / name).exists())
     algorithms = root / "modules/algorithm"
     paths.update(p for p in algorithms.rglob("*") if p.suffix in (".h", ".c"))
+    boundary_paths = set(paths)
+    # Private application state is protected against every module/application,
+    # including legacy modules outside the migration's hardware-rule scope.
+    for base in ('application', 'modules'):
+        paths.update(p for p in (root / base).rglob('*') if p.suffix in ('.h', '.c'))
     found = Counter()
     for path in sorted(paths):
         rel = path.relative_to(root).as_posix()
@@ -55,14 +60,22 @@ def scan(root):
             matches = [directory / name for directory in include_dirs if (directory / name).is_file()]
             candidates = [local] if local.is_file() else matches[:1] or headers.get(Path(name).name, [])
             if len(candidates) != 1:
-                found[(rel, "unresolved-include", name)] += 1
+                # Application sources also consume generated experiment headers.
+                # Here they are scanned for private-header isolation; the build
+                # checks dependency completeness for the selected configuration.
+                if path in boundary_paths:
+                    found[(rel, "unresolved-include", name)] += 1
                 continue
             dest = candidates[0].relative_to(root).as_posix()
+            if dest == 'application/chassis/chassis_internal.h' and path.parent != candidates[0].parent:
+                found[(rel, 'application-private', dest)] += 1
+            if path not in boundary_paths:
+                continue
             if rel == 'modules/motor/DJImotor/dji_motor.c' and (
                     dest.startswith('modules/telemetry/') or
                     candidates[0].name == 'dji_tuning_adapter.h'):
                 found[(rel, 'motor-vehicle-policy', dest)] += 1
-            if dest.startswith("application/"):
+            if rel.startswith('modules/') and dest.startswith("application/"):
                 found[(rel, "application-include", dest)] += 1
             if rel.startswith(("modules/algorithm/", "modules/predictive_power/", "modules/chassis_force/", "modules/chassis_force_calibration/")) and (
                     dest.startswith("Drivers/") or dest == "Inc/main.h" or "FreeRTOS" in dest):
@@ -72,7 +85,7 @@ def scan(root):
             if rel.startswith("modules/chassis_power/") and path.suffix == ".h" and (
                     candidates[0].name == "dji_motor.h"):
                 found[(rel, "power-public-motor", dest)] += 1
-        if not rel.startswith("modules/algorithm/"):
+        if path in boundary_paths and not rel.startswith("modules/algorithm/"):
             for symbol in HARDWARE.findall(text):
                 found[(rel, "hardware-access", symbol)] += 1
             for symbol in REGISTER.findall(text):
@@ -86,6 +99,28 @@ def records(counter):
 
 
 class BoundaryTests(unittest.TestCase):
+    def test_chassis_private_header_rejects_any_module_consumer(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for directory in ('application/chassis', 'modules/can_comm'):
+                (root / directory).mkdir(parents=True)
+            (root / 'application/chassis/chassis_internal.h').write_text('')
+            (root / 'modules/can_comm/bridge.c').write_text(
+                '#include "../../application/chassis/chassis_internal.h"')
+            self.assertEqual(scan(root)[('modules/can_comm/bridge.c',
+                'application-private', 'application/chassis/chassis_internal.h')], 1)
+
+    def test_chassis_private_header_stays_inside_its_application(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for directory in ('application/chassis', 'application/runtime'):
+                (root / directory).mkdir(parents=True)
+            (root / 'application/chassis/chassis_internal.h').write_text('')
+            (root / 'application/runtime/collector.c').write_text(
+                '#include "../chassis/chassis_internal.h"')
+            self.assertEqual(scan(root)[('application/runtime/collector.c',
+                'application-private', 'application/chassis/chassis_internal.h')], 1)
+
     def test_motor_driver_rejects_vehicle_tuning_policy(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

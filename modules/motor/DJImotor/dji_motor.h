@@ -87,7 +87,8 @@ bool DJIMotorAuxiliaryStopped(DJIMotorInstance *const wheels[4],uint32_t now_ms)
 #endif
 
 /* Optional group processing. The adapter owns membership and copied permissions;
- * the motor driver retains PID, tuning and the sole CAN output path. */
+ * the motor driver retains PID, stop proof and the sole CAN output path.
+ * Vehicle tuning is supplied by the optional registered control policy. */
 typedef struct
 {
     uint32_t version, tick_ms;

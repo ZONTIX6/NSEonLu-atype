@@ -23,7 +23,12 @@
 - `cmd/`、`gimbal/`、`chassis/`、`shoot/`：并列的业务应用，通过 `message_center` 交换消息。
 - `board/`：本车硬件、可选外设和车辆标定的装配入口。硬件句柄和模块实例不通过公共头文件暴露。
 - `runtime/`：RTOS 任务、INS/视觉组合调用和整车调参保存策略。任务函数及句柄只在 `robot_task.c` 内可见。
+- `runtime/robot_telemetry.c`：整车 USB 遥测采集和 Flash 轮询；格式、协议与传输仍由 `modules/telemetry` 实现。20 ms 调度及采集顺序保持不变。
 - `robot.[ch]`：整车唯一入口；`robot_def.h`：跨应用协议和车型参数。
+
+速度底盘应用按职责分为 `chassis_init.c`（设备与话题注册）、`chassis_tuning.c`（配置默认值、校验、恢复与应用）和 `chassis.c`（控制周期、运动/功率组合及快照）。跨文件状态仅在 `chassis_internal.h` 声明，该私有头禁止被其他应用或模块引用；外部仍使用 `chassis.h`。电机指针、速度快照和原控制函数的行为保持不变。力控构建排除这三个速度底盘实现文件。
+
+DJI 驱动通过输出组注册的 `DJIMotorControlPolicy_s` 调用整定策略，车辆策略实现在 `dji_tuning_adapter.c`。调用点沿用原来的注册、周期开始、参考值处理、限流后、禁止驱动与提交后位置；驱动保留最终门控、整数打包和唯一 CAN 提交路径。标定限制在 `ForceCalibrationAppInit()` 中同时传给标定引擎与协议模块，协议不会反向读取板级应用配置。
 
 Robot.c是整个机器人的抽象，其下有4个应用：robot_cmd，gimbal，chassis，shoot。此框架当前是针对步兵/英雄/哨兵设计的，其他机器人只需要根据各自的特殊机构进行修改即可。robot_cmd是整个机器人的核心应用，其负责接受遥控器/上位机发来的指令，并将指令转化为实际的运动控制目标，发送给其他三个应用。后者会根据robot_cmd发来的命令，设定电机和其他执行单元的参考值等。
 

@@ -179,6 +179,8 @@ modules/daemon/daemon.c \
 modules/alarm/buzzer.c \
 application/gimbal/gimbal.c \
 application/chassis/chassis.c \
+application/chassis/chassis_init.c \
+application/chassis/chassis_tuning.c \
 application/shoot/shoot.c \
 application/cmd/robot_cmd.c \
 application/robot.c \
@@ -257,7 +259,7 @@ ifeq ($(CHASSIS_FORCE_CALIBRATION_ENABLE),1)
 C_SOURCES += $(wildcard modules/chassis_force_calibration/*.c) application/board/board_force_calibration.c application/runtime/force_calibration_app.c modules/motor/DJImotor/dji_force_calibration.c
 endif
 ifeq ($(CHASSIS_CONTROL_MODE),1)
-C_SOURCES := $(filter-out application/chassis/chassis.c modules/algorithm/chassis_spin.c modules/motor/DJImotor/dji_power_adapter.c,$(C_SOURCES))
+C_SOURCES := $(filter-out application/chassis/chassis.c application/chassis/chassis_init.c application/chassis/chassis_tuning.c modules/algorithm/chassis_spin.c modules/motor/DJImotor/dji_power_adapter.c,$(C_SOURCES))
 C_SOURCES += $(wildcard modules/chassis_force/*.c) application/chassis/chassis_force_app.c application/board/board_chassis_force.c modules/motor/DJImotor/dji_force_adapter.c modules/telemetry/chassis_force_telemetry.c
 else
 C_SOURCES := $(filter-out modules/chassis_power/chassis_power_force.c,$(C_SOURCES))

@@ -47,7 +47,8 @@ for defines, valid in cases:
         assert "error:" in result.stderr
 
 files = {e["file"].replace("\\", "/") for e in entries}
-assert not any(p.endswith(("/chassis/chassis.c", "/algorithm/chassis_spin.c", "/DJImotor/dji_power_adapter.c")) for p in files)
+assert not any(p.endswith(("/chassis/chassis.c", "/chassis/chassis_init.c", "/chassis/chassis_tuning.c",
+                          "/algorithm/chassis_spin.c", "/DJImotor/dji_power_adapter.c")) for p in files)
 finite_math_paths = ("/modules/chassis_force/", "/modules/chassis_power/",
                      "/modules/motor/DJImotor/", "/application/chassis/",
                      "/application/board/board_chassis_force.c",

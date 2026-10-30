@@ -17,6 +17,8 @@ try {
     $revision=git rev-parse HEAD
     $sourceStatus=@(git status --porcelain)
     Run 'architecture' $Python @('tests/architecture/test_layers.py','--strict')
+    Run 'application-headers' $Python @('tests/architecture/test_application_headers.py')
+    Run 'motor-link-boundary' $Python @('tests/architecture/test_motor_link.py')
     foreach($makefile in Get-ChildItem tests -Filter Makefile -Recurse) {
         Run "host-$($makefile.Directory.Name)" 'make' @('-B','-C',$makefile.Directory.FullName,'test','CC=gcc')
     }

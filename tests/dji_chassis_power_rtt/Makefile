@@ -32,7 +32,7 @@ INCLUDES += -I../../modules/vehicle_safety -I../../modules/power_meter -I../../a
 
 all: $(TARGET)
 
-$(TARGET): $(SOURCE) ../../modules/motor/DJImotor/dji_motor.c ../../modules/motor/DJImotor/dji_motor.h
+$(TARGET): $(SOURCE) $(wildcard ../../modules/motor/DJImotor/*.[ch])
 	$(CC) $(CFLAGS) $(INCLUDES) $(SOURCE) $(LDFLAGS) -lm -o $(TARGET)
 
 test: $(TARGET)

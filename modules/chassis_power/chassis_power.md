@@ -51,7 +51,7 @@ if (policy.cap_command_valid) SuperCapSendCommand(&policy.cap_command);
 
 模型为 `K0 + K1*I + K2*n + K3*I*n + K4*I² + K5*n²`（模型内部电流按换算系数转换）。阶段 0 保留旧预算并计算快保护诊断，1 启用快保护，2 启动及预测约束，3 完整慢环学习。源/能量硬上限在各阶段均生效。观察阶段可能另算诊断候选，驱动输出只应用一次四轮处理。
 
-限流之后，驱动继续执行急停、整定独占、显式零力恢复、反馈 20 ms 和启停门控，量化为 int16，统一组帧并提交 CAN。然后以实际最终命令调用 `ChassisPowerRecordFinal`。`final_valid` 表示本周期已记录最终命令；`can_submitted` 表示四轮对应 CAN 组提交成功，不证明电机已执行。提交失败仍记录尝试提交的命令，安全门控置零时诊断也为零。
+限流之后，注册的 `dji_tuning_adapter` 策略在原位置检查整定许可；整定独占和显式零力恢复也由该策略维护。驱动继续执行急停、反馈 20 ms 和启停门控，量化为 int16，统一组帧并提交 CAN。然后以实际最终命令调用 `ChassisPowerRecordFinal`。`final_valid` 表示本周期已记录最终命令；`can_submitted` 表示四轮对应 CAN 组提交成功，不证明电机已执行。提交失败仍记录尝试提交的命令，安全门控置零时诊断也为零。
 
 `ChassisPowerGetSnapshot` 原子复制快环与策略的独立时间/版本和有效标记。`ChassisPowerLimit` 返回 false 时输出清零，调用者不得复用旧候选；空输出失败。非有限输入、错误配置、非法 dt 或过期控制快照按失败处理。反馈不足抑制学习并沿用现有增长兜底，最终逐电机安全门控仍由驱动执行。
 

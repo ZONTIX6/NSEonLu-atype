@@ -14,12 +14,15 @@ class ApplicationHeaders(unittest.TestCase):
         #include "runtime/robot_task.h"
         #include "board/board_devices.h"
         #include "runtime/tuning_policy.h"
+        #include "runtime/robot_telemetry.h"
         #include "runtime/robot_task.h"
         #include "board/board_devices.h"
         #include "runtime/tuning_policy.h"
+        #include "runtime/robot_telemetry.h"
         void (*task_entry_{name})(void) = OSTaskInit;
         bool (*board_entry_{name})(void) = BoardDevicesInit;
         void (*tuning_entry_{name})(void) = TuningPolicyInit;
+        void (*telemetry_entry_{name})(void) = RobotTelemetryTask;
         '''
         with tempfile.TemporaryDirectory() as temp:
             objects = []
