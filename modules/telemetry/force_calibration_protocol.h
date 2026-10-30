@@ -3,6 +3,8 @@
 #include "../chassis_force_calibration/force_calibration.h"
 #include <stddef.h>
 void ForceCalibrationProtocolInit(void);
+/* Board configuration is copied before USB starts and survives session resets. */
+void ForceCalibrationProtocolConfigure(const FcLimits *limits);
 void ForceCalibrationProtocolSubmit(const char *line,uint32_t generation);
 size_t ForceCalibrationProtocolReply(char *buffer,size_t capacity);
 void ForceCalibrationProtocolReplySent(void);

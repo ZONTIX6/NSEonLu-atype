@@ -200,8 +200,10 @@ float DWT_GetDeltaT(uint32_t *count)
     *count=1234;
     return test_delta_s;
 }
+#ifndef DJI_TEST_CUSTOM_CLOCK
 uint32_t DWT_GetCycleCount(void) {return test_cycles;}
 uint32_t DWT_GetFrequencyHz(void) {return 1000000U;}
+#endif
 uint64_t DWT_GetTimeline_us(void) {return test_cycles;}
 
 unsigned BSPLogWrite(const void *data, unsigned length)

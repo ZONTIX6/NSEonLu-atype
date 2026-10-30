@@ -24,6 +24,7 @@
 #include "chassis_power.h"
 #include "chassis_control_config.h"
 #include "usb_telemetry.h"
+#include "robot_telemetry.h"
 #include "chassis_speed_observation.h"
 #include "speed_observation_config.h"
 
@@ -44,7 +45,7 @@ static osThreadId usbTelemetryTaskHandle;
 static void StartUSBTelemetryTask(void const *argument)
 {
     (void)argument;
-    USBTelemetryInit();
+    RobotTelemetryInit();
     TickType_t previous_wake = xTaskGetTickCount();
     for (;;) {
 #if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
@@ -54,7 +55,7 @@ static void StartUSBTelemetryTask(void const *argument)
             chassis_force_motor_stack_free_words=uxTaskGetStackHighWaterMark(motorTaskHandle);
         }
 #endif
-        USBTelemetryTask();
+        RobotTelemetryTask();
         vTaskDelayUntil(&previous_wake, pdMS_TO_TICKS(USB_TELEMETRY_PERIOD_MS));
     }
 }

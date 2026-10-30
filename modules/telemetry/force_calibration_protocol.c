@@ -5,7 +5,6 @@
 #include <math.h>
 #if CHASSIS_FORCE_CALIBRATION_ENABLE
 #include "dji_force_calibration.h"
-#include "board/board_force_calibration.h"
 #include "chassis_power_config.h"
 #include "chassis_energy_config.h"
 #ifndef ATYPE_BENCH_MODE
@@ -15,6 +14,7 @@
 static char response[512];
 static size_t response_size;
 static uint32_t connection;
+static FcLimits configured_limits;
 #if CHASSIS_FORCE_CALIBRATION_ENABLE
 static uint32_t waiting_id;
 #endif
@@ -59,6 +59,10 @@ static uint16_t crc16(const char *s,size_t size)
 }
 #endif
 void ForceCalibrationProtocolInit(void) {response_size=0;waiting=false;adapter_reply=false;connection=0;}
+void ForceCalibrationProtocolConfigure(const FcLimits *limits)
+{
+    if(limits) configured_limits=*limits;
+}
 void ForceCalibrationProtocolCancel(uint32_t generation,FcReason reason)
 {
     connection=generation;waiting=false;response_size=0;adapter_reply=false;
@@ -82,7 +86,7 @@ void ForceCalibrationProtocolSubmit(const char *line,uint32_t generation)
     if((response_size || waiting) && !stop) return; /* Keep the original reply stable until accepted. */
     if(!strcmp(fields[2],"CAP") && count==3) {
 #if CHASSIS_FORCE_CALIBRATION_ENABLE
-        FcLimits l=BoardForceCalibrationLimits();
+        FcLimits l=configured_limits;
         int n=snprintf(response,sizeof response,
             "@FC1,%lu,CAP,%lu,1,1,48,1280,%d,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,0,1,4,2,3,850,900\r\n",
             (unsigned long)id,(unsigned long)generation,l.max_current,l.max_on_ms,l.max_rpm,l.stop_temperature_c,
@@ -150,7 +154,7 @@ void ForceCalibrationProtocolSubmit(const char *line,uint32_t generation)
     FcRequest r={.request_id=(uint32_t)id,.generation=generation,.session=(uint32_t)values[1]};
     if(!strcmp(op,"ARM")) r.op=FC_OP_ARM;
     else if(!strcmp(op,"START")) {
-        FcLimits l=BoardForceCalibrationLimits();
+        FcLimits l=configured_limits;
         if(values[2]>=4 || !values[3] || values[3]<-l.max_current || values[3]>l.max_current ||
            values[4]<1 || values[5]<1 || values[6]<1 || values[4]+values[5]+values[6]>l.max_on_ms) {error(r.request_id,"range");return;}
         r.op=FC_OP_START;r.pulse=(FcPulse){.wheel=(uint8_t)values[2],.current=(int16_t)values[3],

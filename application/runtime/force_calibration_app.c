@@ -2,6 +2,7 @@
 #include "board/board_force_calibration.h"
 #include "vehicle_safety.h"
 #include "bsp_usb.h"
+#include "force_calibration_protocol.h"
 #include <string.h>
 static DJIMotorInstance *wheels[4];
 static bool aux_confirming,aux_ready;
@@ -11,6 +12,7 @@ static void link_snapshot(bool *open,uint32_t *generation)
 bool ForceCalibrationAppInit(DJIMotorInstance *const motors[4])
 {
     memcpy(wheels,motors,sizeof wheels);const FcLimits limits=BoardForceCalibrationLimits();
+    ForceCalibrationProtocolConfigure(&limits);
     return DJIForceCalibrationInit(motors,&limits,link_snapshot);
 }
 bool ForceCalibrationAppPermit(const ChassisForceIntentReceiver_s *command,uint32_t now)

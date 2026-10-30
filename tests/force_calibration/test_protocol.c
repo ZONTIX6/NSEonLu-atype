@@ -38,5 +38,14 @@ int main(void)
     ForceCalibrationProtocolSubmit(saved,generation);run();
     ForceCalibrationProtocolSubmit("@FC1,17,STOP,10,0",generation);
     assert(ForceCalibrationProtocolReply(reply,sizeof reply) && strstr(reply,"@FC1,16,OK,11,"));ForceCalibrationProtocolReplySent();
-    puts("FC1 protocol: strict integers, generations, reconnect, old capture and stable replies OK");return 0;
+    /* A second vehicle's limit must be copied, survive USB init, and be used
+     * in CAP instead of silently reaching back into this board's defaults. */
+    FcLimits limits=BoardForceCalibrationLimits();limits.max_current=1234;
+    ForceCalibrationProtocolConfigure(&limits);limits.max_current=4321;
+    ForceCalibrationProtocolInit();
+    ForceCalibrationProtocolSubmit("@FC1,18,CAP",generation);
+    assert(ForceCalibrationProtocolReply(reply,sizeof reply) && strstr(reply,",CAP,11,1,1,48,1280,1234,"));
+    ForceCalibrationProtocolReplySent();
+    limits=BoardForceCalibrationLimits();ForceCalibrationProtocolConfigure(&limits);
+    puts("FC1 protocol: strict integers, generations, reconnect, configured limits, old capture and stable replies OK");return 0;
 }

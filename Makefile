@@ -139,7 +139,7 @@ modules/motor/step_motor/step_motor.c \
 modules/motor/servo_motor/servo_motor.c \
 modules/motor/motor_task.c \
 modules/telemetry/rtt_telemetry.c \
-modules/telemetry/usb_telemetry.c \
+application/runtime/robot_telemetry.c \
 modules/telemetry/usb_telemetry_format.c \
 modules/telemetry/usb_telemetry_imu.c \
 modules/telemetry/usb_telemetry_stream.c \

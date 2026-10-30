@@ -1,3 +1,4 @@
+#include "robot_telemetry.h"
 #include "usb_telemetry.h"
 #include "tuning_flash.h"
 #include "runtime_tuning.h"
@@ -189,14 +190,14 @@ static void Collect(uint32_t now_ms)
 #endif
 #endif
 
-void USBTelemetryInit(void)
+void RobotTelemetryInit(void)
 {
 #if USB_TELEMETRY_ENABLE
     USBTelemetryStreamInit();
 #endif
 }
 
-void USBTelemetryTask(void)
+void RobotTelemetryTask(void)
 {
 #if USB_TELEMETRY_ENABLE
     /* Let the preceding USB reply finish before a potentially long sector erase. */

@@ -4,6 +4,7 @@ uint32_t __get_PRIMASK(void) {return irq_mask;}
 void __disable_irq(void) {irq_mask=1;}
 void __set_PRIMASK(uint32_t n) {irq_mask=n;}
 #define main SpeedRegressionMain
+#define DJI_TEST_CUSTOM_CLOCK
 #include "../dji_chassis_power_rtt/test_dji_chassis_power_rtt.c"
 #undef main
 #undef DJIMotorControl

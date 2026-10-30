@@ -18,7 +18,7 @@ TARGETS = ("modules/chassis_power", "modules/super_cap", "modules/power_meter",
            "modules/predictive_power",
            "modules/chassis_force", "modules/chassis_force_calibration",
            "modules/mpu6500", "modules/vtx", "modules/oled",
-           "modules/vehicle_safety")
+           "modules/vehicle_safety", "modules/telemetry")
 FILES = ("modules/imu/ins_service.c", "modules/imu/ins_task.h",
          "modules/motor/DJImotor/dji_motor.c", "modules/motor/DJImotor/dji_motor.h",
          "modules/telemetry/tuning_flash.c")
@@ -82,6 +82,17 @@ def records(counter):
 
 
 class BoundaryTests(unittest.TestCase):
+    def test_telemetry_rejects_application_dependencies(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for directory in ('modules/telemetry', 'application/board'):
+                (root / directory).mkdir(parents=True)
+            (root / 'application/board/limits.h').write_text('')
+            (root / 'modules/telemetry/protocol.c').write_text(
+                '#include "../../application/board/limits.h"')
+            self.assertEqual(scan(root)[('modules/telemetry/protocol.c',
+                'application-include', 'application/board/limits.h')], 1)
+
     def test_calibration_core_rejects_rtos_and_application_dependencies(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
