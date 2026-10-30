@@ -6,6 +6,7 @@
 
 /*
  * 车辆力控参数填写入口：只在本函数填写车辆参数，不修改 modules/chassis_force 内部算法。
+ * 方案/启用：docs/chassis-direct-force.md；实测/无测力计替代方法/记录表：docs/chassis-force-calibration.md。
  *
  * 标记约定：
  *   [沿用] 原工程已有值，注明来源；装配、轮胎或重心改变后需要复核。

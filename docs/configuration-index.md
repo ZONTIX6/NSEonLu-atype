@@ -1,14 +1,10 @@
 # 完整宏与初始化参数索引
 
-2026-10-24：自转阶段、能量门槛和响应参数的当前值见 [自转功率说明](chassis-power-priority.md)。下方扫描表除明确更新条目外保留历史快照，生效值以源码及板端 GET 为准。
+更新日期：2026-10-26。当前目标为 STM32F427 A 板。配套说明：[配置指南](configuration-guide.md)、[宏迁移表](atype-macro-migration.md)。
 
-更新日期：2026-10-23。当前目标为 STM32F427 A 板。配套说明：[配置指南](configuration-guide.md)、[宏迁移表](atype-macro-migration.md)。
-
-由 `scripts/generate-configuration-index.py` 扫描 263 个项目 C/H 文件，记录 3232 条预处理、配置初始化和 HAL/NVIC 项。预处理条目包含互斥分支与保护宏，不能将所有条目同时理解为有效配置。可从构建命令覆盖的选项见 `config/atype-options.txt`；普通源码 PID/功率模型初值也列在所属文件下。
+由 `scripts/generate-configuration-index.py` 扫描 293 个项目 C/H 文件，记录 3679 条预处理、配置初始化和 HAL/NVIC 项。预处理条目包含互斥分支与保护宏，不能将所有条目同时理解为有效配置。可从构建命令覆盖的选项见 `config/atype-options.txt`；普通源码 PID/功率模型初值也列在所属文件下。
 
 `modules/imu/ins_task.c`、`BMI088driver.c`、`BMI088Middleware.c` 是未链接的旧 C 板实现；当前 INS 只链接 MPU6500 和公共数学接口。便携副本有独立 API，未加入固件链接。
-
-底盘原跟随档由 `application/robot_def.h` 的 `CHASSIS_FOLLOW_MODE` 选择：`0`（默认）恢复原比例跟转，`1` 以云台实测朝向为前方且 `wz=0`。Make 使用 `CHASSIS_FOLLOW_MODE=0/1`，CMake 使用 `-DCHASSIS_FOLLOW_MODE=0/1`；独立目录重新构建并烧录，非法值触发编译错误。详见 [底盘说明](chassis.md#跟随档策略)。本次仅同步底盘策略涉及的三个源码节，2026-10-23 另同步了 Inc/board_config.h 的裁判 USART6 默认值、端口选择与互斥检查；其余条目保留原索引快照。
 
 ## application/board/board_analog_key.h
 
@@ -17,6 +13,202 @@
 | [1](../application/board/board_analog_key.h#L1) | 预处理 | `#ifndef BOARD_ANALOG_KEY_H` |
 | [2](../application/board/board_analog_key.h#L2) | 预处理 | `#define BOARD_ANALOG_KEY_H` |
 | [6](../application/board/board_analog_key.h#L6) | 预处理 | `#endif` |
+
+## application/board/board_chassis_force.c
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [5](../application/board/board_chassis_force.c#L5) | 预处理 | `#define BOARD_CHASSIS_LEGACY_CURRENT_LIMIT 15000.0f` |
+| [33](../application/board/board_chassis_force.c#L33) | 配置初值 | `ChassisForceConfig_s c={` |
+| [34](../application/board/board_chassis_force.c#L34) | 配置初值 | `.backend=CHASSIS_CONTROL_FORCE, /* 协议后端标识，无单位；固定为 FORCE，不是调参项。 */` |
+| [35](../application/board/board_chassis_force.c#L35) | 配置初值 | `.schema_version=1U,             /* 参数结构版本，无单位；修改结构时单独升级。 */` |
+| [36](../application/board/board_chassis_force.c#L36) | 配置初值 | `.calibration_valid=CHASSIS_FORCE_CALIBRATION_VALID!=0, /* 标定验收标志；默认宏值为 0。 */` |
+| [38](../application/board/board_chassis_force.c#L38) | 配置初值 | `/* 四轮逐轮填写。共同标定方法：` |
+| [39](../application/board/board_chassis_force.c#L39) | 配置初值 | `* k_out_nm_a：输出轴接已知力臂 L(m)，测力 F(N)，tau=F*L；多个低电流正/反向` |
+| [40](../application/board/board_chassis_force.c#L40) | 配置初值 | `*             点拟合 tau-I 的斜率，单位 N*m/A。它是减速器输出端常数，不再乘减速比。` |
+| [41](../application/board/board_chassis_force.c#L41) | 配置初值 | `*             电源输入电流不能代替电机转矩电流；检查摩擦、偏置及正反向拟合误差。` |
+| [42](../application/board/board_chassis_force.c#L42) | 配置初值 | `* current_limit：沿用原速控/功率配置的 15000；更换硬件或调整持续负载时复核电流/温升，` |
+| [43](../application/board/board_chassis_force.c#L43) | 配置初值 | `*                不得超过 16384；起步、堵转和温度保护仍需单独填写。` |
+| [44](../application/board/board_chassis_force.c#L44) | 配置初值 | `* force_limit_n：用测力装置和低力加载验证可重复传递的轮缘力，考虑接地滑移后留裕量；` |
+| [45](../application/board/board_chassis_force.c#L45) | 配置初值 | `*                架空轮速或输出轴转矩不能证明真实接地力。` |
+| [46](../application/board/board_chassis_force.c#L46) | 配置初值 | `* current_slew：初值按原电流幅值上限除以 1 s，表示 0 到旧上限至少约 1 s；` |
+| [47](../application/board/board_chassis_force.c#L47) | 配置初值 | `*               单轮低电流斜坡记录功率/冲击后调整，不是已测得的电流响应斜率。` |
+| [48](../application/board/board_chassis_force.c#L48) | 配置初值 | `*/` |
+| [49](../application/board/board_chassis_force.c#L49) | 配置初值 | `.wheel={` |
+| [50](../application/board/board_chassis_force.c#L50) | 配置初值 | `[0]={ /* LF 左前，CAN1 ID 1。几何在下方从原车配置装配。 */` |
+| [51](../application/board/board_chassis_force.c#L51) | 配置初值 | `.k_out_nm_a=0.0f,   /* [待测] N*m/A，输出轴转矩常数，按上述力臂法拟合。 */` |
+| [52](../application/board/board_chassis_force.c#L52) | 配置初值 | `.current_limit=BOARD_CHASSIS_LEGACY_CURRENT_LIMIT, /* [沿用] CAN 命令幅值，原速控/功率上限。 */` |
+| [53](../application/board/board_chassis_force.c#L53) | 配置初值 | `.force_limit_n=0.0f, /* [待测] N，保守可传递轮缘力，低力加载验证。 */` |
+| [54](../application/board/board_chassis_force.c#L54) | 配置初值 | `.current_slew=BOARD_CHASSIS_LEGACY_CURRENT_LIMIT/1.0f, /* [初值] CAN 命令/s，旧上限的 1 s 斜坡。 */` |
+| [55](../application/board/board_chassis_force.c#L55) | 配置初值 | `},` |
+| [56](../application/board/board_chassis_force.c#L56) | 配置初值 | `[1]={ /* RF 右前，CAN1 ID 4。 */` |
+| [57](../application/board/board_chassis_force.c#L57) | 配置初值 | `.k_out_nm_a=0.0f,    /* [待测] N*m/A，单独测量右前轮组。 */` |
+| [58](../application/board/board_chassis_force.c#L58) | 配置初值 | `.current_limit=BOARD_CHASSIS_LEGACY_CURRENT_LIMIT, /* [沿用] CAN 命令幅值，原速控/功率上限。 */` |
+| [59](../application/board/board_chassis_force.c#L59) | 配置初值 | `.force_limit_n=0.0f, /* [待测] N。 */` |
+| [60](../application/board/board_chassis_force.c#L60) | 配置初值 | `.current_slew=BOARD_CHASSIS_LEGACY_CURRENT_LIMIT/1.0f, /* [初值] CAN 命令/s，旧上限的 1 s 斜坡。 */` |
+| [61](../application/board/board_chassis_force.c#L61) | 配置初值 | `},` |
+| [62](../application/board/board_chassis_force.c#L62) | 配置初值 | `[2]={ /* LB 左后，CAN1 ID 2。 */` |
+| [63](../application/board/board_chassis_force.c#L63) | 配置初值 | `.k_out_nm_a=0.0f,    /* [待测] N*m/A，单独测量左后轮组。 */` |
+| [64](../application/board/board_chassis_force.c#L64) | 配置初值 | `.current_limit=BOARD_CHASSIS_LEGACY_CURRENT_LIMIT, /* [沿用] CAN 命令幅值，原速控/功率上限。 */` |
+| [65](../application/board/board_chassis_force.c#L65) | 配置初值 | `.force_limit_n=0.0f, /* [待测] N。 */` |
+| [66](../application/board/board_chassis_force.c#L66) | 配置初值 | `.current_slew=BOARD_CHASSIS_LEGACY_CURRENT_LIMIT/1.0f, /* [初值] CAN 命令/s，旧上限的 1 s 斜坡。 */` |
+| [67](../application/board/board_chassis_force.c#L67) | 配置初值 | `},` |
+| [68](../application/board/board_chassis_force.c#L68) | 配置初值 | `[3]={ /* RB 右后，CAN1 ID 3。 */` |
+| [69](../application/board/board_chassis_force.c#L69) | 配置初值 | `.k_out_nm_a=0.0f,    /* [待测] N*m/A，单独测量右后轮组。 */` |
+| [70](../application/board/board_chassis_force.c#L70) | 配置初值 | `.current_limit=BOARD_CHASSIS_LEGACY_CURRENT_LIMIT, /* [沿用] CAN 命令幅值，原速控/功率上限。 */` |
+| [71](../application/board/board_chassis_force.c#L71) | 配置初值 | `.force_limit_n=0.0f, /* [待测] N。 */` |
+| [72](../application/board/board_chassis_force.c#L72) | 配置初值 | `.current_slew=BOARD_CHASSIS_LEGACY_CURRENT_LIMIT/1.0f, /* [初值] CAN 命令/s，旧上限的 1 s 斜坡。 */` |
+| [73](../application/board/board_chassis_force.c#L73) | 配置初值 | `},` |
+| [74](../application/board/board_chassis_force.c#L74) | 配置初值 | `},` |
+| [76](../application/board/board_chassis_force.c#L76) | 配置初值 | `/* 车体力/转矩是可选择的操作幅度，不是电机或轮地能力的标定常数。` |
+| [77](../application/board/board_chassis_force.c#L77) | 配置初值 | `* 以下采用低幅起点；物理输出仍受逐轮力/电流、速度及功率限制，不从旧目标轮速换算。 */` |
+| [78](../application/board/board_chassis_force.c#L78) | 配置初值 | `.force_max_n=10.0f,            /* [初值] N，满输入合力；低力加载/加速试验后调整。 */` |
+| [79](../application/board/board_chassis_force.c#L79) | 配置初值 | `.spin_torque_nm=0.3f,          /* [初值] N*m，固定旋转请求；用电流/负载功率日志复核。 */` |
+| [80](../application/board/board_chassis_force.c#L80) | 配置初值 | `.spin_start_torque_nm=0.1f,    /* [初值] N*m，自适应起步请求；不保证起转，也不强制最小输出。 */` |
+| [81](../application/board/board_chassis_force.c#L81) | 配置初值 | `.spin_torque_max_nm=1.0f,      /* [调试限值] N*m，自适应请求上限；不是最大物理转矩的测量值。 */` |
+| [82](../application/board/board_chassis_force.c#L82) | 配置初值 | `.force_rise_n_s=20.0f,         /* [初值] N/s，0 到 10 N 约 0.5 s；阶跃试验核对冲击。 */` |
+| [83](../application/board/board_chassis_force.c#L83) | 配置初值 | `.force_fall_n_s=40.0f,         /* [初值] N/s，10 N 撤至 0 约 0.25 s；松杆试验调整。 */` |
+| [84](../application/board/board_chassis_force.c#L84) | 配置初值 | `.torque_rise_nm_s=0.5f,        /* [初值] N*m/s，0 到固定 0.3 N*m 约 0.6 s。 */` |
+| [85](../application/board/board_chassis_force.c#L85) | 配置初值 | `.torque_fall_nm_s=1.0f,        /* [初值] N*m/s，固定 0.3 N*m 撤至 0 约 0.3 s。 */` |
+| [87](../application/board/board_chassis_force.c#L87) | 配置初值 | `/* 速度只作保护，不是正常驱动力的目标值。轮级 rpm 一律指电机转子。` |
+| [88](../application/board/board_chassis_force.c#L88) | 配置初值 | `* 原工程未配置经过验证的机械硬上限；此处人为限制低速调试，仍需确认估计方向和实际峰值。 */` |
+| [89](../application/board/board_chassis_force.c#L89) | 配置初值 | `.velocity_limit_mps=0.3f,      /* [调试限值] m/s，平移保护；外部测速核对，不是车体最高速度。 */` |
+| [90](../application/board/board_chassis_force.c#L90) | 配置初值 | `.omega_limit_rad_s=1.0f,       /* [调试限值] rad/s，旋转保护；独立测速核对撤力延迟。 */` |
+| [91](../application/board/board_chassis_force.c#L91) | 配置初值 | `.wheel_limit_rpm=1000.0f,      /* [调试限值] 转子 rpm，轮级保护；不是轮子输出轴 rpm。 */` |
+| [92](../application/board/board_chassis_force.c#L92) | 配置初值 | `.resume_ratio=0.9f,            /* [初值] 无单位，(0,1)；降至上限乘此比例后恢复，检查有无抖动。 */` |
+| [93](../application/board/board_chassis_force.c#L93) | 配置初值 | `.startup_current_limit=BOARD_CHASSIS_LEGACY_CURRENT_LIMIT*0.1f, /* [调试限值] CAN 命令幅值，旧上限的 10%；验证起步。 */` |
+| [94](../application/board/board_chassis_force.c#L94) | 配置初值 | `.speed_prediction_rpm=0.0f,    /* [待测] 转子 rpm，功率预测增长裕量；取实测预测窗口内最大增长并留裕量。 */` |
+| [96](../application/board/board_chassis_force.c#L96) | 配置初值 | `/* 堵转/温度：不以长时间硬堵转测试阈值；使用受限短脉冲或负载台架。 */` |
+| [97](../application/board/board_chassis_force.c#L97) | 配置初值 | `.stall_current_command=1000.0f, /* [调试限值] CAN 命令幅值；低于起步上限 1500，使近零速堵转检测可触发。 */` |
+| [98](../application/board/board_chassis_force.c#L98) | 配置初值 | `.stall_rpm=20.0f,              /* [初值] 转子 rpm，低速判据；记录静止噪声后复核，可能误触发。 */` |
+| [99](../application/board/board_chassis_force.c#L99) | 配置初值 | `.stall_timeout_ms=100U,        /* [调试限值] ms，达到上述电流且低速时的连续确认时间；不是允许堵转时长的实测结果。 */` |
+| [100](../application/board/board_chassis_force.c#L100) | 配置初值 | `.temp_derate_c=50.0f,          /* [调试限值] 摄氏度，提前降额；先核对温度反馈与环境温度。 */` |
+| [101](../application/board/board_chassis_force.c#L101) | 配置初值 | `.temp_stop_c=60.0f,            /* [调试限值] 摄氏度，停机；不是电机额定耐温，按温升试验复核。 */` |
+| [103](../application/board/board_chassis_force.c#L103) | 配置初值 | `/* 退出制动：只预填参数，不改变默认 EXIT_MODE=0（滑行）。启用制动后须验证不反向持续驱动。 */` |
+| [104](../application/board/board_chassis_force.c#L104) | 配置初值 | `.brake_torque_nm=0.2f,         /* [初值] N*m，单次反向请求；低转速核对制动距离、电流与功率。 */` |
+| [105](../application/board/board_chassis_force.c#L105) | 配置初值 | `.brake_stop_rad_s=0.1f,        /* [初值] rad/s，停止死区；静止噪声与撤销制动试验后调整。 */` |
+| [106](../application/board/board_chassis_force.c#L106) | 配置初值 | `.brake_timeout_ms=300U,        /* [调试限值] ms，单次制动最多持续时间；不承诺在此时间内停稳。 */` |
+| [108](../application/board/board_chassis_force.c#L108) | 配置初值 | `/* 输入整形：摇杆径向死区和力曲线；键盘同样经过单位圆限幅与力斜率。 */` |
+| [109](../application/board/board_chassis_force.c#L109) | 配置初值 | `.input_deadzone=0.05f,         /* [初值] 归一化幅值，[0,1)；记录松杆噪声，设置为噪声包络以上。 */` |
+| [110](../application/board/board_chassis_force.c#L110) | 配置初值 | `.input_gamma=1.5f,             /* [初值] 无单位，>0；低输入驾驶试验调节细腻程度。 */` |
+| [112](../application/board/board_chassis_force.c#L112) | 配置初值 | `/* 自适应功率环：软件初值，不是已完成的功率计/整车标定结果。` |
+| [113](../application/board/board_chassis_force.c#L113) | 配置初值 | `* 即使当前使用固定转矩模式，这些字段也需要保持合法正值以通过统一参数校验。` |
+| [114](../application/board/board_chassis_force.c#L114) | 配置初值 | `* 功率计必须位于受控底盘负载侧，先核对零点/方向/采样周期，再做低转矩功率阶跃。` |
+| [115](../application/board/board_chassis_force.c#L115) | 配置初值 | `*/` |
+| [116](../application/board/board_chassis_force.c#L116) | 配置初值 | `.power_gain_nm_per_w_s=0.01f,  /* [初值] N*m/(W*s)，功率误差增益；低转矩阶跃整定，观察超调与恢复。 */` |
+| [117](../application/board/board_chassis_force.c#L117) | 配置初值 | `.power_deadband_w=2.0f,        /* [初值] W，功率死区；记录零点和稳态功率噪声后复核。 */` |
+| [118](../application/board/board_chassis_force.c#L118) | 配置初值 | `.power_lpf_tau_s=0.02f,        /* [初值] s，功率跟踪低通；按采样间隔/波动整定，不能代替快保护。 */` |
+| [119](../application/board/board_chassis_force.c#L119) | 配置初值 | `.power_recovery_samples=3U,    /* [初值] 样本数，3~20；连续新鲜功率样本确认，重复样本不计数。 */` |
+| [120](../application/board/board_chassis_force.c#L120) | 配置初值 | `.torque_probe_step_nm=0.05f,   /* [初值] N*m，单次候选转矩增量；低转矩申请试验确认，不能大于转矩上限。 */` |
+| [121](../application/board/board_chassis_force.c#L121) | 配置初值 | `.power_request_step_w=5.0f,    /* [初值] W，申请功率步长；观察能源批准/拒绝，要求 >0 且 <=20。 */` |
+| [122](../application/board/board_chassis_force.c#L122) | 配置初值 | `.grant_timeout_ms=50U,         /* [初值] ms，等待批准超时；测慢任务及输入确认延迟，允许范围 20~1000。 */` |
+| [151](../application/board/board_chassis_force.c#L151) | 配置初值 | `ChassisPower_Init_Config_s c={.stage=3,.force_control=true,.meter_enabled=POWER_METER_ENABLE!=0,` |
+| [152](../application/board/board_chassis_force.c#L152) | 配置初值 | `.buffer_enabled=CHASSIS_BUFFER_POWER_ENABLE!=0,` |
+| [153](../application/board/board_chassis_force.c#L153) | 配置初值 | `.use_supercap=CHASSIS_POWER_SOURCE_MODE==CHASSIS_POWER_SOURCE_SUPERCAP,` |
+| [154](../application/board/board_chassis_force.c#L154) | 配置初值 | `.algorithm={` |
+| [155](../application/board/board_chassis_force.c#L155) | 配置初值 | `.safety_factor=.98f,                 /* [沿用] 无单位，物理功率安全系数；按模型误差复核裕量。 */` |
+| [156](../application/board/board_chassis_force.c#L156) | 配置初值 | `.small_error_threshold_rpm=500,      /* [沿用] rpm，旧速控接口参数，力控不以它生成速度误差。 */` |
+| [157](../application/board/board_chassis_force.c#L157) | 配置初值 | `.reserved_power_threshold_w=54,      /* [沿用] W，旧分配器参数，力控不走旧轮速分配路径。 */` |
+| [158](../application/board/board_chassis_force.c#L158) | 配置初值 | `.per_motor_reserved_power_w=8,       /* [沿用] W，同上，保留共用配置结构兼容性。 */` |
+| [159](../application/board/board_chassis_force.c#L159) | 配置初值 | `.max_current_command=BOARD_CHASSIS_LEGACY_CURRENT_LIMIT, /* [沿用] CAN 命令幅值，与四轮原限流保持一致。 */` |
+| [160](../application/board/board_chassis_force.c#L160) | 配置初值 | `},` |
+| [161](../application/board/board_chassis_force.c#L161) | 配置初值 | `.transient={` |
+| [162](../application/board/board_chassis_force.c#L162) | 配置初值 | `/* [沿用] 与 ChassisPowerTransientDefaultConfig 相同；力控快路径实际读取以下四项。` |
+| [163](../application/board/board_chassis_force.c#L163) | 配置初值 | `* 低功率阶跃验证：超限迅速收紧，恢复需连续新鲜样本，恢复斜率不引入反冲。 */` |
+| [164](../application/board/board_chassis_force.c#L164) | 配置初值 | `.fast_gain=.5f,                      /* 无单位，实测功率超限量到负向快修正的增益。 */` |
+| [165](../application/board/board_chassis_force.c#L165) | 配置初值 | `.release_w_per_s=60,                 /* W/s，负向快修正释放速度。 */` |
+| [166](../application/board/board_chassis_force.c#L166) | 配置初值 | `.release_confirm_ms=10U,             /* ms，解除超功率前低于门槛的连续确认时间。 */` |
+| [167](../application/board/board_chassis_force.c#L167) | 配置初值 | `.stable_run_ms=100U,                 /* ms，驱动稳定/持续超限后允许慢模型学习的时间。 */` |
+| [169](../application/board/board_chassis_force.c#L169) | 配置初值 | `/* [沿用] 下列为共用旧快保护结构的兼容字段，力控不走旧启动峰值或轮速分配器。` |
+| [170](../application/board/board_chassis_force.c#L170) | 配置初值 | `* 力控实际电流、速度及转速预测限制由上方车辆参数决定，不通过此处放宽。 */` |
+| [171](../application/board/board_chassis_force.c#L171) | 配置初值 | `.eta=.95f,                          /* 无单位，旧接口初值；校验时用 algorithm.safety_factor 替换。 */` |
+| [172](../application/board/board_chassis_force.c#L172) | 配置初值 | `.stale_release_w_per_s=20,           /* W/s，旧失联恢复速度；力控失联时不释放负向快修正。 */` |
+| [173](../application/board/board_chassis_force.c#L173) | 配置初值 | `.meter_fresh_ms=20U,                 /* ms，旧功率计新鲜门槛；力控快路径固定检查 <=20 ms。 */` |
+| [174](../application/board/board_chassis_force.c#L174) | 配置初值 | `.feedback_fresh_ms=5U,               /* ms，旧轮反馈门槛；力控快路径固定检查 <=5 ms。 */` |
+| [175](../application/board/board_chassis_force.c#L175) | 配置初值 | `.max_current_command=BOARD_CHASSIS_LEGACY_CURRENT_LIMIT, /* CAN 命令幅值，旧限流；校验时使用 algorithm 值。 */` |
+| [176](../application/board/board_chassis_force.c#L176) | 配置初值 | `.acceleration_tau_s=.010f,           /* s，旧转速增长滤波常数，力控使用实测 speed_prediction_rpm。 */` |
+| [177](../application/board/board_chassis_force.c#L177) | 配置初值 | `.prediction_s=.008f,                 /* s，旧转速预测窗口，复核增长裕量时可参考其时长。 */` |
+| [178](../application/board/board_chassis_force.c#L178) | 配置初值 | `.growth_time_s=.005f,                /* s，旧增长兜底时间，力控不使用。 */` |
+| [179](../application/board/board_chassis_force.c#L179) | 配置初值 | `.peak_ratio=1.30f,                   /* 无单位，旧启动峰值比例，力控不开放该额外额度。 */` |
+| [180](../application/board/board_chassis_force.c#L180) | 配置初值 | `.low_rpm=100,                        /* 转子 rpm，旧低速判据，力控不使用。 */` |
+| [181](../application/board/board_chassis_force.c#L181) | 配置初值 | `.low_current=500,                    /* CAN 命令幅值，旧低需求判据，力控不使用。 */` |
+| [182](../application/board/board_chassis_force.c#L182) | 配置初值 | `.target_step_rpm=300,                /* 转子 rpm，旧目标阶跃门槛，力控没有目标轮速。 */` |
+| [183](../application/board/board_chassis_force.c#L183) | 配置初值 | `.zero_enter_rpm=50,                  /* 转子 rpm，旧近零速进入门槛，力控不使用。 */` |
+| [184](../application/board/board_chassis_force.c#L184) | 配置初值 | `.zero_exit_rpm=100,                  /* 转子 rpm，旧近零速退出门槛，力控不使用。 */` |
+| [185](../application/board/board_chassis_force.c#L185) | 配置初值 | `.demand_enter_current=200,           /* CAN 命令幅值，旧需求进入门槛，力控不使用。 */` |
+| [186](../application/board/board_chassis_force.c#L186) | 配置初值 | `.demand_exit_current=100,            /* CAN 命令幅值，旧需求退出门槛，力控不使用。 */` |
+| [187](../application/board/board_chassis_force.c#L187) | 配置初值 | `.low_hold_ms=100U,                   /* ms，旧低需求保持时间，力控不使用。 */` |
+| [188](../application/board/board_chassis_force.c#L188) | 配置初值 | `.startup_window_ms=30U,              /* ms，旧启动峰值窗口，力控不使用。 */` |
+| [189](../application/board/board_chassis_force.c#L189) | 配置初值 | `.startup_cooldown_ms=500U,           /* ms，旧启动峰值冷却时间，力控不使用。 */` |
+| [190](../application/board/board_chassis_force.c#L190) | 配置初值 | `.guard_search_nodes=256U,            /* 搜索节点数，旧 guard 工作量上限，力控使用自己的有界分配器。 */` |
+| [191](../application/board/board_chassis_force.c#L191) | 配置初值 | `},` |
+| [192](../application/board/board_chassis_force.c#L192) | 配置初值 | `.outer={` |
+| [193](../application/board/board_chassis_force.c#L193) | 配置初值 | `.kp=1,                              /* [沿用] 无单位，功率模型慢修正比例增益；功率阶跃整定。 */` |
+| [194](../application/board/board_chassis_force.c#L194) | 配置初值 | `.ki=1.5f,                           /* [沿用] 1/s，慢修正积分增益；观察稳态误差与恢复。 */` |
+| [195](../application/board/board_chassis_force.c#L195) | 配置初值 | `.measurement_lpf_tau_s=.030f,        /* [沿用] s，慢环功率滤波时间常数；依据采样噪声复核。 */` |
+| [196](../application/board/board_chassis_force.c#L196) | 配置初值 | `.activation_margin_w=5,              /* [沿用] W，接近目标功率时的激活裕量。 */` |
+| [197](../application/board/board_chassis_force.c#L197) | 配置初值 | `.error_deadband_w=.3f,               /* [沿用] W，慢修正误差死区；与负载功率计噪声比较。 */` |
+| [198](../application/board/board_chassis_force.c#L198) | 配置初值 | `.max_positive_correction_w=8,        /* [沿用] W，模型正修正上限，不是额外物理能源额度。 */` |
+| [199](../application/board/board_chassis_force.c#L199) | 配置初值 | `.positive_slew_rate_w_per_s=60,      /* [沿用] W/s，正修正恢复斜率；预算阶跃时检查冲击。 */` |
+| [200](../application/board/board_chassis_force.c#L200) | 配置初值 | `.budget_drop_reset_w=1,              /* [沿用] W，预算下降复位阈值；验证下降时不释放旧积分。 */` |
+| [201](../application/board/board_chassis_force.c#L201) | 配置初值 | `.antiwindup_gain_per_s=10,           /* [沿用] 1/s，慢修正抗饱和增益；检查限幅解除后的恢复。 */` |
+| [202](../application/board/board_chassis_force.c#L202) | 配置初值 | `.low_demand_delay_s=.5f,             /* [沿用] s，低需求保持时间，超时后衰减历史修正。 */` |
+| [203](../application/board/board_chassis_force.c#L203) | 配置初值 | `.low_demand_decay_w_per_s=1,         /* [沿用] W/s，低需求修正衰减速度。 */` |
+| [204](../application/board/board_chassis_force.c#L204) | 配置初值 | `},` |
+| [205](../application/board/board_chassis_force.c#L205) | 配置初值 | `.budget={` |
+| [206](../application/board/board_chassis_force.c#L206) | 配置初值 | `.empty_energy_ratio=.1f,             /* [沿用] 无单位，0~1，电容额外负载能力的空电门槛。 */` |
+| [207](../application/board/board_chassis_force.c#L207) | 配置初值 | `.full_energy_ratio=.3f,              /* [沿用] 无单位，0~1，电容增补全部开放门槛；用充放电日志复核。 */` |
+| [208](../application/board/board_chassis_force.c#L208) | 配置初值 | `.max_boost_w=100,                    /* [沿用] W，电容负载侧增补上限；始终受 051 总能力封顶。 */` |
+| [209](../application/board/board_chassis_force.c#L209) | 配置初值 | `.rise_rate_w_per_s=200,              /* [沿用] W/s，负载额度上升斜率，下降不等待斜率。 */` |
+| [210](../application/board/board_chassis_force.c#L210) | 配置初值 | `.demand_margin_w=CHASSIS_POWER_DEMAND_MARGIN_W, /* [沿用] W，真实需求申请裕量，验证零需求不申请。 */` |
+| [211](../application/board/board_chassis_force.c#L211) | 配置初值 | `.buffer={` |
+| [212](../application/board/board_chassis_force.c#L212) | 配置初值 | `.max_energy_j=CHASSIS_BUFFER_MAX_ENERGY_J,                  /* [沿用] J，裁判缓冲最大有效值。 */` |
+| [213](../application/board/board_chassis_force.c#L213) | 配置初值 | `.recovery_enter_j=CHASSIS_BUFFER_RECOVERY_ENTER_J,          /* [沿用] J，进入恢复阈值；低缓冲试验验证。 */` |
+| [214](../application/board/board_chassis_force.c#L214) | 配置初值 | `.recovery_exit_j=CHASSIS_BUFFER_RECOVERY_EXIT_J,            /* [沿用] J，退出恢复阈值，应高于进入值。 */` |
+| [215](../application/board/board_chassis_force.c#L215) | 配置初值 | `.hard_floor_j=CHASSIS_BUFFER_HARD_FLOOR_J,                  /* [沿用] J，预测缓冲硬底座。 */` |
+| [216](../application/board/board_chassis_force.c#L216) | 配置初值 | `.prediction_window_s=CHASSIS_BUFFER_PREDICTION_WINDOW_S,    /* [沿用] s，输入增补能量预测窗口。 */` |
+| [217](../application/board/board_chassis_force.c#L217) | 配置初值 | `.guard_window_s=CHASSIS_BUFFER_GUARD_WINDOW_S,              /* [沿用] s，输入超功率预测保护窗口。 */` |
+| [218](../application/board/board_chassis_force.c#L218) | 配置初值 | `.settlement_delay_s=CHASSIS_BUFFER_SETTLEMENT_DELAY_S,      /* [沿用] s，裁判结算延迟裕量，按实测消息时序复核。 */` |
+| [219](../application/board/board_chassis_force.c#L219) | 配置初值 | `.energy_margin_j=CHASSIS_BUFFER_ENERGY_MARGIN_J,           /* [沿用] J，缓冲估计能量裕量。 */` |
+| [220](../application/board/board_chassis_force.c#L220) | 配置初值 | `.power_margin_w=CHASSIS_BUFFER_POWER_MARGIN_W,             /* [沿用] W，输入功率测量/调度裕量。 */` |
+| [221](../application/board/board_chassis_force.c#L221) | 配置初值 | `.max_boost_w=CHASSIS_BUFFER_BOOST_MAX_W,                    /* [沿用] W，裁判缓冲允许的输入侧增补上限。 */` |
+| [222](../application/board/board_chassis_force.c#L222) | 配置初值 | `.recovery_power_w=CHASSIS_BUFFER_RECOVERY_POWER_W,          /* [沿用] W，恢复时最大输入功率削减量。 */` |
+| [223](../application/board/board_chassis_force.c#L223) | 配置初值 | `.recovery_target_time_s=CHASSIS_BUFFER_RECOVERY_TARGET_TIME_S, /* [沿用] s，缓冲恢复目标时间。 */` |
+| [224](../application/board/board_chassis_force.c#L224) | 配置初值 | `.observer_max_step_s=CHASSIS_BUFFER_OBSERVER_MAX_STEP_S,    /* [沿用] s，输入侧能量观测最大有效步长。 */` |
+| [225](../application/board/board_chassis_force.c#L225) | 配置初值 | `.recovery_hold_s=CHASSIS_BUFFER_RECOVERY_HOLD_S,            /* [沿用] s，退出恢复前连续保持时间。 */` |
+| [226](../application/board/board_chassis_force.c#L226) | 配置初值 | `.rise_rate_w_per_s=CHASSIS_BUFFER_RISE_RATE_W_PER_S,        /* [沿用] W/s，输入额度上升斜率。 */` |
+| [227](../application/board/board_chassis_force.c#L227) | 配置初值 | `.safety_factor=.98f,                                       /* [沿用] 无单位，与功率算法使用同一换算系数。 */` |
+| [228](../application/board/board_chassis_force.c#L228) | 配置初值 | `.correction_rise_j_per_s=CHASSIS_BUFFER_CORRECTION_RISE_J_PER_S, /* [沿用] J/s，缓冲估计向上修正速率。 */` |
+| [229](../application/board/board_chassis_force.c#L229) | 配置初值 | `},` |
+| [230](../application/board/board_chassis_force.c#L230) | 配置初值 | `},` |
+| [237](../application/board/board_chassis_force.c#L237) | 配置初值 | `const MotorPowerModelConfig_s m={` |
+| [238](../application/board/board_chassis_force.c#L238) | 配置初值 | `.k0=1.3123816f,       /* [沿用] W，常数损耗项。 */` |
+| [239](../application/board/board_chassis_force.c#L239) | 配置初值 | `.k1=-.25836727f,      /* [沿用] W/缩放电流单位，一次电流项。 */` |
+| [240](../application/board/board_chassis_force.c#L240) | 配置初值 | `.k2=.0007424524f,     /* [沿用] W/rpm，一次转速项。 */` |
+| [241](../application/board/board_chassis_force.c#L241) | 配置初值 | `.k3=.0024271158f,     /* [沿用] W/(缩放电流单位*rpm)，电流转速交叉项。 */` |
+| [242](../application/board/board_chassis_force.c#L242) | 配置初值 | `.k4=.081198552f,      /* [沿用] W/(缩放电流单位^2)，二次电流项。 */` |
+| [243](../application/board/board_chassis_force.c#L243) | 配置初值 | `.k5=3.890596e-8f,     /* [沿用] W/rpm^2，二次转速项。 */` |
+| [244](../application/board/board_chassis_force.c#L244) | 配置初值 | `.current_conversion=1000.0f, /* [沿用] 每个缩放电流单位对应的 CAN 命令值，不能单改而保留系数。 */` |
+
+## application/board/board_chassis_force.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../application/board/board_chassis_force.h#L1) | 预处理 | `#ifndef BOARD_CHASSIS_FORCE_H` |
+| [2](../application/board/board_chassis_force.h#L2) | 预处理 | `#define BOARD_CHASSIS_FORCE_H` |
+| [6](../application/board/board_chassis_force.h#L6) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
+| [13](../application/board/board_chassis_force.h#L13) | 预处理 | `#endif` |
+| [14](../application/board/board_chassis_force.h#L14) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
+| [15](../application/board/board_chassis_force.h#L15) | 预处理 | `#if CHASSIS_DRIVE_TYPE != CHASSIS_DRIVE_OMNI_X` |
+| [17](../application/board/board_chassis_force.h#L17) | 预处理 | `#endif` |
+| [18](../application/board/board_chassis_force.h#L18) | 预处理 | `#if CHASSIS_POWER_CONTROL_STAGE != 3` |
+| [20](../application/board/board_chassis_force.h#L20) | 预处理 | `#endif` |
+| [21](../application/board/board_chassis_force.h#L21) | 预处理 | `#if CHASSIS_FORCE_SPIN_MODE == CHASSIS_FORCE_SPIN_POWER_ADAPTIVE && !POWER_METER_ENABLE` |
+| [23](../application/board/board_chassis_force.h#L23) | 预处理 | `#endif` |
+| [24](../application/board/board_chassis_force.h#L24) | 预处理 | `#if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP && !CHASSIS_BUFFER_POWER_ENABLE` |
+| [26](../application/board/board_chassis_force.h#L26) | 预处理 | `#endif` |
+| [27](../application/board/board_chassis_force.h#L27) | 预处理 | `#endif` |
+| [28](../application/board/board_chassis_force.h#L28) | 预处理 | `#endif` |
 
 ## application/board/board_devices.c
 
@@ -81,204 +273,217 @@
 | [60](../application/chassis/chassis.c#L60) | 预处理 | `#endif // CHASSIS_BOARD` |
 | [61](../application/chassis/chassis.c#L61) | 预处理 | `#ifdef ONE_BOARD` |
 | [64](../application/chassis/chassis.c#L64) | 预处理 | `#endif                                              // !ONE_BOARD` |
-| [92](../application/chassis/chassis.c#L92) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
-| [96](../application/chassis/chassis.c#L96) | 预处理 | `#endif` |
-| [97](../application/chassis/chassis.c#L97) | 配置初值 | `static ChassisSpinConfig_s chassis_spin_config = {` |
-| [98](../application/chassis/chassis.c#L98) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE` |
-| [98](../application/chassis/chassis.c#L98) | 配置初值 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE` |
-| [99](../application/chassis/chassis.c#L99) | 配置初值 | `.fixed_wz = CHASSIS_SPIN_SINE_CENTER_WZ,` |
-| [100](../application/chassis/chassis.c#L100) | 配置初值 | `.min_wz = CHASSIS_SPIN_SINE_MIN_WZ,` |
-| [101](../application/chassis/chassis.c#L101) | 预处理 | `#else` |
-| [101](../application/chassis/chassis.c#L101) | 配置初值 | `#else` |
-| [102](../application/chassis/chassis.c#L102) | 配置初值 | `.fixed_wz = CHASSIS_SPIN_FIXED_WZ,` |
-| [103](../application/chassis/chassis.c#L103) | 配置初值 | `.min_wz = CHASSIS_SPIN_MIN_WZ,` |
-| [104](../application/chassis/chassis.c#L104) | 预处理 | `#endif` |
-| [104](../application/chassis/chassis.c#L104) | 配置初值 | `#endif` |
-| [105](../application/chassis/chassis.c#L105) | 配置初值 | `.max_wz = CHASSIS_SPIN_MAX_WZ,` |
-| [106](../application/chassis/chassis.c#L106) | 配置初值 | `.gain_wz_per_w_s = CHASSIS_SPIN_POWER_GAIN,` |
-| [107](../application/chassis/chassis.c#L107) | 配置初值 | `.rise_wz_per_s = CHASSIS_SPIN_RISE_RATE,` |
-| [108](../application/chassis/chassis.c#L108) | 配置初值 | `.fall_wz_per_s = CHASSIS_SPIN_FALL_RATE,` |
-| [109](../application/chassis/chassis.c#L109) | 配置初值 | `.power_lpf_tau_s = CHASSIS_SPIN_POWER_LPF_TAU_S,` |
-| [110](../application/chassis/chassis.c#L110) | 配置初值 | `.power_deadband_w = CHASSIS_SPIN_POWER_DEADBAND_W,` |
-| [111](../application/chassis/chassis.c#L111) | 配置初值 | `.settle_time_s = CHASSIS_SPIN_SETTLE_TIME_S,` |
-| [112](../application/chassis/chassis.c#L112) | 配置初值 | `.budget_drop_reset_w = CHASSIS_SPIN_BUDGET_DROP_RESET_W,` |
-| [113](../application/chassis/chassis.c#L113) | 配置初值 | `.sine_amplitude_wz = CHASSIS_SPIN_SINE_AMPLITUDE_WZ,` |
-| [114](../application/chassis/chassis.c#L114) | 配置初值 | `.sine_period_s = CHASSIS_SPIN_SINE_PERIOD_S,` |
-| [115](../application/chassis/chassis.c#L115) | 配置初值 | `.sine_ramp_s = CHASSIS_SPIN_SINE_RAMP_S,` |
-| [116](../application/chassis/chassis.c#L116) | 配置初值 | `.sine_rise_wz_per_s = CHASSIS_SPIN_SINE_RISE_RATE,` |
-| [117](../application/chassis/chassis.c#L117) | 配置初值 | `.sine_fall_wz_per_s = CHASSIS_SPIN_SINE_FALL_RATE,` |
-| [118](../application/chassis/chassis.c#L118) | 配置初值 | `.sine_direction = CHASSIS_SPIN_SINE_DIRECTION,` |
-| [121](../application/chassis/chassis.c#L121) | 配置初值 | `static ChassisPowerBudgetConfig_s chassis_budget_config = {` |
-| [122](../application/chassis/chassis.c#L122) | 配置初值 | `.empty_energy_ratio = 0.10f,` |
-| [123](../application/chassis/chassis.c#L123) | 配置初值 | `.full_energy_ratio = 0.30f,` |
-| [124](../application/chassis/chassis.c#L124) | 配置初值 | `.max_boost_w = 100.0f,` |
-| [125](../application/chassis/chassis.c#L125) | 配置初值 | `.rise_rate_w_per_s = 200.0f,` |
-| [126](../application/chassis/chassis.c#L126) | 配置初值 | `.demand_margin_w = CHASSIS_POWER_DEMAND_MARGIN_W,` |
-| [127](../application/chassis/chassis.c#L127) | 配置初值 | `.buffer = {` |
-| [128](../application/chassis/chassis.c#L128) | 配置初值 | `.max_energy_j = CHASSIS_BUFFER_MAX_ENERGY_J,` |
-| [129](../application/chassis/chassis.c#L129) | 配置初值 | `.recovery_enter_j = CHASSIS_BUFFER_RECOVERY_ENTER_J,` |
-| [130](../application/chassis/chassis.c#L130) | 配置初值 | `.recovery_exit_j = CHASSIS_BUFFER_RECOVERY_EXIT_J,` |
-| [131](../application/chassis/chassis.c#L131) | 配置初值 | `.hard_floor_j = CHASSIS_BUFFER_HARD_FLOOR_J,` |
-| [132](../application/chassis/chassis.c#L132) | 配置初值 | `.prediction_window_s = CHASSIS_BUFFER_PREDICTION_WINDOW_S,` |
-| [133](../application/chassis/chassis.c#L133) | 配置初值 | `.guard_window_s = CHASSIS_BUFFER_GUARD_WINDOW_S,` |
-| [134](../application/chassis/chassis.c#L134) | 配置初值 | `.settlement_delay_s = CHASSIS_BUFFER_SETTLEMENT_DELAY_S,` |
-| [135](../application/chassis/chassis.c#L135) | 配置初值 | `.energy_margin_j = CHASSIS_BUFFER_ENERGY_MARGIN_J,` |
-| [136](../application/chassis/chassis.c#L136) | 配置初值 | `.power_margin_w = CHASSIS_BUFFER_POWER_MARGIN_W,` |
-| [137](../application/chassis/chassis.c#L137) | 配置初值 | `.max_boost_w = CHASSIS_BUFFER_BOOST_MAX_W,` |
-| [138](../application/chassis/chassis.c#L138) | 配置初值 | `.recovery_power_w = CHASSIS_BUFFER_RECOVERY_POWER_W,` |
-| [139](../application/chassis/chassis.c#L139) | 配置初值 | `.recovery_target_time_s = CHASSIS_BUFFER_RECOVERY_TARGET_TIME_S,` |
-| [140](../application/chassis/chassis.c#L140) | 配置初值 | `.observer_max_step_s = CHASSIS_BUFFER_OBSERVER_MAX_STEP_S,` |
-| [141](../application/chassis/chassis.c#L141) | 配置初值 | `.recovery_hold_s = CHASSIS_BUFFER_RECOVERY_HOLD_S,` |
-| [142](../application/chassis/chassis.c#L142) | 配置初值 | `.rise_rate_w_per_s = CHASSIS_BUFFER_RISE_RATE_W_PER_S,` |
-| [143](../application/chassis/chassis.c#L143) | 配置初值 | `.safety_factor = CHASSIS_POWER_SAFETY_FACTOR,` |
-| [144](../application/chassis/chassis.c#L144) | 配置初值 | `.correction_rise_j_per_s = CHASSIS_BUFFER_CORRECTION_RISE_J_PER_S,` |
-| [145](../application/chassis/chassis.c#L145) | 配置初值 | `},` |
-| [149](../application/chassis/chassis.c#L149) | 配置初值 | `static ChassisPowerOuterLoopConfig_s chassis_outer_loop_config = {` |
-| [150](../application/chassis/chassis.c#L150) | 配置初值 | `.kp = 1.0f, // 比例增益,误差 = 目标功率 - 实测功率(W),输出为预算修正量(W)` |
-| [151](../application/chassis/chassis.c#L151) | 配置初值 | `.ki = 1.5f, // 积分增益,积分限幅为[-基准预算, max_positive_correction_w]` |
-| [152](../application/chassis/chassis.c#L152) | 配置初值 | `.measurement_lpf_tau_s = 0.030f, // 功率计读数一阶低通时间常数(s),抑制采样噪声` |
-| [153](../application/chassis/chassis.c#L153) | 配置初值 | `.activation_margin_w = 5.0f, // 介入阈值(W):需求或实测功率距目标不到此值时才进入ACTIVE` |
-| [154](../application/chassis/chassis.c#L154) | 配置初值 | `.error_deadband_w = 0.3f, // 误差死区(W):&#124;误差&#124;不超过此值时按0处理,停止积分` |
-| [155](../application/chassis/chassis.c#L155) | 配置初值 | `.max_positive_correction_w = 8.0f, // 修正量上限(W):最多只上调8W;下限为-基准预算,即最狠可压到0` |
-| [156](../application/chassis/chassis.c#L156) | 配置初值 | `.positive_slew_rate_w_per_s = 60.0f, // 修正量上升/回零速率(W/s);下调不限速,立即生效` |
-| [157](../application/chassis/chassis.c#L157) | 配置初值 | `.budget_drop_reset_w = 1.0f, // 基准预算单周期跌落超过此值(W)时,清零正向积分与修正量` |
-| [158](../application/chassis/chassis.c#L158) | 配置初值 | `.antiwindup_gain_per_s = 10,` |
-| [159](../application/chassis/chassis.c#L159) | 配置初值 | `.low_demand_delay_s = .5f,` |
-| [160](../application/chassis/chassis.c#L160) | 配置初值 | `.low_demand_decay_w_per_s = 1,` |
-| [163](../application/chassis/chassis.c#L163) | 配置初值 | `static const MotorPowerModelConfig_s m3508_power_model = {` |
-| [164](../application/chassis/chassis.c#L164) | 配置初值 | `.k0 = 1.3123816,` |
-| [165](../application/chassis/chassis.c#L165) | 配置初值 | `.k1 = -0.25836727,` |
-| [166](../application/chassis/chassis.c#L166) | 配置初值 | `.k2 = 0.0007424524,` |
-| [167](../application/chassis/chassis.c#L167) | 配置初值 | `.k3 = 0.0024271158,` |
-| [168](../application/chassis/chassis.c#L168) | 配置初值 | `.k4 = 0.081198552,` |
-| [169](../application/chassis/chassis.c#L169) | 配置初值 | `.k5 = 3.890596e-08,` |
-| [170](../application/chassis/chassis.c#L170) | 配置初值 | `.current_conversion = 1000.0f,// 电流单位转换,功率模型使用A,电机模块使用mA` |
-| [206](../application/chassis/chassis.c#L206) | 配置初值 | `ChassisPowerOuterLoopConfig_s outer = {` |
-| [207](../application/chassis/chassis.c#L207) | 配置初值 | `.kp=v[0], .ki=v[1], .measurement_lpf_tau_s=v[2],` |
-| [208](../application/chassis/chassis.c#L208) | 配置初值 | `.activation_margin_w=v[3], .error_deadband_w=v[4],` |
-| [209](../application/chassis/chassis.c#L209) | 配置初值 | `.max_positive_correction_w=v[5], .positive_slew_rate_w_per_s=v[6],` |
-| [210](../application/chassis/chassis.c#L210) | 配置初值 | `.budget_drop_reset_w=v[7], .antiwindup_gain_per_s=v[8],` |
-| [211](../application/chassis/chassis.c#L211) | 配置初值 | `.low_demand_delay_s=v[9], .low_demand_decay_w_per_s=v[10]};` |
-| [237](../application/chassis/chassis.c#L237) | 配置初值 | `ChassisSpinConfig_s spin = {` |
-| [238](../application/chassis/chassis.c#L238) | 配置初值 | `.fixed_wz=v[0], .min_wz=v[1], .max_wz=v[2], .gain_wz_per_w_s=v[3],` |
-| [239](../application/chassis/chassis.c#L239) | 配置初值 | `.rise_wz_per_s=v[4], .fall_wz_per_s=v[5], .power_lpf_tau_s=v[6],` |
-| [240](../application/chassis/chassis.c#L240) | 配置初值 | `.power_deadband_w=v[7], .settle_time_s=v[8], .budget_drop_reset_w=v[9],` |
-| [241](../application/chassis/chassis.c#L241) | 配置初值 | `.sine_amplitude_wz=v[10], .sine_period_s=v[11], .sine_ramp_s=v[12],` |
-| [242](../application/chassis/chassis.c#L242) | 配置初值 | `.sine_rise_wz_per_s=v[13], .sine_fall_wz_per_s=v[14],` |
-| [243](../application/chassis/chassis.c#L243) | 配置初值 | `.sine_direction=(int8_t)v[15]};` |
-| [245](../application/chassis/chassis.c#L245) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
-| [250](../application/chassis/chassis.c#L250) | 预处理 | `#endif` |
-| [262](../application/chassis/chassis.c#L262) | 配置初值 | `Motor_Init_Config_s chassis_motor_config = {` |
-| [263](../application/chassis/chassis.c#L263) | 配置初值 | `.can_init_config.can_handle = &hcan1,` |
-| [264](../application/chassis/chassis.c#L264) | 配置初值 | `.controller_param_init_config = {` |
-| [265](../application/chassis/chassis.c#L265) | 配置初值 | `.speed_PID = {` |
-| [266](../application/chassis/chassis.c#L266) | 配置初值 | `.Kp = 4.5f, // A-board vehicle baseline, error in degrees/s` |
-| [267](../application/chassis/chassis.c#L267) | 配置初值 | `.Ki = 0,   // 0` |
-| [268](../application/chassis/chassis.c#L268) | 配置初值 | `.Kd = 0,   // 0` |
-| [269](../application/chassis/chassis.c#L269) | 配置初值 | `.IntegralLimit = 3000,` |
-| [270](../application/chassis/chassis.c#L270) | 配置初值 | `.Improve = PID_Trapezoid_Intergral &#124; PID_Integral_Limit &#124; PID_Derivative_On_Measurement,` |
-| [271](../application/chassis/chassis.c#L271) | 配置初值 | `.MaxOut = 15000,` |
-| [272](../application/chassis/chassis.c#L272) | 配置初值 | `.Output_LPF_RC = 0.3,` |
-| [273](../application/chassis/chassis.c#L273) | 配置初值 | `},` |
-| [274](../application/chassis/chassis.c#L274) | 配置初值 | `},` |
-| [275](../application/chassis/chassis.c#L275) | 配置初值 | `.controller_setting_init_config = {` |
-| [276](../application/chassis/chassis.c#L276) | 配置初值 | `.angle_feedback_source = MOTOR_FEED,` |
-| [277](../application/chassis/chassis.c#L277) | 配置初值 | `.speed_feedback_source = MOTOR_FEED,` |
-| [278](../application/chassis/chassis.c#L278) | 配置初值 | `.outer_loop_type = SPEED_LOOP,` |
-| [279](../application/chassis/chassis.c#L279) | 配置初值 | `.close_loop_type = SPEED_LOOP,` |
-| [280](../application/chassis/chassis.c#L280) | 配置初值 | `},` |
-| [281](../application/chassis/chassis.c#L281) | 配置初值 | `.motor_type = M3508,` |
-| [300](../application/chassis/chassis.c#L300) | 配置初值 | `ChassisPower_Init_Config_s power_config = {` |
-| [301](../application/chassis/chassis.c#L301) | 配置初值 | `.budget=chassis_budget_config,.outer=chassis_outer_loop_config,` |
-| [302](../application/chassis/chassis.c#L302) | 配置初值 | `.transient=ChassisPowerTransientDefaultConfig(),.stage=CHASSIS_POWER_CONTROL_STAGE,` |
-| [303](../application/chassis/chassis.c#L303) | 配置初值 | `.use_supercap=CHASSIS_POWER_SOURCE_MODE==CHASSIS_POWER_SOURCE_SUPERCAP,` |
-| [304](../application/chassis/chassis.c#L304) | 配置初值 | `.meter_enabled=POWER_METER_ENABLE!=0,.buffer_enabled=CHASSIS_BUFFER_POWER_ENABLE!=0,` |
-| [305](../application/chassis/chassis.c#L305) | 配置初值 | `.algorithm = {` |
-| [306](../application/chassis/chassis.c#L306) | 配置初值 | `.safety_factor = CHASSIS_POWER_SAFETY_FACTOR,` |
-| [307](../application/chassis/chassis.c#L307) | 配置初值 | `.small_error_threshold_rpm = 500.0f,` |
-| [308](../application/chassis/chassis.c#L308) | 配置初值 | `.reserved_power_threshold_w = 54.0f,` |
-| [309](../application/chassis/chassis.c#L309) | 配置初值 | `.per_motor_reserved_power_w = 8.0f,` |
-| [310](../application/chassis/chassis.c#L310) | 配置初值 | `.max_current_command = 15000.0f,` |
-| [311](../application/chassis/chassis.c#L311) | 配置初值 | `},` |
-| [317](../application/chassis/chassis.c#L317) | 配置初值 | `const DJIPowerAdapterConfig_s adapter_config={.motors={motor_lf,motor_rf,motor_lb,motor_rb},` |
-| [318](../application/chassis/chassis.c#L318) | 配置初值 | `.count=4,.max_current_command=power_config.algorithm.max_current_command};` |
-| [329](../application/chassis/chassis.c#L329) | 预处理 | `#if REFEREE_ENABLE` |
-| [331](../application/chassis/chassis.c#L331) | 预处理 | `#endif` |
-| [334](../application/chassis/chassis.c#L334) | 配置初值 | `PID_Init_Config_s Buffer_pid_conf = {` |
-| [335](../application/chassis/chassis.c#L335) | 配置初值 | `.Kp = 0.1,` |
-| [336](../application/chassis/chassis.c#L336) | 配置初值 | `.Ki = 0,` |
-| [337](../application/chassis/chassis.c#L337) | 配置初值 | `.Kd = 0,` |
-| [338](../application/chassis/chassis.c#L338) | 配置初值 | `.IntegralLimit = 1000,` |
-| [339](../application/chassis/chassis.c#L339) | 配置初值 | `.Improve = PID_Trapezoid_Intergral &#124; PID_Integral_Limit &#124; PID_Derivative_On_Measurement,` |
-| [340](../application/chassis/chassis.c#L340) | 配置初值 | `.MaxOut = 1000,` |
-| [343](../application/chassis/chassis.c#L343) | 预处理 | `#if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP` |
-| [344](../application/chassis/chassis.c#L344) | 配置初值 | `SuperCap_Init_Config_s cap_conf = {` |
-| [345](../application/chassis/chassis.c#L345) | 配置初值 | `.can_config = {` |
-| [346](../application/chassis/chassis.c#L346) | 配置初值 | `.can_handle = BOARD_SUPERCAP_CAN,` |
-| [347](../application/chassis/chassis.c#L347) | 配置初值 | `.tx_id = SUPERCAP_COMMAND_CAN_ID,` |
-| [348](../application/chassis/chassis.c#L348) | 配置初值 | `.rx_id = SUPERCAP_STATUS_CAN_ID,` |
-| [349](../application/chassis/chassis.c#L349) | 配置初值 | `},` |
-| [350](../application/chassis/chassis.c#L350) | 配置初值 | `.offline_reload_count = 20U,` |
-| [351](../application/chassis/chassis.c#L351) | 配置初值 | `.input_power_feedback_enabled = CHASSIS_BUFFER_POWER_ENABLE != 0,` |
-| [354](../application/chassis/chassis.c#L354) | 预处理 | `#endif` |
-| [355](../application/chassis/chassis.c#L355) | 预处理 | `#if POWER_METER_ENABLE` |
-| [356](../application/chassis/chassis.c#L356) | 配置初值 | `const PowerMeter_Init_Config_s power_meter_config = {` |
-| [357](../application/chassis/chassis.c#L357) | 配置初值 | `.can_config = {` |
-| [358](../application/chassis/chassis.c#L358) | 配置初值 | `.can_handle = BOARD_POWER_METER_CAN,` |
-| [359](../application/chassis/chassis.c#L359) | 配置初值 | `.tx_id = POWER_METER_STATUS_CAN_ID,` |
-| [360](../application/chassis/chassis.c#L360) | 配置初值 | `.rx_id = POWER_METER_STATUS_CAN_ID,` |
-| [361](../application/chassis/chassis.c#L361) | 配置初值 | `},` |
-| [362](../application/chassis/chassis.c#L362) | 配置初值 | `.offline_reload_count = 10U,` |
-| [365](../application/chassis/chassis.c#L365) | 预处理 | `#endif` |
-| [369](../application/chassis/chassis.c#L369) | 预处理 | `#ifdef CHASSIS_BOARD` |
-| [372](../application/chassis/chassis.c#L372) | 配置初值 | `CANComm_Init_Config_s comm_conf = {` |
-| [373](../application/chassis/chassis.c#L373) | 配置初值 | `.can_config = {` |
-| [374](../application/chassis/chassis.c#L374) | 配置初值 | `.can_handle = &hcan2,` |
-| [375](../application/chassis/chassis.c#L375) | 配置初值 | `.tx_id = 0x311,` |
-| [376](../application/chassis/chassis.c#L376) | 配置初值 | `.rx_id = 0x312,` |
-| [377](../application/chassis/chassis.c#L377) | 配置初值 | `},` |
-| [378](../application/chassis/chassis.c#L378) | 配置初值 | `.recv_data_len = sizeof(Chassis_Ctrl_Cmd_s),` |
-| [379](../application/chassis/chassis.c#L379) | 配置初值 | `.send_data_len = sizeof(Chassis_Upload_Data_s),` |
-| [383](../application/chassis/chassis.c#L383) | 预处理 | `#endif                                          // CHASSIS_BOARD` |
-| [385](../application/chassis/chassis.c#L385) | 预处理 | `#ifdef ONE_BOARD // 单板控制整车,则通过pubsub来传递消息` |
-| [388](../application/chassis/chassis.c#L388) | 预处理 | `#endif // ONE_BOARD` |
-| [391](../application/chassis/chassis.c#L391) | 预处理 | `#define LF_ROTATION_LEVER_SUM ((HALF_TRACK_WIDTH + CENTER_GIMBAL_OFFSET_X + HALF_WHEEL_BASE - CENTER_GIMBAL_OFFSET_Y) * DEGREE_2_RAD)` |
-| [392](../application/chassis/chassis.c#L392) | 预处理 | `#define RF_ROTATION_LEVER_SUM ((HALF_TRACK_WIDTH - CENTER_GIMBAL_OFFSET_X + HALF_WHEEL_BASE - CENTER_GIMBAL_OFFSET_Y) * DEGREE_2_RAD)` |
-| [393](../application/chassis/chassis.c#L393) | 预处理 | `#define LB_ROTATION_LEVER_SUM ((HALF_TRACK_WIDTH + CENTER_GIMBAL_OFFSET_X + HALF_WHEEL_BASE + CENTER_GIMBAL_OFFSET_Y) * DEGREE_2_RAD)` |
-| [394](../application/chassis/chassis.c#L394) | 预处理 | `#define RB_ROTATION_LEVER_SUM ((HALF_TRACK_WIDTH - CENTER_GIMBAL_OFFSET_X + HALF_WHEEL_BASE + CENTER_GIMBAL_OFFSET_Y) * DEGREE_2_RAD)` |
-| [414](../application/chassis/chassis.c#L414) | 预处理 | `#if CHASSIS_DRIVE_TYPE == CHASSIS_DRIVE_OMNI_X` |
-| [422](../application/chassis/chassis.c#L422) | 预处理 | `#else` |
-| [424](../application/chassis/chassis.c#L424) | 预处理 | `#endif` |
-| [466](../application/chassis/chassis.c#L466) | 预处理 | `#if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP` |
-| [468](../application/chassis/chassis.c#L468) | 预处理 | `#endif` |
-| [469](../application/chassis/chassis.c#L469) | 预处理 | `#if POWER_METER_ENABLE` |
-| [471](../application/chassis/chassis.c#L471) | 预处理 | `#endif` |
-| [474](../application/chassis/chassis.c#L474) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |
-| [476](../application/chassis/chassis.c#L476) | 预处理 | `#endif` |
-| [483](../application/chassis/chassis.c#L483) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED && POWER_METER_ENABLE` |
-| [488](../application/chassis/chassis.c#L488) | 预处理 | `#if CHASSIS_POWER_CONTROL_STAGE >= 1` |
-| [493](../application/chassis/chassis.c#L493) | 预处理 | `#endif` |
-| [495](../application/chassis/chassis.c#L495) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
-| [504](../application/chassis/chassis.c#L504) | 预处理 | `#if CHASSIS_POWER_CONTROL_STAGE >= 2` |
-| [506](../application/chassis/chassis.c#L506) | 预处理 | `#endif` |
-| [527](../application/chassis/chassis.c#L527) | 预处理 | `#endif` |
-| [528](../application/chassis/chassis.c#L528) | 预处理 | `#endif` |
-| [529](../application/chassis/chassis.c#L529) | 预处理 | `#ifdef CHASSIS_BOARD` |
-| [533](../application/chassis/chassis.c#L533) | 预处理 | `#else` |
-| [544](../application/chassis/chassis.c#L544) | 预处理 | `#endif` |
-| [545](../application/chassis/chassis.c#L545) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
-| [549](../application/chassis/chassis.c#L549) | 预处理 | `#endif` |
-| [571](../application/chassis/chassis.c#L571) | 预处理 | `#ifdef ONE_BOARD` |
-| [573](../application/chassis/chassis.c#L573) | 预处理 | `#endif` |
-| [574](../application/chassis/chassis.c#L574) | 预处理 | `#ifdef CHASSIS_BOARD` |
-| [588](../application/chassis/chassis.c#L588) | 预处理 | `#endif // CHASSIS_BOARD` |
-| [592](../application/chassis/chassis.c#L592) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
-| [596](../application/chassis/chassis.c#L596) | 预处理 | `#else` |
-| [598](../application/chassis/chassis.c#L598) | 预处理 | `#endif` |
-| [644](../application/chassis/chassis.c#L644) | 预处理 | `#ifdef ONE_BOARD` |
-| [646](../application/chassis/chassis.c#L646) | 预处理 | `#endif` |
-| [647](../application/chassis/chassis.c#L647) | 预处理 | `#ifdef CHASSIS_BOARD` |
-| [652](../application/chassis/chassis.c#L652) | 预处理 | `#endif // CHASSIS_BOARD` |
+| [107](../application/chassis/chassis.c#L107) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
+| [111](../application/chassis/chassis.c#L111) | 预处理 | `#endif` |
+| [112](../application/chassis/chassis.c#L112) | 配置初值 | `static ChassisSpinConfig_s chassis_spin_config = {` |
+| [113](../application/chassis/chassis.c#L113) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE` |
+| [113](../application/chassis/chassis.c#L113) | 配置初值 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE` |
+| [114](../application/chassis/chassis.c#L114) | 配置初值 | `.fixed_wz = CHASSIS_SPIN_SINE_CENTER_WZ,` |
+| [115](../application/chassis/chassis.c#L115) | 配置初值 | `.min_wz = CHASSIS_SPIN_SINE_MIN_WZ,` |
+| [116](../application/chassis/chassis.c#L116) | 预处理 | `#else` |
+| [116](../application/chassis/chassis.c#L116) | 配置初值 | `#else` |
+| [117](../application/chassis/chassis.c#L117) | 配置初值 | `.fixed_wz = CHASSIS_SPIN_FIXED_WZ,` |
+| [118](../application/chassis/chassis.c#L118) | 配置初值 | `.min_wz = CHASSIS_SPIN_MIN_WZ,` |
+| [119](../application/chassis/chassis.c#L119) | 预处理 | `#endif` |
+| [119](../application/chassis/chassis.c#L119) | 配置初值 | `#endif` |
+| [120](../application/chassis/chassis.c#L120) | 配置初值 | `.max_wz = CHASSIS_SPIN_MAX_WZ,` |
+| [121](../application/chassis/chassis.c#L121) | 配置初值 | `.gain_wz_per_w_s = CHASSIS_SPIN_POWER_GAIN,` |
+| [122](../application/chassis/chassis.c#L122) | 配置初值 | `.rise_wz_per_s = CHASSIS_SPIN_RISE_RATE,` |
+| [123](../application/chassis/chassis.c#L123) | 配置初值 | `.fall_wz_per_s = CHASSIS_SPIN_FALL_RATE,` |
+| [124](../application/chassis/chassis.c#L124) | 配置初值 | `.power_lpf_tau_s = CHASSIS_SPIN_POWER_LPF_TAU_S,` |
+| [125](../application/chassis/chassis.c#L125) | 配置初值 | `.power_deadband_w = CHASSIS_SPIN_POWER_DEADBAND_W,` |
+| [126](../application/chassis/chassis.c#L126) | 配置初值 | `.settle_time_s = CHASSIS_SPIN_SETTLE_TIME_S,` |
+| [127](../application/chassis/chassis.c#L127) | 配置初值 | `.budget_drop_reset_w = CHASSIS_SPIN_BUDGET_DROP_RESET_W,` |
+| [128](../application/chassis/chassis.c#L128) | 配置初值 | `.sine_amplitude_wz = CHASSIS_SPIN_SINE_AMPLITUDE_WZ,` |
+| [129](../application/chassis/chassis.c#L129) | 配置初值 | `.sine_period_s = CHASSIS_SPIN_SINE_PERIOD_S,` |
+| [130](../application/chassis/chassis.c#L130) | 配置初值 | `.sine_ramp_s = CHASSIS_SPIN_SINE_RAMP_S,` |
+| [131](../application/chassis/chassis.c#L131) | 配置初值 | `.sine_rise_wz_per_s = CHASSIS_SPIN_SINE_RISE_RATE,` |
+| [132](../application/chassis/chassis.c#L132) | 配置初值 | `.sine_fall_wz_per_s = CHASSIS_SPIN_SINE_FALL_RATE,` |
+| [133](../application/chassis/chassis.c#L133) | 配置初值 | `.sine_direction = CHASSIS_SPIN_SINE_DIRECTION,` |
+| [134](../application/chassis/chassis.c#L134) | 配置初值 | `.extension_enabled=CHASSIS_SPIN_EXTENSION_ENABLE!=0,` |
+| [135](../application/chassis/chassis.c#L135) | 配置初值 | `.hard_wz=CHASSIS_SPIN_HARD_WZ,` |
+| [136](../application/chassis/chassis.c#L136) | 配置初值 | `.body_hard_rps=CHASSIS_SPIN_BODY_HARD_RPS,` |
+| [137](../application/chassis/chassis.c#L137) | 配置初值 | `.wheel_hard_rpm=CHASSIS_SPIN_WHEEL_HARD_RPM,` |
+| [138](../application/chassis/chassis.c#L138) | 配置初值 | `.extension_rise_wz_per_s=CHASSIS_SPIN_EXTENSION_RISE_RATE,` |
+| [141](../application/chassis/chassis.c#L141) | 配置初值 | `static ChassisPowerBudgetConfig_s chassis_budget_config = {` |
+| [142](../application/chassis/chassis.c#L142) | 配置初值 | `.empty_energy_ratio = 0.10f,` |
+| [143](../application/chassis/chassis.c#L143) | 配置初值 | `.full_energy_ratio = 0.30f,` |
+| [144](../application/chassis/chassis.c#L144) | 配置初值 | `.max_boost_w = 100.0f,` |
+| [145](../application/chassis/chassis.c#L145) | 配置初值 | `.rise_rate_w_per_s = 200.0f,` |
+| [146](../application/chassis/chassis.c#L146) | 配置初值 | `.demand_margin_w = CHASSIS_POWER_DEMAND_MARGIN_W,` |
+| [147](../application/chassis/chassis.c#L147) | 配置初值 | `.buffer = {` |
+| [148](../application/chassis/chassis.c#L148) | 配置初值 | `.max_energy_j = CHASSIS_BUFFER_MAX_ENERGY_J,` |
+| [149](../application/chassis/chassis.c#L149) | 配置初值 | `.recovery_enter_j = CHASSIS_BUFFER_RECOVERY_ENTER_J,` |
+| [150](../application/chassis/chassis.c#L150) | 配置初值 | `.recovery_exit_j = CHASSIS_BUFFER_RECOVERY_EXIT_J,` |
+| [151](../application/chassis/chassis.c#L151) | 配置初值 | `.hard_floor_j = CHASSIS_BUFFER_HARD_FLOOR_J,` |
+| [152](../application/chassis/chassis.c#L152) | 配置初值 | `.prediction_window_s = CHASSIS_BUFFER_PREDICTION_WINDOW_S,` |
+| [153](../application/chassis/chassis.c#L153) | 配置初值 | `.guard_window_s = CHASSIS_BUFFER_GUARD_WINDOW_S,` |
+| [154](../application/chassis/chassis.c#L154) | 配置初值 | `.settlement_delay_s = CHASSIS_BUFFER_SETTLEMENT_DELAY_S,` |
+| [155](../application/chassis/chassis.c#L155) | 配置初值 | `.energy_margin_j = CHASSIS_BUFFER_ENERGY_MARGIN_J,` |
+| [156](../application/chassis/chassis.c#L156) | 配置初值 | `.power_margin_w = CHASSIS_BUFFER_POWER_MARGIN_W,` |
+| [157](../application/chassis/chassis.c#L157) | 配置初值 | `.max_boost_w = CHASSIS_BUFFER_BOOST_MAX_W,` |
+| [158](../application/chassis/chassis.c#L158) | 配置初值 | `.recovery_power_w = CHASSIS_BUFFER_RECOVERY_POWER_W,` |
+| [159](../application/chassis/chassis.c#L159) | 配置初值 | `.recovery_target_time_s = CHASSIS_BUFFER_RECOVERY_TARGET_TIME_S,` |
+| [160](../application/chassis/chassis.c#L160) | 配置初值 | `.observer_max_step_s = CHASSIS_BUFFER_OBSERVER_MAX_STEP_S,` |
+| [161](../application/chassis/chassis.c#L161) | 配置初值 | `.recovery_hold_s = CHASSIS_BUFFER_RECOVERY_HOLD_S,` |
+| [162](../application/chassis/chassis.c#L162) | 配置初值 | `.rise_rate_w_per_s = CHASSIS_BUFFER_RISE_RATE_W_PER_S,` |
+| [163](../application/chassis/chassis.c#L163) | 配置初值 | `.safety_factor = CHASSIS_POWER_SAFETY_FACTOR,` |
+| [164](../application/chassis/chassis.c#L164) | 配置初值 | `.correction_rise_j_per_s = CHASSIS_BUFFER_CORRECTION_RISE_J_PER_S,` |
+| [165](../application/chassis/chassis.c#L165) | 配置初值 | `},` |
+| [169](../application/chassis/chassis.c#L169) | 配置初值 | `static ChassisPowerOuterLoopConfig_s chassis_outer_loop_config = {` |
+| [170](../application/chassis/chassis.c#L170) | 配置初值 | `.kp = 1.0f, // 比例增益,误差 = 目标功率 - 实测功率(W),输出为预算修正量(W)` |
+| [171](../application/chassis/chassis.c#L171) | 配置初值 | `.ki = 1.5f, // 积分增益,积分限幅为[-基准预算, max_positive_correction_w]` |
+| [172](../application/chassis/chassis.c#L172) | 配置初值 | `.measurement_lpf_tau_s = 0.030f, // 功率计读数一阶低通时间常数(s),抑制采样噪声` |
+| [173](../application/chassis/chassis.c#L173) | 配置初值 | `.activation_margin_w = 5.0f, // 介入阈值(W):需求或实测功率距目标不到此值时才进入ACTIVE` |
+| [174](../application/chassis/chassis.c#L174) | 配置初值 | `.error_deadband_w = 0.3f, // 误差死区(W):&#124;误差&#124;不超过此值时按0处理,停止积分` |
+| [175](../application/chassis/chassis.c#L175) | 配置初值 | `.max_positive_correction_w = 8.0f, // 修正量上限(W):最多只上调8W;下限为-基准预算,即最狠可压到0` |
+| [176](../application/chassis/chassis.c#L176) | 配置初值 | `.positive_slew_rate_w_per_s = 60.0f, // 修正量上升/回零速率(W/s);下调不限速,立即生效` |
+| [177](../application/chassis/chassis.c#L177) | 配置初值 | `.budget_drop_reset_w = 1.0f, // 基准预算单周期跌落超过此值(W)时,清零正向积分与修正量` |
+| [178](../application/chassis/chassis.c#L178) | 配置初值 | `.antiwindup_gain_per_s = 10,` |
+| [179](../application/chassis/chassis.c#L179) | 配置初值 | `.low_demand_delay_s = .5f,` |
+| [180](../application/chassis/chassis.c#L180) | 配置初值 | `.low_demand_decay_w_per_s = 1,` |
+| [183](../application/chassis/chassis.c#L183) | 配置初值 | `static const MotorPowerModelConfig_s m3508_power_model = {` |
+| [184](../application/chassis/chassis.c#L184) | 配置初值 | `.k0 = 1.3123816,` |
+| [185](../application/chassis/chassis.c#L185) | 配置初值 | `.k1 = -0.25836727,` |
+| [186](../application/chassis/chassis.c#L186) | 配置初值 | `.k2 = 0.0007424524,` |
+| [187](../application/chassis/chassis.c#L187) | 配置初值 | `.k3 = 0.0024271158,` |
+| [188](../application/chassis/chassis.c#L188) | 配置初值 | `.k4 = 0.081198552,` |
+| [189](../application/chassis/chassis.c#L189) | 配置初值 | `.k5 = 3.890596e-08,` |
+| [190](../application/chassis/chassis.c#L190) | 配置初值 | `.current_conversion = 1000.0f,// 电流单位转换,功率模型使用A,电机模块使用mA` |
+| [226](../application/chassis/chassis.c#L226) | 配置初值 | `ChassisPowerOuterLoopConfig_s outer = {` |
+| [227](../application/chassis/chassis.c#L227) | 配置初值 | `.kp=v[0], .ki=v[1], .measurement_lpf_tau_s=v[2],` |
+| [228](../application/chassis/chassis.c#L228) | 配置初值 | `.activation_margin_w=v[3], .error_deadband_w=v[4],` |
+| [229](../application/chassis/chassis.c#L229) | 配置初值 | `.max_positive_correction_w=v[5], .positive_slew_rate_w_per_s=v[6],` |
+| [230](../application/chassis/chassis.c#L230) | 配置初值 | `.budget_drop_reset_w=v[7], .antiwindup_gain_per_s=v[8],` |
+| [231](../application/chassis/chassis.c#L231) | 配置初值 | `.low_demand_delay_s=v[9], .low_demand_decay_w_per_s=v[10]};` |
+| [257](../application/chassis/chassis.c#L257) | 配置初值 | `ChassisSpinConfig_s spin = {` |
+| [258](../application/chassis/chassis.c#L258) | 配置初值 | `.fixed_wz=v[0], .min_wz=v[1], .max_wz=v[2], .gain_wz_per_w_s=v[3],` |
+| [259](../application/chassis/chassis.c#L259) | 配置初值 | `.rise_wz_per_s=v[4], .fall_wz_per_s=v[5], .power_lpf_tau_s=v[6],` |
+| [260](../application/chassis/chassis.c#L260) | 配置初值 | `.power_deadband_w=v[7], .settle_time_s=v[8], .budget_drop_reset_w=v[9],` |
+| [261](../application/chassis/chassis.c#L261) | 配置初值 | `.sine_amplitude_wz=v[10], .sine_period_s=v[11], .sine_ramp_s=v[12],` |
+| [262](../application/chassis/chassis.c#L262) | 配置初值 | `.sine_rise_wz_per_s=v[13], .sine_fall_wz_per_s=v[14],` |
+| [263](../application/chassis/chassis.c#L263) | 配置初值 | `.sine_direction=(int8_t)v[15]};` |
+| [272](../application/chassis/chassis.c#L272) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
+| [277](../application/chassis/chassis.c#L277) | 预处理 | `#endif` |
+| [289](../application/chassis/chassis.c#L289) | 配置初值 | `Motor_Init_Config_s chassis_motor_config = {` |
+| [290](../application/chassis/chassis.c#L290) | 配置初值 | `.can_init_config.can_handle = &hcan1,` |
+| [291](../application/chassis/chassis.c#L291) | 配置初值 | `.controller_param_init_config = {` |
+| [292](../application/chassis/chassis.c#L292) | 配置初值 | `.speed_PID = {` |
+| [293](../application/chassis/chassis.c#L293) | 配置初值 | `.Kp = 0.75f, // A-board vehicle baseline, error in degrees/s` |
+| [294](../application/chassis/chassis.c#L294) | 配置初值 | `.Ki = 0,   // 0` |
+| [295](../application/chassis/chassis.c#L295) | 配置初值 | `.Kd = 0,   // 0` |
+| [296](../application/chassis/chassis.c#L296) | 配置初值 | `.IntegralLimit = 3000,` |
+| [297](../application/chassis/chassis.c#L297) | 配置初值 | `.Improve = PID_Trapezoid_Intergral &#124; PID_Integral_Limit &#124; PID_Derivative_On_Measurement,` |
+| [298](../application/chassis/chassis.c#L298) | 配置初值 | `.MaxOut = 15000,` |
+| [299](../application/chassis/chassis.c#L299) | 配置初值 | `.Output_LPF_RC = 0.3,` |
+| [300](../application/chassis/chassis.c#L300) | 配置初值 | `},` |
+| [301](../application/chassis/chassis.c#L301) | 配置初值 | `},` |
+| [302](../application/chassis/chassis.c#L302) | 配置初值 | `.controller_setting_init_config = {` |
+| [303](../application/chassis/chassis.c#L303) | 配置初值 | `.angle_feedback_source = MOTOR_FEED,` |
+| [304](../application/chassis/chassis.c#L304) | 配置初值 | `.speed_feedback_source = MOTOR_FEED,` |
+| [305](../application/chassis/chassis.c#L305) | 配置初值 | `.outer_loop_type = SPEED_LOOP,` |
+| [306](../application/chassis/chassis.c#L306) | 配置初值 | `.close_loop_type = SPEED_LOOP,` |
+| [307](../application/chassis/chassis.c#L307) | 配置初值 | `},` |
+| [308](../application/chassis/chassis.c#L308) | 配置初值 | `.motor_type = M3508,` |
+| [327](../application/chassis/chassis.c#L327) | 配置初值 | `ChassisPower_Init_Config_s power_config = {` |
+| [328](../application/chassis/chassis.c#L328) | 配置初值 | `.budget=chassis_budget_config,.outer=chassis_outer_loop_config,` |
+| [329](../application/chassis/chassis.c#L329) | 配置初值 | `.transient=ChassisPowerTransientDefaultConfig(),.stage=CHASSIS_POWER_CONTROL_STAGE,` |
+| [330](../application/chassis/chassis.c#L330) | 配置初值 | `.use_supercap=CHASSIS_POWER_SOURCE_MODE==CHASSIS_POWER_SOURCE_SUPERCAP,` |
+| [331](../application/chassis/chassis.c#L331) | 配置初值 | `.meter_enabled=POWER_METER_ENABLE!=0,.buffer_enabled=CHASSIS_BUFFER_POWER_ENABLE!=0,` |
+| [332](../application/chassis/chassis.c#L332) | 配置初值 | `.algorithm = {` |
+| [333](../application/chassis/chassis.c#L333) | 配置初值 | `.safety_factor = CHASSIS_POWER_SAFETY_FACTOR,` |
+| [334](../application/chassis/chassis.c#L334) | 配置初值 | `.small_error_threshold_rpm = 500.0f,` |
+| [335](../application/chassis/chassis.c#L335) | 配置初值 | `.reserved_power_threshold_w = 54.0f,` |
+| [336](../application/chassis/chassis.c#L336) | 配置初值 | `.per_motor_reserved_power_w = 8.0f,` |
+| [337](../application/chassis/chassis.c#L337) | 配置初值 | `.max_current_command = 15000.0f,` |
+| [338](../application/chassis/chassis.c#L338) | 配置初值 | `},` |
+| [344](../application/chassis/chassis.c#L344) | 配置初值 | `const DJIPowerAdapterConfig_s adapter_config={.motors={motor_lf,motor_rf,motor_lb,motor_rb},` |
+| [345](../application/chassis/chassis.c#L345) | 配置初值 | `.count=4,.max_current_command=power_config.algorithm.max_current_command};` |
+| [356](../application/chassis/chassis.c#L356) | 预处理 | `#if REFEREE_ENABLE` |
+| [358](../application/chassis/chassis.c#L358) | 预处理 | `#endif` |
+| [360](../application/chassis/chassis.c#L360) | 预处理 | `#if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP` |
+| [361](../application/chassis/chassis.c#L361) | 配置初值 | `SuperCap_Init_Config_s cap_conf = {` |
+| [362](../application/chassis/chassis.c#L362) | 配置初值 | `.can_config = {` |
+| [363](../application/chassis/chassis.c#L363) | 配置初值 | `.can_handle = BOARD_SUPERCAP_CAN,` |
+| [364](../application/chassis/chassis.c#L364) | 配置初值 | `.tx_id = SUPERCAP_COMMAND_CAN_ID,` |
+| [365](../application/chassis/chassis.c#L365) | 配置初值 | `.rx_id = SUPERCAP_STATUS_CAN_ID,` |
+| [366](../application/chassis/chassis.c#L366) | 配置初值 | `},` |
+| [367](../application/chassis/chassis.c#L367) | 配置初值 | `.offline_reload_count = 20U,` |
+| [368](../application/chassis/chassis.c#L368) | 配置初值 | `.input_power_feedback_enabled = CHASSIS_BUFFER_POWER_ENABLE != 0,` |
+| [371](../application/chassis/chassis.c#L371) | 预处理 | `#endif` |
+| [372](../application/chassis/chassis.c#L372) | 预处理 | `#if POWER_METER_ENABLE` |
+| [373](../application/chassis/chassis.c#L373) | 配置初值 | `const PowerMeter_Init_Config_s power_meter_config = {` |
+| [374](../application/chassis/chassis.c#L374) | 配置初值 | `.can_config = {` |
+| [375](../application/chassis/chassis.c#L375) | 配置初值 | `.can_handle = BOARD_POWER_METER_CAN,` |
+| [376](../application/chassis/chassis.c#L376) | 配置初值 | `.tx_id = POWER_METER_STATUS_CAN_ID,` |
+| [377](../application/chassis/chassis.c#L377) | 配置初值 | `.rx_id = POWER_METER_STATUS_CAN_ID,` |
+| [378](../application/chassis/chassis.c#L378) | 配置初值 | `},` |
+| [379](../application/chassis/chassis.c#L379) | 配置初值 | `.offline_reload_count = 10U,` |
+| [382](../application/chassis/chassis.c#L382) | 预处理 | `#endif` |
+| [386](../application/chassis/chassis.c#L386) | 预处理 | `#ifdef CHASSIS_BOARD` |
+| [389](../application/chassis/chassis.c#L389) | 配置初值 | `CANComm_Init_Config_s comm_conf = {` |
+| [390](../application/chassis/chassis.c#L390) | 配置初值 | `.can_config = {` |
+| [391](../application/chassis/chassis.c#L391) | 配置初值 | `.can_handle = &hcan2,` |
+| [392](../application/chassis/chassis.c#L392) | 配置初值 | `.tx_id = 0x311,` |
+| [393](../application/chassis/chassis.c#L393) | 配置初值 | `.rx_id = 0x312,` |
+| [394](../application/chassis/chassis.c#L394) | 配置初值 | `},` |
+| [395](../application/chassis/chassis.c#L395) | 配置初值 | `.recv_data_len = sizeof(Chassis_Ctrl_Cmd_s),` |
+| [396](../application/chassis/chassis.c#L396) | 配置初值 | `.send_data_len = sizeof(Chassis_Upload_Data_s),` |
+| [400](../application/chassis/chassis.c#L400) | 预处理 | `#endif                                          // CHASSIS_BOARD` |
+| [402](../application/chassis/chassis.c#L402) | 预处理 | `#ifdef ONE_BOARD // 单板控制整车,则通过pubsub来传递消息` |
+| [405](../application/chassis/chassis.c#L405) | 预处理 | `#endif // ONE_BOARD` |
+| [408](../application/chassis/chassis.c#L408) | 预处理 | `#define LF_ROTATION_LEVER_SUM ((HALF_TRACK_WIDTH + CENTER_GIMBAL_OFFSET_X + HALF_WHEEL_BASE - CENTER_GIMBAL_OFFSET_Y) * DEGREE_2_RAD)` |
+| [409](../application/chassis/chassis.c#L409) | 预处理 | `#define RF_ROTATION_LEVER_SUM ((HALF_TRACK_WIDTH - CENTER_GIMBAL_OFFSET_X + HALF_WHEEL_BASE - CENTER_GIMBAL_OFFSET_Y) * DEGREE_2_RAD)` |
+| [410](../application/chassis/chassis.c#L410) | 预处理 | `#define LB_ROTATION_LEVER_SUM ((HALF_TRACK_WIDTH + CENTER_GIMBAL_OFFSET_X + HALF_WHEEL_BASE + CENTER_GIMBAL_OFFSET_Y) * DEGREE_2_RAD)` |
+| [411](../application/chassis/chassis.c#L411) | 预处理 | `#define RB_ROTATION_LEVER_SUM ((HALF_TRACK_WIDTH - CENTER_GIMBAL_OFFSET_X + HALF_WHEEL_BASE + CENTER_GIMBAL_OFFSET_Y) * DEGREE_2_RAD)` |
+| [431](../application/chassis/chassis.c#L431) | 预处理 | `#if CHASSIS_DRIVE_TYPE == CHASSIS_DRIVE_OMNI_X` |
+| [439](../application/chassis/chassis.c#L439) | 预处理 | `#else` |
+| [441](../application/chassis/chassis.c#L441) | 预处理 | `#endif` |
+| [475](../application/chassis/chassis.c#L475) | 配置初值 | `static const ChassisVelocityConfig_s velocity_config={` |
+| [476](../application/chassis/chassis.c#L476) | 配置初值 | `.omni_x=CHASSIS_DRIVE_TYPE==CHASSIS_DRIVE_OMNI_X,` |
+| [477](../application/chassis/chassis.c#L477) | 配置初值 | `.wheel_radius_m=RADIUS_WHEEL*.001f, .reduction_ratio=REDUCTION_RATIO_WHEEL,` |
+| [478](../application/chassis/chassis.c#L478) | 配置初值 | `.wheel_base_m=WHEEL_BASE*.001f, .track_width_m=TRACK_WIDTH*.001f,` |
+| [479](../application/chassis/chassis.c#L479) | 配置初值 | `.direction={OMNI_X_LF_DIRECTION,OMNI_X_RF_DIRECTION,OMNI_X_LB_DIRECTION,OMNI_X_RB_DIRECTION}};` |
+| [481](../application/chassis/chassis.c#L481) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |
+| [520](../application/chassis/chassis.c#L520) | 预处理 | `#endif` |
+| [560](../application/chassis/chassis.c#L560) | 预处理 | `#if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP` |
+| [562](../application/chassis/chassis.c#L562) | 预处理 | `#endif` |
+| [563](../application/chassis/chassis.c#L563) | 预处理 | `#if POWER_METER_ENABLE` |
+| [565](../application/chassis/chassis.c#L565) | 预处理 | `#endif` |
+| [568](../application/chassis/chassis.c#L568) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |
+| [582](../application/chassis/chassis.c#L582) | 预处理 | `#endif` |
+| [589](../application/chassis/chassis.c#L589) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED && POWER_METER_ENABLE` |
+| [594](../application/chassis/chassis.c#L594) | 预处理 | `#if CHASSIS_POWER_CONTROL_STAGE >= 1` |
+| [599](../application/chassis/chassis.c#L599) | 预处理 | `#endif` |
+| [601](../application/chassis/chassis.c#L601) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
+| [612](../application/chassis/chassis.c#L612) | 预处理 | `#if CHASSIS_POWER_CONTROL_STAGE >= 2` |
+| [615](../application/chassis/chassis.c#L615) | 预处理 | `#endif` |
+| [641](../application/chassis/chassis.c#L641) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |
+| [654](../application/chassis/chassis.c#L654) | 预处理 | `#endif` |
+| [655](../application/chassis/chassis.c#L655) | 预处理 | `#endif` |
+| [656](../application/chassis/chassis.c#L656) | 预处理 | `#endif` |
+| [657](../application/chassis/chassis.c#L657) | 预处理 | `#ifdef CHASSIS_BOARD` |
+| [661](../application/chassis/chassis.c#L661) | 预处理 | `#else` |
+| [672](../application/chassis/chassis.c#L672) | 预处理 | `#endif` |
+| [673](../application/chassis/chassis.c#L673) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
+| [677](../application/chassis/chassis.c#L677) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |
+| [681](../application/chassis/chassis.c#L681) | 预处理 | `#endif` |
+| [682](../application/chassis/chassis.c#L682) | 预处理 | `#endif` |
+| [704](../application/chassis/chassis.c#L704) | 预处理 | `#ifdef ONE_BOARD` |
+| [706](../application/chassis/chassis.c#L706) | 预处理 | `#endif` |
+| [707](../application/chassis/chassis.c#L707) | 预处理 | `#ifdef CHASSIS_BOARD` |
+| [721](../application/chassis/chassis.c#L721) | 预处理 | `#endif // CHASSIS_BOARD` |
+| [727](../application/chassis/chassis.c#L727) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
+| [731](../application/chassis/chassis.c#L731) | 预处理 | `#else` |
+| [733](../application/chassis/chassis.c#L733) | 预处理 | `#endif` |
+| [775](../application/chassis/chassis.c#L775) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
+| [777](../application/chassis/chassis.c#L777) | 预处理 | `#endif` |
+| [797](../application/chassis/chassis.c#L797) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
+| [807](../application/chassis/chassis.c#L807) | 预处理 | `#endif` |
+| [814](../application/chassis/chassis.c#L814) | 预处理 | `#ifdef ONE_BOARD` |
+| [816](../application/chassis/chassis.c#L816) | 预处理 | `#endif` |
+| [817](../application/chassis/chassis.c#L817) | 预处理 | `#ifdef CHASSIS_BOARD` |
+| [822](../application/chassis/chassis.c#L822) | 预处理 | `#endif // CHASSIS_BOARD` |
 
 ## application/chassis/chassis.h
 
@@ -286,7 +491,47 @@
 | --- | --- | --- |
 | [1](../application/chassis/chassis.h#L1) | 预处理 | `#ifndef CHASSIS_H` |
 | [2](../application/chassis/chassis.h#L2) | 预处理 | `#define CHASSIS_H` |
-| [31](../application/chassis/chassis.h#L31) | 预处理 | `#endif // CHASSIS_H` |
+| [51](../application/chassis/chassis.h#L51) | 预处理 | `#endif // CHASSIS_H` |
+
+## application/chassis/chassis_force_app.c
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [19](../application/chassis/chassis_force_app.c#L19) | 预处理 | `#ifdef CHASSIS_BOARD` |
+| [22](../application/chassis/chassis_force_app.c#L22) | 预处理 | `#else` |
+| [25](../application/chassis/chassis_force_app.c#L25) | 预处理 | `#endif` |
+| [53](../application/chassis/chassis_force_app.c#L53) | 配置初值 | `Motor_Init_Config_s m={.can_init_config.can_handle=&hcan1,.motor_type=M3508};` |
+| [63](../application/chassis/chassis_force_app.c#L63) | 预处理 | `#if REFEREE_ENABLE` |
+| [65](../application/chassis/chassis_force_app.c#L65) | 预处理 | `#else` |
+| [67](../application/chassis/chassis_force_app.c#L67) | 预处理 | `#endif` |
+| [68](../application/chassis/chassis_force_app.c#L68) | 预处理 | `#if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP` |
+| [69](../application/chassis/chassis_force_app.c#L69) | 配置初值 | `SuperCap_Init_Config_s cap={.can_config={.can_handle=BOARD_SUPERCAP_CAN,.tx_id=SUPERCAP_COMMAND_CAN_ID,` |
+| [70](../application/chassis/chassis_force_app.c#L70) | 配置初值 | `.rx_id=SUPERCAP_STATUS_CAN_ID},.offline_reload_count=20,.input_power_feedback_enabled=true};` |
+| [72](../application/chassis/chassis_force_app.c#L72) | 预处理 | `#endif` |
+| [73](../application/chassis/chassis_force_app.c#L73) | 预处理 | `#if POWER_METER_ENABLE` |
+| [74](../application/chassis/chassis_force_app.c#L74) | 配置初值 | `PowerMeter_Init_Config_s meter={.can_config={.can_handle=BOARD_POWER_METER_CAN,.tx_id=POWER_METER_STATUS_CAN_ID,` |
+| [75](../application/chassis/chassis_force_app.c#L75) | 配置初值 | `.rx_id=POWER_METER_STATUS_CAN_ID},.offline_reload_count=10};` |
+| [77](../application/chassis/chassis_force_app.c#L77) | 预处理 | `#endif` |
+| [78](../application/chassis/chassis_force_app.c#L78) | 预处理 | `#ifdef CHASSIS_BOARD` |
+| [79](../application/chassis/chassis_force_app.c#L79) | 配置初值 | `CANComm_Init_Config_s comm={.can_config={.can_handle=&hcan2,.tx_id=0x311,.rx_id=0x312},` |
+| [80](../application/chassis/chassis_force_app.c#L80) | 配置初值 | `.recv_data_len=44,.send_data_len=sizeof(Chassis_Upload_Data_s),.daemon_count=10};` |
+| [82](../application/chassis/chassis_force_app.c#L82) | 预处理 | `#else` |
+| [85](../application/chassis/chassis_force_app.c#L85) | 预处理 | `#endif` |
+| [94](../application/chassis/chassis_force_app.c#L94) | 预处理 | `#ifdef CHASSIS_BOARD` |
+| [97](../application/chassis/chassis_force_app.c#L97) | 预处理 | `#else` |
+| [101](../application/chassis/chassis_force_app.c#L101) | 预处理 | `#endif` |
+| [108](../application/chassis/chassis_force_app.c#L108) | 预处理 | `#ifdef CHASSIS_BOARD` |
+| [110](../application/chassis/chassis_force_app.c#L110) | 预处理 | `#else` |
+| [112](../application/chassis/chassis_force_app.c#L112) | 预处理 | `#endif` |
+| [116](../application/chassis/chassis_force_app.c#L116) | 预处理 | `#ifdef CHASSIS_BOARD` |
+| [123](../application/chassis/chassis_force_app.c#L123) | 预处理 | `#endif` |
+| [137](../application/chassis/chassis_force_app.c#L137) | 预处理 | `#if POWER_METER_ENABLE` |
+| [139](../application/chassis/chassis_force_app.c#L139) | 预处理 | `#endif` |
+| [140](../application/chassis/chassis_force_app.c#L140) | 预处理 | `#if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP` |
+| [142](../application/chassis/chassis_force_app.c#L142) | 预处理 | `#endif` |
+| [177](../application/chassis/chassis_force_app.c#L177) | 预处理 | `#ifdef CHASSIS_BOARD` |
+| [180](../application/chassis/chassis_force_app.c#L180) | 预处理 | `#else` |
+| [182](../application/chassis/chassis_force_app.c#L182) | 预处理 | `#endif` |
 
 ## application/chassis/chassis_motion.h
 
@@ -303,36 +548,70 @@
 
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
-| [23](../application/cmd/robot_cmd.c#L23) | 预处理 | `#define YAW_ALIGN_ANGLE (YAW_CHASSIS_ALIGN_ECD * ECD_ANGLE_COEF_DJI) // 对齐时的角度,0-360` |
-| [24](../application/cmd/robot_cmd.c#L24) | 预处理 | `#define PTICH_HORIZON_ANGLE (PITCH_HORIZON_ECD * ECD_ANGLE_COEF_DJI) // pitch水平时电机的角度,0-360` |
-| [25](../application/cmd/robot_cmd.c#L25) | 预处理 | `#define YAW_MAX_TRACK_ERROR 60.0f` |
-| [28](../application/cmd/robot_cmd.c#L28) | 预处理 | `#ifdef GIMBAL_BOARD // 对双板的兼容,条件编译` |
-| [32](../application/cmd/robot_cmd.c#L32) | 预处理 | `#endif` |
-| [33](../application/cmd/robot_cmd.c#L33) | 预处理 | `#ifdef ONE_BOARD` |
-| [36](../application/cmd/robot_cmd.c#L36) | 预处理 | `#endif                                 // ONE_BOARD` |
-| [72](../application/cmd/robot_cmd.c#L72) | 配置初值 | `HeatControl_Init_Config_s heat_config = {` |
-| [73](../application/cmd/robot_cmd.c#L73) | 配置初值 | `.bullet_heat = HEAT_CONTROL_BULLET_HEAT,` |
-| [74](../application/cmd/robot_cmd.c#L74) | 配置初值 | `.max_shoot_rate = HEAT_CONTROL_DEFAULT_MAX_RATE,` |
-| [78](../application/cmd/robot_cmd.c#L78) | 预处理 | `#ifdef ONE_BOARD // 双板兼容` |
-| [81](../application/cmd/robot_cmd.c#L81) | 预处理 | `#endif // ONE_BOARD` |
-| [82](../application/cmd/robot_cmd.c#L82) | 预处理 | `#ifdef GIMBAL_BOARD` |
-| [83](../application/cmd/robot_cmd.c#L83) | 配置初值 | `CANComm_Init_Config_s comm_conf = {` |
-| [84](../application/cmd/robot_cmd.c#L84) | 配置初值 | `.can_config = {` |
-| [85](../application/cmd/robot_cmd.c#L85) | 配置初值 | `.can_handle = &hcan2,` |
-| [86](../application/cmd/robot_cmd.c#L86) | 配置初值 | `.tx_id = 0x312,` |
-| [87](../application/cmd/robot_cmd.c#L87) | 配置初值 | `.rx_id = 0x311,` |
-| [88](../application/cmd/robot_cmd.c#L88) | 配置初值 | `},` |
-| [89](../application/cmd/robot_cmd.c#L89) | 配置初值 | `.recv_data_len = sizeof(Chassis_Upload_Data_s),` |
-| [90](../application/cmd/robot_cmd.c#L90) | 配置初值 | `.send_data_len = sizeof(Chassis_Ctrl_Cmd_s),` |
-| [95](../application/cmd/robot_cmd.c#L95) | 预处理 | `#endif // GIMBAL_BOARD` |
-| [446](../application/cmd/robot_cmd.c#L446) | 预处理 | `#ifdef ONE_BOARD` |
-| [448](../application/cmd/robot_cmd.c#L448) | 预处理 | `#endif // ONE_BOARD` |
-| [449](../application/cmd/robot_cmd.c#L449) | 预处理 | `#ifdef GIMBAL_BOARD` |
-| [460](../application/cmd/robot_cmd.c#L460) | 预处理 | `#endif // GIMBAL_BOARD` |
-| [489](../application/cmd/robot_cmd.c#L489) | 预处理 | `#ifdef ONE_BOARD` |
-| [491](../application/cmd/robot_cmd.c#L491) | 预处理 | `#endif // ONE_BOARD` |
-| [492](../application/cmd/robot_cmd.c#L492) | 预处理 | `#ifdef GIMBAL_BOARD` |
-| [497](../application/cmd/robot_cmd.c#L497) | 预处理 | `#endif // GIMBAL_BOARD` |
+| [4](../application/cmd/robot_cmd.c#L4) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
+| [8](../application/cmd/robot_cmd.c#L8) | 预处理 | `#endif` |
+| [29](../application/cmd/robot_cmd.c#L29) | 预处理 | `#define YAW_ALIGN_ANGLE (YAW_CHASSIS_ALIGN_ECD * ECD_ANGLE_COEF_DJI) // 对齐时的角度,0-360` |
+| [30](../application/cmd/robot_cmd.c#L30) | 预处理 | `#define PTICH_HORIZON_ANGLE (PITCH_HORIZON_ECD * ECD_ANGLE_COEF_DJI) // pitch水平时电机的角度,0-360` |
+| [31](../application/cmd/robot_cmd.c#L31) | 预处理 | `#define YAW_MAX_TRACK_ERROR 60.0f` |
+| [34](../application/cmd/robot_cmd.c#L34) | 预处理 | `#ifdef GIMBAL_BOARD // 对双板的兼容,条件编译` |
+| [38](../application/cmd/robot_cmd.c#L38) | 预处理 | `#endif` |
+| [39](../application/cmd/robot_cmd.c#L39) | 预处理 | `#ifdef ONE_BOARD` |
+| [42](../application/cmd/robot_cmd.c#L42) | 预处理 | `#endif                                 // ONE_BOARD` |
+| [78](../application/cmd/robot_cmd.c#L78) | 配置初值 | `HeatControl_Init_Config_s heat_config = {` |
+| [79](../application/cmd/robot_cmd.c#L79) | 配置初值 | `.bullet_heat = HEAT_CONTROL_BULLET_HEAT,` |
+| [80](../application/cmd/robot_cmd.c#L80) | 配置初值 | `.max_shoot_rate = HEAT_CONTROL_DEFAULT_MAX_RATE,` |
+| [84](../application/cmd/robot_cmd.c#L84) | 预处理 | `#ifdef ONE_BOARD // 双板兼容` |
+| [85](../application/cmd/robot_cmd.c#L85) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
+| [87](../application/cmd/robot_cmd.c#L87) | 预处理 | `#else` |
+| [89](../application/cmd/robot_cmd.c#L89) | 预处理 | `#endif` |
+| [91](../application/cmd/robot_cmd.c#L91) | 预处理 | `#endif // ONE_BOARD` |
+| [92](../application/cmd/robot_cmd.c#L92) | 预处理 | `#ifdef GIMBAL_BOARD` |
+| [93](../application/cmd/robot_cmd.c#L93) | 配置初值 | `CANComm_Init_Config_s comm_conf = {` |
+| [94](../application/cmd/robot_cmd.c#L94) | 配置初值 | `.can_config = {` |
+| [95](../application/cmd/robot_cmd.c#L95) | 配置初值 | `.can_handle = &hcan2,` |
+| [96](../application/cmd/robot_cmd.c#L96) | 配置初值 | `.tx_id = 0x312,` |
+| [97](../application/cmd/robot_cmd.c#L97) | 配置初值 | `.rx_id = 0x311,` |
+| [98](../application/cmd/robot_cmd.c#L98) | 配置初值 | `},` |
+| [99](../application/cmd/robot_cmd.c#L99) | 配置初值 | `.recv_data_len = sizeof(Chassis_Upload_Data_s),` |
+| [100](../application/cmd/robot_cmd.c#L100) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
+| [100](../application/cmd/robot_cmd.c#L100) | 配置初值 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
+| [101](../application/cmd/robot_cmd.c#L101) | 配置初值 | `.send_data_len = CHASSIS_FORCE_WIRE_SIZE,` |
+| [102](../application/cmd/robot_cmd.c#L102) | 预处理 | `#else` |
+| [102](../application/cmd/robot_cmd.c#L102) | 配置初值 | `#else` |
+| [103](../application/cmd/robot_cmd.c#L103) | 配置初值 | `.send_data_len = sizeof(Chassis_Ctrl_Cmd_s),` |
+| [104](../application/cmd/robot_cmd.c#L104) | 预处理 | `#endif` |
+| [104](../application/cmd/robot_cmd.c#L104) | 配置初值 | `#endif` |
+| [109](../application/cmd/robot_cmd.c#L109) | 预处理 | `#endif // GIMBAL_BOARD` |
+| [170](../application/cmd/robot_cmd.c#L170) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
+| [173](../application/cmd/robot_cmd.c#L173) | 预处理 | `#else` |
+| [176](../application/cmd/robot_cmd.c#L176) | 预处理 | `#endif` |
+| [202](../application/cmd/robot_cmd.c#L202) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
+| [206](../application/cmd/robot_cmd.c#L206) | 预处理 | `#else` |
+| [209](../application/cmd/robot_cmd.c#L209) | 预处理 | `#endif` |
+| [274](../application/cmd/robot_cmd.c#L274) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
+| [276](../application/cmd/robot_cmd.c#L276) | 预处理 | `#endif` |
+| [298](../application/cmd/robot_cmd.c#L298) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
+| [302](../application/cmd/robot_cmd.c#L302) | 预处理 | `#else` |
+| [305](../application/cmd/robot_cmd.c#L305) | 预处理 | `#endif` |
+| [373](../application/cmd/robot_cmd.c#L373) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
+| [375](../application/cmd/robot_cmd.c#L375) | 预处理 | `#else` |
+| [379](../application/cmd/robot_cmd.c#L379) | 预处理 | `#endif` |
+| [484](../application/cmd/robot_cmd.c#L484) | 预处理 | `#ifdef ONE_BOARD` |
+| [486](../application/cmd/robot_cmd.c#L486) | 预处理 | `#endif // ONE_BOARD` |
+| [487](../application/cmd/robot_cmd.c#L487) | 预处理 | `#ifdef GIMBAL_BOARD` |
+| [498](../application/cmd/robot_cmd.c#L498) | 预处理 | `#endif // GIMBAL_BOARD` |
+| [526](../application/cmd/robot_cmd.c#L526) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
+| [538](../application/cmd/robot_cmd.c#L538) | 预处理 | `#endif` |
+| [540](../application/cmd/robot_cmd.c#L540) | 预处理 | `#ifdef ONE_BOARD` |
+| [541](../application/cmd/robot_cmd.c#L541) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
+| [544](../application/cmd/robot_cmd.c#L544) | 预处理 | `#else` |
+| [546](../application/cmd/robot_cmd.c#L546) | 预处理 | `#endif` |
+| [547](../application/cmd/robot_cmd.c#L547) | 预处理 | `#endif // ONE_BOARD` |
+| [548](../application/cmd/robot_cmd.c#L548) | 预处理 | `#ifdef GIMBAL_BOARD` |
+| [552](../application/cmd/robot_cmd.c#L552) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
+| [556](../application/cmd/robot_cmd.c#L556) | 预处理 | `#else` |
+| [558](../application/cmd/robot_cmd.c#L558) | 预处理 | `#endif` |
+| [559](../application/cmd/robot_cmd.c#L559) | 预处理 | `#endif // GIMBAL_BOARD` |
 
 ## application/cmd/robot_cmd.h
 
@@ -346,76 +625,76 @@
 
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
-| [24](../application/gimbal/gimbal.c#L24) | 配置初值 | `Motor_Init_Config_s yaw_config = {` |
-| [25](../application/gimbal/gimbal.c#L25) | 配置初值 | `.can_init_config = {` |
-| [26](../application/gimbal/gimbal.c#L26) | 配置初值 | `.can_handle = &hcan2,` |
-| [27](../application/gimbal/gimbal.c#L27) | 配置初值 | `.tx_id = 1,` |
-| [28](../application/gimbal/gimbal.c#L28) | 配置初值 | `},` |
-| [29](../application/gimbal/gimbal.c#L29) | 配置初值 | `.controller_param_init_config = {` |
-| [30](../application/gimbal/gimbal.c#L30) | 配置初值 | `.angle_PID = {` |
-| [31](../application/gimbal/gimbal.c#L31) | 配置初值 | `.Kp = 8, // 8` |
-| [32](../application/gimbal/gimbal.c#L32) | 配置初值 | `.Ki = 0,` |
-| [33](../application/gimbal/gimbal.c#L33) | 配置初值 | `.Kd = 0,` |
-| [34](../application/gimbal/gimbal.c#L34) | 配置初值 | `.DeadBand = 0.1,` |
-| [35](../application/gimbal/gimbal.c#L35) | 配置初值 | `.Improve = PID_Trapezoid_Intergral &#124; PID_Integral_Limit &#124; PID_Derivative_On_Measurement,` |
-| [36](../application/gimbal/gimbal.c#L36) | 配置初值 | `.IntegralLimit = 100,` |
-| [38](../application/gimbal/gimbal.c#L38) | 配置初值 | `.MaxOut = 500,` |
-| [39](../application/gimbal/gimbal.c#L39) | 配置初值 | `},` |
-| [40](../application/gimbal/gimbal.c#L40) | 配置初值 | `.speed_PID = {` |
-| [41](../application/gimbal/gimbal.c#L41) | 配置初值 | `.Kp = 50,  // 50` |
-| [42](../application/gimbal/gimbal.c#L42) | 配置初值 | `.Ki = 200, // 200` |
-| [43](../application/gimbal/gimbal.c#L43) | 配置初值 | `.Kd = 0,` |
-| [44](../application/gimbal/gimbal.c#L44) | 配置初值 | `.Improve = PID_Trapezoid_Intergral &#124; PID_Integral_Limit &#124; PID_Derivative_On_Measurement,` |
-| [45](../application/gimbal/gimbal.c#L45) | 配置初值 | `.IntegralLimit = 3000,` |
-| [46](../application/gimbal/gimbal.c#L46) | 配置初值 | `.MaxOut = 20000,` |
-| [47](../application/gimbal/gimbal.c#L47) | 配置初值 | `},` |
-| [48](../application/gimbal/gimbal.c#L48) | 配置初值 | `.other_angle_feedback_ptr = &gimbal_IMU_data->YawTotalAngle,` |
-| [49](../application/gimbal/gimbal.c#L49) | 配置初值 | `// 还需要增加角速度额外反馈指针,注意方向,ins_task.md中有c板的bodyframe坐标系说明` |
-| [50](../application/gimbal/gimbal.c#L50) | 配置初值 | `.other_speed_feedback_ptr = &gimbal_IMU_data->Gyro[2],` |
-| [51](../application/gimbal/gimbal.c#L51) | 配置初值 | `},` |
-| [52](../application/gimbal/gimbal.c#L52) | 配置初值 | `.controller_setting_init_config = {` |
-| [53](../application/gimbal/gimbal.c#L53) | 配置初值 | `.angle_feedback_source = OTHER_FEED,` |
-| [54](../application/gimbal/gimbal.c#L54) | 配置初值 | `.speed_feedback_source = OTHER_FEED,` |
-| [55](../application/gimbal/gimbal.c#L55) | 配置初值 | `.outer_loop_type = ANGLE_LOOP,` |
-| [56](../application/gimbal/gimbal.c#L56) | 配置初值 | `.close_loop_type = ANGLE_LOOP &#124; SPEED_LOOP,` |
-| [57](../application/gimbal/gimbal.c#L57) | 配置初值 | `.motor_reverse_flag = MOTOR_DIRECTION_NORMAL,` |
-| [58](../application/gimbal/gimbal.c#L58) | 配置初值 | `},` |
-| [59](../application/gimbal/gimbal.c#L59) | 配置初值 | `.motor_type = GM6020};` |
-| [61](../application/gimbal/gimbal.c#L61) | 配置初值 | `Motor_Init_Config_s pitch_config = {` |
-| [62](../application/gimbal/gimbal.c#L62) | 配置初值 | `.can_init_config = {` |
-| [63](../application/gimbal/gimbal.c#L63) | 配置初值 | `.can_handle = &hcan2,` |
-| [64](../application/gimbal/gimbal.c#L64) | 配置初值 | `.tx_id = 2,` |
-| [65](../application/gimbal/gimbal.c#L65) | 配置初值 | `},` |
-| [66](../application/gimbal/gimbal.c#L66) | 配置初值 | `.controller_param_init_config = {` |
-| [67](../application/gimbal/gimbal.c#L67) | 配置初值 | `.angle_PID = {` |
-| [68](../application/gimbal/gimbal.c#L68) | 配置初值 | `.Kp = 10, // 10` |
-| [69](../application/gimbal/gimbal.c#L69) | 配置初值 | `.Ki = 0,` |
-| [70](../application/gimbal/gimbal.c#L70) | 配置初值 | `.Kd = 0,` |
-| [71](../application/gimbal/gimbal.c#L71) | 配置初值 | `.Improve = PID_Trapezoid_Intergral &#124; PID_Integral_Limit &#124; PID_Derivative_On_Measurement,` |
-| [72](../application/gimbal/gimbal.c#L72) | 配置初值 | `.IntegralLimit = 100,` |
-| [73](../application/gimbal/gimbal.c#L73) | 配置初值 | `.MaxOut = 500,` |
-| [74](../application/gimbal/gimbal.c#L74) | 配置初值 | `},` |
-| [75](../application/gimbal/gimbal.c#L75) | 配置初值 | `.speed_PID = {` |
-| [76](../application/gimbal/gimbal.c#L76) | 配置初值 | `.Kp = 50,  // 50` |
-| [77](../application/gimbal/gimbal.c#L77) | 配置初值 | `.Ki = 350, // 350` |
-| [78](../application/gimbal/gimbal.c#L78) | 配置初值 | `.Kd = 0,   // 0` |
-| [79](../application/gimbal/gimbal.c#L79) | 配置初值 | `.Improve = PID_Trapezoid_Intergral &#124; PID_Integral_Limit &#124; PID_Derivative_On_Measurement,` |
-| [80](../application/gimbal/gimbal.c#L80) | 配置初值 | `.IntegralLimit = 2500,` |
-| [81](../application/gimbal/gimbal.c#L81) | 配置初值 | `.MaxOut = 20000,` |
-| [82](../application/gimbal/gimbal.c#L82) | 配置初值 | `},` |
-| [83](../application/gimbal/gimbal.c#L83) | 配置初值 | `.other_angle_feedback_ptr = &gimbal_IMU_data->Pitch,` |
-| [84](../application/gimbal/gimbal.c#L84) | 配置初值 | `// 还需要增加角速度额外反馈指针,注意方向,ins_task.md中有c板的bodyframe坐标系说明` |
-| [85](../application/gimbal/gimbal.c#L85) | 配置初值 | `.other_speed_feedback_ptr = (&gimbal_IMU_data->Gyro[1]),` |
-| [86](../application/gimbal/gimbal.c#L86) | 配置初值 | `},` |
-| [87](../application/gimbal/gimbal.c#L87) | 配置初值 | `.controller_setting_init_config = {` |
-| [88](../application/gimbal/gimbal.c#L88) | 配置初值 | `.angle_feedback_source = OTHER_FEED,` |
-| [89](../application/gimbal/gimbal.c#L89) | 配置初值 | `.speed_feedback_source = OTHER_FEED,` |
-| [90](../application/gimbal/gimbal.c#L90) | 配置初值 | `.outer_loop_type = ANGLE_LOOP,` |
-| [91](../application/gimbal/gimbal.c#L91) | 配置初值 | `.close_loop_type = SPEED_LOOP &#124; ANGLE_LOOP,` |
-| [92](../application/gimbal/gimbal.c#L92) | 配置初值 | `.motor_reverse_flag = MOTOR_DIRECTION_NORMAL,` |
-| [93](../application/gimbal/gimbal.c#L93) | 配置初值 | `.feedback_reverse_flag = FEEDBACK_DIRECTION_REVERSE,` |
-| [94](../application/gimbal/gimbal.c#L94) | 配置初值 | `},` |
-| [95](../application/gimbal/gimbal.c#L95) | 配置初值 | `.motor_type = GM6020,` |
+| [26](../application/gimbal/gimbal.c#L26) | 配置初值 | `Motor_Init_Config_s yaw_config = {` |
+| [27](../application/gimbal/gimbal.c#L27) | 配置初值 | `.can_init_config = {` |
+| [28](../application/gimbal/gimbal.c#L28) | 配置初值 | `.can_handle = &hcan2,` |
+| [29](../application/gimbal/gimbal.c#L29) | 配置初值 | `.tx_id = 1,` |
+| [30](../application/gimbal/gimbal.c#L30) | 配置初值 | `},` |
+| [31](../application/gimbal/gimbal.c#L31) | 配置初值 | `.controller_param_init_config = {` |
+| [32](../application/gimbal/gimbal.c#L32) | 配置初值 | `.angle_PID = {` |
+| [33](../application/gimbal/gimbal.c#L33) | 配置初值 | `.Kp = 8, // 8` |
+| [34](../application/gimbal/gimbal.c#L34) | 配置初值 | `.Ki = 0,` |
+| [35](../application/gimbal/gimbal.c#L35) | 配置初值 | `.Kd = 0,` |
+| [36](../application/gimbal/gimbal.c#L36) | 配置初值 | `.DeadBand = 0.1,` |
+| [37](../application/gimbal/gimbal.c#L37) | 配置初值 | `.Improve = PID_Trapezoid_Intergral &#124; PID_Integral_Limit &#124; PID_Derivative_On_Measurement,` |
+| [38](../application/gimbal/gimbal.c#L38) | 配置初值 | `.IntegralLimit = 100,` |
+| [40](../application/gimbal/gimbal.c#L40) | 配置初值 | `.MaxOut = 500,` |
+| [41](../application/gimbal/gimbal.c#L41) | 配置初值 | `},` |
+| [42](../application/gimbal/gimbal.c#L42) | 配置初值 | `.speed_PID = {` |
+| [43](../application/gimbal/gimbal.c#L43) | 配置初值 | `.Kp = 50,  // 50` |
+| [44](../application/gimbal/gimbal.c#L44) | 配置初值 | `.Ki = 200, // 200` |
+| [45](../application/gimbal/gimbal.c#L45) | 配置初值 | `.Kd = 0,` |
+| [46](../application/gimbal/gimbal.c#L46) | 配置初值 | `.Improve = PID_Trapezoid_Intergral &#124; PID_Integral_Limit &#124; PID_Derivative_On_Measurement,` |
+| [47](../application/gimbal/gimbal.c#L47) | 配置初值 | `.IntegralLimit = 3000,` |
+| [48](../application/gimbal/gimbal.c#L48) | 配置初值 | `.MaxOut = 20000,` |
+| [49](../application/gimbal/gimbal.c#L49) | 配置初值 | `},` |
+| [50](../application/gimbal/gimbal.c#L50) | 配置初值 | `.other_angle_feedback_ptr = &gimbal_IMU_data->YawTotalAngle,` |
+| [51](../application/gimbal/gimbal.c#L51) | 配置初值 | `// 还需要增加角速度额外反馈指针,注意方向,ins_task.md中有c板的bodyframe坐标系说明` |
+| [52](../application/gimbal/gimbal.c#L52) | 配置初值 | `.other_speed_feedback_ptr = &gimbal_IMU_data->Gyro[2],` |
+| [53](../application/gimbal/gimbal.c#L53) | 配置初值 | `},` |
+| [54](../application/gimbal/gimbal.c#L54) | 配置初值 | `.controller_setting_init_config = {` |
+| [55](../application/gimbal/gimbal.c#L55) | 配置初值 | `.angle_feedback_source = OTHER_FEED,` |
+| [56](../application/gimbal/gimbal.c#L56) | 配置初值 | `.speed_feedback_source = OTHER_FEED,` |
+| [57](../application/gimbal/gimbal.c#L57) | 配置初值 | `.outer_loop_type = ANGLE_LOOP,` |
+| [58](../application/gimbal/gimbal.c#L58) | 配置初值 | `.close_loop_type = ANGLE_LOOP &#124; SPEED_LOOP,` |
+| [59](../application/gimbal/gimbal.c#L59) | 配置初值 | `.motor_reverse_flag = MOTOR_DIRECTION_NORMAL,` |
+| [60](../application/gimbal/gimbal.c#L60) | 配置初值 | `},` |
+| [61](../application/gimbal/gimbal.c#L61) | 配置初值 | `.motor_type = GM6020};` |
+| [63](../application/gimbal/gimbal.c#L63) | 配置初值 | `Motor_Init_Config_s pitch_config = {` |
+| [64](../application/gimbal/gimbal.c#L64) | 配置初值 | `.can_init_config = {` |
+| [65](../application/gimbal/gimbal.c#L65) | 配置初值 | `.can_handle = &hcan2,` |
+| [66](../application/gimbal/gimbal.c#L66) | 配置初值 | `.tx_id = 2,` |
+| [67](../application/gimbal/gimbal.c#L67) | 配置初值 | `},` |
+| [68](../application/gimbal/gimbal.c#L68) | 配置初值 | `.controller_param_init_config = {` |
+| [69](../application/gimbal/gimbal.c#L69) | 配置初值 | `.angle_PID = {` |
+| [70](../application/gimbal/gimbal.c#L70) | 配置初值 | `.Kp = 10, // 10` |
+| [71](../application/gimbal/gimbal.c#L71) | 配置初值 | `.Ki = 0,` |
+| [72](../application/gimbal/gimbal.c#L72) | 配置初值 | `.Kd = 0,` |
+| [73](../application/gimbal/gimbal.c#L73) | 配置初值 | `.Improve = PID_Trapezoid_Intergral &#124; PID_Integral_Limit &#124; PID_Derivative_On_Measurement,` |
+| [74](../application/gimbal/gimbal.c#L74) | 配置初值 | `.IntegralLimit = 100,` |
+| [75](../application/gimbal/gimbal.c#L75) | 配置初值 | `.MaxOut = 500,` |
+| [76](../application/gimbal/gimbal.c#L76) | 配置初值 | `},` |
+| [77](../application/gimbal/gimbal.c#L77) | 配置初值 | `.speed_PID = {` |
+| [78](../application/gimbal/gimbal.c#L78) | 配置初值 | `.Kp = 50,  // 50` |
+| [79](../application/gimbal/gimbal.c#L79) | 配置初值 | `.Ki = 350, // 350` |
+| [80](../application/gimbal/gimbal.c#L80) | 配置初值 | `.Kd = 0,   // 0` |
+| [81](../application/gimbal/gimbal.c#L81) | 配置初值 | `.Improve = PID_Trapezoid_Intergral &#124; PID_Integral_Limit &#124; PID_Derivative_On_Measurement,` |
+| [82](../application/gimbal/gimbal.c#L82) | 配置初值 | `.IntegralLimit = 2500,` |
+| [83](../application/gimbal/gimbal.c#L83) | 配置初值 | `.MaxOut = 20000,` |
+| [84](../application/gimbal/gimbal.c#L84) | 配置初值 | `},` |
+| [85](../application/gimbal/gimbal.c#L85) | 配置初值 | `.other_angle_feedback_ptr = &gimbal_IMU_data->Pitch,` |
+| [86](../application/gimbal/gimbal.c#L86) | 配置初值 | `// 还需要增加角速度额外反馈指针,注意方向,ins_task.md中有c板的bodyframe坐标系说明` |
+| [87](../application/gimbal/gimbal.c#L87) | 配置初值 | `.other_speed_feedback_ptr = (&gimbal_IMU_data->Gyro[1]),` |
+| [88](../application/gimbal/gimbal.c#L88) | 配置初值 | `},` |
+| [89](../application/gimbal/gimbal.c#L89) | 配置初值 | `.controller_setting_init_config = {` |
+| [90](../application/gimbal/gimbal.c#L90) | 配置初值 | `.angle_feedback_source = OTHER_FEED,` |
+| [91](../application/gimbal/gimbal.c#L91) | 配置初值 | `.speed_feedback_source = OTHER_FEED,` |
+| [92](../application/gimbal/gimbal.c#L92) | 配置初值 | `.outer_loop_type = ANGLE_LOOP,` |
+| [93](../application/gimbal/gimbal.c#L93) | 配置初值 | `.close_loop_type = SPEED_LOOP &#124; ANGLE_LOOP,` |
+| [94](../application/gimbal/gimbal.c#L94) | 配置初值 | `.motor_reverse_flag = MOTOR_DIRECTION_NORMAL,` |
+| [95](../application/gimbal/gimbal.c#L95) | 配置初值 | `.feedback_reverse_flag = FEEDBACK_DIRECTION_REVERSE,` |
+| [96](../application/gimbal/gimbal.c#L96) | 配置初值 | `},` |
+| [97](../application/gimbal/gimbal.c#L97) | 配置初值 | `.motor_type = GM6020,` |
 
 ## application/gimbal/gimbal.h
 
@@ -424,21 +703,6 @@
 | [1](../application/gimbal/gimbal.h#L1) | 预处理 | `#ifndef GIMBAL_H` |
 | [2](../application/gimbal/gimbal.h#L2) | 预处理 | `#define GIMBAL_H` |
 | [16](../application/gimbal/gimbal.h#L16) | 预处理 | `#endif // GIMBAL_H` |
-
-## application/runtime/ins_bridge.c
-
-| 行 | 类型 | 源码 |
-| --- | --- | --- |
-| [9](../application/runtime/ins_bridge.c#L9) | 预处理 | `#if defined(ONE_BOARD) &#124;&#124; defined(GIMBAL_BOARD)` |
-| [13](../application/runtime/ins_bridge.c#L13) | 预处理 | `#endif` |
-
-## application/runtime/ins_bridge.h
-
-| 行 | 类型 | 源码 |
-| --- | --- | --- |
-| [1](../application/runtime/ins_bridge.h#L1) | 预处理 | `#ifndef INS_BRIDGE_H` |
-| [2](../application/runtime/ins_bridge.h#L2) | 预处理 | `#define INS_BRIDGE_H` |
-| [4](../application/runtime/ins_bridge.h#L4) | 预处理 | `#endif` |
 
 ## application/robot.c
 
@@ -577,7 +841,22 @@
 | [170](../application/robot_def.h#L170) | 预处理 | `#endif` |
 | [305](../application/robot_def.h#L305) | 预处理 | `#if defined(CHASSIS_BOARD) &#124;&#124; defined(GIMBAL_BOARD) // 非单板的时候底盘还将imu数据回传(若有必要)` |
 | [307](../application/robot_def.h#L307) | 预处理 | `#endif` |
-| [334](../application/robot_def.h#L334) | 预处理 | `#endif // !ROBOT_DEF_H` |
+| [336](../application/robot_def.h#L336) | 预处理 | `#endif // !ROBOT_DEF_H` |
+
+## application/runtime/ins_bridge.c
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [9](../application/runtime/ins_bridge.c#L9) | 预处理 | `#if defined(ONE_BOARD) &#124;&#124; defined(GIMBAL_BOARD)` |
+| [13](../application/runtime/ins_bridge.c#L13) | 预处理 | `#endif` |
+
+## application/runtime/ins_bridge.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../application/runtime/ins_bridge.h#L1) | 预处理 | `#ifndef INS_BRIDGE_H` |
+| [2](../application/runtime/ins_bridge.h#L2) | 预处理 | `#define INS_BRIDGE_H` |
+| [4](../application/runtime/ins_bridge.h#L4) | 预处理 | `#endif` |
 
 ## application/runtime/robot_task.c
 
@@ -619,89 +898,6 @@
 | [2](../application/runtime/robot_task.h#L2) | 预处理 | `#define ROBOT_TASK_H` |
 | [7](../application/runtime/robot_task.h#L7) | 预处理 | `#endif` |
 
-## application/shoot/shoot.c
-
-| 行 | 类型 | 源码 |
-| --- | --- | --- |
-| [22](../application/shoot/shoot.c#L22) | 预处理 | `#define LOADER_ONE_BULLET_MOTOR_ANGLE (ONE_BULLET_DELTA_ANGLE * REDUCTION_RATIO_LOADER)` |
-| [23](../application/shoot/shoot.c#L23) | 预处理 | `#define LOADER_ANGLE_TOLERANCE 5.0f` |
-| [28](../application/shoot/shoot.c#L28) | 配置初值 | `Motor_Init_Config_s friction_config = {` |
-| [29](../application/shoot/shoot.c#L29) | 配置初值 | `.can_init_config = {` |
-| [30](../application/shoot/shoot.c#L30) | 配置初值 | `.can_handle = &hcan2,` |
-| [31](../application/shoot/shoot.c#L31) | 配置初值 | `},` |
-| [32](../application/shoot/shoot.c#L32) | 配置初值 | `.controller_param_init_config = {` |
-| [33](../application/shoot/shoot.c#L33) | 配置初值 | `.speed_PID = {` |
-| [34](../application/shoot/shoot.c#L34) | 配置初值 | `.Kp = 20, // 20` |
-| [35](../application/shoot/shoot.c#L35) | 配置初值 | `.Ki = 1, // 1` |
-| [36](../application/shoot/shoot.c#L36) | 配置初值 | `.Kd = 0,` |
-| [37](../application/shoot/shoot.c#L37) | 配置初值 | `.Improve = PID_Integral_Limit,` |
-| [38](../application/shoot/shoot.c#L38) | 配置初值 | `.IntegralLimit = 10000,` |
-| [39](../application/shoot/shoot.c#L39) | 配置初值 | `.MaxOut = 15000,` |
-| [40](../application/shoot/shoot.c#L40) | 配置初值 | `},` |
-| [41](../application/shoot/shoot.c#L41) | 配置初值 | `.current_PID = {` |
-| [42](../application/shoot/shoot.c#L42) | 配置初值 | `.Kp = 0.7, // 0.7` |
-| [43](../application/shoot/shoot.c#L43) | 配置初值 | `.Ki = 0.1, // 0.1` |
-| [44](../application/shoot/shoot.c#L44) | 配置初值 | `.Kd = 0,` |
-| [45](../application/shoot/shoot.c#L45) | 配置初值 | `.Improve = PID_Integral_Limit,` |
-| [46](../application/shoot/shoot.c#L46) | 配置初值 | `.IntegralLimit = 10000,` |
-| [47](../application/shoot/shoot.c#L47) | 配置初值 | `.MaxOut = 15000,` |
-| [48](../application/shoot/shoot.c#L48) | 配置初值 | `},` |
-| [49](../application/shoot/shoot.c#L49) | 配置初值 | `},` |
-| [50](../application/shoot/shoot.c#L50) | 配置初值 | `.controller_setting_init_config = {` |
-| [51](../application/shoot/shoot.c#L51) | 配置初值 | `.angle_feedback_source = MOTOR_FEED,` |
-| [52](../application/shoot/shoot.c#L52) | 配置初值 | `.speed_feedback_source = MOTOR_FEED,` |
-| [53](../application/shoot/shoot.c#L53) | 配置初值 | `.outer_loop_type = SPEED_LOOP,` |
-| [54](../application/shoot/shoot.c#L54) | 配置初值 | `.close_loop_type = SPEED_LOOP &#124; CURRENT_LOOP,` |
-| [55](../application/shoot/shoot.c#L55) | 配置初值 | `.motor_reverse_flag = MOTOR_DIRECTION_REVERSE,` |
-| [56](../application/shoot/shoot.c#L56) | 配置初值 | `},` |
-| [57](../application/shoot/shoot.c#L57) | 配置初值 | `.motor_type = M3508};` |
-| [66](../application/shoot/shoot.c#L66) | 配置初值 | `Motor_Init_Config_s loader_config = {` |
-| [67](../application/shoot/shoot.c#L67) | 配置初值 | `.can_init_config = {` |
-| [68](../application/shoot/shoot.c#L68) | 配置初值 | `.can_handle = &hcan2,` |
-| [69](../application/shoot/shoot.c#L69) | 配置初值 | `.tx_id = 7,` |
-| [70](../application/shoot/shoot.c#L70) | 配置初值 | `},` |
-| [71](../application/shoot/shoot.c#L71) | 配置初值 | `.controller_param_init_config = {` |
-| [72](../application/shoot/shoot.c#L72) | 配置初值 | `.angle_PID = {` |
-| [73](../application/shoot/shoot.c#L73) | 配置初值 | `// 如果启用位置环来控制发弹,需要较大的I值保证输出力矩的线性度否则出现接近拨出的力矩大幅下降` |
-| [74](../application/shoot/shoot.c#L74) | 配置初值 | `.Kp = 10, // 10` |
-| [75](../application/shoot/shoot.c#L75) | 配置初值 | `.Ki = 0,` |
-| [76](../application/shoot/shoot.c#L76) | 配置初值 | `.Kd = 0,` |
-| [77](../application/shoot/shoot.c#L77) | 配置初值 | `.MaxOut = 5000,` |
-| [78](../application/shoot/shoot.c#L78) | 配置初值 | `},` |
-| [79](../application/shoot/shoot.c#L79) | 配置初值 | `.speed_PID = {` |
-| [80](../application/shoot/shoot.c#L80) | 配置初值 | `.Kp = 10, // 10` |
-| [81](../application/shoot/shoot.c#L81) | 配置初值 | `.Ki = 1, // 1` |
-| [82](../application/shoot/shoot.c#L82) | 配置初值 | `.Kd = 0,` |
-| [83](../application/shoot/shoot.c#L83) | 配置初值 | `.Improve = PID_Integral_Limit,` |
-| [84](../application/shoot/shoot.c#L84) | 配置初值 | `.IntegralLimit = 5000,` |
-| [85](../application/shoot/shoot.c#L85) | 配置初值 | `.MaxOut = 5000,` |
-| [86](../application/shoot/shoot.c#L86) | 配置初值 | `},` |
-| [87](../application/shoot/shoot.c#L87) | 配置初值 | `.current_PID = {` |
-| [88](../application/shoot/shoot.c#L88) | 配置初值 | `.Kp = 0.7, // 0.7` |
-| [89](../application/shoot/shoot.c#L89) | 配置初值 | `.Ki = 0.1, // 0.1` |
-| [90](../application/shoot/shoot.c#L90) | 配置初值 | `.Kd = 0,` |
-| [91](../application/shoot/shoot.c#L91) | 配置初值 | `.Improve = PID_Integral_Limit,` |
-| [92](../application/shoot/shoot.c#L92) | 配置初值 | `.IntegralLimit = 5000,` |
-| [93](../application/shoot/shoot.c#L93) | 配置初值 | `.MaxOut = 5000,` |
-| [94](../application/shoot/shoot.c#L94) | 配置初值 | `},` |
-| [95](../application/shoot/shoot.c#L95) | 配置初值 | `},` |
-| [96](../application/shoot/shoot.c#L96) | 配置初值 | `.controller_setting_init_config = {` |
-| [97](../application/shoot/shoot.c#L97) | 配置初值 | `.angle_feedback_source = MOTOR_FEED,` |
-| [98](../application/shoot/shoot.c#L98) | 配置初值 | `.speed_feedback_source = MOTOR_FEED,` |
-| [99](../application/shoot/shoot.c#L99) | 配置初值 | `.outer_loop_type = SPEED_LOOP, // 初始化成SPEED_LOOP,让拨盘停在原地,防止拨盘上电时乱转` |
-| [100](../application/shoot/shoot.c#L100) | 配置初值 | `.close_loop_type = CURRENT_LOOP &#124; SPEED_LOOP &#124; ANGLE_LOOP,` |
-| [101](../application/shoot/shoot.c#L101) | 配置初值 | `.motor_reverse_flag = MOTOR_DIRECTION_NORMAL, // 注意方向设置为拨盘的拨出的击发方向` |
-| [102](../application/shoot/shoot.c#L102) | 配置初值 | `},` |
-| [103](../application/shoot/shoot.c#L103) | 配置初值 | `.motor_type = M2006 // 英雄使用m3508` |
-
-## application/shoot/shoot.h
-
-| 行 | 类型 | 源码 |
-| --- | --- | --- |
-| [1](../application/shoot/shoot.h#L1) | 预处理 | `#ifndef SHOOT_H` |
-| [2](../application/shoot/shoot.h#L2) | 预处理 | `#define SHOOT_H` |
-| [16](../application/shoot/shoot.h#L16) | 预处理 | `#endif // SHOOT_H` |
-
 ## application/runtime/tuning_policy.c
 
 | 行 | 类型 | 源码 |
@@ -716,6 +912,89 @@
 | [1](../application/runtime/tuning_policy.h#L1) | 预处理 | `#ifndef TUNING_POLICY_H` |
 | [2](../application/runtime/tuning_policy.h#L2) | 预处理 | `#define TUNING_POLICY_H` |
 | [4](../application/runtime/tuning_policy.h#L4) | 预处理 | `#endif` |
+
+## application/shoot/shoot.c
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [26](../application/shoot/shoot.c#L26) | 预处理 | `#define LOADER_ONE_BULLET_MOTOR_ANGLE (ONE_BULLET_DELTA_ANGLE * REDUCTION_RATIO_LOADER)` |
+| [27](../application/shoot/shoot.c#L27) | 预处理 | `#define LOADER_ANGLE_TOLERANCE 5.0f` |
+| [32](../application/shoot/shoot.c#L32) | 配置初值 | `Motor_Init_Config_s friction_config = {` |
+| [33](../application/shoot/shoot.c#L33) | 配置初值 | `.can_init_config = {` |
+| [34](../application/shoot/shoot.c#L34) | 配置初值 | `.can_handle = &hcan2,` |
+| [35](../application/shoot/shoot.c#L35) | 配置初值 | `},` |
+| [36](../application/shoot/shoot.c#L36) | 配置初值 | `.controller_param_init_config = {` |
+| [37](../application/shoot/shoot.c#L37) | 配置初值 | `.speed_PID = {` |
+| [38](../application/shoot/shoot.c#L38) | 配置初值 | `.Kp = 20, // 20` |
+| [39](../application/shoot/shoot.c#L39) | 配置初值 | `.Ki = 1, // 1` |
+| [40](../application/shoot/shoot.c#L40) | 配置初值 | `.Kd = 0,` |
+| [41](../application/shoot/shoot.c#L41) | 配置初值 | `.Improve = PID_Integral_Limit,` |
+| [42](../application/shoot/shoot.c#L42) | 配置初值 | `.IntegralLimit = 10000,` |
+| [43](../application/shoot/shoot.c#L43) | 配置初值 | `.MaxOut = 15000,` |
+| [44](../application/shoot/shoot.c#L44) | 配置初值 | `},` |
+| [45](../application/shoot/shoot.c#L45) | 配置初值 | `.current_PID = {` |
+| [46](../application/shoot/shoot.c#L46) | 配置初值 | `.Kp = 0.7, // 0.7` |
+| [47](../application/shoot/shoot.c#L47) | 配置初值 | `.Ki = 0.1, // 0.1` |
+| [48](../application/shoot/shoot.c#L48) | 配置初值 | `.Kd = 0,` |
+| [49](../application/shoot/shoot.c#L49) | 配置初值 | `.Improve = PID_Integral_Limit,` |
+| [50](../application/shoot/shoot.c#L50) | 配置初值 | `.IntegralLimit = 10000,` |
+| [51](../application/shoot/shoot.c#L51) | 配置初值 | `.MaxOut = 15000,` |
+| [52](../application/shoot/shoot.c#L52) | 配置初值 | `},` |
+| [53](../application/shoot/shoot.c#L53) | 配置初值 | `},` |
+| [54](../application/shoot/shoot.c#L54) | 配置初值 | `.controller_setting_init_config = {` |
+| [55](../application/shoot/shoot.c#L55) | 配置初值 | `.angle_feedback_source = MOTOR_FEED,` |
+| [56](../application/shoot/shoot.c#L56) | 配置初值 | `.speed_feedback_source = MOTOR_FEED,` |
+| [57](../application/shoot/shoot.c#L57) | 配置初值 | `.outer_loop_type = SPEED_LOOP,` |
+| [58](../application/shoot/shoot.c#L58) | 配置初值 | `.close_loop_type = SPEED_LOOP &#124; CURRENT_LOOP,` |
+| [59](../application/shoot/shoot.c#L59) | 配置初值 | `.motor_reverse_flag = MOTOR_DIRECTION_REVERSE,` |
+| [60](../application/shoot/shoot.c#L60) | 配置初值 | `},` |
+| [61](../application/shoot/shoot.c#L61) | 配置初值 | `.motor_type = M3508};` |
+| [70](../application/shoot/shoot.c#L70) | 配置初值 | `Motor_Init_Config_s loader_config = {` |
+| [71](../application/shoot/shoot.c#L71) | 配置初值 | `.can_init_config = {` |
+| [72](../application/shoot/shoot.c#L72) | 配置初值 | `.can_handle = &hcan2,` |
+| [73](../application/shoot/shoot.c#L73) | 配置初值 | `.tx_id = 7,` |
+| [74](../application/shoot/shoot.c#L74) | 配置初值 | `},` |
+| [75](../application/shoot/shoot.c#L75) | 配置初值 | `.controller_param_init_config = {` |
+| [76](../application/shoot/shoot.c#L76) | 配置初值 | `.angle_PID = {` |
+| [77](../application/shoot/shoot.c#L77) | 配置初值 | `// 如果启用位置环来控制发弹,需要较大的I值保证输出力矩的线性度否则出现接近拨出的力矩大幅下降` |
+| [78](../application/shoot/shoot.c#L78) | 配置初值 | `.Kp = 10, // 10` |
+| [79](../application/shoot/shoot.c#L79) | 配置初值 | `.Ki = 0,` |
+| [80](../application/shoot/shoot.c#L80) | 配置初值 | `.Kd = 0,` |
+| [81](../application/shoot/shoot.c#L81) | 配置初值 | `.MaxOut = 5000,` |
+| [82](../application/shoot/shoot.c#L82) | 配置初值 | `},` |
+| [83](../application/shoot/shoot.c#L83) | 配置初值 | `.speed_PID = {` |
+| [84](../application/shoot/shoot.c#L84) | 配置初值 | `.Kp = 10, // 10` |
+| [85](../application/shoot/shoot.c#L85) | 配置初值 | `.Ki = 1, // 1` |
+| [86](../application/shoot/shoot.c#L86) | 配置初值 | `.Kd = 0,` |
+| [87](../application/shoot/shoot.c#L87) | 配置初值 | `.Improve = PID_Integral_Limit,` |
+| [88](../application/shoot/shoot.c#L88) | 配置初值 | `.IntegralLimit = 5000,` |
+| [89](../application/shoot/shoot.c#L89) | 配置初值 | `.MaxOut = 5000,` |
+| [90](../application/shoot/shoot.c#L90) | 配置初值 | `},` |
+| [91](../application/shoot/shoot.c#L91) | 配置初值 | `.current_PID = {` |
+| [92](../application/shoot/shoot.c#L92) | 配置初值 | `.Kp = 0.7, // 0.7` |
+| [93](../application/shoot/shoot.c#L93) | 配置初值 | `.Ki = 0.1, // 0.1` |
+| [94](../application/shoot/shoot.c#L94) | 配置初值 | `.Kd = 0,` |
+| [95](../application/shoot/shoot.c#L95) | 配置初值 | `.Improve = PID_Integral_Limit,` |
+| [96](../application/shoot/shoot.c#L96) | 配置初值 | `.IntegralLimit = 5000,` |
+| [97](../application/shoot/shoot.c#L97) | 配置初值 | `.MaxOut = 5000,` |
+| [98](../application/shoot/shoot.c#L98) | 配置初值 | `},` |
+| [99](../application/shoot/shoot.c#L99) | 配置初值 | `},` |
+| [100](../application/shoot/shoot.c#L100) | 配置初值 | `.controller_setting_init_config = {` |
+| [101](../application/shoot/shoot.c#L101) | 配置初值 | `.angle_feedback_source = MOTOR_FEED,` |
+| [102](../application/shoot/shoot.c#L102) | 配置初值 | `.speed_feedback_source = MOTOR_FEED,` |
+| [103](../application/shoot/shoot.c#L103) | 配置初值 | `.outer_loop_type = SPEED_LOOP, // 初始化成SPEED_LOOP,让拨盘停在原地,防止拨盘上电时乱转` |
+| [104](../application/shoot/shoot.c#L104) | 配置初值 | `.close_loop_type = CURRENT_LOOP &#124; SPEED_LOOP &#124; ANGLE_LOOP,` |
+| [105](../application/shoot/shoot.c#L105) | 配置初值 | `.motor_reverse_flag = MOTOR_DIRECTION_NORMAL, // 注意方向设置为拨盘的拨出的击发方向` |
+| [106](../application/shoot/shoot.c#L106) | 配置初值 | `},` |
+| [107](../application/shoot/shoot.c#L107) | 配置初值 | `.motor_type = M2006 // 英雄使用m3508` |
+
+## application/shoot/shoot.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../application/shoot/shoot.h#L1) | 预处理 | `#ifndef SHOOT_H` |
+| [2](../application/shoot/shoot.h#L2) | 预处理 | `#define SHOOT_H` |
+| [16](../application/shoot/shoot.h#L16) | 预处理 | `#endif // SHOOT_H` |
 
 ## bsp/bsp_init.h
 
@@ -740,7 +1019,7 @@
 | [8](../bsp/can/bsp_can.h#L8) | 预处理 | `#define CAN_MX_REGISTER_CNT 16     // 这个数量取决于CAN总线的负载` |
 | [9](../bsp/can/bsp_can.h#L9) | 预处理 | `#define MX_CAN_FILTER_CNT (2 * 14) // 最多可以使用的CAN过滤器数量,目前远不会用到这么多` |
 | [10](../bsp/can/bsp_can.h#L10) | 预处理 | `#define DEVICE_CAN_CNT 2           // 根据板子设定,F407IG有CAN1,CAN2,因此为2;F334只有一个,则设为1` |
-| [71](../bsp/can/bsp_can.h#L71) | 预处理 | `#endif` |
+| [74](../bsp/can/bsp_can.h#L74) | 预处理 | `#endif` |
 
 ## bsp/dwt/bsp_dwt.h
 
@@ -902,7 +1181,7 @@
 | [2](../bsp/usart/bsp_usart.h#L2) | 预处理 | `#define BSP_RC_H` |
 | [8](../bsp/usart/bsp_usart.h#L8) | 预处理 | `#define DEVICE_USART_CNT 6     // C板至多分配3个串口` |
 | [9](../bsp/usart/bsp_usart.h#L9) | 预处理 | `#define USART_RXBUFF_LIMIT 256 // 如果协议需要更大的buff,请修改这里` |
-| [79](../bsp/usart/bsp_usart.h#L79) | 预处理 | `#endif` |
+| [93](../bsp/usart/bsp_usart.h#L93) | 预处理 | `#endif` |
 
 ## Inc/adc.h
 
@@ -1709,6 +1988,40 @@
 | [12](../modules/alarm/buzzer.h#L12) | 预处理 | `#define  SiFreq  988` |
 | [60](../modules/alarm/buzzer.h#L60) | 预处理 | `#endif // !BUZZER_H` |
 
+## modules/algorithm/chassis_control_config.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/algorithm/chassis_control_config.h#L1) | 预处理 | `#ifndef CHASSIS_CONTROL_CONFIG_H` |
+| [2](../modules/algorithm/chassis_control_config.h#L2) | 预处理 | `#define CHASSIS_CONTROL_CONFIG_H` |
+| [3](../modules/algorithm/chassis_control_config.h#L3) | 预处理 | `#define CHASSIS_CONTROL_SPEED 0` |
+| [4](../modules/algorithm/chassis_control_config.h#L4) | 预处理 | `#define CHASSIS_CONTROL_FORCE 1` |
+| [5](../modules/algorithm/chassis_control_config.h#L5) | 预处理 | `#ifndef CHASSIS_CONTROL_MODE` |
+| [6](../modules/algorithm/chassis_control_config.h#L6) | 预处理 | `#define CHASSIS_CONTROL_MODE CHASSIS_CONTROL_SPEED` |
+| [7](../modules/algorithm/chassis_control_config.h#L7) | 预处理 | `#endif` |
+| [8](../modules/algorithm/chassis_control_config.h#L8) | 预处理 | `#define CHASSIS_FORCE_EXIT_COAST 0` |
+| [9](../modules/algorithm/chassis_control_config.h#L9) | 预处理 | `#define CHASSIS_FORCE_EXIT_BRAKE 1` |
+| [10](../modules/algorithm/chassis_control_config.h#L10) | 预处理 | `#ifndef CHASSIS_FORCE_EXIT_MODE` |
+| [11](../modules/algorithm/chassis_control_config.h#L11) | 预处理 | `#define CHASSIS_FORCE_EXIT_MODE CHASSIS_FORCE_EXIT_COAST` |
+| [12](../modules/algorithm/chassis_control_config.h#L12) | 预处理 | `#endif` |
+| [13](../modules/algorithm/chassis_control_config.h#L13) | 预处理 | `#ifndef CHASSIS_FORCE_CALIBRATION_VALID` |
+| [14](../modules/algorithm/chassis_control_config.h#L14) | 预处理 | `#define CHASSIS_FORCE_CALIBRATION_VALID 0` |
+| [15](../modules/algorithm/chassis_control_config.h#L15) | 预处理 | `#endif` |
+| [16](../modules/algorithm/chassis_control_config.h#L16) | 预处理 | `#define CHASSIS_FORCE_SPIN_FIXED_TORQUE 0` |
+| [17](../modules/algorithm/chassis_control_config.h#L17) | 预处理 | `#define CHASSIS_FORCE_SPIN_POWER_ADAPTIVE 1` |
+| [18](../modules/algorithm/chassis_control_config.h#L18) | 预处理 | `#ifndef CHASSIS_FORCE_SPIN_MODE` |
+| [19](../modules/algorithm/chassis_control_config.h#L19) | 预处理 | `#define CHASSIS_FORCE_SPIN_MODE CHASSIS_FORCE_SPIN_POWER_ADAPTIVE` |
+| [20](../modules/algorithm/chassis_control_config.h#L20) | 预处理 | `#endif` |
+| [21](../modules/algorithm/chassis_control_config.h#L21) | 预处理 | `#if CHASSIS_CONTROL_MODE != 0 && CHASSIS_CONTROL_MODE != 1` |
+| [23](../modules/algorithm/chassis_control_config.h#L23) | 预处理 | `#endif` |
+| [24](../modules/algorithm/chassis_control_config.h#L24) | 预处理 | `#if CHASSIS_FORCE_EXIT_MODE != 0 && CHASSIS_FORCE_EXIT_MODE != 1` |
+| [26](../modules/algorithm/chassis_control_config.h#L26) | 预处理 | `#endif` |
+| [27](../modules/algorithm/chassis_control_config.h#L27) | 预处理 | `#if CHASSIS_FORCE_CALIBRATION_VALID != 0 && CHASSIS_FORCE_CALIBRATION_VALID != 1` |
+| [29](../modules/algorithm/chassis_control_config.h#L29) | 预处理 | `#endif` |
+| [30](../modules/algorithm/chassis_control_config.h#L30) | 预处理 | `#if CHASSIS_FORCE_SPIN_MODE != 0 && CHASSIS_FORCE_SPIN_MODE != 1` |
+| [32](../modules/algorithm/chassis_control_config.h#L32) | 预处理 | `#endif` |
+| [33](../modules/algorithm/chassis_control_config.h#L33) | 预处理 | `#endif` |
+
 ## modules/algorithm/chassis_energy_config.h
 
 | 行 | 类型 | 源码 |
@@ -1721,7 +2034,7 @@
 | [9](../modules/algorithm/chassis_energy_config.h#L9) | 预处理 | `#define CHASSIS_POWER_SOURCE_DIRECT 0` |
 | [10](../modules/algorithm/chassis_energy_config.h#L10) | 预处理 | `#define CHASSIS_POWER_SOURCE_SUPERCAP 1` |
 | [13](../modules/algorithm/chassis_energy_config.h#L13) | 预处理 | `#ifndef CHASSIS_POWER_SOURCE_MODE` |
-| [14](../modules/algorithm/chassis_energy_config.h#L14) | 预处理 | `#define CHASSIS_POWER_SOURCE_MODE CHASSIS_POWER_SOURCE_SUPERCAP` |
+| [14](../modules/algorithm/chassis_energy_config.h#L14) | 预处理 | `#define CHASSIS_POWER_SOURCE_MODE CHASSIS_POWER_SOURCE_DIRECT` |
 | [15](../modules/algorithm/chassis_energy_config.h#L15) | 预处理 | `#endif` |
 | [17](../modules/algorithm/chassis_energy_config.h#L17) | 预处理 | `#if CHASSIS_BUFFER_POWER_ENABLE != 0 && CHASSIS_BUFFER_POWER_ENABLE != 1` |
 | [19](../modules/algorithm/chassis_energy_config.h#L19) | 预处理 | `#endif` |
@@ -1731,16 +2044,16 @@
 | [28](../modules/algorithm/chassis_energy_config.h#L28) | 预处理 | `#define CHASSIS_BUFFER_MAX_ENERGY_J 60.0f       // 缓冲能量满值(J):裁判原始读数超过它即判缓冲数据无效,不再参与增补` |
 | [29](../modules/algorithm/chassis_energy_config.h#L29) | 预处理 | `#endif` |
 | [30](../modules/algorithm/chassis_energy_config.h#L30) | 预处理 | `#ifndef CHASSIS_BUFFER_RECOVERY_ENTER_J` |
-| [31](../modules/algorithm/chassis_energy_config.h#L31) | 预处理 | `#define CHASSIS_BUFFER_RECOVERY_ENTER_J 15.0f   // 进入回充(J):估算下限降到它或以下就转入恢复` |
+| [31](../modules/algorithm/chassis_energy_config.h#L31) | 预处理 | `#define CHASSIS_BUFFER_RECOVERY_ENTER_J 10.0f   // 进入回充(J):估算下限降到它或以下就转入恢复` |
 | [32](../modules/algorithm/chassis_energy_config.h#L32) | 预处理 | `#endif` |
 | [33](../modules/algorithm/chassis_energy_config.h#L33) | 预处理 | `#ifndef CHASSIS_BUFFER_RECOVERY_EXIT_J` |
-| [34](../modules/algorithm/chassis_energy_config.h#L34) | 预处理 | `#define CHASSIS_BUFFER_RECOVERY_EXIT_J 30.0f    // 退出回充(J):估算下限回到它或以上并保持 RECOVERY_HOLD_S 才解除` |
+| [34](../modules/algorithm/chassis_energy_config.h#L34) | 预处理 | `#define CHASSIS_BUFFER_RECOVERY_EXIT_J 20.0f    // 退出回充(J):估算下限回到它或以上并保持 RECOVERY_HOLD_S 才解除` |
 | [35](../modules/algorithm/chassis_energy_config.h#L35) | 预处理 | `#endif` |
 | [36](../modules/algorithm/chassis_energy_config.h#L36) | 预处理 | `#ifndef CHASSIS_BUFFER_HARD_FLOOR_J` |
 | [37](../modules/algorithm/chassis_energy_config.h#L37) | 预处理 | `#define CHASSIS_BUFFER_HARD_FLOOR_J 5.0f        // 能量硬底座(J):预测值跌破它强制转入恢复,也是增补功率的保底基准` |
 | [38](../modules/algorithm/chassis_energy_config.h#L38) | 预处理 | `#endif` |
 | [39](../modules/algorithm/chassis_energy_config.h#L39) | 预处理 | `#ifndef CHASSIS_BUFFER_PREDICTION_WINDOW_S` |
-| [40](../modules/algorithm/chassis_energy_config.h#L40) | 预处理 | `#define CHASSIS_BUFFER_PREDICTION_WINDOW_S 0.5f // 预测窗口(s):把高于进入门槛的富余能量按该时长摊成允许的额外输入功率` |
+| [40](../modules/algorithm/chassis_energy_config.h#L40) | 预处理 | `#define CHASSIS_BUFFER_PREDICTION_WINDOW_S 0.25f // 能量释放时间(s)` |
 | [41](../modules/algorithm/chassis_energy_config.h#L41) | 预处理 | `#endif` |
 | [42](../modules/algorithm/chassis_energy_config.h#L42) | 预处理 | `#ifndef CHASSIS_BUFFER_GUARD_WINDOW_S` |
 | [43](../modules/algorithm/chassis_energy_config.h#L43) | 预处理 | `#define CHASSIS_BUFFER_GUARD_WINDOW_S 0.3f      // 保护窗口(s):把超限输入功率和硬底座余量换算成该时长内的能量预算` |
@@ -1770,7 +2083,7 @@
 | [67](../modules/algorithm/chassis_energy_config.h#L67) | 预处理 | `#define CHASSIS_BUFFER_RECOVERY_HOLD_S 0.1f     // 退出回充的确认时长(s):在该时长内持续高于退出门槛才解除` |
 | [68](../modules/algorithm/chassis_energy_config.h#L68) | 预处理 | `#endif` |
 | [69](../modules/algorithm/chassis_energy_config.h#L69) | 预处理 | `#ifndef CHASSIS_BUFFER_RISE_RATE_W_PER_S` |
-| [70](../modules/algorithm/chassis_energy_config.h#L70) | 预处理 | `#define CHASSIS_BUFFER_RISE_RATE_W_PER_S 600.0f // 输入预算上升斜率(W/s);电容负载侧使用独立斜率,下降立即生效` |
+| [70](../modules/algorithm/chassis_energy_config.h#L70) | 预处理 | `#define CHASSIS_BUFFER_RISE_RATE_W_PER_S 1200.0f // 输入预算上升斜率(W/s);电容负载侧使用独立斜率,下降立即生效` |
 | [71](../modules/algorithm/chassis_energy_config.h#L71) | 预处理 | `#endif` |
 | [72](../modules/algorithm/chassis_energy_config.h#L72) | 预处理 | `#ifndef CHASSIS_BUFFER_CORRECTION_RISE_J_PER_S` |
 | [73](../modules/algorithm/chassis_energy_config.h#L73) | 预处理 | `#define CHASSIS_BUFFER_CORRECTION_RISE_J_PER_S 20.0f // 新裁判帧向上校正估算的上限(J/s);向下立即校正` |
@@ -1778,7 +2091,8 @@
 | [75](../modules/algorithm/chassis_energy_config.h#L75) | 预处理 | `#ifndef CHASSIS_POWER_DEMAND_MARGIN_W` |
 | [76](../modules/algorithm/chassis_energy_config.h#L76) | 预处理 | `#define CHASSIS_POWER_DEMAND_MARGIN_W 5.0f     // 高于基础功率的真实驱动需求所允许的额外余量(W)` |
 | [77](../modules/algorithm/chassis_energy_config.h#L77) | 预处理 | `#endif` |
-| [79](../modules/algorithm/chassis_energy_config.h#L79) | 预处理 | `#endif` |
+| [80](../modules/algorithm/chassis_energy_config.h#L80) | 预处理 | `#define CHASSIS_SPIN_BASE_LPF_S 0.050f` |
+| [82](../modules/algorithm/chassis_energy_config.h#L82) | 预处理 | `#endif` |
 
 ## modules/algorithm/chassis_kinematics.c
 
@@ -1801,7 +2115,7 @@
 | [1](../modules/algorithm/chassis_power_budget.h#L1) | 预处理 | `#ifndef CHASSIS_POWER_BUDGET_H` |
 | [2](../modules/algorithm/chassis_power_budget.h#L2) | 预处理 | `#define CHASSIS_POWER_BUDGET_H` |
 | [7](../modules/algorithm/chassis_power_budget.h#L7) | 预处理 | `#define CHASSIS_BUFFER_HISTORY_LENGTH 96U` |
-| [120](../modules/algorithm/chassis_power_budget.h#L120) | 预处理 | `#endif` |
+| [149](../modules/algorithm/chassis_power_budget.h#L149) | 预处理 | `#endif` |
 
 ## modules/algorithm/chassis_power_config.h
 
@@ -1848,26 +2162,30 @@
 
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
-| [15](../modules/algorithm/chassis_spin.c#L15) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE` |
+| [15](../modules/algorithm/chassis_spin.c#L15) | 预处理 | `#if CHASSIS_SPIN_MODE != CHASSIS_SPIN_MODE_FIXED` |
 | [23](../modules/algorithm/chassis_spin.c#L23) | 预处理 | `#else` |
 | [25](../modules/algorithm/chassis_spin.c#L25) | 预处理 | `#endif` |
-| [40](../modules/algorithm/chassis_spin.c#L40) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE` |
-| [50](../modules/algorithm/chassis_spin.c#L50) | 预处理 | `#else` |
-| [52](../modules/algorithm/chassis_spin.c#L52) | 预处理 | `#endif` |
-| [55](../modules/algorithm/chassis_spin.c#L55) | 预处理 | `#if CHASSIS_SPIN_MODE != CHASSIS_SPIN_MODE_SINE` |
-| [60](../modules/algorithm/chassis_spin.c#L60) | 预处理 | `#else` |
-| [137](../modules/algorithm/chassis_spin.c#L137) | 预处理 | `#endif` |
-| [149](../modules/algorithm/chassis_spin.c#L149) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE` |
-| [151](../modules/algorithm/chassis_spin.c#L151) | 预处理 | `#endif` |
-| [156](../modules/algorithm/chassis_spin.c#L156) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_FIXED` |
-| [160](../modules/algorithm/chassis_spin.c#L160) | 预处理 | `#elif CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE` |
-| [162](../modules/algorithm/chassis_spin.c#L162) | 预处理 | `#else` |
-| [212](../modules/algorithm/chassis_spin.c#L212) | 预处理 | `#endif` |
-| [218](../modules/algorithm/chassis_spin.c#L218) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE` |
-| [221](../modules/algorithm/chassis_spin.c#L221) | 预处理 | `#endif` |
-| [241](../modules/algorithm/chassis_spin.c#L241) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE` |
-| [244](../modules/algorithm/chassis_spin.c#L244) | 预处理 | `#else` |
-| [247](../modules/algorithm/chassis_spin.c#L247) | 预处理 | `#endif` |
+| [28](../modules/algorithm/chassis_spin.c#L28) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |
+| [248](../modules/algorithm/chassis_spin.c#L248) | 预处理 | `#endif` |
+| [270](../modules/algorithm/chassis_spin.c#L270) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE` |
+| [280](../modules/algorithm/chassis_spin.c#L280) | 预处理 | `#else` |
+| [282](../modules/algorithm/chassis_spin.c#L282) | 预处理 | `#endif` |
+| [285](../modules/algorithm/chassis_spin.c#L285) | 预处理 | `#if CHASSIS_SPIN_MODE != CHASSIS_SPIN_MODE_SINE` |
+| [291](../modules/algorithm/chassis_spin.c#L291) | 预处理 | `#else` |
+| [368](../modules/algorithm/chassis_spin.c#L368) | 预处理 | `#endif` |
+| [385](../modules/algorithm/chassis_spin.c#L385) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_FIXED` |
+| [389](../modules/algorithm/chassis_spin.c#L389) | 预处理 | `#elif CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE` |
+| [391](../modules/algorithm/chassis_spin.c#L391) | 预处理 | `#else` |
+| [480](../modules/algorithm/chassis_spin.c#L480) | 预处理 | `#endif` |
+| [486](../modules/algorithm/chassis_spin.c#L486) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE` |
+| [489](../modules/algorithm/chassis_spin.c#L489) | 预处理 | `#endif` |
+| [506](../modules/algorithm/chassis_spin.c#L506) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |
+| [514](../modules/algorithm/chassis_spin.c#L514) | 预处理 | `#endif` |
+| [521](../modules/algorithm/chassis_spin.c#L521) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_SINE` |
+| [524](../modules/algorithm/chassis_spin.c#L524) | 预处理 | `#else` |
+| [527](../modules/algorithm/chassis_spin.c#L527) | 预处理 | `#endif` |
+| [538](../modules/algorithm/chassis_spin.c#L538) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |
+| [540](../modules/algorithm/chassis_spin.c#L540) | 预处理 | `#endif` |
 
 ## modules/algorithm/chassis_spin.h
 
@@ -1875,7 +2193,7 @@
 | --- | --- | --- |
 | [1](../modules/algorithm/chassis_spin.h#L1) | 预处理 | `#ifndef CHASSIS_SPIN_H` |
 | [2](../modules/algorithm/chassis_spin.h#L2) | 预处理 | `#define CHASSIS_SPIN_H` |
-| [53](../modules/algorithm/chassis_spin.h#L53) | 预处理 | `#endif` |
+| [102](../modules/algorithm/chassis_spin.h#L102) | 预处理 | `#endif` |
 
 ## modules/algorithm/chassis_spin_config.h
 
@@ -1884,7 +2202,7 @@
 | [1](../modules/algorithm/chassis_spin_config.h#L1) | 预处理 | `#ifndef CHASSIS_SPIN_CONFIG_H` |
 | [2](../modules/algorithm/chassis_spin_config.h#L2) | 预处理 | `#define CHASSIS_SPIN_CONFIG_H` |
 | [5](../modules/algorithm/chassis_spin_config.h#L5) | 预处理 | `#ifndef CHASSIS_SPIN_ADAPTIVE_ENABLE` |
-| [6](../modules/algorithm/chassis_spin_config.h#L6) | 预处理 | `#define CHASSIS_SPIN_ADAPTIVE_ENABLE 0` |
+| [6](../modules/algorithm/chassis_spin_config.h#L6) | 预处理 | `#define CHASSIS_SPIN_ADAPTIVE_ENABLE 1` |
 | [7](../modules/algorithm/chassis_spin_config.h#L7) | 预处理 | `#endif` |
 | [8](../modules/algorithm/chassis_spin_config.h#L8) | 预处理 | `#if CHASSIS_SPIN_ADAPTIVE_ENABLE != 0 && CHASSIS_SPIN_ADAPTIVE_ENABLE != 1` |
 | [10](../modules/algorithm/chassis_spin_config.h#L10) | 预处理 | `#endif` |
@@ -1902,63 +2220,114 @@
 | [24](../modules/algorithm/chassis_spin_config.h#L24) | 预处理 | `#endif` |
 | [25](../modules/algorithm/chassis_spin_config.h#L25) | 预处理 | `#define CHASSIS_SPIN_DYNAMIC_ENABLED (CHASSIS_SPIN_MODE != CHASSIS_SPIN_MODE_FIXED)` |
 | [28](../modules/algorithm/chassis_spin_config.h#L28) | 预处理 | `#ifndef CHASSIS_SPIN_FIXED_WZ` |
-| [29](../modules/algorithm/chassis_spin_config.h#L29) | 预处理 | `#define CHASSIS_SPIN_FIXED_WZ 4000.0f` |
+| [29](../modules/algorithm/chassis_spin_config.h#L29) | 预处理 | `#define CHASSIS_SPIN_FIXED_WZ 8000.0f` |
 | [30](../modules/algorithm/chassis_spin_config.h#L30) | 预处理 | `#endif` |
 | [31](../modules/algorithm/chassis_spin_config.h#L31) | 预处理 | `#ifndef CHASSIS_SPIN_MIN_WZ` |
-| [32](../modules/algorithm/chassis_spin_config.h#L32) | 预处理 | `#define CHASSIS_SPIN_MIN_WZ 1000.0f` |
+| [32](../modules/algorithm/chassis_spin_config.h#L32) | 预处理 | `#define CHASSIS_SPIN_MIN_WZ 3000.0f` |
 | [33](../modules/algorithm/chassis_spin_config.h#L33) | 预处理 | `#endif` |
 | [34](../modules/algorithm/chassis_spin_config.h#L34) | 预处理 | `#ifndef CHASSIS_SPIN_MAX_WZ` |
-| [35](../modules/algorithm/chassis_spin_config.h#L35) | 预处理 | `#define CHASSIS_SPIN_MAX_WZ 6000.0f` |
+| [35](../modules/algorithm/chassis_spin_config.h#L35) | 预处理 | `#define CHASSIS_SPIN_MAX_WZ 9000.0f` |
 | [36](../modules/algorithm/chassis_spin_config.h#L36) | 预处理 | `#endif` |
 | [37](../modules/algorithm/chassis_spin_config.h#L37) | 预处理 | `#ifndef CHASSIS_SPIN_POWER_GAIN` |
-| [38](../modules/algorithm/chassis_spin_config.h#L38) | 预处理 | `#define CHASSIS_SPIN_POWER_GAIN 40.0f` |
-| [39](../modules/algorithm/chassis_spin_config.h#L39) | 预处理 | `#endif` |
-| [40](../modules/algorithm/chassis_spin_config.h#L40) | 预处理 | `#ifndef CHASSIS_SPIN_RISE_RATE` |
-| [41](../modules/algorithm/chassis_spin_config.h#L41) | 预处理 | `#define CHASSIS_SPIN_RISE_RATE 400.0f` |
+| [38](../modules/algorithm/chassis_spin_config.h#L38) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |
+| [39](../modules/algorithm/chassis_spin_config.h#L39) | 预处理 | `#define CHASSIS_SPIN_POWER_GAIN 80.0f` |
+| [40](../modules/algorithm/chassis_spin_config.h#L40) | 预处理 | `#else` |
+| [41](../modules/algorithm/chassis_spin_config.h#L41) | 预处理 | `#define CHASSIS_SPIN_POWER_GAIN 40.0f` |
 | [42](../modules/algorithm/chassis_spin_config.h#L42) | 预处理 | `#endif` |
-| [43](../modules/algorithm/chassis_spin_config.h#L43) | 预处理 | `#ifndef CHASSIS_SPIN_FALL_RATE` |
-| [44](../modules/algorithm/chassis_spin_config.h#L44) | 预处理 | `#define CHASSIS_SPIN_FALL_RATE 2000.0f` |
-| [45](../modules/algorithm/chassis_spin_config.h#L45) | 预处理 | `#endif` |
-| [46](../modules/algorithm/chassis_spin_config.h#L46) | 预处理 | `#ifndef CHASSIS_SPIN_POWER_LPF_TAU_S` |
-| [47](../modules/algorithm/chassis_spin_config.h#L47) | 预处理 | `#define CHASSIS_SPIN_POWER_LPF_TAU_S 0.1f` |
-| [48](../modules/algorithm/chassis_spin_config.h#L48) | 预处理 | `#endif` |
-| [49](../modules/algorithm/chassis_spin_config.h#L49) | 预处理 | `#ifndef CHASSIS_SPIN_POWER_DEADBAND_W` |
-| [50](../modules/algorithm/chassis_spin_config.h#L50) | 预处理 | `#define CHASSIS_SPIN_POWER_DEADBAND_W 1.0f` |
-| [51](../modules/algorithm/chassis_spin_config.h#L51) | 预处理 | `#endif` |
-| [52](../modules/algorithm/chassis_spin_config.h#L52) | 预处理 | `#ifndef CHASSIS_SPIN_SETTLE_TIME_S` |
-| [53](../modules/algorithm/chassis_spin_config.h#L53) | 预处理 | `#define CHASSIS_SPIN_SETTLE_TIME_S 0.2f` |
-| [54](../modules/algorithm/chassis_spin_config.h#L54) | 预处理 | `#endif` |
-| [55](../modules/algorithm/chassis_spin_config.h#L55) | 预处理 | `#ifndef CHASSIS_SPIN_TRACKING_ERROR_RPM` |
-| [56](../modules/algorithm/chassis_spin_config.h#L56) | 预处理 | `#define CHASSIS_SPIN_TRACKING_ERROR_RPM 500.0f` |
-| [57](../modules/algorithm/chassis_spin_config.h#L57) | 预处理 | `#endif` |
-| [58](../modules/algorithm/chassis_spin_config.h#L58) | 预处理 | `#ifndef CHASSIS_SPIN_BUDGET_DROP_RESET_W` |
-| [59](../modules/algorithm/chassis_spin_config.h#L59) | 预处理 | `#define CHASSIS_SPIN_BUDGET_DROP_RESET_W 1.0f` |
+| [43](../modules/algorithm/chassis_spin_config.h#L43) | 预处理 | `#endif` |
+| [44](../modules/algorithm/chassis_spin_config.h#L44) | 预处理 | `#ifndef CHASSIS_SPIN_RISE_RATE` |
+| [45](../modules/algorithm/chassis_spin_config.h#L45) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |
+| [46](../modules/algorithm/chassis_spin_config.h#L46) | 预处理 | `#define CHASSIS_SPIN_RISE_RATE 3600.0f` |
+| [47](../modules/algorithm/chassis_spin_config.h#L47) | 预处理 | `#else` |
+| [48](../modules/algorithm/chassis_spin_config.h#L48) | 预处理 | `#define CHASSIS_SPIN_RISE_RATE 1200.0f` |
+| [49](../modules/algorithm/chassis_spin_config.h#L49) | 预处理 | `#endif` |
+| [50](../modules/algorithm/chassis_spin_config.h#L50) | 预处理 | `#endif` |
+| [51](../modules/algorithm/chassis_spin_config.h#L51) | 预处理 | `#ifndef CHASSIS_SPIN_FALL_RATE` |
+| [52](../modules/algorithm/chassis_spin_config.h#L52) | 预处理 | `#define CHASSIS_SPIN_FALL_RATE 2400.0f` |
+| [53](../modules/algorithm/chassis_spin_config.h#L53) | 预处理 | `#endif` |
+| [54](../modules/algorithm/chassis_spin_config.h#L54) | 预处理 | `#ifndef CHASSIS_SPIN_POWER_LPF_TAU_S` |
+| [55](../modules/algorithm/chassis_spin_config.h#L55) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |
+| [56](../modules/algorithm/chassis_spin_config.h#L56) | 预处理 | `#define CHASSIS_SPIN_POWER_LPF_TAU_S 0.05f` |
+| [57](../modules/algorithm/chassis_spin_config.h#L57) | 预处理 | `#else` |
+| [58](../modules/algorithm/chassis_spin_config.h#L58) | 预处理 | `#define CHASSIS_SPIN_POWER_LPF_TAU_S 0.1f` |
+| [59](../modules/algorithm/chassis_spin_config.h#L59) | 预处理 | `#endif` |
 | [60](../modules/algorithm/chassis_spin_config.h#L60) | 预处理 | `#endif` |
-| [64](../modules/algorithm/chassis_spin_config.h#L64) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_CENTER_WZ` |
-| [65](../modules/algorithm/chassis_spin_config.h#L65) | 预处理 | `#define CHASSIS_SPIN_SINE_CENTER_WZ 800.0f` |
-| [66](../modules/algorithm/chassis_spin_config.h#L66) | 预处理 | `#endif` |
-| [67](../modules/algorithm/chassis_spin_config.h#L67) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_MIN_WZ` |
-| [68](../modules/algorithm/chassis_spin_config.h#L68) | 预处理 | `#define CHASSIS_SPIN_SINE_MIN_WZ 200.0f` |
+| [61](../modules/algorithm/chassis_spin_config.h#L61) | 预处理 | `#ifndef CHASSIS_SPIN_POWER_DEADBAND_W` |
+| [62](../modules/algorithm/chassis_spin_config.h#L62) | 预处理 | `#define CHASSIS_SPIN_POWER_DEADBAND_W 1.0f` |
+| [63](../modules/algorithm/chassis_spin_config.h#L63) | 预处理 | `#endif` |
+| [64](../modules/algorithm/chassis_spin_config.h#L64) | 预处理 | `#ifndef CHASSIS_SPIN_SETTLE_TIME_S` |
+| [65](../modules/algorithm/chassis_spin_config.h#L65) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |
+| [66](../modules/algorithm/chassis_spin_config.h#L66) | 预处理 | `#define CHASSIS_SPIN_SETTLE_TIME_S 0.01f` |
+| [67](../modules/algorithm/chassis_spin_config.h#L67) | 预处理 | `#else` |
+| [68](../modules/algorithm/chassis_spin_config.h#L68) | 预处理 | `#define CHASSIS_SPIN_SETTLE_TIME_S 0.2f` |
 | [69](../modules/algorithm/chassis_spin_config.h#L69) | 预处理 | `#endif` |
-| [70](../modules/algorithm/chassis_spin_config.h#L70) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_AMPLITUDE_WZ` |
-| [71](../modules/algorithm/chassis_spin_config.h#L71) | 预处理 | `#define CHASSIS_SPIN_SINE_AMPLITUDE_WZ 200.0f` |
-| [72](../modules/algorithm/chassis_spin_config.h#L72) | 预处理 | `#endif` |
-| [73](../modules/algorithm/chassis_spin_config.h#L73) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_PERIOD_S` |
-| [74](../modules/algorithm/chassis_spin_config.h#L74) | 预处理 | `#define CHASSIS_SPIN_SINE_PERIOD_S 4.0f` |
-| [75](../modules/algorithm/chassis_spin_config.h#L75) | 预处理 | `#endif` |
-| [76](../modules/algorithm/chassis_spin_config.h#L76) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_RAMP_S` |
-| [77](../modules/algorithm/chassis_spin_config.h#L77) | 预处理 | `#define CHASSIS_SPIN_SINE_RAMP_S 1.0f` |
-| [78](../modules/algorithm/chassis_spin_config.h#L78) | 预处理 | `#endif` |
-| [79](../modules/algorithm/chassis_spin_config.h#L79) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_RISE_RATE` |
-| [80](../modules/algorithm/chassis_spin_config.h#L80) | 预处理 | `#define CHASSIS_SPIN_SINE_RISE_RATE 400.0f` |
+| [70](../modules/algorithm/chassis_spin_config.h#L70) | 预处理 | `#endif` |
+| [71](../modules/algorithm/chassis_spin_config.h#L71) | 预处理 | `#ifndef CHASSIS_SPIN_TRACKING_ERROR_RPM` |
+| [72](../modules/algorithm/chassis_spin_config.h#L72) | 预处理 | `#define CHASSIS_SPIN_TRACKING_ERROR_RPM 500.0f` |
+| [73](../modules/algorithm/chassis_spin_config.h#L73) | 预处理 | `#endif` |
+| [74](../modules/algorithm/chassis_spin_config.h#L74) | 预处理 | `#ifndef CHASSIS_SPIN_BUDGET_DROP_RESET_W` |
+| [75](../modules/algorithm/chassis_spin_config.h#L75) | 预处理 | `#define CHASSIS_SPIN_BUDGET_DROP_RESET_W 1.0f` |
+| [76](../modules/algorithm/chassis_spin_config.h#L76) | 预处理 | `#endif` |
+| [79](../modules/algorithm/chassis_spin_config.h#L79) | 预处理 | `#ifndef CHASSIS_SPIN_EXTENSION_ENABLE` |
+| [80](../modules/algorithm/chassis_spin_config.h#L80) | 预处理 | `#define CHASSIS_SPIN_EXTENSION_ENABLE 0` |
 | [81](../modules/algorithm/chassis_spin_config.h#L81) | 预处理 | `#endif` |
-| [82](../modules/algorithm/chassis_spin_config.h#L82) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_FALL_RATE` |
-| [83](../modules/algorithm/chassis_spin_config.h#L83) | 预处理 | `#define CHASSIS_SPIN_SINE_FALL_RATE 2000.0f` |
+| [82](../modules/algorithm/chassis_spin_config.h#L82) | 预处理 | `#ifndef CHASSIS_SPIN_HARD_WZ` |
+| [83](../modules/algorithm/chassis_spin_config.h#L83) | 预处理 | `#define CHASSIS_SPIN_HARD_WZ 0.0f` |
 | [84](../modules/algorithm/chassis_spin_config.h#L84) | 预处理 | `#endif` |
-| [85](../modules/algorithm/chassis_spin_config.h#L85) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_DIRECTION` |
-| [86](../modules/algorithm/chassis_spin_config.h#L86) | 预处理 | `#define CHASSIS_SPIN_SINE_DIRECTION 1` |
+| [85](../modules/algorithm/chassis_spin_config.h#L85) | 预处理 | `#ifndef CHASSIS_SPIN_BODY_HARD_RPS` |
+| [86](../modules/algorithm/chassis_spin_config.h#L86) | 预处理 | `#define CHASSIS_SPIN_BODY_HARD_RPS 0.0f` |
 | [87](../modules/algorithm/chassis_spin_config.h#L87) | 预处理 | `#endif` |
-| [89](../modules/algorithm/chassis_spin_config.h#L89) | 预处理 | `#endif` |
+| [88](../modules/algorithm/chassis_spin_config.h#L88) | 预处理 | `#ifndef CHASSIS_SPIN_WHEEL_HARD_RPM` |
+| [89](../modules/algorithm/chassis_spin_config.h#L89) | 预处理 | `#define CHASSIS_SPIN_WHEEL_HARD_RPM 0.0f` |
+| [90](../modules/algorithm/chassis_spin_config.h#L90) | 预处理 | `#endif` |
+| [91](../modules/algorithm/chassis_spin_config.h#L91) | 预处理 | `#ifndef CHASSIS_SPIN_EXTENSION_RISE_RATE` |
+| [92](../modules/algorithm/chassis_spin_config.h#L92) | 预处理 | `#define CHASSIS_SPIN_EXTENSION_RISE_RATE 600.0f` |
+| [93](../modules/algorithm/chassis_spin_config.h#L93) | 预处理 | `#endif` |
+| [94](../modules/algorithm/chassis_spin_config.h#L94) | 预处理 | `#if CHASSIS_SPIN_EXTENSION_ENABLE != 0 && CHASSIS_SPIN_EXTENSION_ENABLE != 1` |
+| [96](../modules/algorithm/chassis_spin_config.h#L96) | 预处理 | `#endif` |
+| [97](../modules/algorithm/chassis_spin_config.h#L97) | 预处理 | `#if CHASSIS_SPIN_EXTENSION_ENABLE && CHASSIS_SPIN_MODE != CHASSIS_SPIN_MODE_ADAPTIVE` |
+| [99](../modules/algorithm/chassis_spin_config.h#L99) | 预处理 | `#endif` |
+| [103](../modules/algorithm/chassis_spin_config.h#L103) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_CENTER_WZ` |
+| [104](../modules/algorithm/chassis_spin_config.h#L104) | 预处理 | `#define CHASSIS_SPIN_SINE_CENTER_WZ 800.0f` |
+| [105](../modules/algorithm/chassis_spin_config.h#L105) | 预处理 | `#endif` |
+| [106](../modules/algorithm/chassis_spin_config.h#L106) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_MIN_WZ` |
+| [107](../modules/algorithm/chassis_spin_config.h#L107) | 预处理 | `#define CHASSIS_SPIN_SINE_MIN_WZ 200.0f` |
+| [108](../modules/algorithm/chassis_spin_config.h#L108) | 预处理 | `#endif` |
+| [109](../modules/algorithm/chassis_spin_config.h#L109) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_AMPLITUDE_WZ` |
+| [110](../modules/algorithm/chassis_spin_config.h#L110) | 预处理 | `#define CHASSIS_SPIN_SINE_AMPLITUDE_WZ 200.0f` |
+| [111](../modules/algorithm/chassis_spin_config.h#L111) | 预处理 | `#endif` |
+| [112](../modules/algorithm/chassis_spin_config.h#L112) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_PERIOD_S` |
+| [113](../modules/algorithm/chassis_spin_config.h#L113) | 预处理 | `#define CHASSIS_SPIN_SINE_PERIOD_S 4.0f` |
+| [114](../modules/algorithm/chassis_spin_config.h#L114) | 预处理 | `#endif` |
+| [115](../modules/algorithm/chassis_spin_config.h#L115) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_RAMP_S` |
+| [116](../modules/algorithm/chassis_spin_config.h#L116) | 预处理 | `#define CHASSIS_SPIN_SINE_RAMP_S 1.0f` |
+| [117](../modules/algorithm/chassis_spin_config.h#L117) | 预处理 | `#endif` |
+| [118](../modules/algorithm/chassis_spin_config.h#L118) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_RISE_RATE` |
+| [119](../modules/algorithm/chassis_spin_config.h#L119) | 预处理 | `#define CHASSIS_SPIN_SINE_RISE_RATE 400.0f` |
+| [120](../modules/algorithm/chassis_spin_config.h#L120) | 预处理 | `#endif` |
+| [121](../modules/algorithm/chassis_spin_config.h#L121) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_FALL_RATE` |
+| [122](../modules/algorithm/chassis_spin_config.h#L122) | 预处理 | `#define CHASSIS_SPIN_SINE_FALL_RATE 2000.0f` |
+| [123](../modules/algorithm/chassis_spin_config.h#L123) | 预处理 | `#endif` |
+| [124](../modules/algorithm/chassis_spin_config.h#L124) | 预处理 | `#ifndef CHASSIS_SPIN_SINE_DIRECTION` |
+| [125](../modules/algorithm/chassis_spin_config.h#L125) | 预处理 | `#define CHASSIS_SPIN_SINE_DIRECTION 1` |
+| [126](../modules/algorithm/chassis_spin_config.h#L126) | 预处理 | `#endif` |
+| [128](../modules/algorithm/chassis_spin_config.h#L128) | 预处理 | `#endif` |
+
+## modules/algorithm/chassis_velocity.c
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [5](../modules/algorithm/chassis_velocity.c#L5) | 预处理 | `#define TWO_PI 6.2831853071795864769f` |
+| [6](../modules/algorithm/chassis_velocity.c#L6) | 预处理 | `#define PROJECTION_45 0.7071067811865475244f` |
+
+## modules/algorithm/chassis_velocity.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/algorithm/chassis_velocity.h#L1) | 预处理 | `#ifndef CHASSIS_VELOCITY_H` |
+| [2](../modules/algorithm/chassis_velocity.h#L2) | 预处理 | `#define CHASSIS_VELOCITY_H` |
+| [7](../modules/algorithm/chassis_velocity.h#L7) | 预处理 | `#define CHASSIS_VELOCITY_MAX_AGE_MS 20U` |
+| [38](../modules/algorithm/chassis_velocity.h#L38) | 预处理 | `#endif` |
 
 ## modules/algorithm/controller.h
 
@@ -2301,14 +2670,125 @@
 | [22](../modules/can_comm/can_comm.h#L22) | 预处理 | `#define CAN_COMM_OFFSET_BYTES 4  // 's'+ datalen + 'e' + crc8` |
 | [98](../modules/can_comm/can_comm.h#L98) | 预处理 | `#endif // !CAN_COMM_H` |
 
+## modules/chassis_force/chassis_force_allocator.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/chassis_force/chassis_force_allocator.h#L1) | 预处理 | `#ifndef CHASSIS_FORCE_ALLOCATOR_H` |
+| [2](../modules/chassis_force/chassis_force_allocator.h#L2) | 预处理 | `#define CHASSIS_FORCE_ALLOCATOR_H` |
+| [20](../modules/chassis_force/chassis_force_allocator.h#L20) | 预处理 | `#endif` |
+
+## modules/chassis_force/chassis_force_command.c
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [39](../modules/chassis_force/chassis_force_command.c#L39) | 预处理 | `#if CHASSIS_FORCE_EXIT_MODE == CHASSIS_FORCE_EXIT_BRAKE` |
+| [42](../modules/chassis_force/chassis_force_command.c#L42) | 预处理 | `#endif` |
+
+## modules/chassis_force/chassis_force_command.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/chassis_force/chassis_force_command.h#L1) | 预处理 | `#ifndef CHASSIS_FORCE_COMMAND_H` |
+| [2](../modules/chassis_force/chassis_force_command.h#L2) | 预处理 | `#define CHASSIS_FORCE_COMMAND_H` |
+| [15](../modules/chassis_force/chassis_force_command.h#L15) | 预处理 | `#endif` |
+
+## modules/chassis_force/chassis_force_config.c
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [38](../modules/chassis_force/chassis_force_config.c#L38) | 配置初值 | `ChassisForceConfig_s c={.backend=1,.schema_version=1,` |
+| [39](../modules/chassis_force/chassis_force_config.c#L39) | 配置初值 | `.calibration_valid=CHASSIS_FORCE_CALIBRATION_VALID!=0,.resume_ratio=.9f,` |
+| [40](../modules/chassis_force/chassis_force_config.c#L40) | 配置初值 | `.input_deadzone=.05f,.input_gamma=1.5f,.power_gain_nm_per_w_s=.01f,` |
+| [41](../modules/chassis_force/chassis_force_config.c#L41) | 配置初值 | `.power_deadband_w=2,.power_lpf_tau_s=.02f,.power_recovery_samples=3,` |
+| [42](../modules/chassis_force/chassis_force_config.c#L42) | 配置初值 | `.torque_probe_step_nm=.05f,.power_request_step_w=5,.grant_timeout_ms=50};` |
+| [66](../modules/chassis_force/chassis_force_config.c#L66) | 预处理 | `#if CHASSIS_FORCE_EXIT_MODE == CHASSIS_FORCE_EXIT_BRAKE` |
+| [70](../modules/chassis_force/chassis_force_config.c#L70) | 预处理 | `#endif` |
+
+## modules/chassis_force/chassis_force_config.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/chassis_force/chassis_force_config.h#L1) | 预处理 | `#ifndef CHASSIS_FORCE_CONFIG_H` |
+| [2](../modules/chassis_force/chassis_force_config.h#L2) | 预处理 | `#define CHASSIS_FORCE_CONFIG_H` |
+| [37](../modules/chassis_force/chassis_force_config.h#L37) | 预处理 | `#endif` |
+
+## modules/chassis_force/chassis_force_control.c
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [178](../modules/chassis_force/chassis_force_control.c#L178) | 预处理 | `#if CHASSIS_FORCE_SPIN_MODE == CHASSIS_FORCE_SPIN_POWER_ADAPTIVE` |
+| [193](../modules/chassis_force/chassis_force_control.c#L193) | 预处理 | `#endif` |
+| [204](../modules/chassis_force/chassis_force_control.c#L204) | 预处理 | `#if CHASSIS_FORCE_SPIN_MODE == CHASSIS_FORCE_SPIN_POWER_ADAPTIVE` |
+| [217](../modules/chassis_force/chassis_force_control.c#L217) | 预处理 | `#endif` |
+| [269](../modules/chassis_force/chassis_force_control.c#L269) | 预处理 | `#if CHASSIS_FORCE_SPIN_MODE == CHASSIS_FORCE_SPIN_POWER_ADAPTIVE` |
+| [274](../modules/chassis_force/chassis_force_control.c#L274) | 预处理 | `#endif` |
+
+## modules/chassis_force/chassis_force_control.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/chassis_force/chassis_force_control.h#L1) | 预处理 | `#ifndef CHASSIS_FORCE_CONTROL_H` |
+| [2](../modules/chassis_force/chassis_force_control.h#L2) | 预处理 | `#define CHASSIS_FORCE_CONTROL_H` |
+| [72](../modules/chassis_force/chassis_force_control.h#L72) | 预处理 | `#endif` |
+
+## modules/chassis_force/chassis_force_geometry.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/chassis_force/chassis_force_geometry.h#L1) | 预处理 | `#ifndef CHASSIS_FORCE_GEOMETRY_H` |
+| [2](../modules/chassis_force/chassis_force_geometry.h#L2) | 预处理 | `#define CHASSIS_FORCE_GEOMETRY_H` |
+| [11](../modules/chassis_force/chassis_force_geometry.h#L11) | 预处理 | `#endif` |
+
+## modules/chassis_force/chassis_force_intent.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/chassis_force/chassis_force_intent.h#L1) | 预处理 | `#ifndef CHASSIS_FORCE_INTENT_H` |
+| [2](../modules/chassis_force/chassis_force_intent.h#L2) | 预处理 | `#define CHASSIS_FORCE_INTENT_H` |
+| [7](../modules/chassis_force/chassis_force_intent.h#L7) | 预处理 | `#define CHASSIS_FORCE_WIRE_SIZE 44U` |
+| [25](../modules/chassis_force/chassis_force_intent.h#L25) | 预处理 | `#endif` |
+
+## modules/chassis_force/chassis_force_spin_power.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/chassis_force/chassis_force_spin_power.h#L1) | 预处理 | `#ifndef CHASSIS_FORCE_SPIN_POWER_H` |
+| [2](../modules/chassis_force/chassis_force_spin_power.h#L2) | 预处理 | `#define CHASSIS_FORCE_SPIN_POWER_H` |
+| [18](../modules/chassis_force/chassis_force_spin_power.h#L18) | 预处理 | `#endif` |
+
+## modules/chassis_force/chassis_force_types.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/chassis_force/chassis_force_types.h#L1) | 预处理 | `#ifndef CHASSIS_FORCE_TYPES_H` |
+| [2](../modules/chassis_force/chassis_force_types.h#L2) | 预处理 | `#define CHASSIS_FORCE_TYPES_H` |
+| [4](../modules/chassis_force/chassis_force_types.h#L4) | 预处理 | `#define CHASSIS_FORCE_COMMAND_MAX_AGE_MS 10U` |
+| [15](../modules/chassis_force/chassis_force_types.h#L15) | 预处理 | `#endif` |
+
 ## modules/chassis_power/chassis_power.h
 
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
 | [1](../modules/chassis_power/chassis_power.h#L1) | 预处理 | `#ifndef CHASSIS_POWER_H` |
 | [2](../modules/chassis_power/chassis_power.h#L2) | 预处理 | `#define CHASSIS_POWER_H` |
-| [16](../modules/chassis_power/chassis_power.h#L16) | 预处理 | `#define CHASSIS_POWER_RTT_DIVIDER 20U /* 40 ms at a 2 ms motor period. */` |
-| [18](../modules/chassis_power/chassis_power.h#L18) | 预处理 | `#endif` |
+| [19](../modules/chassis_power/chassis_power.h#L19) | 预处理 | `#define CHASSIS_POWER_RTT_DIVIDER 20U /* 40 ms at a 2 ms motor period. */` |
+| [21](../modules/chassis_power/chassis_power.h#L21) | 预处理 | `#endif` |
+
+## modules/chassis_power/chassis_power_force.c
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [2](../modules/chassis_power/chassis_power_force.c#L2) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
+| [104](../modules/chassis_power/chassis_power_force.c#L104) | 预处理 | `#endif` |
+
+## modules/chassis_power/chassis_power_force.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/chassis_power/chassis_power_force.h#L1) | 预处理 | `#ifndef CHASSIS_POWER_FORCE_H` |
+| [2](../modules/chassis_power/chassis_power_force.h#L2) | 预处理 | `#define CHASSIS_POWER_FORCE_H` |
+| [10](../modules/chassis_power/chassis_power_force.h#L10) | 预处理 | `#endif` |
 
 ## modules/chassis_power/chassis_power_internal.h
 
@@ -2323,8 +2803,8 @@
 | [13](../modules/chassis_power/chassis_power_internal.h#L13) | 预处理 | `#define POWER_LOCK() ((void)0)` |
 | [14](../modules/chassis_power/chassis_power_internal.h#L14) | 预处理 | `#define POWER_UNLOCK() ((void)0)` |
 | [15](../modules/chassis_power/chassis_power_internal.h#L15) | 预处理 | `#endif` |
-| [34](../modules/chassis_power/chassis_power_internal.h#L34) | 预处理 | `#define chassis_power (ChassisPowerPrivate())` |
-| [38](../modules/chassis_power/chassis_power_internal.h#L38) | 预处理 | `#endif` |
+| [38](../modules/chassis_power/chassis_power_internal.h#L38) | 预处理 | `#define chassis_power (ChassisPowerPrivate())` |
+| [42](../modules/chassis_power/chassis_power_internal.h#L42) | 预处理 | `#endif` |
 
 ## modules/chassis_power/chassis_power_policy.h
 
@@ -2351,7 +2831,7 @@
 | --- | --- | --- |
 | [1](../modules/chassis_power/chassis_power_types.h#L1) | 预处理 | `#ifndef CHASSIS_POWER_TYPES_H` |
 | [2](../modules/chassis_power/chassis_power_types.h#L2) | 预处理 | `#define CHASSIS_POWER_TYPES_H` |
-| [104](../modules/chassis_power/chassis_power_types.h#L104) | 预处理 | `#endif` |
+| [111](../modules/chassis_power/chassis_power_types.h#L111) | 预处理 | `#endif` |
 
 ## modules/daemon/daemon.h
 
@@ -2667,14 +3147,14 @@
 | [45](../modules/imu/ins_service.c#L45) | 预处理 | `#define GyOFFSET .003360f` |
 | [46](../modules/imu/ins_service.c#L46) | 预处理 | `#define GzOFFSET .008532f` |
 | [47](../modules/imu/ins_service.c#L47) | 预处理 | `#define gNORM 9.605101f` |
-| [92](../modules/imu/ins_service.c#L92) | 配置初值 | `static PIDInstance TempCtrl = {0};` |
-| [164](../modules/imu/ins_service.c#L164) | 配置初值 | `PID_Init_Config_s config = {.MaxOut = 100,` |
-| [165](../modules/imu/ins_service.c#L165) | 配置初值 | `.IntegralLimit = 15,` |
-| [166](../modules/imu/ins_service.c#L166) | 配置初值 | `.DeadBand = 0,` |
-| [167](../modules/imu/ins_service.c#L167) | 配置初值 | `.Kp = 50,` |
-| [168](../modules/imu/ins_service.c#L168) | 配置初值 | `.Ki = 1,` |
-| [169](../modules/imu/ins_service.c#L169) | 配置初值 | `.Kd = 0,` |
-| [170](../modules/imu/ins_service.c#L170) | 配置初值 | `.Improve = 0x01}; // enable integratiaon limit` |
+| [93](../modules/imu/ins_service.c#L93) | 配置初值 | `static PIDInstance TempCtrl = {0};` |
+| [165](../modules/imu/ins_service.c#L165) | 配置初值 | `PID_Init_Config_s config = {.MaxOut = 100,` |
+| [166](../modules/imu/ins_service.c#L166) | 配置初值 | `.IntegralLimit = 15,` |
+| [167](../modules/imu/ins_service.c#L167) | 配置初值 | `.DeadBand = 0,` |
+| [168](../modules/imu/ins_service.c#L168) | 配置初值 | `.Kp = 50,` |
+| [169](../modules/imu/ins_service.c#L169) | 配置初值 | `.Ki = 1,` |
+| [170](../modules/imu/ins_service.c#L170) | 配置初值 | `.Kd = 0,` |
+| [171](../modules/imu/ins_service.c#L171) | 配置初值 | `.Improve = 0x01}; // enable integratiaon limit` |
 
 ## modules/imu/ins_task.c
 
@@ -2829,24 +3309,40 @@
 | [19](../modules/message_center/message_center.h#L19) | 预处理 | `#define QUEUE_SIZE 1` |
 | [85](../modules/message_center/message_center.h#L85) | 预处理 | `#endif // !PUBSUB_H` |
 
+## modules/motor/DJImotor/dji_force_adapter.c
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [28](../modules/motor/DJImotor/dji_force_adapter.c#L28) | 预处理 | `#if POWER_METER_ENABLE` |
+| [30](../modules/motor/DJImotor/dji_force_adapter.c#L30) | 预处理 | `#endif` |
+
+## modules/motor/DJImotor/dji_force_adapter.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/motor/DJImotor/dji_force_adapter.h#L1) | 预处理 | `#ifndef DJI_FORCE_ADAPTER_H` |
+| [2](../modules/motor/DJImotor/dji_force_adapter.h#L2) | 预处理 | `#define DJI_FORCE_ADAPTER_H` |
+| [15](../modules/motor/DJImotor/dji_force_adapter.h#L15) | 预处理 | `#endif` |
+
 ## modules/motor/DJImotor/dji_motor.c
 
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
-| [76](../modules/motor/DJImotor/dji_motor.c#L76) | 配置初值 | `PIDAutotuneFeedback f={.now_ms=now,.can_ok=true,.feedback_ok=true,` |
-| [77](../modules/motor/DJImotor/dji_motor.c#L77) | 配置初值 | `.permitted=VehicleSafetyAllowsAutotune(now) && cycle_control.autotune_permitted && cycle_control.control_enabled &&` |
-| [78](../modules/motor/DJImotor/dji_motor.c#L78) | 配置初值 | `(uint32_t)(now-cycle_control.tick_ms)<=10 && !autotune_inhibit};` |
-| [87](../modules/motor/DJImotor/dji_motor.c#L87) | 配置初值 | `AutotuneConfiguration config={.improve=pid->Improve,.coef_a=pid->CoefA,.coef_b=pid->CoefB,` |
-| [88](../modules/motor/DJImotor/dji_motor.c#L88) | 配置初值 | `.output_rc=pid->Output_LPF_RC,.derivative_rc=pid->Derivative_LPF_RC,` |
-| [89](../modules/motor/DJImotor/dji_motor.c#L89) | 配置初值 | `.speed_smooth=SPEED_SMOOTH_COEF,.current_smooth=CURRENT_SMOOTH_COEF,` |
-| [90](../modules/motor/DJImotor/dji_motor.c#L90) | 配置初值 | `.output_limit=fminf(pid->MaxOut,output_group->max_current_command),` |
-| [91](../modules/motor/DJImotor/dji_motor.c#L91) | 配置初值 | `.motor_flags=(uint32_t)settings->close_loop_type &#124; ((uint32_t)settings->outer_loop_type<<8) &#124;` |
-| [92](../modules/motor/DJImotor/dji_motor.c#L92) | 配置初值 | `((uint32_t)settings->motor_reverse_flag<<16) &#124; ((uint32_t)settings->feedback_reverse_flag<<20) &#124;` |
-| [93](../modules/motor/DJImotor/dji_motor.c#L93) | 配置初值 | `((uint32_t)settings->speed_feedback_source<<24) &#124; ((uint32_t)settings->feedforward_flag<<28)};` |
-| [379](../modules/motor/DJImotor/dji_motor.c#L379) | 配置初值 | `Daemon_Init_Config_s daemon_config = {` |
-| [380](../modules/motor/DJImotor/dji_motor.c#L380) | 配置初值 | `.callback = DJIMotorLostCallback,` |
-| [381](../modules/motor/DJImotor/dji_motor.c#L381) | 配置初值 | `.owner_id = instance,` |
-| [382](../modules/motor/DJImotor/dji_motor.c#L382) | 配置初值 | `.reload_count = 2, // 20ms未收到数据则丢失` |
+| [84](../modules/motor/DJImotor/dji_motor.c#L84) | 配置初值 | `const PIDAutotuneFeedback denied={.now_ms=now,.permitted=false};` |
+| [90](../modules/motor/DJImotor/dji_motor.c#L90) | 配置初值 | `PIDAutotuneFeedback f={.now_ms=now,.can_ok=true,.feedback_ok=true,` |
+| [91](../modules/motor/DJImotor/dji_motor.c#L91) | 配置初值 | `.permitted=VehicleSafetyAllowsAutotune(now) && cycle_control.autotune_permitted && cycle_control.control_enabled &&` |
+| [92](../modules/motor/DJImotor/dji_motor.c#L92) | 配置初值 | `(uint32_t)(now-cycle_control.tick_ms)<=10 && !autotune_inhibit};` |
+| [101](../modules/motor/DJImotor/dji_motor.c#L101) | 配置初值 | `AutotuneConfiguration config={.improve=pid->Improve,.coef_a=pid->CoefA,.coef_b=pid->CoefB,` |
+| [102](../modules/motor/DJImotor/dji_motor.c#L102) | 配置初值 | `.output_rc=pid->Output_LPF_RC,.derivative_rc=pid->Derivative_LPF_RC,` |
+| [103](../modules/motor/DJImotor/dji_motor.c#L103) | 配置初值 | `.speed_smooth=SPEED_SMOOTH_COEF,.current_smooth=CURRENT_SMOOTH_COEF,` |
+| [104](../modules/motor/DJImotor/dji_motor.c#L104) | 配置初值 | `.output_limit=fminf(pid->MaxOut,output_group->max_current_command),` |
+| [105](../modules/motor/DJImotor/dji_motor.c#L105) | 配置初值 | `.motor_flags=(uint32_t)settings->close_loop_type &#124; ((uint32_t)settings->outer_loop_type<<8) &#124;` |
+| [106](../modules/motor/DJImotor/dji_motor.c#L106) | 配置初值 | `((uint32_t)settings->motor_reverse_flag<<16) &#124; ((uint32_t)settings->feedback_reverse_flag<<20) &#124;` |
+| [107](../modules/motor/DJImotor/dji_motor.c#L107) | 配置初值 | `((uint32_t)settings->speed_feedback_source<<24) &#124; ((uint32_t)settings->feedforward_flag<<28)};` |
+| [393](../modules/motor/DJImotor/dji_motor.c#L393) | 配置初值 | `Daemon_Init_Config_s daemon_config = {` |
+| [394](../modules/motor/DJImotor/dji_motor.c#L394) | 配置初值 | `.callback = DJIMotorLostCallback,` |
+| [395](../modules/motor/DJImotor/dji_motor.c#L395) | 配置初值 | `.owner_id = instance,` |
+| [396](../modules/motor/DJImotor/dji_motor.c#L396) | 配置初值 | `.reload_count = 2, // 20ms未收到数据则丢失` |
 
 ## modules/motor/DJImotor/dji_motor.h
 
@@ -2858,7 +3354,7 @@
 | [28](../modules/motor/DJImotor/dji_motor.h#L28) | 预处理 | `#define SPEED_SMOOTH_COEF 0.85f      // 最好大于0.85` |
 | [29](../modules/motor/DJImotor/dji_motor.h#L29) | 预处理 | `#define CURRENT_SMOOTH_COEF 0.9f     // 必须大于0.9` |
 | [30](../modules/motor/DJImotor/dji_motor.h#L30) | 预处理 | `#define ECD_ANGLE_COEF_DJI 0.043945f // (360/8192),将编码器值转化为角度制` |
-| [176](../modules/motor/DJImotor/dji_motor.h#L176) | 预处理 | `#endif // !DJI_MOTOR_H` |
+| [180](../modules/motor/DJImotor/dji_motor.h#L180) | 预处理 | `#endif // !DJI_MOTOR_H` |
 
 ## modules/motor/DJImotor/dji_power_adapter.c
 
@@ -3357,10 +3853,10 @@
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
 | [21](../modules/referee/rm_referee.c#L21) | 预处理 | `#define RE_RX_BUFFER_SIZE 255u // 裁判系统接收缓冲区大小` |
-| [225](../modules/referee/rm_referee.c#L225) | 配置初值 | `Daemon_Init_Config_s daemon_conf = {` |
-| [226](../modules/referee/rm_referee.c#L226) | 配置初值 | `.callback = RefereeLostCallback,` |
-| [227](../modules/referee/rm_referee.c#L227) | 配置初值 | `.owner_id = referee_usart_instance,` |
-| [228](../modules/referee/rm_referee.c#L228) | 配置初值 | `.reload_count = 30, // 0.3s没有收到数据,则认为丢失,重启串口接收` |
+| [229](../modules/referee/rm_referee.c#L229) | 配置初值 | `Daemon_Init_Config_s daemon_conf = {` |
+| [230](../modules/referee/rm_referee.c#L230) | 配置初值 | `.callback = RefereeLostCallback,` |
+| [231](../modules/referee/rm_referee.c#L231) | 配置初值 | `.owner_id = referee_usart_instance,` |
+| [232](../modules/referee/rm_referee.c#L232) | 配置初值 | `.reload_count = 30, // 0.3s没有收到数据,则认为丢失,重启串口接收` |
 
 ## modules/referee/rm_referee.h
 
@@ -3477,6 +3973,14 @@
 | [2](../modules/telemetry/autotune_protocol.h#L2) | 预处理 | `#define AUTOTUNE_PROTOCOL_H` |
 | [23](../modules/telemetry/autotune_protocol.h#L23) | 预处理 | `#endif` |
 
+## modules/telemetry/chassis_force_telemetry.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/telemetry/chassis_force_telemetry.h#L1) | 预处理 | `#ifndef CHASSIS_FORCE_TELEMETRY_H` |
+| [2](../modules/telemetry/chassis_force_telemetry.h#L2) | 预处理 | `#define CHASSIS_FORCE_TELEMETRY_H` |
+| [9](../modules/telemetry/chassis_force_telemetry.h#L9) | 预处理 | `#endif` |
+
 ## modules/telemetry/chassis_power_capture.h
 
 | 行 | 类型 | 源码 |
@@ -3529,9 +4033,9 @@
 | --- | --- | --- |
 | [1](../modules/telemetry/runtime_tuning.h#L1) | 预处理 | `#ifndef RUNTIME_TUNING_H` |
 | [2](../modules/telemetry/runtime_tuning.h#L2) | 预处理 | `#define RUNTIME_TUNING_H` |
-| [9](../modules/telemetry/runtime_tuning.h#L9) | 预处理 | `#define TUNING_MAX_VALUES 24U` |
-| [10](../modules/telemetry/runtime_tuning.h#L10) | 预处理 | `#define TUNING_LINE_SIZE 512U` |
-| [34](../modules/telemetry/runtime_tuning.h#L34) | 预处理 | `#endif` |
+| [12](../modules/telemetry/runtime_tuning.h#L12) | 预处理 | `#define TUNING_MAX_VALUES 24U` |
+| [13](../modules/telemetry/runtime_tuning.h#L13) | 预处理 | `#define TUNING_LINE_SIZE 512U` |
+| [37](../modules/telemetry/runtime_tuning.h#L37) | 预处理 | `#endif` |
 
 ## modules/telemetry/tuning_flash.h
 
@@ -3583,12 +4087,17 @@
 
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
-| [4](../modules/telemetry/usb_telemetry.c#L4) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
-| [148](../modules/telemetry/usb_telemetry.c#L148) | 预处理 | `#endif` |
-| [152](../modules/telemetry/usb_telemetry.c#L152) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
-| [154](../modules/telemetry/usb_telemetry.c#L154) | 预处理 | `#endif` |
-| [159](../modules/telemetry/usb_telemetry.c#L159) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
-| [165](../modules/telemetry/usb_telemetry.c#L165) | 预处理 | `#endif` |
+| [6](../modules/telemetry/usb_telemetry.c#L6) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
+| [22](../modules/telemetry/usb_telemetry.c#L22) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_SPEED` |
+| [189](../modules/telemetry/usb_telemetry.c#L189) | 预处理 | `#endif` |
+| [190](../modules/telemetry/usb_telemetry.c#L190) | 预处理 | `#endif` |
+| [194](../modules/telemetry/usb_telemetry.c#L194) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
+| [196](../modules/telemetry/usb_telemetry.c#L196) | 预处理 | `#endif` |
+| [201](../modules/telemetry/usb_telemetry.c#L201) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
+| [205](../modules/telemetry/usb_telemetry.c#L205) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_SPEED` |
+| [207](../modules/telemetry/usb_telemetry.c#L207) | 预处理 | `#else` |
+| [209](../modules/telemetry/usb_telemetry.c#L209) | 预处理 | `#endif` |
+| [211](../modules/telemetry/usb_telemetry.c#L211) | 预处理 | `#endif` |
 
 ## modules/telemetry/usb_telemetry.h
 
@@ -3616,7 +4125,7 @@
 | [15](../modules/telemetry/usb_telemetry_config.h#L15) | 预处理 | `#define USB_TELEMETRY_HEADER_PERIOD_MS 1000U` |
 | [16](../modules/telemetry/usb_telemetry_config.h#L16) | 预处理 | `#endif` |
 | [17](../modules/telemetry/usb_telemetry_config.h#L17) | 预处理 | `#ifndef USB_TELEMETRY_BUFFER_SIZE` |
-| [18](../modules/telemetry/usb_telemetry_config.h#L18) | 预处理 | `#define USB_TELEMETRY_BUFFER_SIZE 2048U` |
+| [18](../modules/telemetry/usb_telemetry_config.h#L18) | 预处理 | `#define USB_TELEMETRY_BUFFER_SIZE 3072U` |
 | [19](../modules/telemetry/usb_telemetry_config.h#L19) | 预处理 | `#endif` |
 | [21](../modules/telemetry/usb_telemetry_config.h#L21) | 预处理 | `#endif` |
 
@@ -3625,8 +4134,8 @@
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
 | [8](../modules/telemetry/usb_telemetry_format.c#L8) | 预处理 | `#define USB_HEADER_FIELD(name) #name ","` |
-| [62](../modules/telemetry/usb_telemetry_format.c#L62) | 预处理 | `#define USB_ROW_U(name) \` |
-| [66](../modules/telemetry/usb_telemetry_format.c#L66) | 预处理 | `#define USB_ROW_I(name) \` |
+| [92](../modules/telemetry/usb_telemetry_format.c#L92) | 预处理 | `#define USB_ROW_U(name) \` |
+| [96](../modules/telemetry/usb_telemetry_format.c#L96) | 预处理 | `#define USB_ROW_I(name) \` |
 
 ## modules/telemetry/usb_telemetry_format.h
 
@@ -3634,16 +4143,32 @@
 | --- | --- | --- |
 | [1](../modules/telemetry/usb_telemetry_format.h#L1) | 预处理 | `#ifndef USB_TELEMETRY_FORMAT_H` |
 | [2](../modules/telemetry/usb_telemetry_format.h#L2) | 预处理 | `#define USB_TELEMETRY_FORMAT_H` |
-| [8](../modules/telemetry/usb_telemetry_format.h#L8) | 预处理 | `#define USB_TELEMETRY_FIELDS(U, I) \` |
-| [31](../modules/telemetry/usb_telemetry_format.h#L31) | 预处理 | `#define USB_FIELD_U(name) uint32_t name;` |
-| [32](../modules/telemetry/usb_telemetry_format.h#L32) | 预处理 | `#define USB_FIELD_I(name) int32_t name;` |
-| [47](../modules/telemetry/usb_telemetry_format.h#L47) | 预处理 | `#endif` |
+| [9](../modules/telemetry/usb_telemetry_format.h#L9) | 预处理 | `#define USB_TELEMETRY_FIELDS(U, I) \` |
+| [51](../modules/telemetry/usb_telemetry_format.h#L51) | 预处理 | `#define USB_FIELD_U(name) uint32_t name;` |
+| [52](../modules/telemetry/usb_telemetry_format.h#L52) | 预处理 | `#define USB_FIELD_I(name) int32_t name;` |
+| [69](../modules/telemetry/usb_telemetry_format.h#L69) | 预处理 | `#endif` |
+
+## modules/telemetry/usb_telemetry_imu.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/telemetry/usb_telemetry_imu.h#L1) | 预处理 | `#ifndef USB_TELEMETRY_IMU_H` |
+| [2](../modules/telemetry/usb_telemetry_imu.h#L2) | 预处理 | `#define USB_TELEMETRY_IMU_H` |
+| [11](../modules/telemetry/usb_telemetry_imu.h#L11) | 预处理 | `#endif` |
 
 ## modules/telemetry/usb_telemetry_stream.c
 
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
-| [70](../modules/telemetry/usb_telemetry_stream.c#L70) | 配置初值 | `USB_Init_Config_s config = {.rx_cbk = Receive};` |
+| [7](../modules/telemetry/usb_telemetry_stream.c#L7) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
+| [16](../modules/telemetry/usb_telemetry_stream.c#L16) | 预处理 | `#endif` |
+| [81](../modules/telemetry/usb_telemetry_stream.c#L81) | 配置初值 | `USB_Init_Config_s config = {.rx_cbk = Receive};` |
+| [88](../modules/telemetry/usb_telemetry_stream.c#L88) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
+| [90](../modules/telemetry/usb_telemetry_stream.c#L90) | 预处理 | `#else` |
+| [92](../modules/telemetry/usb_telemetry_stream.c#L92) | 预处理 | `#endif` |
+| [146](../modules/telemetry/usb_telemetry_stream.c#L146) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
+| [152](../modules/telemetry/usb_telemetry_stream.c#L152) | 预处理 | `#else` |
+| [154](../modules/telemetry/usb_telemetry_stream.c#L154) | 预处理 | `#endif` |
 
 ## modules/TFminiPlus/tfminiplus.c
 
@@ -3683,7 +4208,7 @@
 | --- | --- | --- |
 | [1](../modules/vehicle_safety/vehicle_safety.h#L1) | 预处理 | `#ifndef VEHICLE_SAFETY_H` |
 | [2](../modules/vehicle_safety/vehicle_safety.h#L2) | 预处理 | `#define VEHICLE_SAFETY_H` |
-| [19](../modules/vehicle_safety/vehicle_safety.h#L19) | 预处理 | `#endif` |
+| [20](../modules/vehicle_safety/vehicle_safety.h#L20) | 预处理 | `#endif` |
 
 ## modules/vtx/vt02_control.c
 
@@ -3700,14 +4225,14 @@
 | [20](../modules/vtx/vt02_control.c#L20) | 预处理 | `#define VT02_CONTROL_DATA_SIZE 12u` |
 | [21](../modules/vtx/vt02_control.c#L21) | 预处理 | `#define VT02_MIN_FRAME_SIZE (VT02_HEADER_SIZE + VT02_CMD_ID_SIZE + VT02_CRC16_SIZE)` |
 | [22](../modules/vtx/vt02_control.c#L22) | 预处理 | `#define VT02_DEBUG_DATA_SIZE 32u` |
-| [317](../modules/vtx/vt02_control.c#L317) | 配置初值 | `USART_Init_Config_s usart_conf = {` |
-| [318](../modules/vtx/vt02_control.c#L318) | 配置初值 | `.module_callback = Vt02RxCallback,` |
-| [319](../modules/vtx/vt02_control.c#L319) | 配置初值 | `.usart_handle = vt02_usart_handle,` |
-| [320](../modules/vtx/vt02_control.c#L320) | 配置初值 | `.recv_buff_size = (uint8_t)(VT02_RX_BUFFER_SIZE - 1u),` |
-| [323](../modules/vtx/vt02_control.c#L323) | 配置初值 | `Daemon_Init_Config_s daemon_conf = {` |
-| [324](../modules/vtx/vt02_control.c#L324) | 配置初值 | `.reload_count = VT02_DAEMON_RELOAD,` |
-| [325](../modules/vtx/vt02_control.c#L325) | 配置初值 | `.callback = Vt02LostCallback,` |
-| [326](../modules/vtx/vt02_control.c#L326) | 配置初值 | `.owner_id = NULL,` |
+| [318](../modules/vtx/vt02_control.c#L318) | 配置初值 | `USART_Init_Config_s usart_conf = {` |
+| [319](../modules/vtx/vt02_control.c#L319) | 配置初值 | `.module_callback = Vt02RxCallback,` |
+| [320](../modules/vtx/vt02_control.c#L320) | 配置初值 | `.usart_handle = vt02_usart_handle,` |
+| [321](../modules/vtx/vt02_control.c#L321) | 配置初值 | `.recv_buff_size = (uint8_t)(VT02_RX_BUFFER_SIZE - 1u),` |
+| [324](../modules/vtx/vt02_control.c#L324) | 配置初值 | `Daemon_Init_Config_s daemon_conf = {` |
+| [325](../modules/vtx/vt02_control.c#L325) | 配置初值 | `.reload_count = VT02_DAEMON_RELOAD,` |
+| [326](../modules/vtx/vt02_control.c#L326) | 配置初值 | `.callback = Vt02LostCallback,` |
+| [327](../modules/vtx/vt02_control.c#L327) | 配置初值 | `.owner_id = NULL,` |
 
 ## modules/vtx/vt02_control.h
 
@@ -3715,7 +4240,7 @@
 | --- | --- | --- |
 | [12](../modules/vtx/vt02_control.h#L12) | 预处理 | `#ifndef VT02_CONTROL_H` |
 | [13](../modules/vtx/vt02_control.h#L13) | 预处理 | `#define VT02_CONTROL_H` |
-| [65](../modules/vtx/vt02_control.h#L65) | 预处理 | `#endif` |
+| [66](../modules/vtx/vt02_control.h#L66) | 预处理 | `#endif` |
 
 ## Src/adc.c
 
@@ -4236,32 +4761,36 @@
 
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
-| [65](../Src/usbd_desc.c#L65) | 预处理 | `#define USBD_VID     1155` |
-| [66](../Src/usbd_desc.c#L66) | 预处理 | `#define USBD_LANGID_STRING     1033` |
-| [67](../Src/usbd_desc.c#L67) | 预处理 | `#define USBD_MANUFACTURER_STRING     "YueLuEmbedded"` |
-| [68](../Src/usbd_desc.c#L68) | 预处理 | `#define USBD_PID_FS     202` |
-| [69](../Src/usbd_desc.c#L69) | 预处理 | `#define USBD_PRODUCT_STRING_FS     "Vision Comm port"` |
-| [70](../Src/usbd_desc.c#L70) | 预处理 | `#define USBD_CONFIGURATION_STRING_FS     "CDC Config"` |
-| [71](../Src/usbd_desc.c#L71) | 预处理 | `#define USBD_INTERFACE_STRING_FS     "CDC Interface"` |
-| [73](../Src/usbd_desc.c#L73) | 预处理 | `#define USB_SIZ_BOS_DESC            0x0C` |
-| [124](../Src/usbd_desc.c#L124) | 预处理 | `#if (USBD_LPM_ENABLED == 1)` |
-| [126](../Src/usbd_desc.c#L126) | 预处理 | `#endif /* (USBD_LPM_ENABLED == 1) */` |
-| [146](../Src/usbd_desc.c#L146) | 预处理 | `#if (USBD_LPM_ENABLED == 1)` |
-| [148](../Src/usbd_desc.c#L148) | 预处理 | `#endif /* (USBD_LPM_ENABLED == 1) */` |
-| [151](../Src/usbd_desc.c#L151) | 预处理 | `#if defined ( __ICCARM__ ) /* IAR Compiler */` |
-| [153](../Src/usbd_desc.c#L153) | 预处理 | `#endif /* defined ( __ICCARM__ ) */` |
-| [159](../Src/usbd_desc.c#L159) | 预处理 | `#if (USBD_LPM_ENABLED == 1)` |
-| [163](../Src/usbd_desc.c#L163) | 预处理 | `#else` |
-| [165](../Src/usbd_desc.c#L165) | 预处理 | `#endif /* (USBD_LPM_ENABLED == 1) */` |
-| [185](../Src/usbd_desc.c#L185) | 预处理 | `#if (USBD_LPM_ENABLED == 1)` |
-| [186](../Src/usbd_desc.c#L186) | 预处理 | `#if defined ( __ICCARM__ ) /* IAR Compiler */` |
-| [188](../Src/usbd_desc.c#L188) | 预处理 | `#endif /* defined ( __ICCARM__ ) */` |
-| [205](../Src/usbd_desc.c#L205) | 预处理 | `#endif /* (USBD_LPM_ENABLED == 1) */` |
-| [216](../Src/usbd_desc.c#L216) | 预处理 | `#if defined ( __ICCARM__ ) /* IAR Compiler */` |
-| [218](../Src/usbd_desc.c#L218) | 预处理 | `#endif /* defined ( __ICCARM__ ) */` |
-| [229](../Src/usbd_desc.c#L229) | 预处理 | `#if defined ( __ICCARM__ ) /* IAR Compiler */` |
-| [231](../Src/usbd_desc.c#L231) | 预处理 | `#endif /* defined ( __ICCARM__ ) */` |
-| [235](../Src/usbd_desc.c#L235) | 预处理 | `#if defined ( __ICCARM__ ) /*!< IAR Compiler */` |
-| [237](../Src/usbd_desc.c#L237) | 预处理 | `#endif` |
-| [368](../Src/usbd_desc.c#L368) | 预处理 | `#if (USBD_LPM_ENABLED == 1)` |
-| [381](../Src/usbd_desc.c#L381) | 预处理 | `#endif /* (USBD_LPM_ENABLED == 1) */` |
+| [66](../Src/usbd_desc.c#L66) | 预处理 | `#define USBD_VID     1155` |
+| [67](../Src/usbd_desc.c#L67) | 预处理 | `#define USBD_LANGID_STRING     1033` |
+| [68](../Src/usbd_desc.c#L68) | 预处理 | `#define USBD_MANUFACTURER_STRING     "YueLuEmbedded"` |
+| [69](../Src/usbd_desc.c#L69) | 预处理 | `#define USBD_PID_FS     202` |
+| [70](../Src/usbd_desc.c#L70) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
+| [71](../Src/usbd_desc.c#L71) | 预处理 | `#define USBD_PRODUCT_STRING_FS     "A Board Telemetry"` |
+| [72](../Src/usbd_desc.c#L72) | 预处理 | `#else` |
+| [73](../Src/usbd_desc.c#L73) | 预处理 | `#define USBD_PRODUCT_STRING_FS     "Vision Comm port"` |
+| [74](../Src/usbd_desc.c#L74) | 预处理 | `#endif` |
+| [75](../Src/usbd_desc.c#L75) | 预处理 | `#define USBD_CONFIGURATION_STRING_FS     "CDC Config"` |
+| [76](../Src/usbd_desc.c#L76) | 预处理 | `#define USBD_INTERFACE_STRING_FS     "CDC Interface"` |
+| [78](../Src/usbd_desc.c#L78) | 预处理 | `#define USB_SIZ_BOS_DESC            0x0C` |
+| [129](../Src/usbd_desc.c#L129) | 预处理 | `#if (USBD_LPM_ENABLED == 1)` |
+| [131](../Src/usbd_desc.c#L131) | 预处理 | `#endif /* (USBD_LPM_ENABLED == 1) */` |
+| [151](../Src/usbd_desc.c#L151) | 预处理 | `#if (USBD_LPM_ENABLED == 1)` |
+| [153](../Src/usbd_desc.c#L153) | 预处理 | `#endif /* (USBD_LPM_ENABLED == 1) */` |
+| [156](../Src/usbd_desc.c#L156) | 预处理 | `#if defined ( __ICCARM__ ) /* IAR Compiler */` |
+| [158](../Src/usbd_desc.c#L158) | 预处理 | `#endif /* defined ( __ICCARM__ ) */` |
+| [164](../Src/usbd_desc.c#L164) | 预处理 | `#if (USBD_LPM_ENABLED == 1)` |
+| [168](../Src/usbd_desc.c#L168) | 预处理 | `#else` |
+| [170](../Src/usbd_desc.c#L170) | 预处理 | `#endif /* (USBD_LPM_ENABLED == 1) */` |
+| [190](../Src/usbd_desc.c#L190) | 预处理 | `#if (USBD_LPM_ENABLED == 1)` |
+| [191](../Src/usbd_desc.c#L191) | 预处理 | `#if defined ( __ICCARM__ ) /* IAR Compiler */` |
+| [193](../Src/usbd_desc.c#L193) | 预处理 | `#endif /* defined ( __ICCARM__ ) */` |
+| [210](../Src/usbd_desc.c#L210) | 预处理 | `#endif /* (USBD_LPM_ENABLED == 1) */` |
+| [221](../Src/usbd_desc.c#L221) | 预处理 | `#if defined ( __ICCARM__ ) /* IAR Compiler */` |
+| [223](../Src/usbd_desc.c#L223) | 预处理 | `#endif /* defined ( __ICCARM__ ) */` |
+| [234](../Src/usbd_desc.c#L234) | 预处理 | `#if defined ( __ICCARM__ ) /* IAR Compiler */` |
+| [236](../Src/usbd_desc.c#L236) | 预处理 | `#endif /* defined ( __ICCARM__ ) */` |
+| [240](../Src/usbd_desc.c#L240) | 预处理 | `#if defined ( __ICCARM__ ) /*!< IAR Compiler */` |
+| [242](../Src/usbd_desc.c#L242) | 预处理 | `#endif` |
+| [373](../Src/usbd_desc.c#L373) | 预处理 | `#if (USBD_LPM_ENABLED == 1)` |
+| [386](../Src/usbd_desc.c#L386) | 预处理 | `#endif /* (USBD_LPM_ENABLED == 1) */` |

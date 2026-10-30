@@ -22,8 +22,10 @@
 #include "daemon.h"
 #include <stdbool.h>
 #include "../../chassis_force_calibration/force_calibration_config.h"
+#include "../../predictive_power/speed_observation_config.h"
 
 #define DJI_MOTOR_CNT 12
+#define DJI_SENDER_GROUP_COUNT 6U
 
 /* 滤波系数设置为1的时候即关闭滤波 */
 #define SPEED_SMOOTH_COEF 0.85f      // 最好大于0.85
@@ -44,11 +46,18 @@ typedef struct
     int32_t total_round; // 总圈数,注意方向
     uint32_t rx_sequence;
     uint32_t rx_tick_ms;
-#if CHASSIS_FORCE_CALIBRATION_ENABLE
+#if CHASSIS_FORCE_CALIBRATION_ENABLE || CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE
     int16_t raw_rpm, raw_current;
     uint32_t rx_cycles;
 #endif
 } DJI_Motor_Measure_s;
+
+#if CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE
+/* Configure only from task context. Index is the registered global motor index.
+ * Observer executes in receive context and must perform bounded copies only. */
+bool DJIMotorSetSpeedFeedbackObserver(
+    void (*observer)(void *,unsigned,const DJI_Motor_Measure_s *),void *context);
+#endif
 
 /**
  * @brief DJI intelligent motor typedef
@@ -95,6 +104,13 @@ typedef struct
     DJIMotorGroupControl_s control;
 } DJIMotorOutputGroup_s;
 
+typedef struct {
+    uint8_t bytes[DJI_SENDER_GROUP_COUNT][8];
+    uint32_t begin_cycles[DJI_SENDER_GROUP_COUNT],end_cycles[DJI_SENDER_GROUP_COUNT];
+    uint8_t submitted_groups,successful_groups;
+    bool enabled_at_submit[DJI_MOTOR_CNT];
+} DJIMotorSubmission_s;
+
 typedef struct
 {
     uint8_t count;
@@ -103,6 +119,7 @@ typedef struct
     float *current, *actual_aps, *target_aps;
     Motor_Working_Type_e *stop;
     bool *online;
+    const DJIMotorSubmission_s *submission;
 } DJIMotorCycle_s;
 
 typedef struct

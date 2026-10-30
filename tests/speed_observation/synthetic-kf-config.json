@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "max_gap_us": 20000,
+  "max_age_us": 20000,
+  "max_horizon_us": 20000,
+  "q": 1.0,
+  "r": 0.25,
+  "initial_p00": 1.0,
+  "initial_p11": 100.0,
+  "gate_squared": 25.0,
+  "max_rejections": 3,
+  "synthetic": true,
+  "units": "rotor_rad_s"
+}

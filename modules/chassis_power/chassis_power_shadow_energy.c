@@ -7,7 +7,14 @@
 #endif
 static ChassisPowerShadowEnergySnapshot energy;
 static uint32_t last_attempt,version;
-static bool attempted;
+static bool attempted,paused;
+void ChassisPowerShadowEnergyResume(void) {POWER_LOCK();paused=false;POWER_UNLOCK();}
+void ChassisPowerShadowEnergyTiming(uint32_t *elapsed_us,uint32_t *strategy_version)
+{
+    POWER_LOCK();if(elapsed_us)*elapsed_us=attempted ? energy.elapsed_us:UINT32_MAX;
+    if(strategy_version)*strategy_version=energy.plan.strategy_version;
+    POWER_UNLOCK();
+}
 bool ChassisPowerShadowEnergyGet(ChassisPowerShadowEnergySnapshot *s)
 {
     if(!s) return false;
@@ -16,7 +23,7 @@ bool ChassisPowerShadowEnergyGet(ChassisPowerShadowEnergySnapshot *s)
 void ChassisPowerShadowEnergyUpdate(const ChassisPowerPolicyInput_s *i,const ChassisPower_Init_Config_s *c,
                                     const ChassisPowerPolicyOutput_s *policy)
 {
-    if(!i || !c || !policy) return;
+    if(!i || !c || !policy || paused) return;
     ChassisPowerShadowEnergySnapshot result={.config_version=policy->control.config_version,.reason=PP_NO_PERMISSION};
     const bool permitted=policy->valid && policy->control.control_enabled && !i->zero_force &&
         i->referee.valid && i->referee.chassis_output_enabled;
@@ -57,11 +64,15 @@ void ChassisPowerShadowEnergyUpdate(const ChassisPowerPolicyInput_s *i,const Cha
 #ifdef STM32F427xx
     const uint32_t hz=DWT_GetFrequencyHz();
     result.elapsed_us=hz ? (uint32_t)((uint64_t)(uint32_t)(DWT_GetCycleCount()-start)*1000000U/hz) : UINT32_MAX;
-    if(result.elapsed_us>2000) {result.plan.valid=false;result.reason=PP_TIMEOUT;}
+    if(result.elapsed_us>2000) {result.plan.valid=false;result.reason=PP_TIMEOUT;paused=true;}
+#else
+    result.elapsed_us=UINT32_MAX;
 #endif
     POWER_LOCK();energy=result;POWER_UNLOCK();
 }
 #else
+void ChassisPowerShadowEnergyResume(void) {}
+void ChassisPowerShadowEnergyTiming(uint32_t *e,uint32_t *s) {if(e)*e=UINT32_MAX;if(s)*s=0;}
 bool ChassisPowerShadowEnergyGet(ChassisPowerShadowEnergySnapshot *s)
 {if(s) memset(s,0,sizeof *s);return false;}
 void ChassisPowerShadowEnergyUpdate(const ChassisPowerPolicyInput_s *i,const ChassisPower_Init_Config_s *c,

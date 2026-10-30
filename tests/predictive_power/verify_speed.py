@@ -1,4 +1,7 @@
-"""Compile and compare real speed-path final commands in legacy/shadow builds."""
+"""Compare production power-loop traces across observation build options.
+
+The separate DJI suite verifies actual packed CAN bytes and mailbox races.
+"""
 from pathlib import Path
 import subprocess
 import sys
@@ -15,10 +18,18 @@ sources += ['modules/algorithm/'+n+'.c' for n in
             ('power_model', 'chassis_power_transient', 'chassis_power_budget', 'chassis_power_outer_loop', 'chassis_spin')]
 sources += ['modules/telemetry/rtt_telemetry.c']
 outputs = {}
-for mode in (0, 1):
-    exe = BUILD/f'speed-mode-{mode}.exe'
+configurations = (
+    ('default', 0, []),
+    ('capture', 0, ['CHASSIS_SPEED_CAPTURE_ENABLE=1', 'LOG_OUTPUT=2']),
+    ('shadow', 1, []),
+    ('kf-capture', 1, ['CHASSIS_SPEED_CAPTURE_ENABLE=1', 'LOG_OUTPUT=2',
+                       'CHASSIS_SPEED_KF_SHADOW_ENABLE=1']),
+)
+for name, mode, options in configurations:
+    exe = BUILD/f'speed-mode-{name}.exe'
     command = ['gcc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-pedantic', '-O2', '-fno-fast-math',
                '-DCHASSIS_SPIN_MODE=1', '-DPP_TRACE_ACTUATION=1', f'-DCHASSIS_PREDICTIVE_POWER_MODE={mode}',
+               *('-D'+option for option in options),
                *('-I'+directory for directory in includes), 'tests/chassis_power_module/test_spin_policy.c',
                *sources, '-lm', '-o', str(exe)]
     subprocess.run(command, cwd=ROOT, check=True)
@@ -26,13 +37,13 @@ for mode in (0, 1):
         run = subprocess.run([str(exe), *([scenario] if scenario else [])], cwd=ROOT,
                              capture_output=True, text=True, check=True)
         key = scenario or 'closed-loop'
-        (BUILD/f'{key}-{mode}.txt').write_text(run.stdout, encoding='utf-8')
-        if mode == 0:
+        (BUILD/f'{key}-{name}.txt').write_text(run.stdout, encoding='utf-8')
+        if name == 'default':
             outputs[key] = run.stdout
         elif outputs[key] != run.stdout:
             raise AssertionError(f'Final CAN output or diagnostics differ: {key}')
-        if mode == 1:
-            print(f'PASS: {key}: {run.stdout.count("final,")} final CAN records identical')
+        if name != 'default':
+            print(f'PASS: {name}/{key}: {run.stdout.count("final,")} module actuation records identical')
 
 for invalid in ('2', '-1', '3'):
     result = subprocess.run(['gcc', '-x', 'c', '-c', '-', '-o', str(BUILD/'invalid.o'),

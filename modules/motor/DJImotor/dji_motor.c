@@ -28,7 +28,7 @@ static DJIMotorInstance *dji_motor_instance[DJI_MOTOR_CNT] = {NULL}; // 会在co
  * can1: [0]:0x1FF,[1]:0x200,[2]:0x2FF
  * can2: [3]:0x1FF,[4]:0x200,[5]:0x2FF
  */
-static CANInstance sender_assignment[6] = {
+static CANInstance sender_assignment[DJI_SENDER_GROUP_COUNT] = {
     [0] = {.txconf.StdId = 0x1ff, .txconf.IDE = CAN_ID_STD, .txconf.RTR = CAN_RTR_DATA, .txconf.DLC = 0x08, .tx_buff = {0}},
     [1] = {.txconf.StdId = 0x200, .txconf.IDE = CAN_ID_STD, .txconf.RTR = CAN_RTR_DATA, .txconf.DLC = 0x08, .tx_buff = {0}},
     [2] = {.txconf.StdId = 0x2ff, .txconf.IDE = CAN_ID_STD, .txconf.RTR = CAN_RTR_DATA, .txconf.DLC = 0x08, .tx_buff = {0}},
@@ -41,7 +41,22 @@ static CANInstance sender_assignment[6] = {
  * @brief 6个用于确认是否有电机注册到sender_assignment中的标志位,防止发送空帧,此变量将在DJIMotorControl()使用
  *        flag的初始化在 MotorSenderGrouping()中进行
  */
-static uint8_t sender_enable_flag[6] = {0};
+static uint8_t sender_enable_flag[DJI_SENDER_GROUP_COUNT] = {0};
+static DJIMotorSubmission_s cycle_submission;
+#if CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE
+static void (*speed_feedback_observer)(void *,unsigned,const DJI_Motor_Measure_s *);
+static void *speed_feedback_context;
+bool DJIMotorSetSpeedFeedbackObserver(
+    void (*observer)(void *,unsigned,const DJI_Motor_Measure_s *),void *context)
+{
+    taskENTER_CRITICAL();
+    const bool accepted=!observer || !speed_feedback_observer ||
+        (speed_feedback_observer==observer && speed_feedback_context==context);
+    if(accepted) {speed_feedback_context=context;speed_feedback_observer=observer;}
+    taskEXIT_CRITICAL();
+    return accepted;
+}
+#endif
 
 static DJIMotorOutputGroup_s *output_group;
 static DJIMotorOutputHooks_s output_hooks;
@@ -369,11 +384,18 @@ static void DecodeDJIMotor(CANInstance *_instance)
     measure->total_angle = measure->total_round * 360 + measure->angle_single_round;
     measure->rx_tick_ms = HAL_GetTick();
     ++measure->rx_sequence;
-#if CHASSIS_FORCE_CALIBRATION_ENABLE
+#if CHASSIS_FORCE_CALIBRATION_ENABLE || CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE
     measure->raw_rpm=(int16_t)((uint16_t)rxbuff[2]<<8|rxbuff[3]);
     measure->raw_current=(int16_t)((uint16_t)rxbuff[4]<<8|rxbuff[5]);
     measure->rx_cycles=DWT_GetCycleCount();
+#endif
+#if CHASSIS_FORCE_CALIBRATION_ENABLE
     if(feedback_observer) feedback_observer(motor,measure->raw_rpm,measure->raw_current,measure->rx_cycles);
+#endif
+#if CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE
+    if(speed_feedback_observer) for(unsigned n=0;n<idx;++n) if(dji_motor_instance[n]==motor) {
+        speed_feedback_observer(speed_feedback_context,n,measure);break;
+    }
 #endif
 }
 
@@ -608,9 +630,10 @@ void DJIMotorControl()
         }
     }
     // 第二阶段：只修改已注册的四个底盘电机输出。
+    memset(&cycle_submission,0,sizeof cycle_submission);
     const DJIMotorCycle_s cycle={.count=idx,.motors=dji_motor_instance,.measure=cycle_measure,
         .current=motor_output,.actual_aps=speed_feedback_aps,.target_aps=speed_reference_aps,
-        .stop=cycle_stop,.online=cycle_online};
+        .stop=cycle_stop,.online=cycle_online,.submission=&cycle_submission};
     float raw_output[DJI_MOTOR_CNT];
     if(output_group && output_hooks.prepare_current) output_hooks.prepare_current(output_hooks.context,&cycle);
     memcpy(raw_output,motor_output,sizeof raw_output);
@@ -653,7 +676,7 @@ void DJIMotorControl()
 
     bool transmitted = true;
     uint8_t submitted_groups=0,successful_groups=0;
-    for (size_t i = 0; i < 6; ++i)
+    for (size_t i = 0; i < DJI_SENDER_GROUP_COUNT; ++i)
     {
         if (sender_enable_flag[i])
         {
@@ -663,10 +686,31 @@ void DJIMotorControl()
             submitted_groups |= (uint8_t)(1U<<i);
             MotorEnqueueGuard_s gate={.cycle=&cycle,.commands=final_commands,.enabled=final_enabled};
             const bool guarded=contains_output_group && output_hooks.validate_current;
+#if CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE
+            cycle_submission.begin_cycles[i]=DWT_GetCycleCount();
+#endif
             const bool success=(guarded ? CANTransmitGuarded(&sender_assignment[i],1,ValidateBeforeEnqueue,&gate) :
                 CANTransmit(&sender_assignment[i],1))!=0;
+#if CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE
+            cycle_submission.end_cycles[i]=DWT_GetCycleCount();
+#endif
+            memcpy(cycle_submission.bytes[i],sender_assignment[i].tx_buff,8);
+            for(unsigned n=0;n<idx;++n) if(dji_motor_instance[n]->sender_group==i)
+                cycle_submission.enabled_at_submit[n]=final_enabled[n];
             if (success) successful_groups |= (uint8_t)(1U<<i);
             transmitted &= success;
+        }
+    }
+    cycle_submission.submitted_groups=submitted_groups;
+    cycle_submission.successful_groups=successful_groups;
+    /* A later group's guard can clear the shared buffers. Preserve bytes that
+     * were already attempted, including failed submissions, in final history. */
+    for(unsigned n=0;n<idx;++n) {
+        const unsigned g=dji_motor_instance[n]->sender_group,slot=dji_motor_instance[n]->message_num;
+        if(submitted_groups&(1U<<g)) {
+            final_commands[n]=(int16_t)((uint16_t)cycle_submission.bytes[g][2*slot]<<8 |
+                                        cycle_submission.bytes[g][2*slot+1]);
+            final_enabled[n]=cycle_submission.enabled_at_submit[n];
         }
     }
     if (output_group != NULL) output_hooks.record_final(output_hooks.context,&cycle,final_commands,

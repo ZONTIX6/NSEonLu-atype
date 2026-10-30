@@ -1,6 +1,7 @@
 CC ?= gcc
 CFLAGS := -std=c11 -Wall -Wextra -Werror -O0 -g \
-          -ffunction-sections -fdata-sections
+          -ffunction-sections -fdata-sections -fno-fast-math
+CFLAGS += $(foreach option,CHASSIS_SPEED_CAPTURE_ENABLE CHASSIS_SPEED_KF_SHADOW_ENABLE CHASSIS_PREDICTIVE_POWER_MODE LOG_OUTPUT,$(if $($(option)),-D$(option)=$($(option))))
 ifneq ($(strip $(CHASSIS_POWER_CALIBRATION_ENABLE)),)
 CFLAGS += -DCHASSIS_POWER_CALIBRATION_ENABLE=$(CHASSIS_POWER_CALIBRATION_ENABLE)
 endif
@@ -18,6 +19,8 @@ SOURCE := test_dji_chassis_power_rtt.c \
           ../../modules/telemetry/rtt_telemetry.c
 SOURCE += ../../modules/telemetry/runtime_tuning.c
 SOURCE += ../../modules/telemetry/pid_autotune.c ../../modules/telemetry/autotune_protocol.c
+SOURCE += $(wildcard ../../modules/predictive_power/*.c) ../../modules/telemetry/chassis_speed_capture.c
+SOURCE += ../../modules/algorithm/crc16.c
 INCLUDES := -Istubs \
             -I../../modules/motor/DJImotor \
             -I../../modules/motor \
@@ -40,3 +43,4 @@ clean:
 
 SOURCE += $(filter-out ../../modules/chassis_power/chassis_power.c,$(wildcard ../../modules/chassis_power/*.c)) ../../modules/algorithm/chassis_power_budget.c ../../modules/algorithm/chassis_power_outer_loop.c
 INCLUDES += -I../../modules/chassis_power -I../../modules/super_cap -I../../modules/referee
+INCLUDES += -I../../modules/predictive_power

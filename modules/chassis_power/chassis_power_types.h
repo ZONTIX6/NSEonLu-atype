@@ -9,6 +9,8 @@
 #include "super_cap_types.h"
 #include "power_meter_types.h"
 #include "referee_power.h"
+#include "../predictive_power/wheel_speed_kf.h"
+#include "../predictive_power/speed_observation_config.h"
 
 typedef struct
 {
@@ -83,6 +85,9 @@ typedef struct
 typedef struct
 {
     ChassisPowerControlSnapshot_s control;
+    PPWheelSample raw_speed[4];
+    uint64_t observation_now_us;
+    uint8_t raw_time_valid_mask;
     float raw_current[4], actual_rpm[4], target_rpm[4], feedback_current[4];
     uint32_t feedback_tick_ms[4], feedback_sequence[4];
     uint8_t online_mask, enabled_mask;
@@ -105,7 +110,7 @@ typedef struct
     uint32_t now_ms, control_version;
     int16_t current_command[4];
     bool can_submitted;
-    uint8_t enabled_mask;
+    uint8_t enabled_mask, submitted_groups, successful_groups;
 } ChassisPowerFinalInput_s;
 
 #endif

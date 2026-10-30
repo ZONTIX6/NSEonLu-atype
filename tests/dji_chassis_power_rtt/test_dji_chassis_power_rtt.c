@@ -59,6 +59,10 @@ static uint32_t test_tick=123;
 static float test_delta_s=.001f;
 static bool safety_drive=true, safety_bench=true;
 static bool stop_in_can_wait;
+static unsigned can_tx_count, stop_at_submission;
+static uint8_t submitted_bytes[6][8];
+static uint8_t fail_can_groups;
+static uint32_t test_cycles=123000U;
 bool VehicleSafetyAllowsDrive(uint32_t now) {(void)now;return safety_drive;}
 bool VehicleSafetyAllowsAutotune(uint32_t now) {(void)now;return safety_bench;}
 
@@ -127,14 +131,24 @@ CANInstance *CANRegister(CAN_Init_Config_s *config)
 
 uint8_t CANTransmit(CANInstance *instance, float timeout)
 {
-    (void)instance;
     (void)timeout;
-    return fail_can_transmit ? 0U : 1U;
+    if(stop_in_can_wait || (stop_at_submission && can_tx_count+1==stop_at_submission)) {
+        stop_in_can_wait=false;stop_at_submission=0;safety_drive=false;
+    }
+    ++can_tx_count;
+    bool group_failed=false;
+    for(unsigned g=0;g<6;++g) if(instance==&sender_assignment[g]) {
+        memcpy(submitted_bytes[g],instance->tx_buff,8);
+        group_failed=(fail_can_groups&(1U<<g))!=0;
+    }
+    return fail_can_transmit || group_failed ? 0U : 1U;
 }
 uint8_t CANTransmitGuarded(CANInstance *instance,float timeout,void (*guard)(void *),void *context)
 {
     /* Mailbox waiting can preempt the motor task immediately before enqueue. */
-    if(stop_in_can_wait) {stop_in_can_wait=false;safety_drive=false;}
+    if(stop_in_can_wait || (stop_at_submission && can_tx_count+1==stop_at_submission)) {
+        stop_in_can_wait=false;stop_at_submission=0;safety_drive=false;
+    }
     if(guard) guard(context);
     return CANTransmit(instance,timeout);
 }
@@ -186,6 +200,9 @@ float DWT_GetDeltaT(uint32_t *count)
     *count=1234;
     return test_delta_s;
 }
+uint32_t DWT_GetCycleCount(void) {return test_cycles;}
+uint32_t DWT_GetFrequencyHz(void) {return 1000000U;}
+uint64_t DWT_GetTimeline_us(void) {return test_cycles;}
 
 unsigned BSPLogWrite(const void *data, unsigned length)
 {
@@ -218,6 +235,9 @@ static void PreparePowerGroup(void)
     memset(captured_data, 0, sizeof(captured_data));
     memset(&test_meter, 0, sizeof(test_meter));
     safety_drive=safety_bench=true;
+    can_tx_count=stop_at_submission=0;stop_in_can_wait=false;
+    fail_can_groups=0;
+    memset(submitted_bytes,0,sizeof submitted_bytes);
     idx = 4;
     sender_assignment[1].can_handle=&hcan1;
 
@@ -228,7 +248,7 @@ static void PreparePowerGroup(void)
     adapter_group=(DJIMotorOutputGroup_s){.registered=true,.max_current_command=15000};
     output_group=&adapter_group;
     output_hooks=(DJIMotorOutputHooks_s){.read_control=AdapterReadControl,
-        .limit=AdapterLimit,.record_final=AdapterRecordFinal};
+        .limit=AdapterLimit,.validate_current=AdapterValidateCurrent,.record_final=AdapterRecordFinal};
     power_group.input.referee_power_limit_w = 100.0f;
     adapter_control = (ChassisPowerControlSnapshot_s){
         .tick_ms=test_tick,
@@ -408,6 +428,105 @@ static void TestFinalGateAndCanResultAreRecorded(void)
     }
     packing_tick_race=false;
 #endif
+}
+
+#if CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE
+static unsigned raw_observations;
+static DJI_Motor_Measure_s raw_observed;
+static void ObserveSpeed(void *context,unsigned index,const DJI_Motor_Measure_s *m)
+{
+    ASSERT_TRUE(context==&raw_observations && index==0);
+    raw_observed=*m;++raw_observations;
+}
+static void TestRawFeedbackRetainsEveryEvent(void)
+{
+    PreparePowerGroup();raw_observations=0;
+    ASSERT_TRUE(DJIMotorSetSpeedFeedbackObserver(ObserveSpeed,&raw_observations));
+    DJIMotorInstance *m=dji_motor_instance[0];
+    CANInstance frame={0};frame.id=m;
+    const uint8_t bytes[8]={0,0,0x02,0x58,0xff,0x85,42,0};
+    memcpy(frame.rx_buff,bytes,sizeof bytes);
+    test_cycles=123100;DecodeDJIMotor(&frame);
+    ASSERT_TRUE(m->measure.raw_rpm==600 && m->measure.raw_current==-123);
+    ASSERT_TRUE(fabsf(m->measure.speed_aps-3060)<.01f && m->measure.real_current==-110);
+    ASSERT_TRUE(raw_observed.rx_sequence==2 && raw_observed.rx_cycles==123100);
+    m->measure.rx_sequence=UINT32_MAX;
+    test_cycles=123600;DecodeDJIMotor(&frame);
+    ASSERT_TRUE(raw_observations==2 && raw_observed.rx_sequence==0);
+    ASSERT_TRUE(raw_observed.rx_tick_ms==test_tick && raw_observed.rx_cycles==123600);
+    ASSERT_TRUE(DJIMotorSetSpeedFeedbackObserver(NULL,NULL));
+}
+#endif
+
+#if CHASSIS_SPEED_CAPTURE_ENABLE
+static void TestCaptureRecordsActualFeedbackAndFinalBytes(void)
+{
+    static CSCCapture captured;
+    PreparePowerGroup();memset(&captured,0,sizeof captured);
+    memset(sender_enable_flag,0,sizeof sender_enable_flag);sender_enable_flag[1]=1;
+    ASSERT_TRUE(DJIPowerAdapterSetSpeedCapture(&captured));
+    ChassisPowerControlSnapshot_s c=adapter_control;
+    for(unsigned w=0;w<4;++w) {
+        c.target_rpm[w]=(w&1) ? -1000:1000;
+        dji_motor_instance[w]->motor_settings.close_loop_type=SPEED_LOOP;
+        dji_motor_instance[w]->motor_settings.outer_loop_type=SPEED_LOOP;
+    }
+    DJIPowerAdapterPublish(&c);
+    test_cycles=test_tick*1000U+500U;DJIMotorControl();
+    CSCMetadata meta;CSCMetadataInit(&meta,18,DWT_GetFrequencyHz());
+    ASSERT_TRUE(DJIPowerAdapterDescribeSpeedCapture(&meta));
+    ASSERT_TRUE(CSCArm(&captured,18,&meta));
+    for(unsigned w=0;w<4;++w) {
+        CANInstance f={0};f.id=dji_motor_instance[w];
+        int16_t rpm=(int16_t)(600+10*w);
+        f.rx_buff[2]=(uint8_t)(rpm>>8);f.rx_buff[3]=(uint8_t)rpm;
+        f.rx_buff[4]=0xff;f.rx_buff[5]=0x85;f.rx_buff[6]=40;
+        test_cycles=test_tick*1000U+600U+w*20U;DecodeDJIMotor(&f);
+    }
+    test_cycles=test_tick*1000U+800U;DJIMotorControl();
+    CSCCycleRecord row;
+    ASSERT_TRUE(DJIPowerAdapterTakeSpeedCycle(&row));
+    ASSERT_TRUE(!DJIPowerAdapterTakeSpeedCycle(&row));
+    ASSERT_TRUE(captured.raw_count==4);
+    ASSERT_TRUE(CSCReadU32(row.bytes+464)==test_cycles);
+    for(unsigned w=0;w<4;++w) {
+        const uint8_t *b=row.bytes+80+w*80;
+        int16_t actual=(int16_t)((uint16_t)submitted_bytes[1][2*w]<<8|submitted_bytes[1][2*w+1]);
+        ASSERT_TRUE((int16_t)CSCReadU16(b+12)==600+10*(int)w);
+        ASSERT_TRUE((int16_t)CSCReadU16(b+14)==-123);
+        ASSERT_TRUE((int16_t)CSCReadU16(b+22)==actual && (b[39]&0x18)==0x18);
+        ASSERT_TRUE(CSCReadU32(b)==dji_motor_instance[w]->measure.rx_sequence);
+    }
+    ASSERT_TRUE(CSCAppendCycle(&captured,&row));CSCFreeze(&captured);
+    ASSERT_TRUE(CSCBeginDrain(&captured));
+    uint8_t frame[CSC_MAX_FRAME_BYTES];uint16_t length=0;
+    ASSERT_TRUE(CSCPeekFrame(&captured,frame,sizeof frame,&length) && length==CSC_MAX_FRAME_BYTES);
+    ASSERT_TRUE(CSCFrameIsValid(frame,length));
+    speed_capture=NULL;ASSERT_TRUE(DJIMotorSetSpeedFeedbackObserver(NULL,NULL));
+    PreparePowerGroup();
+}
+#endif
+
+static void TestSpeedStopDuringMailboxWait(void)
+{
+    PreparePowerGroup();
+    memset(sender_enable_flag,0,sizeof sender_enable_flag);sender_enable_flag[1]=1;
+    ChassisPowerControlSnapshot_s c=adapter_control;
+    for(unsigned w=0;w<4;++w) {
+        c.target_rpm[w]=1000;
+        dji_motor_instance[w]->motor_settings.close_loop_type=SPEED_LOOP;
+        dji_motor_instance[w]->motor_settings.outer_loop_type=SPEED_LOOP;
+    }
+    DJIPowerAdapterPublish(&c);
+    DJIMotorControl();
+    ASSERT_TRUE(chassis_power->state.final_current[0]>0);
+    stop_in_can_wait=true;
+    DJIMotorControl();
+    for(unsigned w=0;w<4;++w) {
+        ASSERT_TRUE(submitted_bytes[1][2*w]==0 && submitted_bytes[1][2*w+1]==0);
+        ASSERT_TRUE(chassis_power->state.final_current[w]==0);
+    }
+    PreparePowerGroup();
 }
 
 static void TestAdapterRejectsInvalidMembership(void)
@@ -753,6 +872,7 @@ static void TestBaselineScenarioStream(bool record)
 }
 
 static int16_t direct_recorded[DJI_MOTOR_CNT];
+static DJIMotorSubmission_s direct_submission;
 static bool direct_validate_ok;
 static void DirectPrepare(void *context,const DJIMotorCycle_s *cycle)
 {
@@ -767,7 +887,11 @@ static bool DirectValidate(void *context,const DJIMotorCycle_s *cycle,const int1
 {(void)context;(void)cycle;(void)commands;(void)enabled;(void)now;return direct_validate_ok && safety_drive;}
 static void DirectRecord(void *context,const DJIMotorCycle_s *cycle,const int16_t *commands,
     const bool *enabled,uint8_t submitted,uint8_t success)
-{(void)context;(void)cycle;(void)enabled;(void)submitted;(void)success;memcpy(direct_recorded,commands,sizeof direct_recorded);}
+{
+    (void)context;(void)enabled;(void)submitted;(void)success;
+    memcpy(direct_recorded,commands,sizeof direct_recorded);
+    if(cycle->submission) direct_submission=*cycle->submission;
+}
 static void TestDirectCurrentOwnership(void)
 {
     PreparePowerGroup();
@@ -802,6 +926,36 @@ static void TestDirectCurrentOwnership(void)
         ASSERT_TRUE(direct_recorded[w]==0);
         ASSERT_TRUE(sender_assignment[1].tx_buff[w*2]==0 && sender_assignment[1].tx_buff[w*2+1]==0);
     }
+    PreparePowerGroup();
+}
+
+static void TestSecondGroupStopPreservesFirstSubmission(void)
+{
+    PreparePowerGroup();
+    memset(sender_enable_flag,0,sizeof sender_enable_flag);
+    sender_enable_flag[1]=sender_enable_flag[4]=1;
+    adapter_group.owns_raw_current=true;direct_validate_ok=true;
+    output_hooks=(DJIMotorOutputHooks_s){.read_control=AdapterReadControl,.prepare_current=DirectPrepare,
+        .limit=DirectLimit,.validate_current=DirectValidate,.record_final=DirectRecord};
+    for(unsigned w=0;w<4;++w) {
+        dji_motor_instance[w]->measure.speed_aps=600;
+        dji_motor_instance[w]->sender_group=w<2 ? 1 : 4;
+        dji_motor_instance[w]->message_num=w%2;
+    }
+    stop_at_submission=2;
+    DJIMotorControl();
+    ASSERT_TRUE(can_tx_count==2);
+    ASSERT_TRUE(direct_recorded[0]==100 && direct_recorded[1]==-101);
+    ASSERT_TRUE(direct_recorded[2]==0 && direct_recorded[3]==0);
+    ASSERT_TRUE(submitted_bytes[1][1]==100);
+    ASSERT_TRUE(submitted_bytes[4][0]==0 && submitted_bytes[4][1]==0);
+    ASSERT_TRUE(direct_submission.submitted_groups==0x12 && direct_submission.successful_groups==0x12);
+    ASSERT_TRUE(direct_submission.enabled_at_submit[0] && !direct_submission.enabled_at_submit[2]);
+    safety_drive=true;can_tx_count=0;fail_can_groups=0x10;
+    DJIMotorControl();
+    ASSERT_TRUE(direct_submission.submitted_groups==0x12 && direct_submission.successful_groups==0x02);
+    ASSERT_TRUE(direct_recorded[2]==102 && direct_submission.bytes[4][1]==102);
+    memset(sender_enable_flag,0,sizeof sender_enable_flag);
     PreparePowerGroup();
 }
 
@@ -888,6 +1042,14 @@ int main(int argc, char **argv)
     TestAutotuneIsolationAndExplicitZeroForceRearm();
     TestNineMotorPowerAndStopIsolation();
     TestDirectCurrentOwnership();
+    TestSpeedStopDuringMailboxWait();
+    TestSecondGroupStopPreservesFirstSubmission();
+#if CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE
+    TestRawFeedbackRetainsEveryEvent();
+#endif
+#if CHASSIS_SPEED_CAPTURE_ENABLE
+    TestCaptureRecordsActualFeedbackAndFinalBytes();
+#endif
     if (CHASSIS_POWER_CONTROL_STAGE == 0 && POWER_METER_ENABLE) {
         TestControlAndMeasurementSnapshotsReachOneRttRow();
         TestOfflineMeasurementKeepsValueAndTick();

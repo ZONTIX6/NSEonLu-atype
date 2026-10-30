@@ -4,8 +4,52 @@
 #include <stdio.h>
 #include <string.h>
 
+static void test_wheel_shadow(void)
+{
+    PPWheelKFConfig k={.version=1,.max_gap_us=20000,.max_age_us=20000,.max_horizon_us=20000,
+        .q=1,.r=.25f,.initial_p00=1,.initial_p11=100,.gate_squared=25,.max_rejections=3};
+    assert(ChassisPowerShadowSetWheelKFConfig(&k));
+    PPWheelKFConfig changed=k;changed.q=2;
+    assert(!ChassisPowerShadowSetWheelKFConfig(&changed));
+    changed.version=UINT32_MAX;
+    assert(!ChassisPowerShadowSetWheelKFConfig(&changed));
+    uint32_t mv,kv;assert(!ChassisPowerShadowVersions(&mv,&kv));
+    ChassisPowerCycleInput_s i={.observation_now_us=100000,.raw_time_valid_mask=15};
+    ChassisPower_Init_Config_s c={0};
+    ChassisPowerCycleOutput_s legacy={.current={12,34,56,78}},before=legacy;
+    for(unsigned w=0;w<4;++w) i.raw_speed[w]=(PPWheelSample){.rx_time_us=99000,
+        .sequence=1,.source_epoch=1,.omega_rad_s=10+(float)w,.online=true};
+    ChassisPowerShadowCycle(&i,&c,&legacy);
+    ChassisPowerFinalInput_s f={.current_command={12,34,56,78}};
+    ChassisPowerShadowRecord(&f);
+    ChassisPowerShadowSnapshot s;
+    assert(ChassisPowerShadowGet(&s));
+    assert(s.wheel_kf.configured && !s.dynamic_model);
+    assert(ChassisPowerShadowVersions(&mv,&kv) && mv==0 && kv==1);
+    assert(s.wheel_kf.current[0].valid && s.wheel_kf.corrected_count[0]==1);
+    assert(s.wheel_kf.future_valid_mask[2]==15);
+    assert(memcmp(&legacy,&before,sizeof legacy)==0);
+    i.observation_now_us+=1000;
+    ChassisPowerShadowCycle(&i,&c,&legacy);ChassisPowerShadowRecord(&f);
+    assert(ChassisPowerShadowGet(&s));
+    assert(s.wheel_kf.corrected_count[0]==1);
+    PPWheelKF state[4];PPWheelKFConfig installed;
+    assert(ChassisPowerShadowGetWheelKFCheckpoint(state,&installed));
+    assert(state[0].corrected.corrected_time_us==99000 && installed.version==1);
+    ChassisPowerShadowRecordElapsed(301);
+    ChassisPowerShadowRecordElapsed(300);
+    ChassisPowerShadowRecordElapsed(301);
+    ChassisPowerShadowRecordElapsed(301);
+    ChassisPowerShadowRecordElapsed(301);
+    ChassisPowerShadowCycle(&i,&c,&legacy);ChassisPowerShadowRecord(&f);
+    assert(ChassisPowerShadowGet(&s));assert(s.wheel_kf.paused);
+    ChassisPowerShadowResume();
+    ChassisPowerShadowCycle(&i,&c,&legacy);ChassisPowerShadowRecord(&f);
+    assert(ChassisPowerShadowGet(&s));assert(!s.wheel_kf.paused);
+}
 int main(void)
 {
+    test_wheel_shadow();
     ChassisPower_Init_Config_s c={0};
     c.algorithm.max_current_command=15000;
     for(unsigned w=0;w<4;++w) c.models[w]=(MotorPowerModelConfig_s){.current_conversion=1000,.k4=1};

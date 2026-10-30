@@ -3,6 +3,7 @@
 
 #include "dji_motor.h"
 #include "chassis_power.h"
+#include "../../telemetry/chassis_speed_capture.h"
 
 typedef struct
 {
@@ -14,4 +15,9 @@ typedef struct
 bool DJIPowerAdapterInit(const DJIPowerAdapterConfig_s *config);
 bool DJIPowerAdapterPublish(const ChassisPowerControlSnapshot_s *control);
 
+bool DJIPowerAdapterSetSpeedCapture(CSCCapture *);
+bool DJIPowerAdapterTakeSpeedCycle(CSCCycleRecord *);
+bool DJIPowerAdapterDescribeSpeedCapture(CSCMetadata *);
+bool DJIPowerAdapterDriveStopped(uint32_t now_ms);
+void DJIPowerAdapterPublishInputPower(const SuperCapSnapshot_s *);
 #endif

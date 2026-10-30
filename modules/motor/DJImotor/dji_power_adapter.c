@@ -1,6 +1,9 @@
 #include "dji_power_adapter.h"
 #include "bsp_dwt.h"
 #include "power_meter.h"
+#include "vehicle_safety.h"
+#include "chassis_power_shadow.h"
+#include "../../predictive_power/speed_observation_time.h"
 #include "chassis_power_config.h"
 #include "FreeRTOS.h"
 #include "task.h"
@@ -12,6 +15,20 @@ static ChassisPowerControlSnapshot_s adapter_control, adapter_cycle_control;
 static uint32_t adapter_dwt_count;
 static ChassisPowerCycleInput_s adapter_input;
 static ChassisPowerCycleOutput_s adapter_output;
+#if CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE
+static PPObservationClock observation_clock;
+#endif
+#if CHASSIS_SPEED_CAPTURE_ENABLE
+static CSCCapture *speed_capture;
+static CSCCycleRecord pending_cycle;
+static bool cycle_pending;
+static uint32_t observation_cycle,limit_end_cycles;
+static SuperCapSnapshot_s observed_input_power;
+static ChassisPowerShadowSnapshot capture_shadow;
+static PPWheelKF checkpoint[4];
+static PPWheelKFConfig checkpoint_config;
+static void CaptureFinal(const DJIMotorCycle_s *,const ChassisPowerFinalInput_s *);
+#endif
 
 static void AdapterReadControl(void *context)
 {
@@ -29,6 +46,10 @@ static void AdapterLimit(void *context,const DJIMotorCycle_s *cycle)
     (void)PowerMeterGetStatus(&input->meter);
 #endif
     input->now_ms=HAL_GetTick();
+#if CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE
+    bool time_valid=PPObservationClockUpdate(&observation_clock,DWT_GetCycleCount(),input->now_ms,DWT_GetFrequencyHz());
+    input->observation_now_us=observation_clock.now_us;
+#endif
     for(unsigned w=0;w<4;++w) {
         const unsigned index=adapter_group.motor_indices[w];
         input->raw_current[w]=cycle->current[index];
@@ -37,11 +58,40 @@ static void AdapterLimit(void *context,const DJIMotorCycle_s *cycle)
         input->feedback_current[w]=cycle->measure[index].real_current;
         input->feedback_tick_ms[w]=cycle->measure[index].rx_tick_ms;
         input->feedback_sequence[w]=cycle->measure[index].rx_sequence;
+#if CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE
+        const DJI_Motor_Measure_s *m=&cycle->measure[index];
+        input->raw_speed[w]=(PPWheelSample){.sequence=m->rx_sequence,.source_epoch=observation_clock.source_epoch,
+            .omega_rad_s=m->raw_rpm*.10471975511965977f,.online=cycle->online[index]};
+        if(time_valid && PPObservationReceiveTime(&observation_clock,m->rx_cycles,m->rx_tick_ms,20000,
+                                                  &input->raw_speed[w].rx_time_us))
+            input->raw_time_valid_mask|=(uint8_t)(1U<<w);
+#endif
         if(cycle->online[index]) input->online_mask |= (uint8_t)(1U<<w);
         if(cycle->stop[index]!=MOTOR_STOP) input->enabled_mask |= (uint8_t)(1U<<w);
     }
     (void)ChassisPowerLimit(input,&adapter_output);
     for(unsigned w=0;w<4;++w) cycle->current[adapter_group.motor_indices[w]]=adapter_output.current[w];
+#if CHASSIS_SPEED_CAPTURE_ENABLE
+    limit_end_cycles=DWT_GetCycleCount();
+#endif
+}
+
+static bool AdapterValidateCurrent(void *context,const DJIMotorCycle_s *cycle,
+    const int16_t commands[DJI_MOTOR_CNT],const bool enabled[DJI_MOTOR_CNT],uint32_t now_ms)
+{
+    (void)context;
+    if(!VehicleSafetyAllowsDrive(now_ms) || !adapter_control.control_enabled || adapter_control.zero_force ||
+        adapter_control.version!=adapter_cycle_control.version ||
+        adapter_control.config_version!=adapter_cycle_control.config_version ||
+        (uint32_t)(now_ms-adapter_control.tick_ms)>10U) return false;
+    for(unsigned w=0;w<4;++w) {
+        const unsigned n=adapter_group.motor_indices[w];
+        const DJIMotorInstance *motor=cycle->motors[n];
+        if(commands[n]!=0 && (!enabled[n] || motor->stop_flag==MOTOR_STOP || !DaemonIsOnline(motor->daemon) ||
+            !motor->measure.rx_sequence || (uint32_t)(now_ms-motor->measure.rx_tick_ms)>20U ||
+            (uint32_t)(now_ms-cycle->measure[n].rx_tick_ms)>20U)) return false;
+    }
+    return true;
 }
 
 static void AdapterRecordFinal(void *context,const DJIMotorCycle_s *cycle,
@@ -50,7 +100,7 @@ static void AdapterRecordFinal(void *context,const DJIMotorCycle_s *cycle,
 {
     (void)context;
     ChassisPowerFinalInput_s final={.now_ms=HAL_GetTick(),.control_version=adapter_cycle_control.version,
-        .can_submitted=true};
+        .can_submitted=true,.submitted_groups=submitted_groups,.successful_groups=successful_groups};
     for(unsigned w=0;w<4;++w) {
         const unsigned index=adapter_group.motor_indices[w];
         const uint8_t group=(uint8_t)(1U<<cycle->motors[index]->sender_group);
@@ -59,6 +109,9 @@ static void AdapterRecordFinal(void *context,const DJIMotorCycle_s *cycle,
         if(enabled[index]) final.enabled_mask |= (uint8_t)(1U<<w);
     }
     (void)ChassisPowerRecordFinal(&final);
+#if CHASSIS_SPEED_CAPTURE_ENABLE
+    CaptureFinal(cycle,&final);
+#endif
 }
 
 bool DJIPowerAdapterInit(const DJIPowerAdapterConfig_s *config)
@@ -74,7 +127,7 @@ bool DJIPowerAdapterInit(const DJIPowerAdapterConfig_s *config)
     }
     adapter_group=group;
     const DJIMotorOutputHooks_s hooks={.read_control=AdapterReadControl,.limit=AdapterLimit,
-        .record_final=AdapterRecordFinal};
+        .validate_current=AdapterValidateCurrent,.record_final=AdapterRecordFinal};
     if(!DJIMotorRegisterOutputGroup(&adapter_group,&hooks)) return false;
     memcpy(adapter_motors,config->motors,sizeof adapter_motors);
     (void)DWT_GetDeltaT(&adapter_dwt_count);
@@ -98,3 +151,165 @@ bool DJIPowerAdapterPublish(const ChassisPowerControlSnapshot_s *control)
     taskEXIT_CRITICAL();
     return true;
 }
+
+
+bool DJIPowerAdapterDriveStopped(uint32_t now_ms)
+{
+    taskENTER_CRITICAL();
+    bool stopped=!adapter_control.control_enabled || adapter_control.zero_force ||
+        !VehicleSafetyAllowsDrive(now_ms) || (uint32_t)(now_ms-adapter_control.tick_ms)>10;
+    if(!stopped && adapter_group.registered) {
+        stopped=true;
+        for(unsigned w=0;w<4;++w) stopped &= adapter_motors[w]->stop_flag==MOTOR_STOP;
+    }
+    taskEXIT_CRITICAL();return stopped;
+}
+#if CHASSIS_SPEED_CAPTURE_ENABLE
+static void RawFeedback(void *context,unsigned index,const DJI_Motor_Measure_s *m)
+{
+    (void)context;
+    if(!speed_capture || !m) return;
+    unsigned w;
+    for(w=0;w<4 && adapter_group.motor_indices[w]!=index;++w) {}
+    if(w==4) return;
+    CSCRawRecord r={{0}};uint8_t *b=r.bytes;
+    b[0]=(uint8_t)w;b[1]=m->temperature;
+    CSCWriteU32(b+4,m->rx_sequence);CSCWriteU32(b+8,m->rx_tick_ms);CSCWriteU32(b+12,m->rx_cycles);
+    CSCWriteU16(b+16,(uint16_t)m->raw_rpm);CSCWriteU16(b+18,(uint16_t)m->raw_current);
+    CSCWriteF32(b+20,m->speed_aps/6);CSCWriteU16(b+24,(uint16_t)m->real_current);
+    /* Driver callback is an ISR; PRIMASK preserves nesting and excludes all
+     * interrupt writers while publishing this one bounded record. */
+    uint32_t irq=__get_PRIMASK();__disable_irq();
+    CSCWriteU32(b+36,speed_capture->raw_count);
+    (void)CSCAppendRaw(speed_capture,&r);__set_PRIMASK(irq);
+}
+bool DJIPowerAdapterSetSpeedCapture(CSCCapture *capture)
+{
+    if(!capture || !adapter_group.registered) return false;
+    speed_capture=capture;
+    return DJIMotorSetSpeedFeedbackObserver(RawFeedback,NULL);
+}
+void DJIPowerAdapterPublishInputPower(const SuperCapSnapshot_s *input)
+{if(input) {taskENTER_CRITICAL();observed_input_power=*input;taskEXIT_CRITICAL();}}
+bool DJIPowerAdapterTakeSpeedCycle(CSCCycleRecord *out)
+{if(!out || !cycle_pending) return false;*out=pending_cycle;cycle_pending=false;return true;}
+static void WriteConfig(uint8_t *b,const PPWheelKFConfig *c)
+{
+    CSCWriteU32(b,c->version);CSCWriteU32(b+4,c->max_gap_us);CSCWriteU32(b+8,c->max_age_us);
+    CSCWriteU32(b+12,c->max_horizon_us);CSCWriteF32(b+16,c->q);CSCWriteF32(b+20,c->r);
+    CSCWriteF32(b+24,c->initial_p00);CSCWriteF32(b+28,c->initial_p11);CSCWriteF32(b+32,c->gate_squared);
+    b[36]=c->max_rejections;
+}
+bool DJIPowerAdapterDescribeSpeedCapture(CSCMetadata *meta)
+{
+    if(!meta || !adapter_group.registered || !observation_clock.initialized) return false;
+    uint8_t *b=meta->bytes;
+    CSCWriteU32(b+32,observation_clock.source_epoch);CSCWriteU32(b+36,observation_clock.cycles);
+    CSCWriteU32(b+40,observation_clock.tick_ms);CSCWriteU64(b+48,observation_clock.now_us);
+    CSCWriteU32(b+56,observation_clock.fraction);
+    uint32_t flags=observation_clock.initialized ? 1U:0U;
+    if(ChassisPowerShadowGetWheelKFCheckpoint(checkpoint,&checkpoint_config)) {
+        flags|=6U;WriteConfig(b+64,&checkpoint_config);
+        for(unsigned w=0;w<4;++w) {
+            uint8_t *d=b+104+80*w;const PPWheelKF *k=&checkpoint[w];const PPWheelEstimate *e=&k->corrected;
+            const float f[7]={e->omega,e->alpha,e->p00,e->p01,e->p11,e->innovation,e->innovation_variance};
+            for(unsigned j=0;j<7;++j) CSCWriteF32(d+4*j,f[j]);
+            CSCWriteU64(d+28,e->corrected_time_us);CSCWriteU64(d+36,e->output_time_us);
+            CSCWriteU32(d+44,e->sequence);CSCWriteU32(d+48,e->source_epoch);CSCWriteU32(d+52,e->config_version);
+            d[56]=e->valid;d[57]=(uint8_t)e->reason;d[58]=k->initialized;d[59]=k->seen;
+            CSCWriteU64(d+60,k->seen_time_us);CSCWriteU32(d+68,k->seen_sequence);CSCWriteU32(d+72,k->seen_source_epoch);
+            d[76]=k->rejected_consecutive;
+        }
+    }
+    CSCWriteU32(b+44,flags);
+    taskENTER_CRITICAL();
+    for(unsigned w=0;w<4;++w) {
+        const PIDInstance *pid=&adapter_motors[w]->motor_controller.speed_PID;
+        const float f[7]={pid->Kp,pid->Ki,pid->Kd,pid->MaxOut,pid->IntegralLimit,pid->Output_LPF_RC,pid->Derivative_LPF_RC};
+        for(unsigned j=0;j<7;++j) CSCWriteF32(b+424+w*32+j*4,f[j]);
+        CSCWriteU32(b+424+w*32+28,(uint32_t)pid->Improve);
+        b[24+w]=adapter_motors[w]->motor_settings.motor_reverse_flag==MOTOR_DIRECTION_REVERSE ? (uint8_t)-1:1;
+    }
+    CSCWriteU32(b+624,adapter_control.config_version);taskEXIT_CRITICAL();
+    CSCWriteU16(b+554,1);
+    if(ChassisPowerShadowGet(&capture_shadow))CSCWriteU32(b+556,capture_shadow.model_checksum);
+    return true;
+}
+static void CaptureFinal(const DJIMotorCycle_s *cycle,const ChassisPowerFinalInput_s *final)
+{
+    if(!speed_capture) return;
+    memset(&pending_cycle,0,sizeof pending_cycle);uint8_t *b=pending_cycle.bytes;
+    const bool shadow_available=ChassisPowerShadowGet(&capture_shadow);
+    if(!shadow_available) {
+        capture_shadow.elapsed_us=UINT32_MAX;capture_shadow.allocation.elapsed_us=UINT32_MAX;
+        capture_shadow.wheel_kf.kf_elapsed_us=UINT32_MAX;
+        for(unsigned w=0;w<4;++w)capture_shadow.wheel_kf.accepted_age_us[w]=UINT32_MAX;
+    }
+    CSCWriteU32(b,final->now_ms);CSCWriteU32(b+20,adapter_cycle_control.config_version);
+    CSCWriteU32(b+24,final->control_version);CSCWriteU32(b+28,capture_shadow.model_version);
+    CSCWriteU32(b+36,capture_shadow.wheel_kf.corrected[0].config_version);
+    CSCWriteU32(b+40,observation_clock.source_epoch);CSCWriteU32(b+44,observation_cycle++);
+    CSCWriteU64(b+48,adapter_input.observation_now_us);
+    uint32_t flags=(adapter_input.raw_time_valid_mask ? 2U:0U)|
+        (capture_shadow.wheel_kf.configured ? 4U:0U)|(capture_shadow.wheel_kf.paused ? 8U:0U);
+    CSCWriteU32(b+64,flags);b[72]=final->enabled_mask;b[73]=adapter_input.online_mask;
+    b[74]=final->submitted_groups;b[75]=final->successful_groups;
+    CSCWriteU32(b+76,speed_capture->rejected_records);
+    uint32_t skipped=0,first=0,last=0;bool submitted=false;
+    for(unsigned w=0;w<4;++w) {
+        const unsigned n=adapter_group.motor_indices[w],g=cycle->motors[n]->sender_group;
+        const DJI_Motor_Measure_s *m=&cycle->measure[n];uint8_t *d=b+80+80*w;
+        const PPWheelEstimate *k=&capture_shadow.wheel_kf.corrected[w];
+        CSCWriteU32(d,m->rx_sequence);CSCWriteU32(d+4,m->rx_tick_ms);CSCWriteU32(d+8,m->rx_cycles);
+        CSCWriteU16(d+12,(uint16_t)m->raw_rpm);CSCWriteU16(d+14,(uint16_t)m->raw_current);
+        CSCWriteF32(d+16,m->speed_aps/6);CSCWriteU16(d+20,(uint16_t)m->real_current);
+        CSCWriteU16(d+22,(uint16_t)final->current_command[w]);
+        CSCWriteF32(d+24,adapter_input.target_rpm[w]);CSCWriteF32(d+28,adapter_input.raw_current[w]);
+        CSCWriteF32(d+32,adapter_output.current[w]);d[36]=m->temperature;d[37]=(uint8_t)g;d[38]=(uint8_t)k->reason;
+        d[39]=(adapter_input.raw_time_valid_mask&(1U<<w) ? 1:0)|(k->valid ? 2:0)|
+            (final->submitted_groups&(1U<<g) ? 8:0)|(final->successful_groups&(1U<<g) ? 16:0);
+        const float f[7]={k->omega,k->alpha,k->p00,k->p01,k->p11,k->innovation,k->innovation_variance};
+        for(unsigned j=0;j<7;++j) CSCWriteF32(d+40+j*4,f[j]);
+        CSCWriteU32(d+68,capture_shadow.wheel_kf.accepted_age_us[w]);
+        CSCWriteU32(d+72,capture_shadow.wheel_kf.corrected_count[w]);
+        CSCWriteU32(d+76,capture_shadow.wheel_kf.skipped_events[w]);skipped+=capture_shadow.wheel_kf.skipped_events[w];
+    }
+    if(cycle->submission)for(unsigned g=0;g<DJI_SENDER_GROUP_COUNT;++g) {
+        bool member=false;for(unsigned w=0;w<4;++w)member|=cycle->motors[adapter_group.motor_indices[w]]->sender_group==g;
+        if(member && (final->submitted_groups&(1U<<g))) {
+            if(!submitted)first=cycle->submission->begin_cycles[g];
+            last=cycle->submission->end_cycles[g];submitted=true;
+        }
+    }
+    CSCWriteU32(b+56,first);CSCWriteU32(b+60,last);CSCWriteU32(b+68,skipped);
+    uint8_t *d=b+400;
+    taskENTER_CRITICAL();
+    CSCWriteF32(d,observed_input_power.input_power.input_power_w);
+    CSCWriteU32(d+4,observed_input_power.input_received_frame_count);
+    CSCWriteU32(d+8,observed_input_power.input_power.last_rx_tick_ms);
+    CSCWriteU32(d+12,observed_input_power.input_received_frame_count ?
+        1U|((observed_input_power.input_power.online && (uint32_t)(final->now_ms-observed_input_power.input_power.last_rx_tick_ms)<=20) ? 2U:0U):0);
+    taskEXIT_CRITICAL();
+    CSCWriteF32(d+16,adapter_input.meter.power_w);CSCWriteU32(d+20,adapter_input.meter.rx_sequence);
+    CSCWriteU32(d+24,adapter_input.meter.last_rx_tick_ms);
+    CSCWriteU32(d+28,adapter_input.meter.rx_sequence ? 1U|((adapter_input.meter.online &&
+        (uint32_t)(final->now_ms-adapter_input.meter.last_rx_tick_ms)<=20) ? 2U:0U):0);
+    for(unsigned w=0;w<4;++w) CSCWriteF32(d+32+4*w,adapter_output.transient.guard_rpm[w]);
+    CSCWriteU32(d+48,capture_shadow.wheel_kf.kf_elapsed_us);
+    CSCWriteU32(d+52,capture_shadow.allocation.elapsed_us);CSCWriteU32(d+56,capture_shadow.elapsed_us);
+    uint32_t slow_us,strategy_version;ChassisPowerShadowEnergyTiming(&slow_us,&strategy_version);
+    CSCWriteU32(d+60,slow_us);CSCWriteU32(b+32,strategy_version);
+    for(unsigned off=64;off<=92;off+=4) CSCWriteU32(d+off,UINT32_MAX);
+    CSCWriteU32(d+64,observation_clock.cycles);
+    uint32_t hz=DWT_GetFrequencyHz();
+    if(submitted && hz)CSCWriteU32(d+72,(uint32_t)((uint64_t)(uint32_t)(last-limit_end_cycles)*1000000U/hz));
+    CSCWriteF32(d+96,adapter_output.transient.candidate_guard_w);CSCWriteF32(d+100,adapter_output.transient.guard_power_w);
+    CSCWriteF32(d+104,adapter_cycle_control.target_power_w);CSCWriteU32(d+108,(uint32_t)capture_shadow.reason);
+    cycle_pending=true;
+}
+#else
+bool DJIPowerAdapterSetSpeedCapture(CSCCapture *c) {(void)c;return false;}
+void DJIPowerAdapterPublishInputPower(const SuperCapSnapshot_s *c) {(void)c;}
+bool DJIPowerAdapterTakeSpeedCycle(CSCCycleRecord *c) {(void)c;return false;}
+bool DJIPowerAdapterDescribeSpeedCapture(CSCMetadata *c) {(void)c;return false;}
+#endif

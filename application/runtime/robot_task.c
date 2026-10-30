@@ -24,6 +24,8 @@
 #include "chassis_power.h"
 #include "chassis_control_config.h"
 #include "usb_telemetry.h"
+#include "chassis_speed_observation.h"
+#include "speed_observation_config.h"
 
 static osThreadId insTaskHandle;
 static osThreadId robotTaskHandle;
@@ -77,6 +79,24 @@ static void StartPowerCaptureTask(void const *argument)
 }
 #endif
 
+#if CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE
+static osThreadId speedObservationTaskHandle;
+static void StartSpeedObservationTask(void const *argument)
+{
+    (void)argument;
+    uint32_t sampled=0;
+    for(;;) {
+        ChassisSpeedObservationTask();
+        if((uint32_t)(HAL_GetTick()-sampled)>=200) {
+            sampled=HAL_GetTick();
+            ChassisSpeedObservationResources(uxTaskGetStackHighWaterMark(motorTaskHandle),
+                uxTaskGetStackHighWaterMark(robotTaskHandle),uxTaskGetStackHighWaterMark(speedObservationTaskHandle),
+                xPortGetFreeHeapSize(),xPortGetMinimumEverFreeHeapSize());
+        }
+        osDelay(5);
+    }
+}
+#endif
 static void StartINSTASK(void const *argument);
 static void StartMOTORTASK(void const *argument);
 static void StartDAEMONTASK(void const *argument);
@@ -91,6 +111,9 @@ static void StartUITASK(void const *argument);
  */
 void OSTaskInit(void)
 {
+#if CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE
+    ChassisSpeedObservationInit();
+#endif
     osThreadDef(instask, StartINSTASK, osPriorityAboveNormal, 0, 1024);
     insTaskHandle = osThreadCreate(osThread(instask), NULL); // 由于是阻塞读取传感器,为姿态解算设置较高优先级,确保以1khz的频率执行
     // // 后续修改为读取传感器数据准备好的中断处理,
@@ -127,6 +150,10 @@ void OSTaskInit(void)
     uiTaskHandle = osThreadCreate(osThread(uitask), NULL);
 #endif
 
+#if CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE
+    osThreadDef(speedobserve, StartSpeedObservationTask, osPriorityBelowNormal, 0, 384);
+    speedObservationTaskHandle=osThreadCreate(osThread(speedobserve),NULL);
+#endif
     HTMotorControlInit(); // 没有注册HT电机则不会执行
 }
 
@@ -157,7 +184,13 @@ static __attribute__((noreturn)) void StartMOTORTASK(void const *argument)
     for (;;)
     {
         motor_start = DWT_GetTimeline_ms();
+#if CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE
+        ChassisSpeedObservationMotorBegin(DWT_GetCycleCount(),HAL_GetTick());
+#endif
         MotorControlTask();
+#if CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE
+        ChassisSpeedObservationMotorEnd(DWT_GetCycleCount(),HAL_GetTick());
+#endif
         motor_dt = DWT_GetTimeline_ms() - motor_start;
 #if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
         const uint32_t execution_us=(uint32_t)(motor_dt*1000);

@@ -9,7 +9,10 @@ MODULE_INCLUDES = -I../../modules/chassis_power -I../../modules/algorithm -I../.
 test_core.exe: test_core.c $(CORE) $(HEADERS)
 	$(CC) $(CFLAGS) $(INCLUDES) test_core.c $(CORE) -lm -o $@
 test_shadow.exe: test_shadow.c $(CORE) $(HEADERS) $(SHADOW) ../../modules/algorithm/power_model.c
-	$(CC) $(CFLAGS) $(INCLUDES) $(MODULE_INCLUDES) -DCHASSIS_PREDICTIVE_POWER_MODE=1 test_shadow.c $(CORE) $(SHADOW) ../../modules/algorithm/power_model.c -lm -o $@
-test: test_core.exe test_shadow.exe
+	$(CC) $(CFLAGS) $(INCLUDES) $(MODULE_INCLUDES) -DCHASSIS_PREDICTIVE_POWER_MODE=1 -DCHASSIS_SPEED_KF_SHADOW_ENABLE=1 test_shadow.c $(CORE) $(SHADOW) ../../modules/algorithm/power_model.c -lm -o $@
+test_wheel_speed_kf.exe: test_wheel_speed_kf.c ../../modules/predictive_power/wheel_speed_kf.c ../../modules/predictive_power/wheel_speed_kf.h
+	$(CC) $(CFLAGS) $(INCLUDES) test_wheel_speed_kf.c ../../modules/predictive_power/wheel_speed_kf.c -lm -o $@
+test: test_core.exe test_shadow.exe test_wheel_speed_kf.exe
 	./test_core.exe
 	./test_shadow.exe
+	./test_wheel_speed_kf.exe

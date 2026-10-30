@@ -104,6 +104,7 @@ include_sub_directories_recursively(${CMAKE_SOURCE_DIR}/bsp)
 include_sub_directories_recursively(${CMAKE_SOURCE_DIR}/modules)
 include_sub_directories_recursively(${CMAKE_SOURCE_DIR}/application)
 include_sub_directories_recursively(${CMAKE_SOURCE_DIR}/Inc)
+include_directories("${CMAKE_BINARY_DIR}")
 
 # Match Make's CMSIS-DSP headers; recursive traversal also discovers legacy Inc/.
 include_directories(BEFORE
@@ -135,6 +136,9 @@ else()
     list(FILTER SOURCES EXCLUDE REGEX "/application/board/board_chassis_force\\.c$")
 endif()
 foreach(NUMERIC_SOURCE IN LISTS SOURCES)
+    if(NUMERIC_SOURCE MATCHES "/(modules/telemetry/chassis_speed_capture|application/runtime/chassis_speed_observation)\\.c$")
+        set_property(SOURCE "${NUMERIC_SOURCE}" APPEND PROPERTY COMPILE_OPTIONS -fno-fast-math)
+    endif()
     if(NUMERIC_SOURCE MATCHES "/modules/predictive_power/")
         set_property(SOURCE "${NUMERIC_SOURCE}" APPEND PROPERTY COMPILE_OPTIONS -fno-fast-math)
     endif()

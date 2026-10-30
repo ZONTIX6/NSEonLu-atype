@@ -284,7 +284,7 @@ void ChassisInit()
         .can_init_config.can_handle = &hcan1,
         .controller_param_init_config = {
             .speed_PID = {
-                .Kp = 4.5f, // A-board vehicle baseline, error in degrees/s
+                .Kp = 0.75f, // A-board vehicle baseline, error in degrees/s
                 .Ki = 0,   // 0
                 .Kd = 0,   // 0
                 .IntegralLimit = 3000,
