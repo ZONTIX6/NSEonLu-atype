@@ -8,6 +8,22 @@
 
 **Tech Stack:** STM32F427、C11、FreeRTOS/CMSIS-RTOS、DWT、现有 CAN/USART2 日志传输；GCC 主机测试、ARM GNU、Make/CMake、Python 标准库。
 
+## 2026-10-30 续实施状态
+
+从干净的 `061a08f` 继续，前七项主体已存在。本轮核对并修复时钟配对、无效计时、来源冻结、KF 离线/暂停恢复、导出门控以及因果回放/实验清单。代码提交为 `50fc7c2`、`4f46e0a`；详见[验证记录](../verification/2026-10-29-chassis-speed-observation.md)和[操作规程](../../chassis-speed-observation.md)。
+
+| 交付 | 当前状态 |
+|---|---|
+| Task 1–4 原始反馈、时间、CSC1、提交和运行时 | 实现及回归通过；真实硬件时序待验收 |
+| Task 5–6 KF 与影子隔离 | 实现及注入时钟/隔离回归通过，默认关闭 |
+| Task 7 manifest 与回放 | 工具及 26 个回放测试通过；非零采样延迟需先提供对齐数据，不伪造评分 |
+| Task 8 软件矩阵/规程/阶段记录 | 13 项主机检查、四种 Make 和 CMake 构建通过，文档完成 |
+| Task 8 板上参数、配对实验与预算 | **未执行**，`hardware_gate=not_run`；相对全关闭配置的总内存口径仍超 32 KiB |
+
+下面保留原实施脚本；历史首次红灯及原拟逐项提交不追溯重写，完成状态以本节和验证记录为准。软件通过不代表 S1 放行。
+
+协议修订：沿既有 schema 1 实现，周期 diagnostics 相对 offset 64 为 `observation_cycles`，周期 offset 0 `tick_ms` 与它同源配对。累计 `period_max_us` 保留在 runtime 诊断，报告从周期帧计算窗内最大值。这样可以保留精确接收时间回放所需 DWT 相位，而不改变帧长度或 CPC1。
+
 ## Global Constraints
 
 - 设计依据：[底盘速度控制优化与改进方案](../specs/2026-10-29-chassis-speed-control-improvement-design.md)，尤其第 4、5、9、10、11 节。
@@ -593,7 +609,7 @@ diagnostics block：
 | 16 | f32, u32, u32, u32 | load_power_w, load_sequence, load_tick_ms, load_flags |
 | 32 | f32 ×4 | old_guard_rpm[4]，绝对转速语义 |
 | 48 | u32 ×4 | kf_us, allocator_us, fast_shadow_us, slow_shadow_us |
-| 64 | u32 ×3 | period_max_us, execution_max_us, control_to_submit_end_us |
+| 64 | u32 ×3 | observation_cycles, execution_max_us, control_to_submit_end_us |
 | 76 | u32 ×5 | motor_stack_free_words, robot_stack_free_words, observation_stack_free_words, heap_free_bytes, heap_min_bytes |
 | 96 | f32 ×3 | old_candidate_power_w, old_guard_power_w, physical_budget_w |
 | 108 | u32 | shadow_reason |
