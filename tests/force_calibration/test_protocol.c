@@ -46,6 +46,11 @@ int main(void)
     ForceCalibrationProtocolSubmit("@FC1,18,CAP",generation);
     assert(ForceCalibrationProtocolReply(reply,sizeof reply) && strstr(reply,",CAP,11,1,1,48,1280,1234,"));
     ForceCalibrationProtocolReplySent();
+    DJIForceCalibrationGetStatus(&status);
+    snprintf(saved,sizeof saved,"@FC1,19,START,11,%lu,0,1400,50,100,50",(unsigned long)status.session);
+    ForceCalibrationProtocolSubmit(saved,generation);
+    assert(ForceCalibrationProtocolReply(reply,sizeof reply));
+    assert(!strcmp(reply,"@FC1,19,ERR,11,range\r\n"));ForceCalibrationProtocolReplySent();
     limits=BoardForceCalibrationLimits();ForceCalibrationProtocolConfigure(&limits);
     puts("FC1 protocol: strict integers, generations, reconnect, configured limits, old capture and stable replies OK");return 0;
 }

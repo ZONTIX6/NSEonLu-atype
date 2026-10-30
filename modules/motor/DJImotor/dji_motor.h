@@ -122,6 +122,20 @@ typedef struct
     const DJIMotorSubmission_s *submission;
 } DJIMotorCycle_s;
 
+/* Optional group policy. All callbacks run in the existing motor task; none
+ * may send CAN. prepare runs on the locked cycle copy, gate uses live permits,
+ * cancel runs before the driver's all-motor zero, record follows submission. */
+typedef struct
+{
+    void (*registered)(DJIMotorOutputGroup_s *group, DJIMotorInstance *const *motors);
+    void (*process)(void);
+    void (*prepare)(const DJIMotorCycle_s *cycle, const DJIMotorGroupControl_s *control,
+                    float *references);
+    void (*gate)(const DJIMotorCycle_s *cycle);
+    void (*cancel)(void);
+    void (*record)(const DJIMotorCycle_s *cycle, const float *raw_current, bool transmitted);
+} DJIMotorControlPolicy_s;
+
 typedef struct
 {
     void (*read_control)(void *context); /* Called inside the motor snapshot lock. */
@@ -133,10 +147,13 @@ typedef struct
                          const int16_t commands[DJI_MOTOR_CNT], const bool enabled[DJI_MOTOR_CNT],
                          uint8_t submitted_groups, uint8_t successful_groups);
     void *context;
+    const DJIMotorControlPolicy_s *policy;
 } DJIMotorOutputHooks_s;
 
 bool DJIMotorFindIndex(const DJIMotorInstance *motor, uint8_t *motor_index);
 bool DJIMotorRegisterOutputGroup(DJIMotorOutputGroup_s *group, const DJIMotorOutputHooks_s *hooks);
+/* Reset PID history at the current measurement without changing its gains. */
+void DJIMotorResetPID(PIDInstance *pid, float measured);
 
 /**
  * @brief 调用此函数注册一个DJI智能电机,需要传递较多的初始化参数,请在application初始化的时候调用此函数

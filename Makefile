@@ -132,6 +132,7 @@ modules/ist8310/ist8310.c \
 modules/master_machine/master_process.c \
 modules/master_machine/seasky_protocol.c \
 modules/motor/DJImotor/dji_motor.c \
+modules/motor/DJImotor/dji_tuning_adapter.c \
 modules/motor/HTmotor/HT04.c \
 modules/motor/LKmotor/LK9025.c \
 modules/motor/DMmotor/dmmotor.c \

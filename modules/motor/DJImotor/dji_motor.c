@@ -4,10 +4,7 @@
 #include "bsp_log.h"
 #include "FreeRTOS.h"
 #include "task.h"
-#include "runtime_tuning.h"
-#include "autotune_protocol.h"
 #include "vehicle_safety.h"
-#include "board_config.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,11 +68,6 @@ static bool cycle_online[DJI_MOTOR_CNT];
 static DJIMotorGroupControl_s cycle_control;
 static uint32_t tuning_stop_since, tuning_stop_tick;
 static bool tuning_stopped, tuning_stop_seen;
-static bool autotune_owned,autotune_inhibit;
-static uint32_t autotune_trial;
-static PIDInstance autotune_original[4];
-static AutotuneDrive autotune_drive;
-
 static bool OwnsRawCurrent(unsigned index)
 {
     if(!output_group || !output_group->owns_raw_current) return false;
@@ -83,90 +75,13 @@ static bool OwnsRawCurrent(unsigned index)
     return false;
 }
 
-static void ResetTrialPID(PIDInstance *pid,float measured)
+void DJIMotorResetPID(PIDInstance *pid,float measured)
 {
     pid->Iout=pid->ITerm=pid->Last_ITerm=0;
     pid->Dout=pid->Last_Dout=0;
     pid->Output=pid->Last_Output=0;
     pid->Last_Measure=measured;pid->Last_Err=-measured;
     (void)DWT_GetDeltaT(&pid->DWT_CNT);
-}
-static void ApplyAutotuneCycle(void)
-{
-    if (!output_group) return;
-    const uint32_t now=HAL_GetTick();
-    if(output_group->owns_raw_current) {
-        const PIDAutotuneFeedback denied={.now_ms=now,.permitted=false};
-        AutotuneMotorStep(&denied,&autotune_drive);
-        if(autotune_drive.owned) AutotuneCancel();
-        autotune_owned=false;autotune_inhibit=false;
-        return;
-    }
-    PIDAutotuneFeedback f={.now_ms=now,.can_ok=true,.feedback_ok=true,
-        .permitted=VehicleSafetyAllowsAutotune(now) && cycle_control.autotune_permitted && cycle_control.control_enabled &&
-            (uint32_t)(now-cycle_control.tick_ms)<=10 && !autotune_inhibit};
-    for(unsigned w=0;w<4;++w) {
-        unsigned i=output_group->motor_indices[w];
-        f.rpm[w]=cycle_measure[i].speed_aps/6;
-        f.rx_ms[w]=cycle_measure[i].rx_tick_ms;f.rx_sequence[w]=cycle_measure[i].rx_sequence;
-        f.feedback_ok &= cycle_online[i] && (uint32_t)(now-cycle_measure[i].rx_tick_ms)<=20;
-        f.permitted &= fabsf(cycle_control.target_rpm[w])<=5;
-        PIDInstance *pid=autotune_owned ? &autotune_original[w] : &dji_motor_instance[i]->motor_controller.speed_PID;
-        const Motor_Control_Setting_s *settings=&dji_motor_instance[i]->motor_settings;
-        AutotuneConfiguration config={.improve=pid->Improve,.coef_a=pid->CoefA,.coef_b=pid->CoefB,
-            .output_rc=pid->Output_LPF_RC,.derivative_rc=pid->Derivative_LPF_RC,
-            .speed_smooth=SPEED_SMOOTH_COEF,.current_smooth=CURRENT_SMOOTH_COEF,
-            .output_limit=fminf(pid->MaxOut,output_group->max_current_command),
-            .motor_flags=(uint32_t)settings->close_loop_type | ((uint32_t)settings->outer_loop_type<<8) |
-                ((uint32_t)settings->motor_reverse_flag<<16) | ((uint32_t)settings->feedback_reverse_flag<<20) |
-                ((uint32_t)settings->speed_feedback_source<<24) | ((uint32_t)settings->feedforward_flag<<28)};
-        AutotuneSetConfiguration(w,&config);
-    }
-    for (unsigned i=0;i<idx;++i) {
-        bool chassis=false;
-        for(unsigned w=0;w<4;++w) chassis |= i==output_group->motor_indices[w];
-        if (!chassis) f.permitted &= cycle_stop[i]==MOTOR_STOP && cycle_online[i] &&
-            (uint32_t)(now-cycle_measure[i].rx_tick_ms)<=20 &&
-            isfinite(cycle_measure[i].speed_aps) && fabsf(cycle_measure[i].speed_aps)<=300;
-    }
-    AutotuneMotorStep(&f,&autotune_drive);
-    if(autotune_drive.owned && !autotune_owned) {
-        for(unsigned w=0;w<4;++w) autotune_original[w]=dji_motor_instance[output_group->motor_indices[w]]->motor_controller.speed_PID;
-        autotune_trial=0;
-    }
-    if(!autotune_drive.owned && autotune_owned) {
-        for(unsigned w=0;w<4;++w) {
-            PIDInstance *pid=&dji_motor_instance[output_group->motor_indices[w]]->motor_controller.speed_PID;
-            *pid=autotune_original[w];ResetTrialPID(pid,cycle_measure[output_group->motor_indices[w]].speed_aps);
-        }
-        autotune_inhibit=true;
-    }
-    autotune_owned=autotune_drive.owned;
-    if(autotune_owned && autotune_drive.running && autotune_drive.trial!=autotune_trial) {
-        for(unsigned w=0;w<4;++w) {
-            PIDInstance *pid=&dji_motor_instance[output_group->motor_indices[w]]->motor_controller.speed_PID;
-            *pid=autotune_original[w];ResetTrialPID(pid,cycle_measure[output_group->motor_indices[w]].speed_aps);
-        }
-        PIDInstance *pid=&dji_motor_instance[output_group->motor_indices[autotune_drive.test.wheel]]->motor_controller.speed_PID;
-        pid->Kp=autotune_drive.test.kp;pid->Ki=autotune_drive.test.ki;pid->Kd=autotune_drive.test.kd;
-        pid->MaxOut=fminf(pid->MaxOut,autotune_drive.test.current_limit);
-        pid->IntegralLimit=fminf(pid->IntegralLimit,pid->MaxOut);
-        autotune_trial=autotune_drive.trial;
-    }
-    if(autotune_owned || autotune_inhibit) for(unsigned w=0;w<4;++w) {
-        unsigned i=output_group->motor_indices[w];
-        bool selected=autotune_owned && autotune_drive.running && w==autotune_drive.test.wheel;
-        cycle_stop[i]=selected ? MOTOR_ENALBED : MOTOR_STOP;
-        cycle_reference[i]=selected ? autotune_drive.target_rpm*6 : 0;
-    }
-    if (autotune_owned || autotune_inhibit || ATYPE_BENCH_MODE) {
-        for(unsigned i=0;i<idx;++i) {
-            bool chassis=false;
-            for(unsigned w=0;w<4;++w) chassis |= i==output_group->motor_indices[w];
-            if (!chassis) {cycle_stop[i]=MOTOR_STOP;cycle_reference[i]=0;}
-        }
-    }
-    if(autotune_inhibit && cycle_control.zero_force && (uint32_t)(now-cycle_control.tick_ms)<=10) autotune_inhibit=false;
 }
 static void UpdateTuningStopState(uint32_t now,bool transmitted)
 {
@@ -210,40 +125,6 @@ bool DJIMotorGetStopProof(uint32_t now, uint32_t *oldest_feedback_age_ms)
     return safe && age<=20U;
 }
 
-static void RegisterPIDTuning(void)
-{
-    float values[24];
-    for (unsigned i = 0; i < 4; ++i) {
-        PIDInstance *pid = &dji_motor_instance[output_group->motor_indices[i]]->motor_controller.speed_PID;
-        const float wheel[] = {pid->Kp, pid->Ki, pid->Kd, pid->MaxOut, pid->IntegralLimit, pid->DeadBand};
-        memcpy(&values[i * 6], wheel, sizeof wheel);
-    }
-    RuntimeTuningRegister(TUNING_PID, values, output_group->owns_raw_current ? 1 : 0);
-}
-static bool ApplyPIDTuning(const float *v)
-{
-    if (!output_group || output_group->owns_raw_current) return false;
-    for (unsigned i = 0; i < 4; ++i) {
-        const float *w = &v[i * 6];
-        for (unsigned j = 0; j < 6; ++j)
-            if (!isfinite(w[j]) || w[j] < 0) return false;
-        if (w[0] > 1000 || w[1] > 1000 || w[2] > 1000 ||
-            w[3] <= 0 || w[3] > output_group->max_current_command ||
-            w[4] > w[3] || w[5] > 10000) return false;
-    }
-    /* Runs in the motor task, before any wheel computes its next PID output. */
-    for (unsigned i = 0; i < 4; ++i) {
-        const float *w = &v[i * 6];
-        PIDInstance *pid = &dji_motor_instance[output_group->motor_indices[i]]->motor_controller.speed_PID;
-        pid->Kp=w[0]; pid->Ki=w[1]; pid->Kd=w[2];
-        pid->MaxOut=w[3]; pid->IntegralLimit=w[4]; pid->DeadBand=w[5];
-        pid->Iout=pid->ITerm=pid->Last_ITerm=0;
-        pid->Dout=pid->Last_Dout=0;
-        pid->Output=fminf(fmaxf(pid->Output, -pid->MaxOut), pid->MaxOut);
-        pid->Last_Output=pid->Output;
-    }
-    return true;
-}
 /**
  * @brief 根据电调/拨码开关上的ID,根据说明书的默认id分配方式计算发送ID和接收ID,
  *        并对电机进行分组以便处理多电机控制命令
@@ -511,8 +392,8 @@ bool DJIMotorRegisterOutputGroup(DJIMotorOutputGroup_s *group, const DJIMotorOut
         for(unsigned j=0;j<w;++j) if(group->motor_indices[w]==group->motor_indices[j]) return false;
     }
     output_hooks=*hooks;output_group=group;group->registered=true;
-    RegisterPIDTuning();
-    if(!group->owns_raw_current) RuntimeTuningRestore(TUNING_PID, ApplyPIDTuning);
+    if(output_hooks.policy && output_hooks.policy->registered)
+        output_hooks.policy->registered(group, dji_motor_instance);
     return true;
 }
 
@@ -552,7 +433,7 @@ static void ValidateBeforeEnqueue(void *context)
 }
 void DJIMotorControl()
 {
-    RuntimeTuningProcess(TUNING_PID, ApplyPIDTuning);
+    if(output_hooks.policy && output_hooks.policy->process) output_hooks.policy->process();
     uint8_t group, num;
     int16_t set;
     DJIMotorInstance *motor;
@@ -561,7 +442,11 @@ void DJIMotorControl()
     DJI_Motor_Measure_s *measure;
     float pid_measure, pid_ref;
     ReadMotorCycle();
-    ApplyAutotuneCycle();
+    const DJIMotorCycle_s cycle={.count=idx,.motors=dji_motor_instance,.measure=cycle_measure,
+        .current=motor_output,.actual_aps=speed_feedback_aps,.target_aps=speed_reference_aps,
+        .stop=cycle_stop,.online=cycle_online,.submission=&cycle_submission};
+    if(output_hooks.policy && output_hooks.policy->prepare)
+        output_hooks.policy->prepare(&cycle,&cycle_control,cycle_reference);
 
     // 第一阶段：计算所有 DJI 电机的原始输出，暂不写入 CAN 缓冲区。
     for (size_t i = 0; i < idx; ++i)
@@ -579,9 +464,9 @@ void DJIMotorControl()
             cycle_measure[i].rx_sequence==0 ||
             (uint32_t)(HAL_GetTick()-cycle_measure[i].rx_tick_ms)>20U) {
             motor_output[i]=0;
-            ResetTrialPID(&motor_controller->speed_PID,measure->speed_aps);
-            ResetTrialPID(&motor_controller->angle_PID,measure->total_angle);
-            ResetTrialPID(&motor_controller->current_PID,measure->real_current);
+            DJIMotorResetPID(&motor_controller->speed_PID,measure->speed_aps);
+            DJIMotorResetPID(&motor_controller->angle_PID,measure->total_angle);
+            DJIMotorResetPID(&motor_controller->current_PID,measure->real_current);
             continue;
         }
 
@@ -631,28 +516,15 @@ void DJIMotorControl()
     }
     // 第二阶段：只修改已注册的四个底盘电机输出。
     memset(&cycle_submission,0,sizeof cycle_submission);
-    const DJIMotorCycle_s cycle={.count=idx,.motors=dji_motor_instance,.measure=cycle_measure,
-        .current=motor_output,.actual_aps=speed_feedback_aps,.target_aps=speed_reference_aps,
-        .stop=cycle_stop,.online=cycle_online,.submission=&cycle_submission};
     float raw_output[DJI_MOTOR_CNT];
     if(output_group && output_hooks.prepare_current) output_hooks.prepare_current(output_hooks.context,&cycle);
     memcpy(raw_output,motor_output,sizeof raw_output);
     if (output_group != NULL) output_hooks.limit(output_hooks.context,&cycle);
 
-    /* A new stop/control message can arrive while PID/power calculations run. */
-    if(output_group && (autotune_owned || autotune_inhibit)) {
-        taskENTER_CRITICAL();
-        bool permitted=VehicleSafetyAllowsAutotune(HAL_GetTick()) && output_group->control.autotune_permitted && output_group->control.control_enabled &&
-            (uint32_t)(HAL_GetTick()-output_group->control.tick_ms)<=10;
-        taskEXIT_CRITICAL();
-        if(!permitted) {
-            if(autotune_owned) AutotuneCancel();
-            for(unsigned w=0;w<4;++w) {unsigned i=output_group->motor_indices[w];cycle_stop[i]=MOTOR_STOP;motor_output[i]=0;}
-        }
-    }
+    if(output_hooks.policy && output_hooks.policy->gate) output_hooks.policy->gate(&cycle);
 
     if (!VehicleSafetyAllowsDrive(HAL_GetTick())) {
-        if(autotune_owned) AutotuneCancel();
+        if(output_hooks.policy && output_hooks.policy->cancel) output_hooks.policy->cancel();
         for(unsigned i=0;i<idx;++i) {cycle_stop[i]=MOTOR_STOP;motor_output[i]=0;}
     }
 
@@ -716,9 +588,6 @@ void DJIMotorControl()
     if (output_group != NULL) output_hooks.record_final(output_hooks.context,&cycle,final_commands,
         final_enabled,submitted_groups,successful_groups);
     UpdateTuningStopState(HAL_GetTick(),transmitted);
-    if(output_group && autotune_owned) {
-        unsigned w=autotune_drive.test.wheel,i=output_group->motor_indices[w];
-        AutotuneObserve(HAL_GetTick(),cycle_measure[i].speed_aps/6,raw_output[i],
-            motor_output[i],fabsf(motor_output[i])>=dji_motor_instance[i]->motor_controller.speed_PID.MaxOut*.98f,transmitted);
-    }
+    if(output_hooks.policy && output_hooks.policy->record)
+        output_hooks.policy->record(&cycle,raw_output,transmitted);
 }

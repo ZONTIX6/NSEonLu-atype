@@ -1,3 +1,4 @@
+#include "dji_tuning_adapter.h"
 #include "dji_power_adapter.h"
 #include "bsp_dwt.h"
 #include "power_meter.h"
@@ -127,7 +128,7 @@ bool DJIPowerAdapterInit(const DJIPowerAdapterConfig_s *config)
         for(unsigned j=0;j<w;++j) if(config->motors[w]==config->motors[j]) return false;
     }
     adapter_group=group;
-    const DJIMotorOutputHooks_s hooks={.read_control=AdapterReadControl,.limit=AdapterLimit,
+    const DJIMotorOutputHooks_s hooks={.policy=DJITuningAdapterPolicy(),.read_control=AdapterReadControl,.limit=AdapterLimit,
         .validate_current=AdapterValidateCurrent,.record_final=AdapterRecordFinal};
     if(!DJIMotorRegisterOutputGroup(&adapter_group,&hooks)) return false;
     memcpy(adapter_motors,config->motors,sizeof adapter_motors);

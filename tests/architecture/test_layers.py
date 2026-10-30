@@ -18,7 +18,7 @@ TARGETS = ("modules/chassis_power", "modules/super_cap", "modules/power_meter",
            "modules/predictive_power",
            "modules/chassis_force", "modules/chassis_force_calibration",
            "modules/mpu6500", "modules/vtx", "modules/oled",
-           "modules/vehicle_safety", "modules/telemetry")
+           "modules/vehicle_safety", "modules/telemetry", "modules/motor/DJImotor")
 FILES = ("modules/imu/ins_service.c", "modules/imu/ins_task.h",
          "modules/motor/DJImotor/dji_motor.c", "modules/motor/DJImotor/dji_motor.h",
          "modules/telemetry/tuning_flash.c")
@@ -58,6 +58,10 @@ def scan(root):
                 found[(rel, "unresolved-include", name)] += 1
                 continue
             dest = candidates[0].relative_to(root).as_posix()
+            if rel == 'modules/motor/DJImotor/dji_motor.c' and (
+                    dest.startswith('modules/telemetry/') or
+                    candidates[0].name == 'dji_tuning_adapter.h'):
+                found[(rel, 'motor-vehicle-policy', dest)] += 1
             if dest.startswith("application/"):
                 found[(rel, "application-include", dest)] += 1
             if rel.startswith(("modules/algorithm/", "modules/predictive_power/", "modules/chassis_force/", "modules/chassis_force_calibration/")) and (
@@ -82,6 +86,17 @@ def records(counter):
 
 
 class BoundaryTests(unittest.TestCase):
+    def test_motor_driver_rejects_vehicle_tuning_policy(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for directory in ('modules/motor/DJImotor', 'modules/telemetry'):
+                (root / directory).mkdir(parents=True)
+            (root / 'modules/telemetry/autotune_protocol.h').write_text('')
+            (root / 'modules/motor/DJImotor/dji_motor.c').write_text(
+                '#include "../../telemetry/autotune_protocol.h"')
+            self.assertEqual(scan(root)[('modules/motor/DJImotor/dji_motor.c',
+                'motor-vehicle-policy', 'modules/telemetry/autotune_protocol.h')], 1)
+
     def test_telemetry_rejects_application_dependencies(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

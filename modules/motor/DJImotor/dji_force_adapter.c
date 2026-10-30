@@ -1,3 +1,4 @@
+#include "dji_tuning_adapter.h"
 #include "dji_force_adapter.h"
 #include "bsp_dwt.h"
 #include "power_meter.h"
@@ -26,7 +27,7 @@ bool DJIForceAdapterInit(DJIMotorInstance *const motors[4],const ChassisForceCon
             motors[w]->sender_group!=motors[0]->sender_group) return false;
         for(unsigned j=0;j<w;j++) if(motors[w]==motors[j]) return false;
     }
-    const DJIMotorOutputHooks_s hooks={.read_control=fc_read,.prepare_current=fc_prepare,.limit=fc_limit,
+    const DJIMotorOutputHooks_s hooks={.policy=DJITuningAdapterPolicy(),.read_control=fc_read,.prepare_current=fc_prepare,.limit=fc_limit,
         .validate_current=fc_validate,.record_final=fc_record};
     return DJIMotorRegisterOutputGroup(&calibration_group,&hooks);
 }
@@ -157,7 +158,7 @@ bool DJIForceAdapterInit(DJIMotorInstance *const motors[4],const ChassisForceCon
     /* Invalid calibration is a supported locked state, never a fallback to wheel PID. */
     (void)ChassisForceControlInit(config,&controller);
     force_group=group;memcpy(force_motors,motors,sizeof force_motors);
-    const DJIMotorOutputHooks_s hooks={.read_control=read_control,.prepare_current=prepare,.limit=limit,
+    const DJIMotorOutputHooks_s hooks={.policy=DJITuningAdapterPolicy(),.read_control=read_control,.prepare_current=prepare,.limit=limit,
         .validate_current=validate,.record_final=record};
     if(!DJIMotorRegisterOutputGroup(&force_group,&hooks)) return false;
     (void)DWT_GetDeltaT(&dwt_count);return true;

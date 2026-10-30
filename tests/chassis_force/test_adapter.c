@@ -1,5 +1,6 @@
 /* Reuse the driver's HAL/CAN/PID test platform, exercising the real force adapter. */
 #define main SpeedRegressionMain
+#define DJI_TEST_CUSTOM_TIMELINE
 #include "../dji_chassis_power_rtt/test_dji_chassis_power_rtt.c"
 #undef main
 #undef DJIMotorControl

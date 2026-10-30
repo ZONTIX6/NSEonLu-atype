@@ -7,6 +7,7 @@
 #include "../../modules/chassis_power/chassis_power.c"
 #include "chassis_power_config.h"
 #include "../../modules/motor/DJImotor/dji_motor.c"
+#include "../../modules/motor/DJImotor/dji_tuning_adapter.c"
 #include "../../modules/motor/DJImotor/dji_power_adapter.c"
 
 static void SyncTestControl(void)
@@ -31,6 +32,14 @@ static void TestMotorControl(void)
 }
 #define ReadMotorCycle TestReadMotorCycle
 #define DJIMotorControl TestMotorControl
+
+static void PrepareAutotuneTestCycle(void)
+{
+    const DJIMotorCycle_s cycle={.count=idx,.motors=dji_motor_instance,.measure=cycle_measure,
+        .current=motor_output,.actual_aps=speed_feedback_aps,.target_aps=speed_reference_aps,
+        .stop=cycle_stop,.online=cycle_online};
+    DJITuningAdapterPolicy()->prepare(&cycle,&cycle_control,cycle_reference);
+}
 
 static void ApplyChassisPowerGroup(void)
 {
@@ -204,7 +213,9 @@ float DWT_GetDeltaT(uint32_t *count)
 uint32_t DWT_GetCycleCount(void) {return test_cycles;}
 uint32_t DWT_GetFrequencyHz(void) {return 1000000U;}
 #endif
+#ifndef DJI_TEST_CUSTOM_TIMELINE
 uint64_t DWT_GetTimeline_us(void) {return test_cycles;}
+#endif
 
 unsigned BSPLogWrite(const void *data, unsigned length)
 {
@@ -249,7 +260,8 @@ static void PreparePowerGroup(void)
     power_group.config.transient=ChassisPowerTransientDefaultConfig();
     adapter_group=(DJIMotorOutputGroup_s){.registered=true,.max_current_command=15000};
     output_group=&adapter_group;
-    output_hooks=(DJIMotorOutputHooks_s){.read_control=AdapterReadControl,
+    tuning_group=output_group;tuning_motors=dji_motor_instance;
+    output_hooks=(DJIMotorOutputHooks_s){.policy=DJITuningAdapterPolicy(),.read_control=AdapterReadControl,
         .limit=AdapterLimit,.validate_current=AdapterValidateCurrent,.record_final=AdapterRecordFinal};
     power_group.input.referee_power_limit_w = 100.0f;
     adapter_control = (ChassisPowerControlSnapshot_s){
@@ -796,26 +808,26 @@ static void TestAutotuneIsolationAndExplicitZeroForceRearm(void)
         pid->Kp=.75f;pid->MaxOut=2000;pid->IntegralLimit=1000;pid->DWT_CNT=7;
     }
     RuntimeTuningCancel();RegisterPIDTuning();
-    AutotuneSubmit("@A1,1,BEGIN,1");ReadMotorCycle();ApplyAutotuneCycle();
+    AutotuneSubmit("@A1,1,BEGIN,1");ReadMotorCycle();PrepareAutotuneTestCycle();
     char reply[512];ASSERT_TRUE(AutotuneReply(reply,sizeof reply)>0);AutotuneReplySent();
     ASSERT_TRUE(autotune_owned);
     AutotuneSubmit("@A1,2,TRIAL,1,2,500,500,3000,3f800000,3f000000,00000000");
-    ReadMotorCycle();ApplyAutotuneCycle();AutotuneReply(reply,sizeof reply);AutotuneReplySent();
+    ReadMotorCycle();PrepareAutotuneTestCycle();AutotuneReply(reply,sizeof reply);AutotuneReplySent();
     ASSERT_TRUE(dji_motor_instance[2]->motor_controller.speed_PID.Kp==1);
     ASSERT_TRUE(dji_motor_instance[2]->motor_controller.speed_PID.MaxOut==2000);
     ASSERT_TRUE(dji_motor_instance[2]->motor_controller.speed_PID.DWT_CNT==1234);
     for(unsigned w=0;w<4;++w) ASSERT_TRUE(cycle_stop[w]==(w==2?MOTOR_ENALBED:MOTOR_STOP));
     for(unsigned i=4;i<9;++i) ASSERT_TRUE(cycle_stop[i]==MOTOR_STOP && cycle_reference[i]==0);
-    AutotuneCancel();ReadMotorCycle();ApplyAutotuneCycle();
+    AutotuneCancel();ReadMotorCycle();PrepareAutotuneTestCycle();
     ASSERT_TRUE(!autotune_owned && autotune_inhibit);
     ASSERT_TRUE(dji_motor_instance[2]->motor_controller.speed_PID.Kp==.75f);
     adapter_control.control_enabled=false;
-    ReadMotorCycle();ApplyAutotuneCycle();ASSERT_TRUE(autotune_inhibit);
+    ReadMotorCycle();PrepareAutotuneTestCycle();ASSERT_TRUE(autotune_inhibit);
     adapter_control.control_enabled=true;
-    ReadMotorCycle();ApplyAutotuneCycle();
+    ReadMotorCycle();PrepareAutotuneTestCycle();
     for(unsigned w=0;w<4;++w) ASSERT_TRUE(cycle_stop[w]==MOTOR_STOP);
     adapter_control.zero_force=true;adapter_control.control_enabled=false;
-    ReadMotorCycle();ApplyAutotuneCycle();ASSERT_TRUE(!autotune_inhibit);
+    ReadMotorCycle();PrepareAutotuneTestCycle();ASSERT_TRUE(!autotune_inhibit);
     adapter_control.zero_force=false;adapter_control.control_enabled=true;
     AutotuneSubmit("@A1,3,BEGIN,1");DJIMotorControl();
     ASSERT_TRUE(AutotuneReply(reply,sizeof reply)>0);AutotuneReplySent();
@@ -938,7 +950,7 @@ static void TestDirectCurrentOwnership(void)
 {
     PreparePowerGroup();
     adapter_group.owns_raw_current=true;direct_validate_ok=true;
-    output_hooks=(DJIMotorOutputHooks_s){.read_control=AdapterReadControl,.prepare_current=DirectPrepare,
+    output_hooks=(DJIMotorOutputHooks_s){.policy=DJITuningAdapterPolicy(),.read_control=AdapterReadControl,.prepare_current=DirectPrepare,
         .limit=DirectLimit,.validate_current=DirectValidate,.record_final=DirectRecord};
     for(unsigned w=0;w<4;++w) {
         dji_motor_instance[w]->measure.speed_aps=600;
@@ -977,7 +989,7 @@ static void TestSecondGroupStopPreservesFirstSubmission(void)
     memset(sender_enable_flag,0,sizeof sender_enable_flag);
     sender_enable_flag[1]=sender_enable_flag[4]=1;
     adapter_group.owns_raw_current=true;direct_validate_ok=true;
-    output_hooks=(DJIMotorOutputHooks_s){.read_control=AdapterReadControl,.prepare_current=DirectPrepare,
+    output_hooks=(DJIMotorOutputHooks_s){.policy=DJITuningAdapterPolicy(),.read_control=AdapterReadControl,.prepare_current=DirectPrepare,
         .limit=DirectLimit,.validate_current=DirectValidate,.record_final=DirectRecord};
     for(unsigned w=0;w<4;++w) {
         dji_motor_instance[w]->measure.speed_aps=600;
