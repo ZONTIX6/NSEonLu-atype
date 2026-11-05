@@ -25,7 +25,7 @@ typedef struct {
     uint32_t elapsed_us,max_elapsed_us,cycles,overruns;
     float dt_s,measured_w;
     PPReason reason;
-    bool dynamic_model,baseline_envelope,eligible;
+    bool dynamic_model,baseline_envelope,eligible,measured_valid;
     PPPrediction prediction;
     PPAllocationResult allocation;
     PPFinalActuation final;

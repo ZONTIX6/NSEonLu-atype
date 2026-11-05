@@ -6,6 +6,8 @@
 
 ## 1. 构建配置
 
+需要电脑实时看影子波形时，可开启独立 [J-Scope RTT 通道 2](shadow-jscope.md)，无需 USART2 短窗导出。该入口默认关闭，支持 1～100 Hz 配置和单轮选择。
+
 | 宏 | 默认 | 约束 |
 |---|---:|---|
 | `CHASSIS_SPEED_CAPTURE_ENABLE` | 0 | 速度模式、力控标定关闭、`LOG_OUTPUT=2` 或 `3` |

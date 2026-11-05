@@ -1,4 +1,5 @@
 #include "jscope.h"
+#include "shadow_scope_config.h"
 
 #include "SEGGER_RTT.h"
 #include "SEGGER_RTT_Conf.h"
@@ -25,7 +26,14 @@ int JScopeInit(void)
     }
 
     result = SEGGER_RTT_ConfigUpBuffer(
-        JSCOPE_RTT_BUFFER_INDEX, JSCOPE_RTT_BUFFER_NAME, jscope_buffer,
+        JSCOPE_RTT_BUFFER_INDEX,
+#if CHASSIS_SHADOW_JSCOPE_ENABLE
+        /* J-Scope selects the FIRST matching buffer; advertise only channel 2. */
+        "LegacyScope_f4f4f4f4",
+#else
+        JSCOPE_RTT_BUFFER_NAME,
+#endif
+        jscope_buffer,
         sizeof(jscope_buffer), SEGGER_RTT_MODE_NO_BLOCK_SKIP);
     if (result < 0)
     {

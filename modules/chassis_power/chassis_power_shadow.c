@@ -153,6 +153,8 @@ static void cycle(const ChassisPowerCycleInput_s *i,const ChassisPower_Init_Conf
         .max_elapsed_us=max_us,.overruns=overruns,.control_version=i->control.version,
         .config_version=i->control.config_version,.meter_sequence=i->meter.rx_sequence,
         .measured_w=i->meter.power_w,.reason=PP_INVALID_INPUT,.elapsed_us=UINT32_MAX};
+    working.measured_valid=c->meter_enabled && i->meter.online &&
+        isfinite(i->meter.power_w) && (uint32_t)(i->now_ms-i->meter.last_rx_tick_ms)<=20U;
     working.allocation.elapsed_us=UINT32_MAX;
     working.wheel_kf.kf_elapsed_us=UINT32_MAX;
     for(unsigned w=0;w<4;++w) working.wheel_kf.accepted_age_us[w]=UINT32_MAX;

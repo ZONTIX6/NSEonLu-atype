@@ -27,6 +27,7 @@
 #include "robot_telemetry.h"
 #include "chassis_speed_observation.h"
 #include "speed_observation_config.h"
+#include "shadow_jscope.h"
 
 static osThreadId insTaskHandle;
 static osThreadId robotTaskHandle;
@@ -80,14 +81,16 @@ static void StartPowerCaptureTask(void const *argument)
 }
 #endif
 
-#if CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE
+#if CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE || CHASSIS_SHADOW_JSCOPE_ENABLE
 static osThreadId speedObservationTaskHandle;
 static void StartSpeedObservationTask(void const *argument)
 {
     (void)argument;
     uint32_t sampled=0;
+    ShadowJScopeInit();
     for(;;) {
         ChassisSpeedObservationTask();
+        ShadowJScopePoll(HAL_GetTick());
         if((uint32_t)(HAL_GetTick()-sampled)>=200) {
             sampled=HAL_GetTick();
             ChassisSpeedObservationResources(uxTaskGetStackHighWaterMark(motorTaskHandle),
@@ -151,7 +154,7 @@ void OSTaskInit(void)
     uiTaskHandle = osThreadCreate(osThread(uitask), NULL);
 #endif
 
-#if CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE
+#if CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE || CHASSIS_SHADOW_JSCOPE_ENABLE
     osThreadDef(speedobserve, StartSpeedObservationTask, osPriorityBelowNormal, 0, 384);
     speedObservationTaskHandle=osThreadCreate(osThread(speedobserve),NULL);
 #endif

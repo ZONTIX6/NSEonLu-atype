@@ -1,4 +1,5 @@
 #include "jscope.h"
+#include "shadow_scope_config.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -9,7 +10,13 @@ void __disable_irq(void) {mask=1;}
 void __enable_irq(void) {mask=0;}
 void __set_PRIMASK(uint32_t value) {mask=value;}
 int SEGGER_RTT_ConfigUpBuffer(unsigned index,const char *name,void *buffer,unsigned size,unsigned flags)
-{(void)buffer;(void)flags;assert(index==1 && size==1024 && strcmp(name,"JScope_f4f4f4f4")==0);return 0;}
+{(void)buffer;(void)flags;
+#if CHASSIS_SHADOW_JSCOPE_ENABLE
+assert(index==1 && size==1024 && strcmp(name,"LegacyScope_f4f4f4f4")==0);
+#else
+assert(index==1 && size==1024 && strcmp(name,"JScope_f4f4f4f4")==0);
+#endif
+return 0;}
 unsigned SEGGER_RTT_Write(unsigned index,const void *data,unsigned length)
 {(void)data;assert(index==1 && length==16);++writes;return length;}
 unsigned SEGGER_RTT_GetAvailWriteSpace(unsigned index) {assert(mask==1 && index==1);return free_bytes;}

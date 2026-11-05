@@ -141,6 +141,7 @@ modules/motor/servo_motor/servo_motor.c \
 modules/motor/motor_task.c \
 modules/telemetry/rtt_telemetry.c \
 application/runtime/robot_telemetry.c \
+application/runtime/shadow_jscope.c \
 modules/telemetry/usb_telemetry_format.c \
 modules/telemetry/usb_telemetry_imu.c \
 modules/telemetry/usb_telemetry_stream.c \
@@ -381,6 +382,7 @@ OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
 NUMERIC_SOURCES := $(filter modules/chassis_force_calibration/% modules/chassis_force/% modules/chassis_power/% modules/algorithm/power_model.c modules/algorithm/chassis_power_% modules/algorithm/chassis_spin.c modules/motor/DJImotor/% modules/telemetry/chassis_force_telemetry.c modules/telemetry/force_calibration_protocol.c application/runtime/force_calibration_app.c application/chassis/% application/board/board_chassis_force.c application/board/board_force_calibration.c application/cmd/robot_cmd.c,$(C_SOURCES))
 NUMERIC_SOURCES += $(filter modules/predictive_power/%,$(C_SOURCES))
 NUMERIC_SOURCES += modules/telemetry/chassis_speed_capture.c application/runtime/chassis_speed_observation.c
+NUMERIC_SOURCES += application/runtime/shadow_jscope.c
 $(addprefix $(BUILD_DIR)/,$(notdir $(NUMERIC_SOURCES:.c=.o))): CFLAGS += -fno-fast-math
 vpath %.c $(sort $(dir $(C_SOURCES)))
 # list of ASM program objects

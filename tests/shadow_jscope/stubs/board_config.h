@@ -1,0 +1,1 @@
+#define BOARD_LOG_RTT_ENABLED 1
