@@ -14,6 +14,9 @@
 #ifndef LOG_OUTPUT
 #define LOG_OUTPUT 1 /* 0: off, 1: RTT, 2: USART2, 3: both */
 #endif
+#ifndef VOFA_TELEMETRY_ENABLE
+#define VOFA_TELEMETRY_ENABLE 0
+#endif
 #ifndef ATYPE_BENCH_MODE
 #define ATYPE_BENCH_MODE 0
 #endif
@@ -25,6 +28,9 @@
 #endif
 #if LOG_OUTPUT < 0 || LOG_OUTPUT > 3
 #error LOG_OUTPUT must be 0, 1, 2, or 3.
+#endif
+#if VOFA_TELEMETRY_ENABLE != 0 && VOFA_TELEMETRY_ENABLE != 1
+#error VOFA_TELEMETRY_ENABLE must be 0 or 1.
 #endif
 #if ATYPE_BENCH_MODE != 0 && ATYPE_BENCH_MODE != 1
 #error ATYPE_BENCH_MODE must be 0 or 1.
@@ -41,6 +47,7 @@
 #define BOARD_REFEREE_UART (&huart6)
 #endif
 #define BOARD_LOG_UART (&huart2)
+#define BOARD_VOFA_UART (&huart7)
 #define BOARD_SUPERCAP_CAN (&hcan1)
 #define BOARD_POWER_METER_CAN (&hcan1)
 
@@ -72,6 +79,9 @@
 #endif
 #if REFEREE_ENABLE && REFEREE_UART_PORT == 7 && BOARD_AUX_UART7_DEVICE
 #error UART7 cannot be shared by the referee system and an auxiliary device.
+#endif
+#if VOFA_TELEMETRY_ENABLE && ((REFEREE_ENABLE && REFEREE_UART_PORT == 7) || BOARD_AUX_UART7_DEVICE)
+#error UART7 cannot be shared by VOFA telemetry and the referee system or an auxiliary device.
 #endif
 #if BOARD_AUX_UART2_DEVICE && BOARD_AUX_UART7_DEVICE && BOARD_AUX_UART2_DEVICE == BOARD_AUX_UART7_DEVICE
 #error TFmini, HC05 and bus servo each support one UART instance.

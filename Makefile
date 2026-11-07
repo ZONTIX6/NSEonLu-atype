@@ -141,6 +141,7 @@ modules/motor/servo_motor/servo_motor.c \
 modules/motor/motor_task.c \
 modules/telemetry/rtt_telemetry.c \
 application/runtime/robot_telemetry.c \
+application/runtime/vofa_telemetry.c \
 application/runtime/shadow_jscope.c \
 modules/telemetry/usb_telemetry_format.c \
 modules/telemetry/usb_telemetry_imu.c \

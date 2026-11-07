@@ -41,9 +41,9 @@ static osThreadId daemonTaskHandle;
 #if REFEREE_ENABLE && (defined(ONE_BOARD) || defined(CHASSIS_BOARD))
 static osThreadId uiTaskHandle;
 #endif
-#if USB_TELEMETRY_ENABLE
-static osThreadId usbTelemetryTaskHandle;
-static void StartUSBTelemetryTask(void const *argument)
+#if USB_TELEMETRY_ENABLE || VOFA_TELEMETRY_ENABLE
+static osThreadId telemetryTaskHandle;
+static void StartTelemetryTask(void const *argument)
 {
     (void)argument;
     RobotTelemetryInit();
@@ -138,10 +138,10 @@ void OSTaskInit(void)
     osThreadDef(robottask, StartROBOTTASK, osPriorityNormal, 0, 1024);
     robotTaskHandle = osThreadCreate(osThread(robottask), NULL);
 
-#if USB_TELEMETRY_ENABLE
+#if USB_TELEMETRY_ENABLE || VOFA_TELEMETRY_ENABLE
     /* Bounded tuning-line parsing and reply formatting share this task. */
-    osThreadDef(usbtelemetry, StartUSBTelemetryTask, osPriorityBelowNormal, 0, 768);
-    usbTelemetryTaskHandle = osThreadCreate(osThread(usbtelemetry), NULL);
+    osThreadDef(telemetry, StartTelemetryTask, osPriorityBelowNormal, 0, 768);
+    telemetryTaskHandle = osThreadCreate(osThread(telemetry), NULL);
 #endif
 
 #if CHASSIS_POWER_CAPTURE_ENABLE && BOARD_LOG_UART_ENABLED

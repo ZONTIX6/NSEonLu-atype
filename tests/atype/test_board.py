@@ -61,6 +61,18 @@ class BoardConfiguration(unittest.TestCase):
             result = self.compile("", f"REFEREE_UART_PORT={port}")
             self.assertNotEqual(result.returncode, 0)
 
+    def test_vofa_reserves_uart7_only_when_enabled(self):
+        enabled = "VOFA_TELEMETRY_ENABLE=1"
+        for owner in ("REFEREE_UART_PORT=7", "BOARD_AUX_UART7_DEVICE=1"):
+            with self.subTest(owner=owner):
+                conflict = self.compile("", enabled, owner)
+                self.assertNotEqual(conflict.returncode, 0)
+                self.assertIn("UART7", conflict.stderr)
+                self.assertEqual(self.compile("", owner).returncode, 0)
+        self.assertEqual(self.compile("", enabled, "LOG_OUTPUT=3").returncode, 0)
+        self.assertEqual(self.compile("", enabled, "REFEREE_UART_PORT=7",
+                                      "REFEREE_ENABLE=0").returncode, 0)
+
     def test_registered_uart_handles_are_distinct(self):
         source = '''
         #include "board_config.h"

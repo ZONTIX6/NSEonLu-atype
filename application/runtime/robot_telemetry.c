@@ -3,9 +3,20 @@
 #include "tuning_flash.h"
 #include "runtime_tuning.h"
 #include "chassis_control_config.h"
+#include "board_config.h"
+
+#if VOFA_TELEMETRY_ENABLE
+#include "vofa_telemetry.h"
+#if CHASSIS_CONTROL_MODE != CHASSIS_CONTROL_SPEED
+#error VOFA telemetry requires CHASSIS_CONTROL_MODE=0 for speed-control snapshots.
+#endif
+#endif
 
 #if USB_TELEMETRY_ENABLE
 #include "usbd_cdc_if.h"
+#endif
+
+#if USB_TELEMETRY_ENABLE || VOFA_TELEMETRY_ENABLE
 #include "chassis.h"
 #include "remote_control.h"
 #include "chassis_power.h"
@@ -202,12 +213,14 @@ void RobotTelemetryTask(void)
 #if USB_TELEMETRY_ENABLE
     /* Let the preceding USB reply finish before a potentially long sector erase. */
     if (!CDC_IsPortOpen_FS() || CDC_IsTransmitIdle_FS()) TuningFlashPoll();
-    const uint32_t now_ms = HAL_GetTick();
-#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_SPEED
-    Collect(now_ms);
-#else
-    (void)now_ms;
 #endif
+#if (USB_TELEMETRY_ENABLE || VOFA_TELEMETRY_ENABLE) && CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_SPEED
+    Collect(HAL_GetTick());
+#endif
+#if VOFA_TELEMETRY_ENABLE
+    VofaTelemetrySend(&sample);
+#endif
+#if USB_TELEMETRY_ENABLE
     USBTelemetryStreamSend(&sample, HAL_GetTick());
 #endif
 }
