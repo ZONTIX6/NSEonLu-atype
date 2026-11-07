@@ -384,6 +384,8 @@ NUMERIC_SOURCES := $(filter modules/chassis_force_calibration/% modules/chassis_
 NUMERIC_SOURCES += $(filter modules/predictive_power/%,$(C_SOURCES))
 NUMERIC_SOURCES += modules/telemetry/chassis_speed_capture.c application/runtime/chassis_speed_observation.c
 NUMERIC_SOURCES += application/runtime/shadow_jscope.c
+NUMERIC_SOURCES += application/runtime/robot_telemetry.c modules/telemetry/usb_telemetry_format.c \
+                   modules/telemetry/usb_telemetry_imu.c modules/super_cap/super_cap_protocol.c
 $(addprefix $(BUILD_DIR)/,$(notdir $(NUMERIC_SOURCES:.c=.o))): CFLAGS += -fno-fast-math
 vpath %.c $(sort $(dir $(C_SOURCES)))
 # list of ASM program objects

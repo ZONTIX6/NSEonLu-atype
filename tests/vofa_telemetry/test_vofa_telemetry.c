@@ -120,11 +120,40 @@ static void TestBusyPreservesBytesUntilTransmitCompletes(void)
     assert(memcmp(active_data + 4, original + 4, FRAME_SIZE - 4) == 0);
 }
 
+static void TestPayloadHasNoFalseTail(void)
+{
+    USBTelemetrySample_s sample = full_sample;
+    sample.rpm_lf = 0;
+    sample.rpm_rf = 1022;
+    sample.p_meter_cw = 0;
+    sample.p_limited_cw = 25550;
+
+    huart7.gState = HAL_UART_STATE_READY;
+    const unsigned previous = frames_started;
+    VofaTelemetrySend(&sample);
+    assert(frames_started == previous + 1);
+
+    /* The receiver searches every byte for the first frame delimiter. */
+    static const uint8_t tail[] = {0x00, 0x00, 0x80, 0x7f};
+    unsigned first_tail = 0;
+    while (first_tail + sizeof tail <= FRAME_SIZE &&
+           memcmp(active_data + first_tail, tail, sizeof tail) != 0)
+        ++first_tail;
+    assert(first_tail == FRAME_SIZE - sizeof tail);
+
+    const float expected[CHANNEL_COUNT] = {
+        0, 1022, 303, -404, 505, -606, 707, -808,
+        0, 255.5f, 52.5f, 61.25f, 22.25f, 87.5f, -75.5f, 11.25f, -8.75f, 15, 31
+    };
+    AssertFrame(expected);
+}
+
 int main(void)
 {
     TestFrameLayoutAndScales();
     TestValidityGatesEachSource();
     TestBusyPreservesBytesUntilTransmitCompletes();
+    TestPayloadHasNoFalseTail();
     puts("PASS: VOFA+ JustFloat frame, validity and asynchronous buffer ownership");
     return 0;
 }

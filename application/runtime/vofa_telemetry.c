@@ -3,6 +3,7 @@
 
 #if VOFA_TELEMETRY_ENABLE
 #include "usart.h"
+#include <string.h>
 
 /* STM32F427 stores IEEE 754 floats in JustFloat's little-endian wire order. */
 static struct {
@@ -43,6 +44,16 @@ void VofaTelemetrySend(const USBTelemetrySample_s *sample)
                            (sample->cap_input_online ? 8U : 0U) |
                            (sample->imu_valid ? 16U : 0U));
 
-    (void)HAL_UART_Transmit_IT(uart, (const uint8_t *)&frame, sizeof(frame));
+    /* JustFloat scans for the delimiter even across adjacent float boundaries.
+     * In a collision, flip the lowest mantissa bit of the float ending the match. */
+    uint8_t *bytes = (uint8_t *)&frame;
+    for (size_t i = 0; i + sizeof(frame.tail) <= sizeof(frame.channels); ++i) {
+        if (memcmp(bytes + i, frame.tail, sizeof(frame.tail)) == 0) {
+            const size_t last = i + sizeof(frame.tail) - 1;
+            bytes[last - last % sizeof(float)] ^= 1U;
+        }
+    }
+
+    (void)HAL_UART_Transmit_IT(uart, bytes, sizeof(frame));
 }
 #endif

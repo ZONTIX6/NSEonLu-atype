@@ -34,15 +34,15 @@ make -j8 PROFILE=atype-vehicle BUILD_DIR=build/vofa-telemetry-cap VOFA_TELEMETRY
 ## 在 VOFA+ 中画图
 
 1. 连接方式选 **SerialPort**，选择调试器的虚拟 COM 号，设为 **115200、8 数据位、无校验、1 停止位、无流控**。
-2. 协议引擎选 **JustFloat**，打开串口。收到完整帧后，右侧数据栏会出现 19 路数据，按下面通道表的顺序编号。[VOFA+ JustFloat 协议](https://www.vofa.plus/docs/learning/dataengines/justfloat/)
-3. 从控件栏拖入「波形图」，右键在 Y 轴菜单勾选要看的通道。例如同时勾选 `ch0` 和 `ch4`，即可对照左前轮实测与目标转速。波形图的采样间隔 Δt 可按默认周期填写 `20 ms`。[VOFA+ 波形图操作](https://www.vofa.plus/docs/learning/widgets/wave/)
+2. 协议引擎选 **JustFloat**，打开串口。收到完整帧后，右侧数据栏会出现 19 路数据，表中的 `ch0`–`ch18` 对应 VOFA+ 默认显示的 `I0`–`I18`。[VOFA+ JustFloat 协议](https://www.vofa.plus/docs/learning/dataengines/justfloat/)
+3. 从控件栏拖入「波形图」，右键在 Y 轴菜单勾选要看的通道。例如同时勾选 `I0` 和 `I4`，即可对照左前轮电机的实测与目标转速。波形图的采样间隔 Δt 可按默认周期填写 `20 ms`。[VOFA+ 波形图操作](https://www.vofa.plus/docs/learning/widgets/wave/)
 
 ## 通道表
 
 | 通道 | 数据 | 单位 |
 | --- | --- | --- |
-| `ch0`–`ch3` | LF、RF、LB、RB 实测转速 | rpm |
-| `ch4`–`ch7` | LF、RF、LB、RB 目标转速 | rpm |
+| `ch0`–`ch3` | LF、RF、LB、RB 电机转子实测转速 | rpm |
+| `ch4`–`ch7` | LF、RF、LB、RB 电机转子目标转速 | rpm |
 | `ch8` | 功率计实测功率 | W |
 | `ch9` | 限制后模型估算功率 | W |
 | `ch10` | 有效功率上限 | W |
@@ -53,6 +53,8 @@ make -j8 PROFILE=atype-vehicle BUILD_DIR=build/vofa-telemetry-cap VOFA_TELEMETRY
 | `ch17` | 电机在线位掩码，bit 0–3 对应 LF、RF、LB、RB | — |
 | `ch18` | 数据有效位掩码，见下文 | — |
 
-LF、RF、LB、RB 依次为左前、右前、左后、右后。电机在线位清零时，该轮实测和目标转速均发送 0。`ch18` 的 bit 0 对应功控模型（`ch9`、`ch10`），bit 1 对应功率计（`ch8`），bit 2 对应电容输出与剩余百分比（`ch11`、`ch13`），bit 3 对应电容输入（`ch12`），bit 4 对应 IMU（`ch14`–`ch16`）。数据不可用时发送 0，可结合有效位区分真实零值。
+LF、RF、LB、RB 依次为左前、右前、左后、右后。将转子 rpm 除以 `REDUCTION_RATIO_WHEEL`（默认 19.0）即可换算为轮端 rpm。电机在线位清零时，该电机的实测和目标转速均发送 0。
 
-每帧由 19 个小端 32 位浮点数和 `00 00 80 7F` 帧尾组成，共 80 字节。发送周期跟随 `USB_TELEMETRY_PERIOD_MS`，默认 20 ms（50 Hz）。UART7 忙时跳过当期整帧。
+`ch18` 的 bit 0 对应功控模型（`ch9`、`ch10`），bit 1 对应功率计（`ch8`），bit 2 对应电容输出与剩余百分比（`ch11`、`ch13`），bit 3 对应电容输入（`ch12`），bit 4 对应 IMU（`ch14`–`ch16`）。数据不可用时发送 0，可结合有效位区分真实零值。
+
+每帧由 19 个小端 32 位浮点数和 `00 00 80 7F` 帧尾组成，共 80 字节。数据字节若恰好拼成帧尾，固件会调整冲突浮点数的最低尾数位，避免接收端提前切帧。发送周期跟随 `USB_TELEMETRY_PERIOD_MS`，默认 20 ms（50 Hz）。UART7 忙时跳过当期整帧。[JustFloat 解码器](https://github.com/je00/Vodka/blob/master/dataengines/justfloat/justfloat.cpp#L39-L50)
