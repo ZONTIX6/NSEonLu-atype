@@ -17,6 +17,9 @@
 #ifndef VOFA_TELEMETRY_ENABLE
 #define VOFA_TELEMETRY_ENABLE 0
 #endif
+#ifndef VOFA_TELEMETRY_MODE
+#define VOFA_TELEMETRY_MODE 0 /* 0: JustFloat, 1: FireWater measurement */
+#endif
 #ifndef ATYPE_BENCH_MODE
 #define ATYPE_BENCH_MODE 0
 #endif
@@ -31,6 +34,9 @@
 #endif
 #if VOFA_TELEMETRY_ENABLE != 0 && VOFA_TELEMETRY_ENABLE != 1
 #error VOFA_TELEMETRY_ENABLE must be 0 or 1.
+#endif
+#if VOFA_TELEMETRY_MODE != 0 && VOFA_TELEMETRY_MODE != 1
+#error VOFA_TELEMETRY_MODE must be 0 or 1.
 #endif
 #if ATYPE_BENCH_MODE != 0 && ATYPE_BENCH_MODE != 1
 #error ATYPE_BENCH_MODE must be 0 or 1.

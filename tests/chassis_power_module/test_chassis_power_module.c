@@ -71,7 +71,7 @@ int main(int argc,char **argv)
     ChassisPowerCycleInput_s input={.now_ms=100,.dt_s=.002f,.online_mask=15,.enabled_mask=15,
         .control={.version=42,.tick_ms=100,.control_enabled=true,.nominal_budget_w=20,
             .target_power_w=19,.legacy_budget_w=20},
-        .meter={.online=true,.last_rx_tick_ms=100,.power_w=19}};
+        .meter={.online=true,.last_rx_tick_ms=100,.power_w=19,.rx_sequence=UINT32_C(0x01234567)}};
     for(unsigned w=0;w<4;++w) {
         input.raw_current[w]=5000;input.actual_rpm[w]=input.target_rpm[w]=1000;
         input.feedback_tick_ms[w]=100;input.feedback_sequence[w]=1;
@@ -86,6 +86,8 @@ int main(int argc,char **argv)
     ChassisPowerSnapshot_s snapshot;
     assert(ChassisPowerGetSnapshot(&snapshot));
     assert(snapshot.final_valid && snapshot.can_submitted);
+    assert(snapshot.measured_power_w==19 && snapshot.meter_tick_ms==100);
+    assert(snapshot.meter_sequence==UINT32_C(0x01234567));
     for(unsigned w=0;w<4;++w) assert(snapshot.final_current[w]==0 && snapshot.telemetry.current_command[w]==0);
     final.control_version=41;assert(!ChassisPowerRecordFinal(&final));
     /* The slow publication switches complete configuration versions at a boundary. */
@@ -102,9 +104,11 @@ int main(int argc,char **argv)
     assert(ChassisPowerRequestConfig(&next,7));
     assert(!ChassisPowerRequestConfig(&next,7));
     assert(!ChassisPowerRequestConfig(&next,6));
+    input.meter.rx_sequence=UINT32_C(0x01234568); /* Another receive event in the same tick. */
     assert(ChassisPowerLimit(&input,&output)); /* Slow boundary has not consumed version 7. */
     assert(ChassisPowerGetSnapshot(&snapshot));
     assert(snapshot.final_valid && snapshot.control_version==42); /* Last complete cycle stays visible. */
+    assert(snapshot.meter_sequence==UINT32_C(0x01234567));
     policy_input.previous_valid=ChassisPowerGetSnapshot(&policy_input.previous);
     policy_input.now_ms=101;
     assert(ChassisPowerUpdatePolicy(&policy_input,&policy_output));

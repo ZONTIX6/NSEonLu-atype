@@ -57,7 +57,7 @@ typedef struct
     uint8_t online_mask;
     bool base_limited, numeric_error;
     float measured_power_w;
-    uint32_t meter_tick_ms;
+    uint32_t meter_tick_ms, meter_sequence;
     bool meter_online;
     ChassisPowerTransientOutput_s transient;
     bool cycle_valid, final_valid, can_submitted;

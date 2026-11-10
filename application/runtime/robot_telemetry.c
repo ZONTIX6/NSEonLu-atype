@@ -218,7 +218,11 @@ void RobotTelemetryTask(void)
     Collect(HAL_GetTick());
 #endif
 #if VOFA_TELEMETRY_ENABLE
+#if VOFA_TELEMETRY_MODE == 1
+    VofaTelemetrySendMeasurement(&sample, model.registered ? &model : NULL, HAL_GetTick());
+#else
     VofaTelemetrySend(&sample);
+#endif
 #endif
 #if USB_TELEMETRY_ENABLE
     USBTelemetryStreamSend(&sample, HAL_GetTick());

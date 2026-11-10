@@ -19,7 +19,8 @@ bool ChassisPowerLimit(const ChassisPowerCycleInput_s *i, ChassisPowerCycleOutpu
     *state=(ChassisPowerSnapshot_s){.registered=true,.tick_ms=i->now_ms,
         .control_version=i->control.version,.control_tick_ms=i->control.tick_ms,
         .config_version=i->control.config_version,.measured_power_w=i->meter.power_w,
-        .meter_online=i->meter.online,.meter_tick_ms=i->meter.last_rx_tick_ms};
+        .meter_online=i->meter.online,.meter_tick_ms=i->meter.last_rx_tick_ms,
+        .meter_sequence=i->meter.rx_sequence};
     p->control=i->control;
     p->input.referee_power_limit_w=i->control.legacy_budget_w;
     ChassisPowerTransientInput_s transient={.budget_w=i->control.nominal_budget_w,
