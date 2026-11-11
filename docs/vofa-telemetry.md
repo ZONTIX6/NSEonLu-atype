@@ -9,7 +9,7 @@
 | `0`（默认） | 原有 19 路遥测，默认 50 Hz | JustFloat |
 | `1` | 38 路测量数据，每组一行，发送间隔至少 60 ms | FireWater |
 
-需要 FireWater 测量时，可以用 `VOFA_TELEMETRY_MODE=1` 覆盖协议。力控模式、裁判使用 UART7 或 UART7 接有辅助设备时，默认关闭 VOFA+ 输出。USB 遥测可同时开启，也可用 `USB_TELEMETRY_ENABLE=0` 单独运行无线遥测。[A 板串口接线](atype-integration.md#接线)
+在 [Inc/board_config.h](../Inc/board_config.h) 中修改 `VOFA_TELEMETRY_MODE` 后，正常编译烧录即可切换协议。构建命令也可显式覆盖该宏。力控模式、裁判使用 UART7 或 UART7 接有辅助设备时，默认关闭 VOFA+ 输出。USB 遥测可同时开启，也可用 `USB_TELEMETRY_ENABLE=0` 单独运行无线遥测。[A 板串口接线](atype-integration.md#接线)
 
 当前整车默认直供，此时第 11–13 路无有效超电数据。已接入匹配的 F334 超电且整车使用超电供电时，构建时设置 `CHASSIS_POWER_SOURCE_MODE=1`。第 12 路需要收到 F334 的 CAN `0x052` 输入功率反馈。 [超电协议](supercap-can-protocol.md)
 

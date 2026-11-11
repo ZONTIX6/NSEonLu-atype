@@ -268,10 +268,11 @@ ifneq ($(CHASSIS_VELOCITY_FUSION_CALIBRATED),1)
 $(error CHASSIS_VELOCITY_FUSION_CALIBRATED must be 0 or 1)
 endif
 endif
-VOFA_TELEMETRY_MODE ?= 0
+ifneq ($(origin VOFA_TELEMETRY_MODE),undefined)
 ifneq ($(VOFA_TELEMETRY_MODE),0)
 ifneq ($(VOFA_TELEMETRY_MODE),1)
 $(error VOFA_TELEMETRY_MODE must be 0 or 1)
+endif
 endif
 endif
 include config/atype.mk
