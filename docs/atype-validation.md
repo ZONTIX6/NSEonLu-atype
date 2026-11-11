@@ -63,7 +63,7 @@ Windows / PowerShell；Arm GNU Toolchain 13.3.Rel1（GCC 13.3.1）、MinGW GCC 1
 
 CMake的 `atype-vehicle`、`atype-bench`、`atype-direct` 分别在 `build/cmake-<配置>` 通过。旧 `Makefile.upgrade` 入口转为复用主Makefile，避免维护另一份过期源文件清单。
 
-链接检查确认：F427栈顶0x20030000；参数区0x081C0000/0x081E0000；无固件段进入参数区；`.data/.bss`位于DMA可访问普通RAM；无未定义强符号；当前 INS/EKF 与 USB/UART8 中断入口存在，关键公开实现无重复定义；map 不含历史功控/INS 源。底盘角色未使用的 `INSGetSnapshot` 可被正常裁剪，仍检查活跃 INS/EKF/采样实现。可选配置另检查 `config/atype-link-symbols.txt` 的所有实现入口实际保留。
+链接检查确认：F427栈顶0x20030000；参数区0x081C0000/0x081E0000；无固件段进入参数区；`.data/.bss`位于DMA可访问普通RAM；无未定义强符号；当前 INS/EKF 与 USB/UART8 中断入口存在，关键公开实现无重复定义；map 不含历史功控/INS 源。底盘角色未使用的 `INSGetSnapshot` 可被正常裁剪，仍检查活跃 INS/EKF/采样实现。可选配置另检查 `config/99_build/atype-link-symbols.txt` 的所有实现入口实际保留。
 
 | 配置 | Flash镜像 B | 静态RAM B | 含链接预留堆栈RAM B |
 | --- | ---: | ---: | ---: |

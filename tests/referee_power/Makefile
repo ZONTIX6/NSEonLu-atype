@@ -3,7 +3,7 @@ CFLAGS := -std=c11 -Wall -Wextra -Werror -pedantic -O0 -g
 TARGET := test_referee_power.exe
 LEGACY_TARGET := test_referee_power_legacy.exe
 SOURCE := test_referee_power.c ../../modules/referee/referee_power.c
-HEADERS := ../../modules/referee/referee_power.h ../../modules/referee/referee_protocol.h
+HEADERS := ../../modules/referee/referee_power.h ../../config/90_board/referee_config.h ../../modules/referee/referee_protocol.h
 INCLUDES := -I../../modules/referee
 
 .PHONY: all test clean
@@ -16,7 +16,7 @@ $(TARGET): $(SOURCE) $(HEADERS)
 $(LEGACY_TARGET): $(SOURCE) $(HEADERS)
 	$(CC) $(CFLAGS) -DREFEREE_LEGACY_POWER_FIELDS_ENABLED=1 $(INCLUDES) $(SOURCE) -o $(LEGACY_TARGET)
 
-test_referee_heat.exe: test_referee_heat.c ../../modules/referee/referee_power.c ../../modules/referee/referee_power.h
+test_referee_heat.exe: test_referee_heat.c ../../modules/referee/referee_power.c ../../modules/referee/referee_power.h ../../config/90_board/referee_config.h
 	$(CC) $(CFLAGS) $(INCLUDES) test_referee_heat.c ../../modules/referee/referee_power.c -o $@
 
 test: $(TARGET) $(LEGACY_TARGET) test_referee_heat.exe

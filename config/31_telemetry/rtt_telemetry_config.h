@@ -1,0 +1,16 @@
+#ifndef RTT_TELEMETRY_CONFIG_H
+#define RTT_TELEMETRY_CONFIG_H
+
+/* 功率CSV标定列开关：0=标准17列（默认），1=额外追加9列标定数据。
+ * 示例：make CHASSIS_POWER_CALIBRATION_ENABLE=1；此项只改变遥测格式，不改变控制参数。 */
+#ifndef CHASSIS_POWER_CALIBRATION_ENABLE
+#define CHASSIS_POWER_CALIBRATION_ENABLE 0 /* 0=普通遥测，1=附加标定列。 */
+#endif
+
+#if CHASSIS_POWER_CALIBRATION_ENABLE != 0 && CHASSIS_POWER_CALIBRATION_ENABLE != 1
+#error CHASSIS_POWER_CALIBRATION_ENABLE must be 0 or 1
+#endif
+
+#define RTT_TELEMETRY_CHASSIS_POWER_CSV_MAX_LENGTH 320U /* 功率CSV格式化缓冲区容量，单位字节；默认320。 */
+
+#endif

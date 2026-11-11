@@ -8,7 +8,7 @@ INCLUDES := -Istubs -I../../Inc -I../../bsp/log
 
 all: $(TARGET)
 
-$(TARGET): $(SOURCE)
+$(TARGET): $(SOURCE) ../../config/90_board/log_config.h
 	$(CC) $(CFLAGS) -DLOG_OUTPUT=1 $(INCLUDES) $(SOURCE) -o $(TARGET)
 
 test: $(TARGET)

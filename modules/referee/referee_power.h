@@ -10,17 +10,7 @@
 #define REFEREE_ROBOT_STATE_EXTENDED_PAYLOAD_LENGTH 17U
 #define REFEREE_POWER_HEAT_PAYLOAD_LENGTH 14U
 #define REFEREE_POWER_HEAT_LEGACY_PAYLOAD_LENGTH 16U
-#define REFEREE_POWER_DATA_TIMEOUT_MS 300U
-
-/* Enable only for a verified protocol that defines power at offset 4 (e.g. 2024).
- * The 2025 protocol also has 16-byte frames, but these bytes are reserved. */
-#ifndef REFEREE_LEGACY_POWER_FIELDS_ENABLED
-#define REFEREE_LEGACY_POWER_FIELDS_ENABLED 0
-#endif
-
-#if REFEREE_LEGACY_POWER_FIELDS_ENABLED != 0 && REFEREE_LEGACY_POWER_FIELDS_ENABLED != 1
-#error "REFEREE_LEGACY_POWER_FIELDS_ENABLED must be 0 or 1"
-#endif
+#include "../../config/90_board/referee_config.h"
 
 typedef struct
 {

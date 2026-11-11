@@ -34,7 +34,7 @@ node tools/usb-telemetry/serve.cjs
 
 输入框下显示板端最后确认值。编辑只改变草稿，点击“应用并同步文件”后整组发送，板端校验通过，在所属控制任务下个周期应用并回传实际值。网页使用回执值同步文件，不将未确认或被拒绝的草稿写入文件。小陀螺运行中保持目标过渡速率，改变旋转方向需先退出小陀螺模式。修改 PID 会清除四轮积分，功控修改会重置慢外环学习量；保护链路继续生效。
 
-同步文件为仓库中的 modules/telemetry/tuning_overrides.h。每组的 OVERRIDE=1 且 MODE 匹配当前固件模式时，VALUES 覆盖原始源码默认；有效的板端保存值具有更高优先级。字段顺序见 runtime_tuning.h。文件由本地 Node 服务原子替换，并保留其他组设置及对应模式。
+同步文件为仓库中的 [`config/31_telemetry/tuning_overrides.h`](../../config/31_telemetry/tuning_overrides.h)。每组的 OVERRIDE=1 且 MODE 匹配当前固件模式时，VALUES 覆盖原始源码默认；有效的板端保存值具有更高优先级。字段顺序见 runtime_tuning.h。文件由本地 Node 服务原子替换，并保留其他组设置及对应模式。
 
 每次成功应用会自动排队保存到板端 Flash。请进入零力模式，使全部已注册 DJI 电机停用、反馈在线且速度不超过 50 rpm，持续至少 100 ms；控制快照必须新鲜、零电流帧发送成功，才会保存。网页单独显示“等待板端保存 / 已保存到板端 / 保存失败”，确认已保存后再断电。保存前断电会恢复上一次完整保存值；文件已同步不代表 Flash 已保存。
 
@@ -109,7 +109,7 @@ V2 浏览器脚本 `tests/autotune-v2-check.js` 使用本地端口 4176，覆盖
 
 ## 固件配置与构建
 
-`modules/telemetry/usb_telemetry_config.h`：
+[USB 遥测配置](../../config/31_telemetry/usb_telemetry_config.h)（旧模块路径仅作转发）：
 
 | 配置 | 默认 | 含义 |
 | --- | --- | --- |

@@ -11,7 +11,7 @@ INCLUDES := -Istubs -I../../modules/telemetry -I../../modules/algorithm
 
 all: $(TARGET)
 
-$(TARGET): $(SOURCE)
+$(TARGET): $(SOURCE) ../../config/31_telemetry/rtt_telemetry_config.h
 	$(CC) $(CFLAGS) $(INCLUDES) $(SOURCE) -lm -o $(TARGET)
 
 test: $(TARGET)

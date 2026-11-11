@@ -1,21 +1,3 @@
-#ifndef SHADOW_SCOPE_CONFIG_H
-#define SHADOW_SCOPE_CONFIG_H
-#ifndef CHASSIS_SHADOW_JSCOPE_ENABLE
-#define CHASSIS_SHADOW_JSCOPE_ENABLE 0
-#endif
-#ifndef CHASSIS_SHADOW_JSCOPE_HZ
-#define CHASSIS_SHADOW_JSCOPE_HZ 50
-#endif
-#ifndef CHASSIS_SHADOW_JSCOPE_WHEEL
-#define CHASSIS_SHADOW_JSCOPE_WHEEL 0
-#endif
-#if CHASSIS_SHADOW_JSCOPE_ENABLE != 0 && CHASSIS_SHADOW_JSCOPE_ENABLE != 1
-#error CHASSIS_SHADOW_JSCOPE_ENABLE must be 0 or 1
-#endif
-#if CHASSIS_SHADOW_JSCOPE_HZ < 1 || CHASSIS_SHADOW_JSCOPE_HZ > 100
-#error CHASSIS_SHADOW_JSCOPE_HZ must be 1 to 100
-#endif
-#if CHASSIS_SHADOW_JSCOPE_WHEEL < 0 || CHASSIS_SHADOW_JSCOPE_WHEEL > 3
-#error CHASSIS_SHADOW_JSCOPE_WHEEL must be 0 to 3 (LF RF LB RB)
-#endif
-#endif
+/* Compatibility include. Edit config/32_capture/shadow_scope_config.h for project settings. */
+#pragma once
+#include "../../config/32_capture/shadow_scope_config.h"

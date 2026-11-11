@@ -13,7 +13,7 @@ PRODUCTION_SOURCES = $(CHASSIS)/chassis_velocity_observer.c \
     $(ALGORITHM)/chassis_velocity_center.c $(ALGORITHM)/chassis_gimbal_imu.c \
     $(TIME)/speed_observation_time.c
 SOURCES = test_chassis_velocity_observer.c $(PRODUCTION_SOURCES)
-HEADERS = $(wildcard stubs/*.h) $(CHASSIS)/chassis_velocity_observer.h \
+HEADERS = $(ROOT)/config/30_velocity_observation/chassis_velocity_config.h $(ROOT)/config/30_velocity_observation/speed_observation_config.h $(wildcard stubs/*.h) $(CHASSIS)/chassis_velocity_observer.h \
     $(CHASSIS)/chassis_internal.h $(wildcard $(ALGORITHM)/chassis_velocity*.h) \
     $(ALGORITHM)/chassis_gimbal_imu.h $(APPLICATION)/gimbal/gimbal.h \
     $(MODULES)/imu/ins_task.h $(TIME)/speed_observation_time.h

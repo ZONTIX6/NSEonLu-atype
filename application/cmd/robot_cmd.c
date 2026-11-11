@@ -1,5 +1,6 @@
 // app
 #include "robot_def.h"
+#include "../../config/05_remote/remote_config.h"
 #include "board/board_chassis_force.h"
 #if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
 #include "chassis_force_intent.h"
@@ -28,7 +29,6 @@ static uint32_t force_command_sequence;
 // 私有宏,自动将编码器转换成角度值
 #define YAW_ALIGN_ANGLE (YAW_CHASSIS_ALIGN_ECD * ECD_ANGLE_COEF_DJI) // 对齐时的角度,0-360
 #define PTICH_HORIZON_ANGLE (PITCH_HORIZON_ECD * ECD_ANGLE_COEF_DJI) // pitch水平时电机的角度,0-360
-#define YAW_MAX_TRACK_ERROR 60.0f
 
 /* cmd应用包含的模块实例指针和交互信息存储*/
 #ifdef GIMBAL_BOARD // 对双板的兼容,条件编译
@@ -103,7 +103,7 @@ void RobotCMDInit()
         .send_data_len = sizeof(Chassis_Ctrl_Cmd_s),
 #endif
     };
-    comm_conf.daemon_count=10;
+    comm_conf.daemon_count=REMOTE_BOARD_OFFLINE_RELOAD_COUNT;
     cmd_can_comm = CANCommInit(&comm_conf);
     dual_heat_pub=PubRegister(HEAT_CONTROL_DATA_TOPIC,sizeof(HeatControlData_s));
 #endif // GIMBAL_BOARD
@@ -161,18 +161,18 @@ static void RemoteControlSet()
     // 视觉控制尚未实现，中/下档均保留人工摇杆控制，不让目标标志屏蔽输入。
     if (switch_is_down(rc_data[TEMP].rc.switch_left) || switch_is_mid(rc_data[TEMP].rc.switch_left))
     { // 按照摇杆的输出大小进行角度增量,增益系数需调整
-        gimbal_cmd_send.yaw -= 0.005f * (float)rc_data[TEMP].rc.rocker_l_;
-        gimbal_cmd_send.pitch += 0.001f * (float)rc_data[TEMP].rc.rocker_l1;
+        gimbal_cmd_send.yaw -= REMOTE_STICK_YAW_GAIN * (float)rc_data[TEMP].rc.rocker_l_;
+        gimbal_cmd_send.pitch += REMOTE_STICK_PITCH_GAIN * (float)rc_data[TEMP].rc.rocker_l1;
     }
     // 云台软件限位
 
     // 底盘参数,目前没有加入小陀螺(调试似乎暂时没有必要),系数需要调整
 #if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
-    ChassisForceIntentStick(-(float)rc_data[TEMP].rc.rocker_r1,(float)rc_data[TEMP].rc.rocker_r_,660,&force_intent);
+    ChassisForceIntentStick(-(float)rc_data[TEMP].rc.rocker_r1,(float)rc_data[TEMP].rc.rocker_r_,REMOTE_STICK_FULL_SCALE,&force_intent);
     force_intent.source_id=CHASSIS_FORCE_SOURCE_REMOTE;force_intent.force_scale=1;
 #else
-    chassis_cmd_send.vx = -40.0f * (float)rc_data[TEMP].rc.rocker_r1; // 右摇杆竖直方向：前进/后退
-    chassis_cmd_send.vy = 40.0f * (float)rc_data[TEMP].rc.rocker_r_; // 右摇杆水平方向：左/右横移
+    chassis_cmd_send.vx = -REMOTE_STICK_CHASSIS_GAIN * (float)rc_data[TEMP].rc.rocker_r1; // 右摇杆竖直方向：前进/后退
+    chassis_cmd_send.vy = REMOTE_STICK_CHASSIS_GAIN * (float)rc_data[TEMP].rc.rocker_r_; // 右摇杆水平方向：左/右横移
 #endif
 
     // 发射参数
@@ -182,12 +182,12 @@ static void RemoteControlSet()
     //     ; // 弹舱舵机控制,待添加servo_motor模块,关闭
 
     // 摩擦轮控制,拨轮向上打为负,向下为正
-    if (rc_data[TEMP].rc.dial < -100) // 向上超过100,打开摩擦轮
+    if (rc_data[TEMP].rc.dial < REMOTE_DIAL_FRICTION_THRESHOLD) // 向上超过100,打开摩擦轮
         shoot_cmd_send.friction_mode = FRICTION_ON;
     else
         shoot_cmd_send.friction_mode = FRICTION_OFF;
     // 拨弹控制,遥控器固定为一种拨弹模式,可自行选择
-    if (rc_data[TEMP].rc.dial < -200)
+    if (rc_data[TEMP].rc.dial < REMOTE_DIAL_SHOOT_THRESHOLD)
         shoot_cmd_send.load_mode = LOAD_BURSTFIRE;
     else
         shoot_cmd_send.load_mode = LOAD_STOP;
@@ -204,12 +204,12 @@ static __attribute__((unused)) void MouseKeySet()
     ChassisForceIntentKeys(keys->w,keys->s,keys->a,keys->d,&force_intent);
     force_intent.source_id=CHASSIS_FORCE_SOURCE_DBUS_KEYS;
 #else
-    chassis_cmd_send.vx = rc_data[TEMP].key[KEY_PRESS].w * 300 - rc_data[TEMP].key[KEY_PRESS].s * 300; // 系数待测
-    chassis_cmd_send.vy = rc_data[TEMP].key[KEY_PRESS].d * 300 - rc_data[TEMP].key[KEY_PRESS].a * 300;
+    chassis_cmd_send.vx = rc_data[TEMP].key[KEY_PRESS].w * REMOTE_KEY_CHASSIS_SPEED - rc_data[TEMP].key[KEY_PRESS].s * REMOTE_KEY_CHASSIS_SPEED; // 系数待测
+    chassis_cmd_send.vy = rc_data[TEMP].key[KEY_PRESS].d * REMOTE_KEY_CHASSIS_SPEED - rc_data[TEMP].key[KEY_PRESS].a * REMOTE_KEY_CHASSIS_SPEED;
 #endif
 
-    gimbal_cmd_send.yaw += (float)rc_data[TEMP].mouse.x / 660 * 10; // 系数待测
-    gimbal_cmd_send.pitch += (float)rc_data[TEMP].mouse.y / 660 * 10;
+    gimbal_cmd_send.yaw += (float)rc_data[TEMP].mouse.x / REMOTE_MOUSE_FULL_SCALE * REMOTE_MOUSE_YAW_GAIN; // 系数待测
+    gimbal_cmd_send.pitch += (float)rc_data[TEMP].mouse.y / REMOTE_MOUSE_FULL_SCALE * REMOTE_MOUSE_PITCH_GAIN;
 
     switch (rc_data[TEMP].key_count[KEY_PRESS][Key_Z] % 3) // Z键设置弹速
     {
@@ -259,16 +259,16 @@ static __attribute__((unused)) void MouseKeySet()
     switch (rc_data[TEMP].key_count[KEY_PRESS][Key_C] % 4) // C键设置底盘速度
     {
     case 0:
-        chassis_cmd_send.chassis_speed_buff = 40;
+        chassis_cmd_send.chassis_speed_buff = REMOTE_CHASSIS_SPEED_LEVEL_1;
         break;
     case 1:
-        chassis_cmd_send.chassis_speed_buff = 60;
+        chassis_cmd_send.chassis_speed_buff = REMOTE_CHASSIS_SPEED_LEVEL_2;
         break;
     case 2:
-        chassis_cmd_send.chassis_speed_buff = 80;
+        chassis_cmd_send.chassis_speed_buff = REMOTE_CHASSIS_SPEED_LEVEL_3;
         break;
     default:
-        chassis_cmd_send.chassis_speed_buff = 100;
+        chassis_cmd_send.chassis_speed_buff = REMOTE_CHASSIS_SPEED_LEVEL_4;
         break;
     }
 #if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
@@ -300,12 +300,12 @@ static void VideoTransmissionControlSet()
     ChassisForceIntentKeys(keys->w,keys->s,keys->a,keys->d,&force_intent);
     force_intent.source_id=CHASSIS_FORCE_SOURCE_VTX;
 #else
-    chassis_cmd_send.vx = -vt02_data->key[KEY_PRESS].w * 3000 + vt02_data->key[KEY_PRESS].s * 3000;
-    chassis_cmd_send.vy = -vt02_data->key[KEY_PRESS].d * 3000 + vt02_data->key[KEY_PRESS].a * 3000;
+    chassis_cmd_send.vx = -vt02_data->key[KEY_PRESS].w * REMOTE_VTX_KEY_CHASSIS_SPEED + vt02_data->key[KEY_PRESS].s * REMOTE_VTX_KEY_CHASSIS_SPEED;
+    chassis_cmd_send.vy = -vt02_data->key[KEY_PRESS].d * REMOTE_VTX_KEY_CHASSIS_SPEED + vt02_data->key[KEY_PRESS].a * REMOTE_VTX_KEY_CHASSIS_SPEED;
 #endif
 
-    gimbal_cmd_send.yaw -= (float)vt02_data->mouse.x / 660 * 10;
-    gimbal_cmd_send.pitch += (float)vt02_data->mouse.y / 660 * 10;
+    gimbal_cmd_send.yaw -= (float)vt02_data->mouse.x / REMOTE_MOUSE_FULL_SCALE * REMOTE_MOUSE_YAW_GAIN;
+    gimbal_cmd_send.pitch += (float)vt02_data->mouse.y / REMOTE_MOUSE_FULL_SCALE * REMOTE_MOUSE_PITCH_GAIN;
 
     switch (vt02_data->key_count[KEY_PRESS][Key_Z] % 3)   // 设置摩擦轮转速
     {
@@ -358,16 +358,16 @@ static void VideoTransmissionControlSet()
     switch (vt02_data->key_count[KEY_PRESS][Key_C] % 4)     // 设置底盘速度
     {
     case 0:
-        chassis_cmd_send.chassis_speed_buff = 40;
+        chassis_cmd_send.chassis_speed_buff = REMOTE_CHASSIS_SPEED_LEVEL_1;
         break;
     case 1:
-        chassis_cmd_send.chassis_speed_buff = 60;
+        chassis_cmd_send.chassis_speed_buff = REMOTE_CHASSIS_SPEED_LEVEL_2;
         break;
     case 2:
-        chassis_cmd_send.chassis_speed_buff = 80;
+        chassis_cmd_send.chassis_speed_buff = REMOTE_CHASSIS_SPEED_LEVEL_3;
         break;
     default:
-        chassis_cmd_send.chassis_speed_buff = 100;
+        chassis_cmd_send.chassis_speed_buff = REMOTE_CHASSIS_SPEED_LEVEL_4;
         break;
     }
 #if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
@@ -422,7 +422,7 @@ static void GimbalCommandLimit()
 
 /**
  * @brief  紧急停止,包括遥控器左上侧拨轮打满/重要模块离线/双板通信失效等
- *         停止的阈值'300'待修改成合适的值,或改为开关控制.
+ *         停止阈值在 remote_config.h 的 REMOTE_DIAL_EMERGENCY_THRESHOLD 中调整。
  *
  * @todo   后续修改为遥控器离线则电机停止(关闭遥控器急停),通过给遥控器模块添加daemon实现
  *
@@ -431,23 +431,23 @@ static void EmergencyHandler(bool board_online)
 {
     RemoteControlSnapshot_s remote={0};
     bool online=RemoteControlGetSnapshot(&remote) && remote.online && remote.has_sample &&
-        (uint32_t)(HAL_GetTick()-remote.last_rx_tick_ms)<=100U;
+        (uint32_t)(HAL_GetTick()-remote.last_rx_tick_ms)<=REMOTE_INPUT_MAX_AGE_MS;
     online &= INSIsHealthy(HAL_GetTick()) && board_online;
     online &= gimbal_fetch_data.yaw_feedback_valid &&
-        (uint32_t)(HAL_GetTick()-gimbal_fetch_data.yaw_feedback_tick_ms)<=20U;
+        (uint32_t)(HAL_GetTick()-gimbal_fetch_data.yaw_feedback_tick_ms)<=REMOTE_YAW_FEEDBACK_MAX_AGE_MS;
     const bool vtx_mode=switch_is_up(remote.control.rc.switch_left);
     Vt02_Ctrl_t vtx={0};
     if (vtx_mode) online &= Vt02ControlGetSnapshot(&vtx)!=0;
     const bool neutral=(!vtx_mode || (!vtx.key[KEY_PRESS].keys &&
         !vtx.mouse.press_l && !vtx.mouse.press_r && !vtx.mouse.x && !vtx.mouse.y && !vtx.mouse.z)) &&
         !remote.control.mouse.x && !remote.control.mouse.y &&
-        abs(remote.control.rc.rocker_l_)<=30 &&
-        abs(remote.control.rc.rocker_l1)<=30 && abs(remote.control.rc.rocker_r_)<=30 &&
-        abs(remote.control.rc.rocker_r1)<=30 && abs(remote.control.rc.dial)<=30 &&
+        abs(remote.control.rc.rocker_l_)<=REMOTE_NEUTRAL_THRESHOLD &&
+        abs(remote.control.rc.rocker_l1)<=REMOTE_NEUTRAL_THRESHOLD && abs(remote.control.rc.rocker_r_)<=REMOTE_NEUTRAL_THRESHOLD &&
+        abs(remote.control.rc.rocker_r1)<=REMOTE_NEUTRAL_THRESHOLD && abs(remote.control.rc.dial)<=REMOTE_NEUTRAL_THRESHOLD &&
         !remote.control.key[KEY_PRESS].keys && !remote.control.mouse.press_l &&
         !remote.control.mouse.press_r;
     VehicleSafetyInput_s input={.input_online=online,
-        .emergency=remote.control.rc.dial>300,
+        .emergency=remote.control.rc.dial>REMOTE_DIAL_EMERGENCY_THRESHOLD,
         .reset=neutral && switch_is_up(remote.control.rc.switch_right),
         .bench=ATYPE_BENCH_MODE && neutral && switch_is_down(remote.control.rc.switch_left) &&
             switch_is_up(remote.control.rc.switch_right)};
@@ -486,7 +486,7 @@ void RobotCMDTask()
 #endif // ONE_BOARD
 #ifdef GIMBAL_BOARD
     uint32_t chassis_rx_tick=0;
-    const bool chassis_fresh=CANCommCopyFreshAt(cmd_can_comm,&chassis_fetch_data,sizeof chassis_fetch_data,&chassis_rx_tick,10U);
+    const bool chassis_fresh=CANCommCopyFreshAt(cmd_can_comm,&chassis_fetch_data,sizeof chassis_fetch_data,&chassis_rx_tick,REMOTE_BOARD_FEEDBACK_MAX_AGE_MS);
     board_online=chassis_fresh;
     if(!chassis_fresh) chassis_fetch_data=(Chassis_Upload_Data_s){0};
     const RefereeHeatSnapshot_s *heat=&chassis_fetch_data.heat;

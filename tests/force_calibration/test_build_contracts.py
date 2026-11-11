@@ -6,6 +6,7 @@ import subprocess
 import unittest
 ROOT = Path(__file__).resolve().parents[2]
 INCLUDES = re.findall(r'(?:^|\s)-I([^\s\\]+)', (ROOT / 'Makefile').read_text(encoding='utf-8-sig'))
+INCLUDES += [str(p.relative_to(ROOT)) for p in sorted({h.parent for h in (ROOT / 'config').rglob('*.h')})]
 BASE = dict(CHASSIS_FORCE_CALIBRATION_ENABLE=1, CHASSIS_CONTROL_MODE=1,
             CHASSIS_FORCE_SPIN_MODE=0, CHASSIS_POWER_CONTROL_STAGE=3,
             ATYPE_BENCH_MODE=1, USB_TELEMETRY_ENABLE=1, POWER_METER_ENABLE=1,

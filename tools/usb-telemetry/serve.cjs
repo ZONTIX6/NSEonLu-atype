@@ -6,7 +6,7 @@ const {validate} = require('./tuning.js');
 
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml' };
 
-function createServer(root = __dirname, configPath = path.join(__dirname, '../../modules/telemetry/tuning_overrides.h')) {
+function createServer(root = __dirname, configPath = path.join(__dirname, '../../config/31_telemetry/tuning_overrides.h')) {
   let writing = Promise.resolve();
   async function synchronize(group, mode, values) {
     if (!['pid','power','spin'].includes(group) || !Number.isInteger(mode) ||
@@ -50,7 +50,7 @@ function createServer(root = __dirname, configPath = path.join(__dirname, '../..
         const data = JSON.parse(body);
         await synchronize(data.group,data.mode,data.values);
         response.writeHead(200,{'Content-Type':'application/json; charset=utf-8'});
-        response.end(JSON.stringify({saved:true,file:'modules/telemetry/tuning_overrides.h'}));
+        response.end(JSON.stringify({saved:true,file:'config/31_telemetry/tuning_overrides.h'}));
       } catch(error) {
         response.writeHead(error instanceof SyntaxError || !error.code ? 400 : 500,{'Content-Type':'application/json; charset=utf-8'});
         response.end(JSON.stringify({error:error.code ? '配置文件写入失败，请检查文件权限或占用。' : error.message}));

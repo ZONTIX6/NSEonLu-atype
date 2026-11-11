@@ -1,0 +1,63 @@
+# 配置与调参入口
+
+本目录按“上层应用、常用调参 → 控制策略 → 观测与调试 → 底层硬件 → 构建”编号排列。在文件树中按名称升序查看即可保持这一顺序。编号表示查找优先级，不表示代码执行顺序或参数覆盖优先级；文件仍保留 `pid_config.c` 等功能名称。
+
+宏、编译开关和声明放在 `.h`，PID 和有类型的默认配置放在 `.c`；只有宏的配置不额外建立空 `.c`。各参数旁有中文用途、单位和切换说明，修改后重新编译并烧录。
+
+| 显示顺序 | 用途 | 调参文件 |
+| --- | --- | --- |
+| `01_pid` | 最常用：底盘、云台、摩擦轮、拨弹和 IMU 温控 PID | [pid_config.c](01_pid/pid_config.c)、[pid_config.h](01_pid/pid_config.h) |
+| `02_chassis` | 底盘轮型、跟随模式、尺寸、减速比和轮向 | [chassis_config.h](02_chassis/chassis_config.h) |
+| `03_gimbal` | 云台机械零点、Pitch 限角和 Yaw 跟踪限幅 | [gimbal_config.h](03_gimbal/gimbal_config.h) |
+| `04_shoot` | 摩擦轮目标、拨弹参数与发射热量策略 | [shoot_config.h](04_shoot/shoot_config.h)、[heat_control_config.h](04_shoot/heat_control_config.h) |
+| `05_remote` | 摇杆/键鼠灵敏度、速度档位、输入超时 | [remote_config.h](05_remote/remote_config.h) |
+| `06_robot` | 上层整车组织：单/双板角色、视觉通信方式 | [robot_config.h](06_robot/robot_config.h) |
+| `20_chassis_power` | 功率阶段、预算、外环 PI、供电/缓冲与功率模型 | [chassis_power_config.c](20_chassis_power/chassis_power_config.c)、[chassis_power_config.h](20_chassis_power/chassis_power_config.h)、[chassis_energy_config.h](20_chassis_power/chassis_energy_config.h)、[chassis_power_model_config.h](20_chassis_power/chassis_power_model_config.h) |
+| `21_chassis_spin` | 固定、自适应和正弦小陀螺策略 | [chassis_spin_config.c](21_chassis_spin/chassis_spin_config.c)、[chassis_spin_config.h](21_chassis_spin/chassis_spin_config.h) |
+| `22_chassis_force` | 速度/力控选择、力控通用值、车辆标定和标定工具 | [chassis_control_config.h](22_chassis_force/chassis_control_config.h)、[chassis_force_config.c](22_chassis_force/chassis_force_config.c)、[chassis_force_config.h](22_chassis_force/chassis_force_config.h)、[chassis_force_vehicle_config.c](22_chassis_force/chassis_force_vehicle_config.c)、[chassis_force_vehicle_config.h](22_chassis_force/chassis_force_vehicle_config.h)、[force_calibration_config.h](22_chassis_force/force_calibration_config.h) |
+| `30_velocity_observation` | 速度时效、融合观测、预测功率和轮速影子滤波 | [chassis_velocity_config.h](30_velocity_observation/chassis_velocity_config.h)、[predictive_power_config.h](30_velocity_observation/predictive_power_config.h)、[speed_observation_config.h](30_velocity_observation/speed_observation_config.h) |
+| `31_telemetry` | USB/RTT 遥测、标定 CSV 字段与缓冲、网页源码覆盖值 | [usb_telemetry_config.h](31_telemetry/usb_telemetry_config.h)、[rtt_telemetry_config.h](31_telemetry/rtt_telemetry_config.h)、[tuning_overrides.h](31_telemetry/tuning_overrides.h) |
+| `32_capture` | IMU 采集/CAN 收发与 J-Scope 影子观测 | [imu_capture_config.h](32_capture/imu_capture_config.h)、[shadow_scope_config.h](32_capture/shadow_scope_config.h) |
+| `90_board` | 板级绑定/可选设备、裁判旧协议与超时、日志启停 | [board_config.h](90_board/board_config.h)、[referee_config.h](90_board/referee_config.h)、[log_config.h](90_board/log_config.h) |
+| `91_motor` | DJI 电机数量、反馈滤波与驱动参数 | [dji_motor_config.h](91_motor/dji_motor_config.h) |
+| `92_imu` | IMU 安装方向、零偏、重力、恒温、EKF 与低通 | [imu_config.h](92_imu/imu_config.h) |
+| `99_build` | 较少修改：构建配置、允许覆盖的宏、强制链接符号 | [atype.mk](99_build/atype.mk)、[atype-options.txt](99_build/atype-options.txt)、[atype-link-symbols.txt](99_build/atype-link-symbols.txt) |
+
+## 常用调参步骤
+
+1. 调 PID：打开 `01_pid/pid_config.c`。`pid_chassis_speed_config` 是四个底盘轮的启动默认参数，`pid_gimbal_yaw_speed_config` 是云台 Yaw 速度环；按各环注释的单位调整 `Kp`、`Ki`、`Kd`、`MaxOut` 和 `IntegralLimit`。
+2. 调运动与手感：底盘尺寸/跟随模式在 `02_chassis`，云台限位在 `03_gimbal`，摇杆和键鼠增益在 `05_remote`。
+3. 调发射：摩擦轮目标转速和拨弹参数在 `04_shoot/shoot_config.h`，单发热量、预留弹数和射频规划在同目录 `heat_control_config.h`。
+4. 调功率/自旋：功率外环独立 PI 的 `kp`、`ki` 在 `20_chassis_power/chassis_power_config.c` 的 `chassis_outer_loop_config`；小陀螺参数在 `21_chassis_spin`。这些不是电机 PID 参数。
+
+MPU6500 与旧 BMI088 温控 PID 在 `01_pid/pid_config.c` 中分别命名，当前 A 板使用 MPU6500；温度目标和 IMU 安装参数在 `92_imu/imu_config.h`。
+
+## 宏怎样切换
+
+普通数值参数直接修改对应文件中的初值；宏按旁边列出的取值切换。`CHASSIS_CONTROL_MODE`（速度/力控）和 `CHASSIS_FORCE_CALIBRATION_ENABLE`（力控标定工具）还会影响编译源文件选择，应通过 Make/CMake 构建参数切换。带 `#ifndef` 的宏可由编译定义覆盖；Make/CMake 接受的变量名单在 `99_build/atype-options.txt`，不是所有数值宏都自动支持构建变量。
+
+首次使用本次整理后的目录，请选择新的 `BUILD_DIR`（例如下面的命令），或先清理旧构建目录。旧 Make `.d` 缓存可能仍引用迁移前的源文件路径；不要直接烧录旧目录中遗留的固件。
+
+```powershell
+# 随动档：0=车身跟转，1=按云台朝向平移且不主动跟转
+make -j8 PROFILE=atype-vehicle BUILD_DIR=build/follow-gimbal CHASSIS_FOLLOW_MODE=1
+# 自旋：0=固定，1=自适应，2=正弦
+make -j8 PROFILE=atype-vehicle BUILD_DIR=build/spin-sine CHASSIS_SPIN_MODE=2
+# 控制后端：0=速度控制，1=直接力控；选择力控还需按22_chassis_force中的说明完成标定
+make -j8 PROFILE=atype-vehicle BUILD_DIR=build/force-control CHASSIS_CONTROL_MODE=1
+# USB 视觉与 USB 遥测互斥，启用前者必须关闭后者
+make -j8 PROFILE=atype-vehicle BUILD_DIR=build/usb-vision VISION_USE_VCP=1 USB_TELEMETRY_ENABLE=0
+# CMake 使用同名 -D 参数
+cmake -S . -B build/cmake-follow-gimbal -G "MinGW Makefiles" -DCHASSIS_FOLLOW_MODE=1
+cmake --build build/cmake-follow-gimbal -j8
+```
+
+`ONE_BOARD`、`CHASSIS_BOARD`、`GIMBAL_BOARD` 以及视觉通道宏按“是否定义”判断，写成 `0` 仍视为已定义。角色只选一个；未指定时默认单板。双板可分别传 `CHASSIS_BOARD=1` 和 `GIMBAL_BOARD=1` 编译两套固件，不能同时传入。其他 0/1 开关按文件注释切换，多个值的模式宏按其列出的映射选择。
+
+## 参数优先级与兼容入口
+
+编译阶段，显式编译定义优先于带 `#ifndef` 的源码默认值；构建 profile 也可能提供默认选项，应检查实际构建命令和输出目录。编号只用于文件排序，不改变这些规则。
+
+底盘在线调参的启动恢复优先级从高到低为：有效且模式匹配的 Flash 保存值 → 启用且模式匹配的 `31_telemetry/tuning_overrides.h` → 普通配置默认值。在线调参修改运行副本；修改默认值不会自动清除已有 Flash 参数。网页“同步源码”写入 `31_telemetry/tuning_overrides.h`，重新编译烧录后才成为启动覆盖值，也不会自动替代已有有效 Flash 记录。
+
+Make 和 CMake 会包含各编号子目录，并按速度/力控模式选择配置源文件。原 `Inc/` 和 `modules/` 中的同名配置头仅作兼容转发，实际参数以本目录为准。协议常量、寄存器定义、数学换算、算法实现，以及 Cube/HAL/FreeRTOS 配置保留原模块；融合实测标定头仍从对应构建目录提供。

@@ -8,7 +8,7 @@ parser.add_argument("--date",required=True)
 args=parser.parse_args()
 root=pathlib.Path(__file__).resolve().parents[1]
 files=[]
-for directory in ["application","bsp","modules","Inc","Src"]:
+for directory in ["config","application","bsp","modules","Inc","Src"]:
     files.extend(p for p in (root/directory).rglob("*") if p.suffix in [".c",".h"])
 files.append(root/"Middlewares/Third_Party/SEGGER/Config/SEGGER_RTT_Conf.h")
 sections=[];entries=0
@@ -41,7 +41,7 @@ header=f'''# 完整宏与初始化参数索引
 
 更新日期：{args.date}。当前目标为 STM32F427 A 板。配套说明：[配置指南](configuration-guide.md)、[宏迁移表](atype-macro-migration.md)。
 
-由 `scripts/generate-configuration-index.py` 扫描 {len(files)} 个项目 C/H 文件，记录 {entries} 条预处理、配置初始化和 HAL/NVIC 项。预处理条目包含互斥分支与保护宏，不能将所有条目同时理解为有效配置。可从构建命令覆盖的选项见 `config/atype-options.txt`；普通源码 PID/功率模型初值也列在所属文件下。
+由 `scripts/generate-configuration-index.py` 扫描 {len(files)} 个项目 C/H 文件，记录 {entries} 条预处理、配置初始化和 HAL/NVIC 项。预处理条目包含互斥分支与保护宏，不能将所有条目同时理解为有效配置。可从构建命令覆盖的选项见 `config/99_build/atype-options.txt`；普通源码 PID/功率模型初值也列在所属文件下。
 
 `modules/imu/ins_task.c`、`BMI088driver.c`、`BMI088Middleware.c` 是未链接的旧 C 板实现；当前 INS 只链接 MPU6500 和公共数学接口。便携副本有独立 API，未加入固件链接。
 

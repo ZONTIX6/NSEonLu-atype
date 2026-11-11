@@ -5,7 +5,7 @@ INCLUDES := -Istubs -I../../application/chassis -I../../application -I../../modu
             -I../../modules/referee -I../../modules/telemetry
 SOURCE := test_chassis_motion.c ../../modules/algorithm/user_lib.c
 HEADERS := $(wildcard stubs/*.h ../../application/chassis/chassis_motion.h) \
-           ../../application/robot_def.h ../../modules/algorithm/user_lib.h
+           ../../application/robot_def.h $(wildcard ../../config/*/*.h) ../../modules/algorithm/user_lib.h
 TARGETS := test_default.exe test_original.exe test_gimbal_forward.exe
 
 .PHONY: all test invalid

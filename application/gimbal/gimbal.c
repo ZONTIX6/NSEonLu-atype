@@ -1,4 +1,5 @@
 #include "gimbal.h"
+#include "../../config/01_pid/pid_config.h"
 #include "robot_def.h"
 #include "dji_motor.h"
 #include "ins_task.h"
@@ -46,24 +47,8 @@ void GimbalInit()
             .tx_id = 1,
         },
         .controller_param_init_config = {
-            .angle_PID = {
-                .Kp = 8, // 8
-                .Ki = 0,
-                .Kd = 0,
-                .DeadBand = 0.1,
-                .Improve = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
-                .IntegralLimit = 100,
-
-                .MaxOut = 500,
-            },
-            .speed_PID = {
-                .Kp = 50,  // 50
-                .Ki = 200, // 200
-                .Kd = 0,
-                .Improve = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
-                .IntegralLimit = 3000,
-                .MaxOut = 20000,
-            },
+            .angle_PID = pid_gimbal_yaw_angle_config,
+            .speed_PID = pid_gimbal_yaw_speed_config,
             .other_angle_feedback_ptr = &gimbal_IMU_data->YawTotalAngle,
             // 还需要增加角速度额外反馈指针,注意方向,ins_task.md中有c板的bodyframe坐标系说明
             .other_speed_feedback_ptr = &gimbal_IMU_data->Gyro[2],
@@ -83,22 +68,8 @@ void GimbalInit()
             .tx_id = 2,
         },
         .controller_param_init_config = {
-            .angle_PID = {
-                .Kp = 10, // 10
-                .Ki = 0,
-                .Kd = 0,
-                .Improve = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
-                .IntegralLimit = 100,
-                .MaxOut = 500,
-            },
-            .speed_PID = {
-                .Kp = 50,  // 50
-                .Ki = 350, // 350
-                .Kd = 0,   // 0
-                .Improve = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
-                .IntegralLimit = 2500,
-                .MaxOut = 20000,
-            },
+            .angle_PID = pid_gimbal_pitch_angle_config,
+            .speed_PID = pid_gimbal_pitch_speed_config,
             .other_angle_feedback_ptr = &gimbal_IMU_data->Pitch,
             // 还需要增加角速度额外反馈指针,注意方向,ins_task.md中有c板的bodyframe坐标系说明
             .other_speed_feedback_ptr = (&gimbal_IMU_data->Gyro[1]),

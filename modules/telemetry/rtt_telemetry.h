@@ -7,16 +7,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* 0: standard 17-column control CSV; 1: append 9 calibration columns. */
-#ifndef CHASSIS_POWER_CALIBRATION_ENABLE
-#define CHASSIS_POWER_CALIBRATION_ENABLE 0
-#endif
-
-#if CHASSIS_POWER_CALIBRATION_ENABLE != 0 && CHASSIS_POWER_CALIBRATION_ENABLE != 1
-#error CHASSIS_POWER_CALIBRATION_ENABLE must be 0 or 1
-#endif
-
-#define RTT_TELEMETRY_CHASSIS_POWER_CSV_MAX_LENGTH 320U //预留的缓冲区大小
+#include "../../config/31_telemetry/rtt_telemetry_config.h"
 
 typedef struct
 {

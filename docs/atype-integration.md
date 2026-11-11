@@ -114,6 +114,6 @@ Flash 保存要求整车处于新鲜零力状态、全部已注册 DJI 电机停
 
 `BOARD_AUX_UART2_DEVICE/BOARD_AUX_UART7_DEVICE`：0 不注册，1 TFmini，2 HC05，3 总线舵机；USART2 与 UART 日志互斥，UART7 辅助设备与 UART7 裁判互斥，同种单例不能同时占两路串口。可选模块验证配置显式使用 `REFEREE_UART_PORT=6`。`BOARD_OLED_ENABLE`、`BOARD_KEY_ENABLE` 默认 0；`OLED_USE_I2C=1` 选择保留的 I²C 后端。按键中断只记时，10 ms 任务完成消抖。
 
-`ATYPE_LINK_MODULES=1` 强制保留 `config/atype-link-symbols.txt` 中驱动初始化及控制入口；验证脚本检查 ELF 已定义符号，避免把被链接器裁掉的代码算作验证。外接 BMI088/IST8310、HT/DM/LK、电机堵转检测、舵机、Flash 与通用 BSP 都不默认注册。SPI/I²C 扩展验证以轮询接口为基准，DMA 模式需实际配置对应句柄和不冲突的流，不能只更改实例工作模式。
+`ATYPE_LINK_MODULES=1` 强制保留 `config/99_build/atype-link-symbols.txt` 中驱动初始化及控制入口；验证脚本检查 ELF 已定义符号，避免把被链接器裁掉的代码算作验证。外接 BMI088/IST8310、HT/DM/LK、电机堵转检测、舵机、Flash 与通用 BSP 都不默认注册。SPI/I²C 扩展验证以轮询接口为基准，DMA 模式需实际配置对应句柄和不冲突的流，不能只更改实例工作模式。
 
 原 `encoder`、`unicomm`、`step_motor`、`bsp_adc` 目录没有完整通用驱动实现，保留占位并明确记录；实际可用的编码器/ADC 走已生成 TIM5/TIM8/ADC1，通信走 CANComm/USART。没有把空文件列为可用模块。便携裁判副本同步了新帧长与热量 API，并独立测试；便携电容副本保留原来 `0x061/0x051` 子集，输入功率 `0x052` 由主工程完整实现。

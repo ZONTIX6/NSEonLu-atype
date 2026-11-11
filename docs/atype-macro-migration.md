@@ -36,12 +36,12 @@
 | `ATYPE_BENCH_MODE` | `无` | `0` | `无` | `Inc/board_config.h` | `无量纲/选择值` | `按已确认 A 板硬件或整车默认行为迁移` | `对应功能启用，范围/互斥检查通过` | `配置矩阵/主机回归` |
 | `CHASSIS_DRIVE_TYPE` | `CHASSIS_DRIVE_MECANUM` | `CHASSIS_DRIVE_OMNI_X` | `application/robot_def.h` | `application/robot_def.h` | `无量纲/选择值` | `按已确认 A 板硬件或整车默认行为迁移` | `对应功能启用，范围/互斥检查通过` | `配置矩阵/主机回归` |
 | `VISION_USE_UART` | `未定义` | `默认定义（无数值）` | `application/robot_def.h` | `application/robot_def.h` | `存在性开关` | `视觉迁至参考USART3` | `未指定任何视觉传输时自动定义；与VCP互斥` | `默认固件/USB视觉配置` |
-| `VISION_USE_VCP` | `定义（无数值）` | `默认未定义；构建可定义为1` | `application/robot_def.h` | `application/robot_def.h、config/atype-options.txt` | `存在性开关` | `默认USB留给遥测，保留USB视觉` | `启用时USB_TELEMETRY_ENABLE必须为0；不以=0关闭存在性宏` | `USB视觉固件` |
+| `VISION_USE_VCP` | `定义（无数值）` | `默认未定义；构建可定义为1` | `application/robot_def.h` | `application/robot_def.h、config/99_build/atype-options.txt` | `存在性开关` | `默认USB留给遥测，保留USB视觉` | `启用时USB_TELEMETRY_ENABLE必须为0；不以=0关闭存在性宏` | `USB视觉固件` |
 | `ONE_BOARD` | `定义（无数值）` | `未指定其他角色时自动定义` | `application/robot_def.h` | `application/robot_def.h` | `存在性开关` | `默认单板完整整车` | `三种角色只能定义一种；不以=0关闭` | `默认/双板固件` |
-| `CHASSIS_BOARD` | `未定义` | `可选，构建定义为1` | `application/robot_def.h（注释入口）` | `application/robot_def.h、config/atype-options.txt` | `存在性开关` | `保留底盘板角色` | `与ONE_BOARD/GIMBAL_BOARD互斥` | `atype-chassis/dual-bench` |
-| `GIMBAL_BOARD` | `未定义` | `可选，构建定义为1` | `application/robot_def.h（注释入口）` | `application/robot_def.h、config/atype-options.txt` | `存在性开关` | `保留云台板角色` | `与ONE_BOARD/CHASSIS_BOARD互斥` | `atype-gimbal` |
+| `CHASSIS_BOARD` | `未定义` | `可选，构建定义为1` | `application/robot_def.h（注释入口）` | `application/robot_def.h、config/99_build/atype-options.txt` | `存在性开关` | `保留底盘板角色` | `与ONE_BOARD/GIMBAL_BOARD互斥` | `atype-chassis/dual-bench` |
+| `GIMBAL_BOARD` | `未定义` | `可选，构建定义为1` | `application/robot_def.h（注释入口）` | `application/robot_def.h、config/99_build/atype-options.txt` | `存在性开关` | `保留云台板角色` | `与ONE_BOARD/CHASSIS_BOARD互斥` | `atype-gimbal` |
 | `OLED_USE_I2C` | `无` | `0 /* A-board SPI1 OLED; I2C2 backend remains optional. */` | `无` | `Inc/board_config.h` | `无量纲/选择值` | `按已确认 A 板硬件或整车默认行为迁移` | `对应功能启用，范围/互斥检查通过` | `配置矩阵/主机回归` |
-| `ATYPE_LINK_MODULES` | `无` | `默认不定义；验证设1` | `无` | `config/atype.mk、CMakeLists.txt` | `布尔` | `强制保留可选模块实现入口` | `设1时读取atype-link-symbols.txt` | `optional/i2c-oled及nm检查` |
+| `ATYPE_LINK_MODULES` | `无` | `默认不定义；验证设1` | `无` | `config/99_build/atype.mk、CMakeLists.txt` | `布尔` | `强制保留可选模块实现入口` | `设1时读取atype-link-symbols.txt` | `optional/i2c-oled及nm检查` |
 | `BOARD_AUX_UART2_DEVICE` | `无` | `0` | `无` | `Inc/board_config.h` | `无量纲/选择值` | `按已确认 A 板硬件或整车默认行为迁移` | `对应功能启用，范围/互斥检查通过` | `tests/atype/test_board.py；可选配置` |
 | `BOARD_AUX_UART7_DEVICE` | `无` | `0` | `无` | `Inc/board_config.h` | `无量纲/选择值` | `按已确认 A 板硬件或整车默认行为迁移` | `对应功能启用，范围/互斥检查通过` | `tests/atype/test_board.py；可选配置` |
 | `BOARD_OLED_ENABLE` | `无` | `0` | `无` | `Inc/board_config.h` | `无量纲/选择值` | `按已确认 A 板硬件或整车默认行为迁移` | `对应功能启用，范围/互斥检查通过` | `tests/atype/test_board.py；可选配置` |
@@ -106,7 +106,7 @@
 | `USB_TELEMETRY_PERIOD_MS` | `20U` | `20U` | `modules/telemetry/usb_telemetry_config.h` | `modules/telemetry/usb_telemetry_config.h` | `ms` | `保留输入数值与功能，构建定义优先` | `对应功能启用，范围/互斥检查通过` | `配置矩阵/主机回归` |
 | `USB_TELEMETRY_HEADER_PERIOD_MS` | `1000U` | `1000U` | `modules/telemetry/usb_telemetry_config.h` | `modules/telemetry/usb_telemetry_config.h` | `ms` | `保留输入数值与功能，构建定义优先` | `对应功能启用，范围/互斥检查通过` | `配置矩阵/主机回归` |
 | `USB_TELEMETRY_BUFFER_SIZE` | `2048U` | `2048U` | `modules/telemetry/usb_telemetry_config.h` | `modules/telemetry/usb_telemetry_config.h` | `字节` | `保留输入数值与功能，构建定义优先` | `对应功能启用，范围/互斥检查通过` | `USB遥测/Node回归` |
-| `DISABLE_LOG_SYSTEM` | `构建定义1（头默认0）` | `默认0，构建可设1` | `Makefile、bsp/log/bsp_log.h` | `bsp/log/bsp_log.h、config/atype-options.txt` | `布尔` | `恢复分级日志可见性，保留关闭入口` | `只控制分级宏；原始写接口仍按LOG_OUTPUT输出` | `tests/bsp_log/uart_log` |
+| `DISABLE_LOG_SYSTEM` | `构建定义1（头默认0）` | `默认0，构建可设1` | `Makefile、bsp/log/bsp_log.h` | `bsp/log/bsp_log.h、config/99_build/atype-options.txt` | `布尔` | `恢复分级日志可见性，保留关闭入口` | `只控制分级宏；原始写接口仍按LOG_OUTPUT输出` | `tests/bsp_log/uart_log` |
 | `BOARD_REMOTE_UART` | `无` | `(&huart1)` | `无` | `Inc/board_config.h` | `无量纲/选择值` | `按已确认 A 板硬件或整车默认行为迁移` | `对应功能启用，范围/互斥检查通过` | `tests/atype/test_board.py；可选配置` |
 | `BOARD_VISION_UART` | `无` | `(&huart3)` | `无` | `Inc/board_config.h` | `无量纲/选择值` | `按已确认 A 板硬件或整车默认行为迁移` | `对应功能启用，范围/互斥检查通过` | `tests/atype/test_board.py；可选配置` |
 | `BOARD_VTX_UART` | `无` | `(&huart8)` | `无` | `Inc/board_config.h` | `无量纲/选择值` | `按已确认 A 板硬件或整车默认行为迁移` | `对应功能启用，范围/互斥检查通过` | `tests/atype/test_board.py；可选配置` |

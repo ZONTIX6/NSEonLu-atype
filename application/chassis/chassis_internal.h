@@ -11,7 +11,7 @@
 #include "chassis_spin_config.h"
 #include "message_center.h"
 
-#define CHASSIS_POWER_SAFETY_FACTOR 0.98f
+#include "chassis_power_config.h"
 
 /* Device/message registrations owned by chassis_init.c. */
 extern DJIMotorInstance *motor_lf, *motor_rf, *motor_lb, *motor_rb;

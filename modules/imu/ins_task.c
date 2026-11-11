@@ -12,6 +12,8 @@
  ******************************************************************************
  */
 #include "ins_task.h"
+#include "../../config/92_imu/imu_config.h"
+#include "../../config/01_pid/pid_config.h"
 #include "controller.h"
 #include "QuaternionEKF.h"
 #include "spi.h"
@@ -31,7 +33,7 @@ const float zb[3] = {0, 0, 1};
 // 用于获取两次采样之间的时间间隔
 static uint32_t INS_DWT_Count = 0;
 static float dt = 0, t = 0;
-static float RefTemp = 40; // 恒温设定温度
+static float RefTemp = IMU_BMI088_REF_TEMP_C; // 恒温设定温度
 
 static void IMU_Param_Correction(IMU_Param_t *param, float gyro[3], float accel[3]);
 
@@ -98,19 +100,15 @@ attitude_t *INS_Init(void)
 
     float init_quaternion[4] = {0};
     InitQuaternion(init_quaternion);
-    IMU_QuaternionEKF_Init(init_quaternion, 10, 0.001, 1000000, 1, 0);
+    IMU_QuaternionEKF_Init(init_quaternion, IMU_BMI088_EKF_PROCESS_NOISE_1,
+                          IMU_BMI088_EKF_PROCESS_NOISE_2, IMU_BMI088_EKF_MEASUREMENT_NOISE,
+                          IMU_BMI088_EKF_LAMBDA, IMU_BMI088_EKF_ACCEL_LPF);
     // imu heat init
-    PID_Init_Config_s config = {.MaxOut = 2000,
-                                .IntegralLimit = 300,
-                                .DeadBand = 0,
-                                .Kp = 1000,
-                                .Ki = 20,
-                                .Kd = 0,
-                                .Improve = 0x01}; // enable integratiaon limit
+    PID_Init_Config_s config = pid_imu_bmi088_temperature_config;
     PIDInit(&TempCtrl, &config);
 
     // noise of accel is relatively big and of high freq,thus lpf is used
-    INS.AccelLPF = 0.0085;
+    INS.AccelLPF = IMU_BMI088_MOTION_ACCEL_LPF_S;
     DWT_GetDeltaT(&INS_DWT_Count);
     return (attitude_t *)&INS.Gyro; // @todo: 这里偷懒了,不要这样做! 修改INT_t结构体可能会导致异常,待修复.
 }

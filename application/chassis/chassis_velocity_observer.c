@@ -21,7 +21,7 @@
 #error Chassis velocity fusion requires a single board and speed control
 #endif
 
-#define FUSED_MAX_AGE_MS 60U
+#include "../../config/30_velocity_observation/chassis_velocity_config.h"
 volatile ChassisFusedVelocitySnapshot_s chassis_fused_velocity;
 
 bool ChassisGetFusedVelocitySnapshot(ChassisFusedVelocitySnapshot_s *snapshot)
@@ -32,7 +32,7 @@ bool ChassisGetFusedVelocitySnapshot(ChassisFusedVelocitySnapshot_s *snapshot)
     const uint32_t now_ms=HAL_GetTick();
     taskEXIT_CRITICAL();
     const uint32_t limit=snapshot->status==CHASSIS_VELOCITY_FUSED ?
-        FUSED_MAX_AGE_MS : CHASSIS_VELOCITY_MAX_AGE_MS;
+        CHASSIS_FUSED_VELOCITY_MAX_AGE_MS : CHASSIS_VELOCITY_MAX_AGE_MS;
     if ((uint32_t)(now_ms-snapshot->wheel.tick_ms)>CHASSIS_VELOCITY_MAX_AGE_MS)
         snapshot->wheel=(ChassisVelocity_s){0};
     if (!snapshot->wheel.valid || (uint32_t)(now_ms-snapshot->tick_ms)>limit)
@@ -48,8 +48,6 @@ bool ChassisGetFusedVelocitySnapshot(ChassisFusedVelocitySnapshot_s *snapshot)
 #include "speed_observation_time.h"
 #include <math.h>
 
-#define RECEIVE_MAX_AGE_US 10000U
-#define RECEIVE_MAX_SKEW_US 3000U
 #define TWO_PI 6.2831853071795864769f
 
 typedef struct {
@@ -81,7 +79,7 @@ static void ResetHistory(void)
 static bool TimeAt(uint32_t cycles, uint32_t tick_ms, uint32_t *time_us)
 {
     uint64_t time=0;
-    const bool valid=PPObservationReceiveTime(&clock,cycles,tick_ms,RECEIVE_MAX_AGE_US,&time);
+    const bool valid=PPObservationReceiveTime(&clock,cycles,tick_ms,CHASSIS_FUSION_RECEIVE_MAX_AGE_US,&time);
     *time_us=(uint32_t)time;
     return valid;
 }
@@ -97,8 +95,8 @@ static bool JointAngle(const GimbalEncoderSample_s *joint, unsigned axis,
 
     const uint32_t imu_after=imu_us-joint_us, joint_after=joint_us-imu_us;
     float dt_s;
-    if (imu_after<=RECEIVE_MAX_SKEW_US) dt_s=(float)imu_after*1e-6f;
-    else if (joint_after<=RECEIVE_MAX_SKEW_US) dt_s=-(float)joint_after*1e-6f;
+    if (imu_after<=CHASSIS_FUSION_RECEIVE_MAX_SKEW_US) dt_s=(float)imu_after*1e-6f;
+    else if (joint_after<=CHASSIS_FUSION_RECEIVE_MAX_SKEW_US) dt_s=-(float)joint_after*1e-6f;
     else return false;
 
     const float turns=(float)((int)joint->ecd-(int)zero)/8192.0f+(float)joint->rpm*dt_s/60.0f;
@@ -114,14 +112,14 @@ static bool WheelTime(const ChassisVelocityInput_s *wheels, const uint32_t cycle
     for (unsigned i=0;i<4;++i) {
         uint32_t time_us;
         if (!TimeAt(cycles[i],wheels->feedback_tick_ms[i],&time_us) ||
-            ((uint32_t)(imu_us-time_us)>RECEIVE_MAX_SKEW_US &&
-             (uint32_t)(time_us-imu_us)>RECEIVE_MAX_SKEW_US))
+            ((uint32_t)(imu_us-time_us)>CHASSIS_FUSION_RECEIVE_MAX_SKEW_US &&
+             (uint32_t)(time_us-imu_us)>CHASSIS_FUSION_RECEIVE_MAX_SKEW_US))
             return false;
         const uint32_t age=now_us-time_us;
         if (age>earliest_age) earliest_age=age;
         if (age<latest_age) latest_age=age;
     }
-    if (earliest_age-latest_age>RECEIVE_MAX_SKEW_US) return false;
+    if (earliest_age-latest_age>CHASSIS_FUSION_RECEIVE_MAX_SKEW_US) return false;
     *wheel_us=now_us-(earliest_age+latest_age)/2U;
     return true;
 }
@@ -179,7 +177,7 @@ static ChassisFusedVelocityStatus_e UpdateFused(ChassisFusedVelocitySnapshot_s *
     if (!filtered.valid || !filtered.fused)
         return center_result==CHASSIS_CENTER_READY ? CHASSIS_VELOCITY_REJECTED : CHASSIS_VELOCITY_WARMUP;
     const uint32_t age_us=now_us-filtered.sample_us;
-    if (age_us>FUSED_MAX_AGE_MS*1000U) return CHASSIS_VELOCITY_REJECTED;
+    if (age_us>CHASSIS_FUSED_VELOCITY_MAX_AGE_MS*1000U) return CHASSIS_VELOCITY_REJECTED;
 
     /* Invert the projected planar map, including the effect of chassis tilt. */
     const float a=filtered_sample.body_to_nav_xy[0][0], b=filtered_sample.body_to_nav_xy[0][1];

@@ -34,8 +34,9 @@ def scan(root):
     makefile = root / "Makefile"
     include_dirs = [root / name for name in re.findall(r'(?:^|\s)-I([^\s\\]+)',
                     makefile.read_text(encoding="utf-8-sig"))] if makefile.exists() else []
+    include_dirs.extend(sorted({p.parent for p in (root / "config").rglob("*.h")}))
     headers = {}
-    for base in ("application", "modules", "bsp", "Inc", "Drivers"):
+    for base in ("application", "modules", "bsp", "Inc", "Drivers", "config"):
         for path in (root / base).rglob("*.h"):
             headers.setdefault(path.name, []).append(path)
     paths = set()

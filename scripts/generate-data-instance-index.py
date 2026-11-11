@@ -557,34 +557,34 @@ COMMON_DATA = [
 
 COMMON_MACROS = [
     ("键盘状态索引", "KEY_PRESS", "modules/remote/remote_control.h", "例：`rc_data->key[KEY_PRESS].w`"),
-    ("遥控器串口", "BOARD_REMOTE_UART", "Inc/board_config.h", "DBUS 使用 USART1"),
-    ("图传串口", "BOARD_VTX_UART", "Inc/board_config.h", "图传键鼠使用 UART8"),
-    ("裁判串口句柄", "BOARD_REFEREE_UART", "Inc/board_config.h", "由 `REFEREE_UART_PORT` 选择"),
-    ("裁判系统开关", "REFEREE_ENABLE", "Inc/board_config.h", "0 关闭，1 开启"),
-    ("裁判串口编号", "REFEREE_UART_PORT", "Inc/board_config.h", "6 为 USART6，7 为 UART7"),
-    ("功率计开关", "POWER_METER_ENABLE", "modules/algorithm/chassis_power_config.h", "0 关闭，1 开启"),
-    ("功控阶段", "CHASSIS_POWER_CONTROL_STAGE", "modules/algorithm/chassis_power_config.h", "0 原控制与诊断，1 快保护，2 启动保护，3 完整慢环"),
-    ("底盘供电模式", "CHASSIS_POWER_SOURCE_MODE", "modules/algorithm/chassis_energy_config.h", "DIRECT=0 直供，SUPERCAP=1 超级电容"),
-    ("缓冲能量增补", "CHASSIS_BUFFER_POWER_ENABLE", "modules/algorithm/chassis_energy_config.h", "0 关闭，1 开启"),
-    ("小陀螺模式", "CHASSIS_SPIN_MODE", "modules/algorithm/chassis_spin_config.h", "FIXED=0 固定，ADAPTIVE=1 自适应，SINE=2 正弦"),
-    ("固定自旋目标", "CHASSIS_SPIN_FIXED_WZ", "modules/algorithm/chassis_spin_config.h", "Wz 命令尺度，非 rpm 或物理角速度"),
-    ("跟随档策略", "CHASSIS_FOLLOW_MODE", "application/robot_def.h", "0 车身跟转，1 云台朝向平移且不主动跟转"),
-    ("云台底盘对齐", "YAW_CHASSIS_ALIGN_ECD", "application/robot_def.h", "单位：编码器计数"),
-    ("俯仰水平标定", "PITCH_HORIZON_ECD", "application/robot_def.h", "单位：编码器计数"),
-    ("USB 遥测开关", "USB_TELEMETRY_ENABLE", "modules/telemetry/usb_telemetry_config.h", "0 关闭，1 开启；USB 视觉需关闭遥测"),
-    ("USB 遥测周期", "USB_TELEMETRY_PERIOD_MS", "modules/telemetry/usb_telemetry_config.h", "单位：ms"),
-    ("日志输出", "LOG_OUTPUT", "Inc/board_config.h", "0 关闭，1 RTT，2 USART2，3 两者"),
+    ("遥控器串口", "BOARD_REMOTE_UART", "config/90_board/board_config.h", "DBUS 使用 USART1"),
+    ("图传串口", "BOARD_VTX_UART", "config/90_board/board_config.h", "图传键鼠使用 UART8"),
+    ("裁判串口句柄", "BOARD_REFEREE_UART", "config/90_board/board_config.h", "由 `REFEREE_UART_PORT` 选择"),
+    ("裁判系统开关", "REFEREE_ENABLE", "config/90_board/board_config.h", "0 关闭，1 开启"),
+    ("裁判串口编号", "REFEREE_UART_PORT", "config/90_board/board_config.h", "6 为 USART6，7 为 UART7"),
+    ("功率计开关", "POWER_METER_ENABLE", "config/20_chassis_power/chassis_power_config.h", "0 关闭，1 开启"),
+    ("功控阶段", "CHASSIS_POWER_CONTROL_STAGE", "config/20_chassis_power/chassis_power_config.h", "0 原控制与诊断，1 快保护，2 启动保护，3 完整慢环"),
+    ("底盘供电模式", "CHASSIS_POWER_SOURCE_MODE", "config/20_chassis_power/chassis_energy_config.h", "DIRECT=0 直供，SUPERCAP=1 超级电容"),
+    ("缓冲能量增补", "CHASSIS_BUFFER_POWER_ENABLE", "config/20_chassis_power/chassis_energy_config.h", "0 关闭，1 开启"),
+    ("小陀螺模式", "CHASSIS_SPIN_MODE", "config/21_chassis_spin/chassis_spin_config.h", "FIXED=0 固定，ADAPTIVE=1 自适应，SINE=2 正弦"),
+    ("固定自旋目标", "CHASSIS_SPIN_FIXED_WZ", "config/21_chassis_spin/chassis_spin_config.h", "Wz 命令尺度，非 rpm 或物理角速度"),
+    ("跟随档策略", "CHASSIS_FOLLOW_MODE", "config/02_chassis/chassis_config.h", "0 车身跟转，1 云台朝向平移且不主动跟转"),
+    ("云台底盘对齐", "YAW_CHASSIS_ALIGN_ECD", "config/03_gimbal/gimbal_config.h", "单位：编码器计数"),
+    ("俯仰水平标定", "PITCH_HORIZON_ECD", "config/03_gimbal/gimbal_config.h", "单位：编码器计数"),
+    ("USB 遥测开关", "USB_TELEMETRY_ENABLE", "config/31_telemetry/usb_telemetry_config.h", "0 关闭，1 开启；USB 视觉需关闭遥测"),
+    ("USB 遥测周期", "USB_TELEMETRY_PERIOD_MS", "config/31_telemetry/usb_telemetry_config.h", "单位：ms"),
+    ("日志输出", "LOG_OUTPUT", "config/90_board/board_config.h", "0 关闭，1 RTT，2 USART2，3 两者"),
 ]
 
 
 COMMON_MODE_MACROS = [
-    ("底盘轮型", "CHASSIS_DRIVE_TYPE", "application/robot_def.h", "MECANUM=0 麦克纳姆轮，OMNI_X=1 X 型全向轮"),
+    ("底盘轮型", "CHASSIS_DRIVE_TYPE", "config/02_chassis/chassis_config.h", "MECANUM=0 麦克纳姆轮，OMNI_X=1 X 型全向轮"),
     *(s for s in COMMON_MACROS if s[1] in {"CHASSIS_SPIN_MODE", "CHASSIS_FOLLOW_MODE", "CHASSIS_POWER_SOURCE_MODE"}),
 ]
 OPTIONAL_MODE_MACROS = [
-    ("底盘控制方式", "CHASSIS_CONTROL_MODE", "modules/algorithm/chassis_control_config.h", "SPEED=0 速度环，FORCE=1 直接力控"),
-    ("力控退出方式", "CHASSIS_FORCE_EXIT_MODE", "modules/algorithm/chassis_control_config.h", "COAST=0 滑行，BRAKE=1 制动"),
-    ("力控自旋策略", "CHASSIS_FORCE_SPIN_MODE", "modules/algorithm/chassis_control_config.h", "FIXED_TORQUE=0 固定力矩，POWER_ADAPTIVE=1 功率自适应"),
+    ("底盘控制方式", "CHASSIS_CONTROL_MODE", "config/22_chassis_force/chassis_control_config.h", "SPEED=0 速度环，FORCE=1 直接力控"),
+    ("力控退出方式", "CHASSIS_FORCE_EXIT_MODE", "config/22_chassis_force/chassis_control_config.h", "COAST=0 滑行，BRAKE=1 制动"),
+    ("力控自旋策略", "CHASSIS_FORCE_SPIN_MODE", "config/22_chassis_force/chassis_control_config.h", "FIXED_TORQUE=0 固定力矩，POWER_ADAPTIVE=1 功率自适应"),
 ]
 COMMON_MODES = [
     ("底盘", "chassis_mode_e", "chassis_cmd_send.chassis_mode",
@@ -691,7 +691,7 @@ def generate_common(root):
             "## 模式切换", ""]
     # Only expose optional mode switches after their owner integrates them into
     # the shared build-option list. A new header alone may be unfinished work.
-    options_path = Path(root) / "config/atype-options.txt"
+    options_path = Path(root) / "config/99_build/atype-options.txt"
     exposed = set(options_path.read_text(encoding="utf-8").split()) if options_path.is_file() else set()
     mode_macros = COMMON_MODE_MACROS + [s for s in OPTIONAL_MODE_MACROS if s[1] in exposed and (Path(root) / s[2]).is_file()]
     if mode_macros:

@@ -21,7 +21,7 @@ cmake -S . -B build/cmake-vehicle -G "MinGW Makefiles" -DATYPE_PROFILE=atype-veh
 cmake --build build/cmake-vehicle -j8
 ```
 
-默认配置为单板完整整车、X 全向轮、固定 Wz=4000、直供、阶段 3 功控、功率计和缓冲管理开启。超级电容需显式设置 `CHASSIS_POWER_SOURCE_MODE=1`；atype-direct 为直供；atype-bench 默认直供且允许无裁判 50 W 回退，锁停云台与发射，仅在明确台架条件下整定选中底盘轮。
+源码默认配置为单板完整整车、X 全向轮、自适应小陀螺（初始 Wz=8000，沿用工程命令尺度）、直供、阶段 3 功控、功率计和缓冲管理开启；实际参数还受构建覆盖和有效保存值影响。超级电容需显式设置 `CHASSIS_POWER_SOURCE_MODE=1`；atype-direct 为直供；atype-bench 默认直供且允许无裁判 50 W 回退，锁停云台与发射，仅在明确台架条件下整定选中底盘轮。
 
 USART1 固定 DBUS；视觉 USART3、图传 UART8、裁判默认 USART6（编号 16 最左侧、丝印 6）；日志默认 RTT，可选 USART2 非阻塞中断输出。裁判 USART6 使用 RX/TX DMA；`REFEREE_UART_PORT=7` 可切换到 UART7（RX DMA、TX 中断），UART7 裁判与辅助设备同时启用会编译报错。接口对应及本次故障见 [裁判通讯修复说明](docs/referee-uart7-fix.md)。旧 `UART1_USE` 构建参数会报错，替代选项见 [配置指南](docs/configuration-guide.md)。USB 默认用于网页遥测；改用 USB 视觉时同时设置 `VISION_USE_VCP=1 USB_TELEMETRY_ENABLE=0`。
 
@@ -40,6 +40,19 @@ node tools/usb-telemetry/serve.cjs
 
 ## 配置与验证
 
+`config/` 按名称升序排列：`01～06` 是最常用的应用调参，`20～22` 是底盘控制策略，`30～32` 是观测和调试，`90～92` 是硬件配置，`99_build` 是较少修改的构建入口。目录编号只决定查找顺序，不决定参数覆盖顺序。
+
+| 常用调整 | 直接入口 |
+| --- | --- |
+| PID 增益与限幅 | [01_pid/pid_config.c](config/01_pid/pid_config.c) |
+| 底盘尺寸、轮向、随动模式 | [02_chassis/chassis_config.h](config/02_chassis/chassis_config.h) |
+| 云台限位和机械零点 | [03_gimbal/gimbal_config.h](config/03_gimbal/gimbal_config.h) |
+| 摩擦轮、拨弹和热量 | [04_shoot/shoot_config.h](config/04_shoot/shoot_config.h)、[heat_control_config.h](config/04_shoot/heat_control_config.h) |
+| 遥控器/键鼠手感 | [05_remote/remote_config.h](config/05_remote/remote_config.h) |
+
+开关取值和切换方式写在各配置项旁；完整分层目录、Make/CMake 示例和 Flash/源码优先级见 [配置目录说明](config/README.md)。
+
+- [集中配置与调参入口：PID、底盘、云台、发射、功率、IMU](config/README.md)
 - [常用指针与宏速查：遥控器、电机、功率计、超级电容、裁判系统等](.Doc/指针查找索引.md)
 - [结构体与成员索引：查字段类型、说明与嵌套定义](docs/structure-index.md)
 - [配置与参数指南](docs/configuration-guide.md)
@@ -62,7 +75,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/update-structure-ind
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/update-structure-index.ps1 -Check
 ```
 
-也可跨平台分别执行 `python scripts/generate-structure-index.py` 和 `python scripts/generate-data-instance-index.py`（检查使用 `--check`）。常用指针、宏和模式名单在后者的 `COMMON_DATA`、`COMMON_MACROS`、`COMMON_MODE_MACROS`、`OPTIONAL_MODE_MACROS`、`COMMON_MODES` 中维护；力控编译模式在对应头文件存在、且接入 `config/atype-options.txt` 构建选项后自动列出。缺失已收录的宏或模式常量会明确报错并保留原文档。加 `--full` 可另行生成完整实例表。每份文档在成功生成后原子替换，生成失败返回非零状态。CMD 自动化调用可设置环境变量 `STRUCTURE_INDEX_NO_PAUSE=1` 跳过窗口暂停。
+也可跨平台分别执行 `python scripts/generate-structure-index.py` 和 `python scripts/generate-data-instance-index.py`（检查使用 `--check`）。常用指针、宏和模式名单在后者的 `COMMON_DATA`、`COMMON_MACROS`、`COMMON_MODE_MACROS`、`OPTIONAL_MODE_MACROS`、`COMMON_MODES` 中维护；力控编译模式在对应头文件存在、且接入 `config/99_build/atype-options.txt` 构建选项后自动列出。缺失已收录的宏或模式常量会明确报错并保留原文档。加 `--full` 可另行生成完整实例表。每份文档在成功生成后原子替换，生成失败返回非零状态。CMD 自动化调用可设置环境变量 `STRUCTURE_INDEX_NO_PAUSE=1` 跳过窗口暂停。
 
 ```powershell
 ./scripts/validate-atype.ps1 -Python "<Python 3 executable>" -FirmwareMatrix -CMake

@@ -40,7 +40,7 @@ class InstanceTests(unittest.TestCase):
 #define KEY_PRESS 0
 #endif
 """)
-        self.write("Inc/board_config.h", """#ifndef BOARD_CONFIG_H
+        self.write("config/90_board/board_config.h", """#ifndef BOARD_CONFIG_H
 #define BOARD_CONFIG_H
 #define BOARD_REMOTE_UART (&huart1)
 #define BOARD_VTX_UART (&huart8)
@@ -56,11 +56,11 @@ class InstanceTests(unittest.TestCase):
 #define LOG_OUTPUT 1
 #endif
 """)
-        self.write("modules/algorithm/chassis_power_config.h",
+        self.write("config/20_chassis_power/chassis_power_config.h",
                    "#define POWER_METER_ENABLE 1\n#define CHASSIS_POWER_CONTROL_STAGE 3\n")
-        self.write("modules/algorithm/chassis_energy_config.h",
+        self.write("config/20_chassis_power/chassis_energy_config.h",
                    "#define CHASSIS_POWER_SOURCE_MODE CHASSIS_POWER_SOURCE_DIRECT\n#define CHASSIS_BUFFER_POWER_ENABLE 1\n")
-        self.write("modules/algorithm/chassis_spin_config.h", """#ifndef CHASSIS_SPIN_MODE
+        self.write("config/21_chassis_spin/chassis_spin_config.h", """#ifndef CHASSIS_SPIN_MODE
 #if CHASSIS_SPIN_ADAPTIVE_ENABLE
 #define CHASSIS_SPIN_MODE CHASSIS_SPIN_MODE_ADAPTIVE
 #else
@@ -69,15 +69,17 @@ class InstanceTests(unittest.TestCase):
 #endif
 #define CHASSIS_SPIN_FIXED_WZ 8000.0f
 """)
+        self.write("config/02_chassis/chassis_config.h",
+                   "#define CHASSIS_FOLLOW_MODE 0\n#define CHASSIS_DRIVE_TYPE CHASSIS_DRIVE_OMNI_X\n")
+        self.write("config/03_gimbal/gimbal_config.h",
+                   "#define YAW_CHASSIS_ALIGN_ECD 350\n#define PITCH_HORIZON_ECD 3412\n")
         self.write("application/robot_def.h",
-                   "#define CHASSIS_FOLLOW_MODE 0\n#define YAW_CHASSIS_ALIGN_ECD 350\n#define PITCH_HORIZON_ECD 3412\n"
-                   "#define CHASSIS_DRIVE_TYPE CHASSIS_DRIVE_OMNI_X\n"
                    "typedef enum { CHASSIS_ZERO_FORCE=0, CHASSIS_ROTATE, CHASSIS_NO_FOLLOW, CHASSIS_FOLLOW_GIMBAL_YAW } chassis_mode_e;\n"
                    "typedef enum { GIMBAL_ZERO_FORCE=0, GIMBAL_FREE_MODE, GIMBAL_GYRO_MODE } gimbal_mode_e;\n"
                    "typedef enum { SHOOT_OFF=0, SHOOT_ON } shoot_mode_e;\n"
                    "typedef enum { FRICTION_OFF=0, FRICTION_ON } friction_mode_e;\n"
                    "typedef enum { LOAD_STOP=0, LOAD_REVERSE, LOAD_1_BULLET, LOAD_3_BULLET, LOAD_BURSTFIRE } loader_mode_e;\n")
-        self.write("modules/telemetry/usb_telemetry_config.h",
+        self.write("config/31_telemetry/usb_telemetry_config.h",
                    "#define USB_TELEMETRY_ENABLE 1\n#define USB_TELEMETRY_PERIOD_MS 20U\n")
 
     def test_global_multi_pointer_array_object_and_extern_declarations(self):
@@ -320,8 +322,8 @@ class InstanceTests(unittest.TestCase):
         self.assertIn("`LOAD_1_BULLET`", modes)
         self.assertIn("`LOAD_BURSTFIRE`", modes)
         self.assertIn("枚举", modes)
+        self.assertIn("robot_def.h#L1", modes)
         self.assertIn("robot_def.h#L5", modes)
-        self.assertIn("robot_def.h#L9", modes)
         self.assertIn("当前仍用 IMU", modes)
         self.assertIn("当前按停止处理", modes)
         self.assertNotIn("拨杆", md)
@@ -329,13 +331,13 @@ class InstanceTests(unittest.TestCase):
     def test_available_force_mode_macros_are_included_without_requiring_optional_module(self):
         self.write_macro_sources()
         self.assertNotIn("CHASSIS_CONTROL_MODE", index.generate_common(self.root))
-        self.write("modules/algorithm/chassis_control_config.h",
+        self.write("config/22_chassis_force/chassis_control_config.h",
                    "#define CHASSIS_CONTROL_MODE CHASSIS_CONTROL_SPEED\n"
                    "#define CHASSIS_FORCE_EXIT_MODE CHASSIS_FORCE_EXIT_COAST\n"
                    "#define CHASSIS_FORCE_SPIN_MODE CHASSIS_FORCE_SPIN_POWER_ADAPTIVE\n")
         # A header still being authored is not an exposed build-time switch.
         self.assertNotIn("`CHASSIS_CONTROL_MODE`", index.generate_common(self.root))
-        self.write("config/atype-options.txt",
+        self.write("config/99_build/atype-options.txt",
                    "CHASSIS_CONTROL_MODE\nCHASSIS_FORCE_EXIT_MODE\nCHASSIS_FORCE_SPIN_MODE\n")
         md = index.generate_common(self.root)
         self.assertIn("`CHASSIS_CONTROL_MODE`", md)
@@ -367,7 +369,7 @@ class InstanceTests(unittest.TestCase):
         self.assertFalse((self.root / "docs/data-instance-index.md").exists())
         self.assertEqual(subprocess.run(args + ["--check"], capture_output=True).returncode, 0)
         old = output.read_bytes()
-        self.write("modules/telemetry/usb_telemetry_config.h",
+        self.write("config/31_telemetry/usb_telemetry_config.h",
                    "#define USB_TELEMETRY_ENABLE 1\n#define USB_TELEMETRY_PERIOD_MS 50U\n")
         self.assertNotEqual(subprocess.run(args + ["--check"], capture_output=True).returncode, 0)
         self.assertEqual(output.read_bytes(), old)
@@ -380,7 +382,7 @@ class InstanceTests(unittest.TestCase):
         self.assertEqual(subprocess.run(args, capture_output=True).returncode, 0)
         output = self.root / ".Doc/指针查找索引.md"
         old = output.read_bytes()
-        self.write("modules/telemetry/usb_telemetry_config.h", "#define USB_TELEMETRY_ENABLE 1\n")
+        self.write("config/31_telemetry/usb_telemetry_config.h", "#define USB_TELEMETRY_ENABLE 1\n")
         result = subprocess.run(args, capture_output=True, encoding="utf-8")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("USB_TELEMETRY_PERIOD_MS", result.stderr)

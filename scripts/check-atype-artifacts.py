@@ -76,7 +76,7 @@ for line in sections.splitlines():
         ram_end=max(ram_end,vma+size)
 if args.modules:
     root=pathlib.Path(__file__).resolve().parents[1]
-    for name in (root/"config/atype-link-symbols.txt").read_text().splitlines():
+    for name in (root/"config/99_build/atype-link-symbols.txt").read_text().splitlines():
         assert name in symbols and symbols[name][1] in "Tt",("module was discarded",name)
 assert elf.with_suffix(".hex").exists() and elf.with_suffix(".bin").exists()
 assert elf.with_suffix(".bin").stat().st_size<=1792*1024

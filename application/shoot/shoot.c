@@ -1,4 +1,5 @@
 #include "shoot.h"
+#include "../../config/01_pid/pid_config.h"
 #include "robot_def.h"
 
 #include "math.h"
@@ -23,9 +24,6 @@ static Shoot_Upload_Data_s shoot_feedback_data; // 来自cmd的发射控制信�
 static float loader_target_angle = 0;
 static HeatControlInstance shoot_heat;
 
-#define LOADER_ONE_BULLET_MOTOR_ANGLE (ONE_BULLET_DELTA_ANGLE * REDUCTION_RATIO_LOADER)
-#define LOADER_ANGLE_TOLERANCE 5.0f
-
 void ShootInit()
 {
     // 左摩擦轮
@@ -34,22 +32,8 @@ void ShootInit()
             .can_handle = &hcan2,
         },
         .controller_param_init_config = {
-            .speed_PID = {
-                .Kp = 20, // 20
-                .Ki = 1, // 1
-                .Kd = 0,
-                .Improve = PID_Integral_Limit,
-                .IntegralLimit = 10000,
-                .MaxOut = 15000,
-            },
-            .current_PID = {
-                .Kp = 0.7, // 0.7
-                .Ki = 0.1, // 0.1
-                .Kd = 0,
-                .Improve = PID_Integral_Limit,
-                .IntegralLimit = 10000,
-                .MaxOut = 15000,
-            },
+            .speed_PID = pid_shoot_friction_speed_config,
+            .current_PID = pid_shoot_friction_current_config,
         },
         .controller_setting_init_config = {
             .angle_feedback_source = MOTOR_FEED,
@@ -73,29 +57,9 @@ void ShootInit()
             .tx_id = 7,
         },
         .controller_param_init_config = {
-            .angle_PID = {
-                // 如果启用位置环来控制发弹,需要较大的I值保证输出力矩的线性度否则出现接近拨出的力矩大幅下降
-                .Kp = 10, // 10
-                .Ki = 0,
-                .Kd = 0,
-                .MaxOut = 5000,
-            },
-            .speed_PID = {
-                .Kp = 10, // 10
-                .Ki = 1, // 1
-                .Kd = 0,
-                .Improve = PID_Integral_Limit,
-                .IntegralLimit = 5000,
-                .MaxOut = 5000,
-            },
-            .current_PID = {
-                .Kp = 0.7, // 0.7
-                .Ki = 0.1, // 0.1
-                .Kd = 0,
-                .Improve = PID_Integral_Limit,
-                .IntegralLimit = 5000,
-                .MaxOut = 5000,
-            },
+            .angle_PID = pid_shoot_loader_angle_config,
+            .speed_PID = pid_shoot_loader_speed_config,
+            .current_PID = pid_shoot_loader_current_config,
         },
         .controller_setting_init_config = {
             .angle_feedback_source = MOTOR_FEED,
@@ -118,16 +82,16 @@ void ShootInit()
 static float FrictionTarget(Bullet_Speed_e speed)
 {
     switch (speed) {
-    case SMALL_AMU_15: return 4000;
-    case SMALL_AMU_18: return 32000;
-    case SMALL_AMU_30: return 8000;
-    default: return 32000;
+    case SMALL_AMU_15: return SHOOT_FRICTION_SPEED_15;
+    case SMALL_AMU_18: return SHOOT_FRICTION_SPEED_18;
+    case SMALL_AMU_30: return SHOOT_FRICTION_SPEED_30;
+    default: return SHOOT_FRICTION_SPEED_DEFAULT;
     }
 }
 
 static bool FreshMeasure(const DJI_Motor_Measure_s *m, uint32_t now)
 {
-    return m->rx_sequence != 0 && (uint32_t)(now-m->rx_tick_ms)<=20U &&
+    return m->rx_sequence != 0 && (uint32_t)(now-m->rx_tick_ms)<=SHOOT_MOTOR_FEEDBACK_MAX_AGE_MS &&
         isfinite(m->speed_aps) && isfinite(m->total_angle);
 }
 
@@ -145,8 +109,8 @@ void ShootTask(void)
     /* Refresh heat even when the trigger is released. */
     (void)HeatControlCalculate(&shoot_heat, 0);
     const bool heat_valid=shoot_heat.data_valid && shoot_heat.heat_limit>0 &&
-        (uint32_t)(now-shoot_heat.robot_state_tick_ms)<=300U &&
-        (uint32_t)(now-shoot_heat.power_heat_tick_ms)<=300U &&
+        (uint32_t)(now-shoot_heat.robot_state_tick_ms)<=SHOOT_HEAT_FEEDBACK_MAX_AGE_MS &&
+        (uint32_t)(now-shoot_heat.power_heat_tick_ms)<=SHOOT_HEAT_FEEDBACK_MAX_AGE_MS &&
         shoot_heat.current_heat<shoot_heat.heat_limit;
     const bool on=shoot_cmd_recv.shoot_mode==SHOOT_ON;
     const float target=FrictionTarget(shoot_cmd_recv.bullet_speed);
@@ -154,11 +118,11 @@ void ShootTask(void)
     const float left_target=friction_l->motor_settings.motor_reverse_flag==MOTOR_DIRECTION_REVERSE ? -target : target;
     const float right_target=friction_r->motor_settings.motor_reverse_flag==MOTOR_DIRECTION_REVERSE ? -target : target;
     const bool tracking=friction_on && FreshMeasure(&left,now) && FreshMeasure(&right,now) &&
-        fabsf(left.speed_aps-left_target)<=target*.1f &&
-        fabsf(right.speed_aps-right_target)<=target*.1f;
+        fabsf(left.speed_aps-left_target)<=target*SHOOT_FRICTION_SPEED_TOLERANCE_RATIO &&
+        fabsf(right.speed_aps-right_target)<=target*SHOOT_FRICTION_SPEED_TOLERANCE_RATIO;
     if (!tracking) friction_tracking=false;
     else if (!friction_tracking) { friction_tracking=true; friction_since=now; }
-    const bool ready=tracking && (uint32_t)(now-friction_since)>=100U;
+    const bool ready=tracking && (uint32_t)(now-friction_since)>=SHOOT_FRICTION_STABLE_TIME_MS;
     DJIMotorSetRef(friction_l,friction_on ? target : 0);
     DJIMotorSetRef(friction_r,friction_on ? target : 0);
     if (on) { DJIMotorEnable(friction_l); DJIMotorEnable(friction_r); }
@@ -168,12 +132,12 @@ void ShootTask(void)
     const bool discrete=request==LOAD_1_BULLET || request==LOAD_3_BULLET;
     const bool edge=discrete && previous_request==LOAD_STOP;
     const bool completed=active_batch && FreshMeasure(&feed,now) &&
-        fabsf(feed.total_angle-loader_target_angle)<=LOADER_ANGLE_TOLERANCE;
+        fabsf(feed.total_angle-loader_target_angle)<=SHOOT_LOADER_ANGLE_TOLERANCE;
     if (completed) active_batch=false;
     /* Signed differences support tick wrap; require source timestamps after the
-     * 300 ms reporting horizon, not merely a locally republished old snapshot. */
-    const bool settled=!fed || (!active_batch && (uint32_t)(now-last_feed_tick)>300U &&
-        heat_valid && (int32_t)(shoot_heat.power_heat_tick_ms-last_feed_tick)>300);
+     * heat reporting horizon, not merely a locally republished old snapshot. */
+    const bool settled=!fed || (!active_batch && (uint32_t)(now-last_feed_tick)>SHOOT_HEAT_SETTLE_DELAY_MS &&
+        heat_valid && (int32_t)(shoot_heat.power_heat_tick_ms-last_feed_tick)>(int32_t)SHOOT_HEAT_SETTLE_DELAY_MS);
     if (settled) discrete_pending=false;
     const bool permitted=on && ready && heat_valid && FreshMeasure(&feed,now);
     if (!permitted) active_batch=false;
@@ -181,7 +145,7 @@ void ShootTask(void)
         const unsigned shots=request==LOAD_3_BULLET ? 3U : 1U;
         const float required=(shots+HEAT_CONTROL_RESERVE_SHOTS)*shoot_heat.bullet_heat;
         if (shoot_heat.heat_limit-shoot_heat.current_heat>=required) {
-            loader_target_angle=feed.total_angle+shots*LOADER_ONE_BULLET_MOTOR_ANGLE;
+            loader_target_angle=feed.total_angle+shots*SHOOT_LOADER_ONE_BULLET_MOTOR_ANGLE;
             active_batch=true; discrete_pending=true;
         }
     }

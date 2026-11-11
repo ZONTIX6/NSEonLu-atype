@@ -23,13 +23,10 @@
 #include <stdbool.h>
 #include "../../chassis_force_calibration/force_calibration_config.h"
 #include "../../predictive_power/speed_observation_config.h"
+#include "../../../config/91_motor/dji_motor_config.h"
 
-#define DJI_MOTOR_CNT 12
 #define DJI_SENDER_GROUP_COUNT 6U
 
-/* 滤波系数设置为1的时候即关闭滤波 */
-#define SPEED_SMOOTH_COEF 0.85f      // 最好大于0.85
-#define CURRENT_SMOOTH_COEF 0.9f     // 必须大于0.9
 #define ECD_ANGLE_COEF_DJI 0.043945f // (360/8192),将编码器值转化为角度制
 
 /* DJI电机CAN反馈信息*/

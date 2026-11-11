@@ -7,7 +7,7 @@
 #include "chassis_force_config.h"
 #include "chassis_power.h"
 
-/* All physical vehicle calibration and energy parameters are assembled here. */
+/* Board entry points; tune physical/energy defaults in config/22_chassis_force/chassis_force_vehicle_config.c. */
 ChassisForceConfig_s BoardChassisForceConfig(void);
 ChassisPower_Init_Config_s BoardChassisForcePowerConfig(void);
 #endif

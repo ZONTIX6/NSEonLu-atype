@@ -1,12 +1,3 @@
-#ifndef PREDICTIVE_POWER_CONFIG_H
-#define PREDICTIVE_POWER_CONFIG_H
-#define CHASSIS_PREDICTIVE_LEGACY 0
-#define CHASSIS_PREDICTIVE_SHADOW 1
-#define CHASSIS_PREDICTIVE_CONTROL 2
-#ifndef CHASSIS_PREDICTIVE_POWER_MODE
-#define CHASSIS_PREDICTIVE_POWER_MODE CHASSIS_PREDICTIVE_LEGACY
-#endif
-#if CHASSIS_PREDICTIVE_POWER_MODE != 0 && CHASSIS_PREDICTIVE_POWER_MODE != 1
-#error Predictive takeover is not released: use legacy (0) or shadow (1)
-#endif
-#endif
+/* Compatibility include. Edit config/30_velocity_observation/predictive_power_config.h for project settings. */
+#pragma once
+#include "../../config/30_velocity_observation/predictive_power_config.h"

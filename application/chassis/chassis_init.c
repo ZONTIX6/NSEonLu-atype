@@ -1,4 +1,5 @@
 #include "chassis_internal.h"
+#include "../../config/01_pid/pid_config.h"
 #include "dji_power_adapter.h"
 #include "chassis_power_model_config.h"
 #include "chassis_power_config.h"
@@ -42,15 +43,7 @@ void ChassisInit()
     Motor_Init_Config_s chassis_motor_config = {
         .can_init_config.can_handle = &hcan1,
         .controller_param_init_config = {
-            .speed_PID = {
-                .Kp = 0.75f, // A-board vehicle baseline, error in degrees/s
-                .Ki = 0,   // 0
-                .Kd = 0,   // 0
-                .IntegralLimit = 3000,
-                .Improve = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement,
-                .MaxOut = 15000,
-                .Output_LPF_RC = 0.3,
-            },
+            .speed_PID = pid_chassis_speed_config,
         },
         .controller_setting_init_config = {
             .angle_feedback_source = MOTOR_FEED,
@@ -84,10 +77,10 @@ void ChassisInit()
         .meter_enabled=POWER_METER_ENABLE!=0,.buffer_enabled=CHASSIS_BUFFER_POWER_ENABLE!=0,
         .algorithm = {
             .safety_factor = CHASSIS_POWER_SAFETY_FACTOR,
-            .small_error_threshold_rpm = 500.0f,
-            .reserved_power_threshold_w = 54.0f,
-            .per_motor_reserved_power_w = 8.0f,
-            .max_current_command = 15000.0f,
+            .small_error_threshold_rpm = CHASSIS_POWER_SMALL_ERROR_RPM,
+            .reserved_power_threshold_w = CHASSIS_POWER_RESERVED_THRESHOLD_W,
+            .per_motor_reserved_power_w = CHASSIS_POWER_PER_MOTOR_RESERVED_W,
+            .max_current_command = CHASSIS_POWER_MAX_CURRENT_COMMAND,
         },
     };
     for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)

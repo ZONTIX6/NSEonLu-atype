@@ -5,9 +5,7 @@
 #include "SEGGER_RTT_Conf.h"
 #include <stdio.h>
 
-#ifndef DISABLE_LOG_SYSTEM
-#define DISABLE_LOG_SYSTEM 0
-#endif
+#include "../../config/90_board/log_config.h"
 
 #define BUFFER_INDEX 0
 

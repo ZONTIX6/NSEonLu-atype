@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define CHASSIS_VELOCITY_MAX_AGE_MS 20U
+#include "../../config/30_velocity_observation/chassis_velocity_config.h"
 
 typedef struct {
     bool valid;

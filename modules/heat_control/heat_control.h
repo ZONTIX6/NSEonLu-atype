@@ -7,12 +7,7 @@
 /* 裁判系统热量数据主题，由底盘应用发布，热量控制模块订阅。 */
 #define HEAT_CONTROL_DATA_TOPIC "heat_control_data"
 
-/* 单发热量统一配置入口，应与裁判系统实际配置一致。 */
-#define HEAT_CONTROL_BULLET_HEAT 10.0f
-#define HEAT_CONTROL_DEFAULT_MAX_RATE 30.0f
-#define HEAT_CONTROL_RESERVE_SHOTS 7.0f /* Delay reserve; see integration validation report. */
-#define HEAT_CONTROL_SETTLE_PERIOD_S 0.1f /* 裁判系统按 10 Hz 结算冷却 */
-#define HEAT_CONTROL_PLAN_PERIOD_S 0.5   /* 热量规划窗口；越长越早降速，与冷却周期独立 */
+#include "../../config/04_shoot/heat_control_config.h"
 
 /**
  * @brief 从裁判系统转发的热量数据

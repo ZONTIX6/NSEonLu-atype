@@ -46,7 +46,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-/* 根据robot_def.h中的macro自动计算的参数 */
+/* 根据 config/02_chassis/chassis_config.h 中的宏自动计算的参数。 */
 #define HALF_WHEEL_BASE (WHEEL_BASE / 2.0f)     // 半轴距
 #define HALF_TRACK_WIDTH (TRACK_WIDTH / 2.0f)   // 半轮距
 #define PERIMETER_WHEEL (RADIUS_WHEEL * 2 * PI) // 轮子周长

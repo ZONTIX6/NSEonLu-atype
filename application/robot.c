@@ -16,7 +16,7 @@
 // 编译warning,提醒开发者修改机器人参数
 #ifndef ROBOT_DEF_PARAM_WARNING
 #define ROBOT_DEF_PARAM_WARNING
-#pragma message "check if you have configured the parameters in robot_def.h, IF NOT, please refer to the comments AND DO IT, otherwise the robot will have FATAL ERRORS!!!"
+#pragma message "Check robot parameters in config/ before running; see config/README.md for tuning entries."
 #endif // !ROBOT_DEF_PARAM_WARNING
 
 #if !IMU_CAPTURE_ONLY && (defined(ONE_BOARD) || defined(CHASSIS_BOARD))

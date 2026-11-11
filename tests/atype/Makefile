@@ -7,8 +7,8 @@ test: test_safety.exe test_flash_bounds.exe test_imu_math.exe test_pwm_units.exe
 	./test_imu_math.exe
 	./test_pwm_units.exe
 	./test_imu_init.exe
-test_imu_init.exe: test_imu_init.c ../../modules/imu/ins_service.c ../ins_service/test_ins_service.c ../../modules/mpu6500/mpu6500_math.c
-	$(CC) $(CFLAGS) -Iimu_stubs -Ipwm_stubs -I../../modules/imu -I../../modules/mpu6500 test_imu_init.c ../../modules/mpu6500/mpu6500_math.c -lm -o $@
+test_imu_init.exe: ../../config/01_pid/pid_config.h ../../config/92_imu/imu_config.h test_imu_init.c ../../modules/imu/ins_service.c ../ins_service/test_ins_service.c ../../modules/mpu6500/mpu6500_math.c ../../config/01_pid/pid_config.c
+	$(CC) $(CFLAGS) -Iimu_stubs -Ipwm_stubs -I../../modules/imu -I../../modules/mpu6500 -I../../config/01_pid test_imu_init.c ../../modules/mpu6500/mpu6500_math.c ../../config/01_pid/pid_config.c -lm -o $@
 test_pwm_units.exe: test_pwm_units.c ../../modules/mpu6500/imu_temperature.c
 	$(CC) $(CFLAGS) -Ipwm_stubs -I../../modules/mpu6500 $^ -lm -o $@
 test_imu_math.exe: test_imu_math.c ../../modules/mpu6500/mpu6500_math.c ../../modules/mpu6500/mpu6500_math.h ../../modules/imu/ins_math.c

@@ -33,15 +33,6 @@ uint32_t ChassisForceConfigChecksum(const ChassisForceConfig_s *c)
     h=hash_word(h,c->brake_timeout_ms);h=hash_word(h,c->power_recovery_samples);
     h=hash_word(h,c->grant_timeout_ms);return hash_word(h,c->stall_timeout_ms);
 }
-ChassisForceConfig_s ChassisForceDefaultConfig(void)
-{
-    ChassisForceConfig_s c={.backend=1,.schema_version=1,
-        .calibration_valid=CHASSIS_FORCE_CALIBRATION_VALID!=0,.resume_ratio=.9f,
-        .input_deadzone=.05f,.input_gamma=1.5f,.power_gain_nm_per_w_s=.01f,
-        .power_deadband_w=2,.power_lpf_tau_s=.02f,.power_recovery_samples=3,
-        .torque_probe_step_nm=.05f,.power_request_step_w=5,.grant_timeout_ms=50};
-    c.checksum=ChassisForceConfigChecksum(&c);return c;
-}
 bool ChassisForceConfigValid(const ChassisForceConfig_s *c)
 {
     if(!c || c->backend!=1 || c->schema_version!=1 || !c->calibration_valid ||

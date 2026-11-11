@@ -7,7 +7,7 @@ TARGET := test_chassis_power_module.exe
 all: $(TARGET)
 $(TARGET): $(SOURCE)
 	$(CC) $(CFLAGS) $(INCLUDES) $(SOURCE) -lm -o $@
-test_spin_policy.exe: test_spin_policy.c $(filter-out test_chassis_power_module.c,$(SOURCE)) ../../modules/telemetry/rtt_telemetry.c ../../modules/algorithm/chassis_spin.c ../../modules/algorithm/chassis_power_model_config.h
+test_spin_policy.exe: test_spin_policy.c $(filter-out test_chassis_power_module.c,$(SOURCE)) ../../modules/telemetry/rtt_telemetry.c ../../modules/algorithm/chassis_spin.c ../../modules/algorithm/chassis_power_model_config.h ../../config/20_chassis_power/chassis_power_model_config.h
 	$(CC) $(CFLAGS) $(INCLUDES) -DCHASSIS_SPIN_MODE=1 $(filter %.c,$^) -lm -o $@
 test_idle_power.exe: test_idle_power.c $(filter-out test_chassis_power_module.c,$(SOURCE)) ../../modules/telemetry/rtt_telemetry.c
 	$(CC) $(CFLAGS) $(INCLUDES) $^ -lm -o $@

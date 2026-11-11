@@ -11,6 +11,8 @@
  */
 
 #include "ins_task.h"
+#include "../../config/92_imu/imu_config.h"
+#include "../../config/01_pid/pid_config.h"
 #include "QuaternionEKF.h"
 #include "mpu6500_math.h"
 
@@ -27,11 +29,6 @@ static uint32_t ins_sample_tick;
 #include "QuaternionEKF.h"
 #include "general_def.h"
 #include "SEGGER_RTT.h"
-#define BOARD_DOWN (1)
-#define IST8310
-#define GYRO_OFFSET_LIMIT_X 0.04f
-#define GYRO_OFFSET_LIMIT_Y 0.04f
-#define GYRO_OFFSET_LIMIT_Z 0.04f
 #ifdef STM32F427xx
 #include "FreeRTOS.h"
 #include "task.h"
@@ -41,10 +38,6 @@ static uint32_t ins_sample_tick;
 #define INS_LOCK() ((void)0)
 #define INS_UNLOCK() ((void)0)
 #endif
-#define GxOFFSET .037452f
-#define GyOFFSET .003360f
-#define GzOFFSET .008532f
-#define gNORM 9.605101f
 typedef struct {float Accel[3],Gyro[3],TempWhenCali,Temperature,AccelScale,GyroOffset[3],gNorm;} mpu_data_t;
 static INSServiceConfig_s service_config;
 static bool service_configured;
@@ -126,7 +119,7 @@ static float dt = 0, t = 0;
 static uint32_t INS_DWT_Count = 0;
 static uint8_t INS_Init_flag = 0;                           /* INS system init flag */
 
-static float RefTemp = 40; // 恒温设定温度
+static float RefTemp = IMU_MPU6500_REF_TEMP_C; // 恒温设定温度
 
 static bool mpu_offset_call(void);
 static void IMU_Param_Correction(IMU_Param_t *param, float gyro[3], float accel[3]);
@@ -214,13 +207,7 @@ attitude_t *INS_Init(void)
         return &published_attitude;
     }
 
-    PID_Init_Config_s config = {.MaxOut = 100,
-                                .IntegralLimit = 15,
-                                .DeadBand = 0,
-                                .Kp = 50,
-                                .Ki = 1,
-                                .Kd = 0,
-                                .Improve = 0x01}; // enable integratiaon limit
+    PID_Init_Config_s config = pid_imu_mpu6500_temperature_config;
     PIDInit(&TempCtrl, &config);
     if(!mpu_offset_call()) return &published_attitude;
 	IMU_Param.scale[0] = 1;
@@ -233,8 +220,10 @@ attitude_t *INS_Init(void)
 
     float init_quaternion[4] = {0};
     if(!InitQuaternion(init_quaternion)) {IMU_Temperature_Update(0);return &published_attitude;}
-    IMU_QuaternionEKF_Init(init_quaternion, 10, 0.001, 1000000, 1, 0);
-	INS.AccelLPF = 0.0085;
+    IMU_QuaternionEKF_Init(init_quaternion, IMU_MPU6500_EKF_PROCESS_NOISE_1,
+                          IMU_MPU6500_EKF_PROCESS_NOISE_2, IMU_MPU6500_EKF_MEASUREMENT_NOISE,
+                          IMU_MPU6500_EKF_LAMBDA, IMU_MPU6500_EKF_ACCEL_LPF);
+	INS.AccelLPF = IMU_MPU6500_MOTION_ACCEL_LPF_S;
 	DWT_GetDeltaT(&INS_DWT_Count);
 	INS_Init_flag = 1;
 	return &published_attitude;
@@ -274,13 +263,13 @@ static bool mpu_offset_call(void)
                               gyroDiff[1] > 0.15f,
                               gyroDiff[2] > 0.15f);
             SEGGER_RTT_printf(0, "fail ox:%d oy:%d oz:%d\r\n",
-                              fabsf(mpu_data.GyroOffset[0]) > GYRO_OFFSET_LIMIT_X,
-                              fabsf(mpu_data.GyroOffset[1]) > GYRO_OFFSET_LIMIT_Y,
-                              fabsf(mpu_data.GyroOffset[2]) > GYRO_OFFSET_LIMIT_Z);
-            mpu_data.GyroOffset[0] = GxOFFSET;
-            mpu_data.GyroOffset[1] = GyOFFSET;
-            mpu_data.GyroOffset[2] = GzOFFSET;
-            mpu_data.gNorm = gNORM;
+                              fabsf(mpu_data.GyroOffset[0]) > IMU_MPU6500_GYRO_OFFSET_LIMIT_X,
+                              fabsf(mpu_data.GyroOffset[1]) > IMU_MPU6500_GYRO_OFFSET_LIMIT_Y,
+                              fabsf(mpu_data.GyroOffset[2]) > IMU_MPU6500_GYRO_OFFSET_LIMIT_Z);
+            mpu_data.GyroOffset[0] = IMU_MPU6500_GYRO_OFFSET_X;
+            mpu_data.GyroOffset[1] = IMU_MPU6500_GYRO_OFFSET_Y;
+            mpu_data.GyroOffset[2] = IMU_MPU6500_GYRO_OFFSET_Z;
+            mpu_data.gNorm = IMU_MPU6500_GRAVITY_NORM;
             mpu_data.TempWhenCali = 40;
             break;
         }
@@ -293,7 +282,7 @@ static bool mpu_offset_call(void)
 		for (uint16_t i = 0; i < CaliTimes; ++i)
 		{
             if(!ReadSample(&sample)) {
-                mpu_data.gNorm=gNORM;mpu_data.AccelScale=9.81f/gNORM;
+                mpu_data.gNorm=IMU_MPU6500_GRAVITY_NORM;mpu_data.AccelScale=9.81f/IMU_MPU6500_GRAVITY_NORM;
                 IMU_Temperature_Update(0);return false;
             }
             for(unsigned axis=0;axis<3;++axis) {
@@ -354,9 +343,9 @@ static bool mpu_offset_call(void)
              gyroDiff[0] > 0.15f ||
              gyroDiff[1] > 0.15f ||
              gyroDiff[2] > 0.15f ||
-             fabsf(mpu_data.GyroOffset[0]) > GYRO_OFFSET_LIMIT_X ||
-             fabsf(mpu_data.GyroOffset[1]) > GYRO_OFFSET_LIMIT_Y ||
-             fabsf(mpu_data.GyroOffset[2]) > GYRO_OFFSET_LIMIT_Z);
+             fabsf(mpu_data.GyroOffset[0]) > IMU_MPU6500_GYRO_OFFSET_LIMIT_X ||
+             fabsf(mpu_data.GyroOffset[1]) > IMU_MPU6500_GYRO_OFFSET_LIMIT_Y ||
+             fabsf(mpu_data.GyroOffset[2]) > IMU_MPU6500_GYRO_OFFSET_LIMIT_Z);
 	mpu_data.AccelScale = 9.81/mpu_data.gNorm;
     SEGGER_RTT_printf(0, "gyro offset x:%d y:%d z:%d (x1e6)\r\n",
                       (int)(mpu_data.GyroOffset[0] * 1000000.0f),

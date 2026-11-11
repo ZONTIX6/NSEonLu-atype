@@ -196,6 +196,7 @@ application/runtime/robot_task.c
 
 C_SOURCES += $(wildcard modules/chassis_power/*.c) modules/motor/DJImotor/dji_power_adapter.c
 C_SOURCES += $(wildcard modules/predictive_power/*.c)
+C_SOURCES += $(wildcard config/*/*.c)
 C_SOURCES += modules/telemetry/chassis_speed_capture.c application/runtime/chassis_speed_observation.c
 C_SOURCES += modules/imu/ins_math.c modules/vehicle_safety/vehicle_safety.c application/board/board_optional.c application/board/board_devices.c application/board/board_analog_key.c Src/syscalls.c Src/sysmem.c modules/oled/oled_spi.c
 C_SOURCES += $(wildcard modules/TFminiPlus/*.c modules/key/*.c modules/jam_detector/*.c)
@@ -289,7 +290,7 @@ $(error VOFA_TELEMETRY_MODE must be 0 or 1)
 endif
 endif
 endif
-include config/atype.mk
+include config/99_build/atype.mk
 CHASSIS_FORCE_CALIBRATION_ENABLE ?= 0
 ifneq ($(filter $(CHASSIS_FORCE_CALIBRATION_ENABLE),0 1),$(CHASSIS_FORCE_CALIBRATION_ENABLE))
 $(error CHASSIS_FORCE_CALIBRATION_ENABLE must be 0 or 1)
@@ -298,9 +299,11 @@ ifeq ($(CHASSIS_FORCE_CALIBRATION_ENABLE),1)
 C_SOURCES += $(wildcard modules/chassis_force_calibration/*.c) application/board/board_force_calibration.c application/runtime/force_calibration_app.c modules/motor/DJImotor/dji_force_calibration.c
 endif
 ifeq ($(CHASSIS_CONTROL_MODE),1)
+C_SOURCES := $(filter-out config/20_chassis_power/chassis_power_config.c config/21_chassis_spin/chassis_spin_config.c,$(C_SOURCES))
 C_SOURCES := $(filter-out application/chassis/chassis.c application/chassis/chassis_init.c application/chassis/chassis_tuning.c modules/algorithm/chassis_spin.c modules/motor/DJImotor/dji_power_adapter.c,$(C_SOURCES))
 C_SOURCES += $(wildcard modules/chassis_force/*.c) application/chassis/chassis_force_app.c application/board/board_chassis_force.c modules/motor/DJImotor/dji_force_adapter.c modules/telemetry/chassis_force_telemetry.c
 else
+C_SOURCES := $(filter-out config/22_chassis_force/chassis_force_%.c,$(C_SOURCES))
 C_SOURCES := $(filter-out modules/chassis_power/chassis_power_force.c,$(C_SOURCES))
 endif
 
@@ -310,6 +313,7 @@ AS_INCLUDES =  \
 
 # C includes
 C_INCLUDES =  \
+$(addprefix -I,$(sort $(dir $(wildcard config/*/*.h)))) \
 -IInc \
 -IDrivers/STM32F4xx_HAL_Driver/Inc \
 -IDrivers/STM32F4xx_HAL_Driver/Inc/Legacy \
@@ -419,6 +423,7 @@ LDFLAGS += $(ATYPE_MODULE_LDFLAGS)
 OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
 NUMERIC_SOURCES := $(filter modules/chassis_force_calibration/% modules/chassis_force/% modules/chassis_power/% modules/algorithm/power_model.c modules/algorithm/chassis_power_% modules/algorithm/chassis_spin.c modules/motor/DJImotor/% modules/telemetry/chassis_force_telemetry.c modules/telemetry/force_calibration_protocol.c application/runtime/force_calibration_app.c application/chassis/% application/board/board_chassis_force.c application/board/board_force_calibration.c application/cmd/robot_cmd.c,$(C_SOURCES))
 NUMERIC_SOURCES += $(filter modules/predictive_power/%,$(C_SOURCES))
+NUMERIC_SOURCES += $(filter config/%,$(C_SOURCES))
 NUMERIC_SOURCES += modules/algorithm/chassis_velocity_fusion.c \
                    modules/algorithm/chassis_velocity_center.c modules/algorithm/chassis_gimbal_imu.c
 ifeq ($(CHASSIS_VELOCITY_FUSION_ENABLE),1)

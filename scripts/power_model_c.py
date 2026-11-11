@@ -22,7 +22,7 @@ class Bridge:
                         ROOT/'modules/algorithm/chassis_power_transient.c',
                         ROOT/'modules/algorithm/chassis_power_transient.h',
                         ROOT/'modules/algorithm/power_model.h',
-                        ROOT/'modules/algorithm/chassis_power_model_config.h']
+                        ROOT/'config/20_chassis_power/chassis_power_model_config.h']
         subprocess.run(['gcc', '-shared', '-fPIC', '-std=c11', '-O2', '-fno-fast-math',
             '-Wall', '-Wextra', '-Werror', '-I'+str(ROOT/'modules/algorithm'),
             *map(str, self.sources[:3]), '-lm', '-o', str(library)], check=True,

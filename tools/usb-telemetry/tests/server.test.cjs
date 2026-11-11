@@ -10,7 +10,7 @@ const { createServer } = require('../serve.cjs');
 test('acknowledged values synchronize to a source header; foreign origins and invalid values cannot write', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'telemetry-tuning-'));
   const config = path.join(root, 'tuning_overrides.h');
-  await fs.copyFile(path.join(__dirname, '../../../modules/telemetry/tuning_overrides.h'), config);
+  await fs.copyFile(path.join(__dirname, '../../../config/31_telemetry/tuning_overrides.h'), config);
   const server = createServer(root, config);
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const base = 'http://127.0.0.1:'+server.address().port;
