@@ -1,3 +1,5 @@
+#include "../../config/32_capture/imu_capture_config.h"
+
 #if CHASSIS_VELOCITY_FUSION_ENABLE != 0 && CHASSIS_VELOCITY_FUSION_ENABLE != 1
 #error CHASSIS_VELOCITY_FUSION_ENABLE must be 0 or 1
 #endif
@@ -198,6 +200,46 @@ static ChassisFusedVelocityStatus_e UpdateFused(ChassisFusedVelocitySnapshot_s *
 }
 #endif /* CHASSIS_VELOCITY_FUSION_CALIBRATED */
 
+#if CHASSIS_REMOTE_IMU_FUSION_ENABLE
+#include "../runtime/chassis_imu_can.h"
+#include "../../config/30_velocity_observation/chassis_remote_imu_config.h"
+static ChassisRemoteFusion_s remote_state;
+static const ChassisRemoteFusionConfig_s remote_config = CHASSIS_REMOTE_IMU_CONFIG_INITIALIZER;
+
+static void UpdateRemote(ChassisFusedVelocitySnapshot_s *snapshot,
+                         const ChassisVelocityInput_s *wheels,
+                         const ChassisImuCanSnapshot_s *remote, bool usable)
+{
+    uint32_t oldest=0, youngest=UINT32_MAX;
+    for (unsigned i=0;i<4;++i) {
+        const uint32_t age=wheels->now_ms-wheels->feedback_tick_ms[i];
+        if(age>oldest) oldest=age;
+        if(age<youngest) youngest=age;
+    }
+    ChassisRemoteFusionUpdate(&remote_state,&remote_config,&snapshot->wheel,
+        oldest-youngest,remote,usable,wheels->now_ms,&snapshot->remote);
+    const ChassisRemoteFusionOutput_s *out=&snapshot->remote;
+    switch(out->status) {
+    case CHASSIS_REMOTE_NO_SAMPLE: snapshot->status=CHASSIS_VELOCITY_NO_SAMPLE; break;
+    case CHASSIS_REMOTE_WHEEL_UNAVAILABLE: snapshot->status=CHASSIS_VELOCITY_WHEEL_UNAVAILABLE; break;
+    case CHASSIS_REMOTE_IMU_UNAVAILABLE: snapshot->status=CHASSIS_VELOCITY_IMU_UNAVAILABLE; break;
+    case CHASSIS_REMOTE_NOT_ALIGNED: snapshot->status=CHASSIS_VELOCITY_NOT_ALIGNED; break;
+    case CHASSIS_REMOTE_WARMUP: snapshot->status=CHASSIS_VELOCITY_WARMUP; break;
+    case CHASSIS_REMOTE_FUSED: snapshot->status=CHASSIS_VELOCITY_FUSED; break;
+    case CHASSIS_REMOTE_CONFIG_INVALID: snapshot->status=CHASSIS_VELOCITY_CONFIG_INVALID; break;
+    default: snapshot->status=CHASSIS_VELOCITY_REJECTED; break;
+    }
+    snapshot->valid=out->valid;
+    snapshot->tick_ms=out->tick_ms;
+    snapshot->vx_mps=out->vx_mps;
+    snapshot->vy_mps=out->vy_mps;
+    for(unsigned i=0;i<2;++i) {
+        snapshot->paired_wheel_mps[i]=out->paired_wheel_mps[i];
+        snapshot->center_accel_n_mps2[i]=out->center_accel_n_mps2[i];
+    }
+}
+#endif
+
 void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config)
 {
     DJIMotorInstance *const motors[4]={motor_lf,motor_rf,motor_lb,motor_rb};
@@ -205,6 +247,9 @@ void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config)
     ChassisFusedVelocitySnapshot_s snapshot={0};
     INSMotionSnapshot_s imu={0};
     GimbalEncoderSample_s joints[2]={0};
+#if CHASSIS_REMOTE_IMU_FUSION_ENABLE
+    ChassisImuCanSnapshot_s remote={0};
+#endif
 #if CHASSIS_VELOCITY_FUSION_CALIBRATED
     uint32_t wheel_cycles[4]={0};
 #endif
@@ -219,14 +264,31 @@ void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config)
         wheel_cycles[i]=motor->measure.rx_cycles;
 #endif
     }
+#if !CHASSIS_REMOTE_IMU_FUSION_ENABLE
     (void)INSGetMotionSnapshot(&imu);
+#endif
     const bool joints_valid=GimbalGetEncoderSnapshot(joints);
 #if CHASSIS_VELOCITY_FUSION_CALIBRATED
     const uint32_t cycles=DWT_GetCycleCount();
 #endif
     wheels.now_ms=HAL_GetTick();
+#if CHASSIS_REMOTE_IMU_FUSION_ENABLE
+    /* Nested critical sections keep the wheel/remote copy and receiver clock
+     * consistent; numerical work remains outside the critical section. */
+    const bool remote_usable=ChassisImuCanReadSnapshot(&remote,wheels.now_ms);
+#endif
     taskEXIT_CRITICAL();
 
+#if CHASSIS_REMOTE_IMU_FUSION_ENABLE
+    imu.valid=remote_usable;
+    imu.sequence=remote.sample.sequence;
+    imu.tick_ms=remote.first_rx_tick_ms-remote.sample.source_age_ms;
+    for(unsigned i=0;i<4;++i) imu.quaternion[i]=remote.sample.quaternion[i];
+    for(unsigned i=0;i<3;++i) {
+        imu.accel_n_mps2[i]=remote.sample.accel_n_mps2[i];
+        imu.gyro_sensor_radps[i]=remote.sample.gyro_sensor_radps[i];
+    }
+#endif
     ChassisVelocityDiagnostics_s *diagnostics=&snapshot.diagnostics;
     diagnostics->available=true;
     diagnostics->tick_ms=wheels.now_ms;
@@ -262,6 +324,9 @@ void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config)
                                       CHASSIS_VELOCITY_CLOCK_INVALID;
     if (snapshot.status!=CHASSIS_VELOCITY_FUSED && snapshot.status!=CHASSIS_VELOCITY_WARMUP)
         ResetHistory();
+#endif
+#if CHASSIS_REMOTE_IMU_FUSION_ENABLE
+    UpdateRemote(&snapshot,&wheels,&remote,remote_usable);
 #endif
     taskENTER_CRITICAL();
     chassis_fused_velocity=snapshot;

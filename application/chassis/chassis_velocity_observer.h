@@ -2,6 +2,7 @@
 #define CHASSIS_VELOCITY_OBSERVER_H
 
 #include "chassis_velocity.h"
+#include "chassis_remote_fusion.h"
 
 typedef enum {
     CHASSIS_VELOCITY_NO_SAMPLE,
@@ -13,7 +14,8 @@ typedef enum {
     CHASSIS_VELOCITY_NOT_ALIGNED,
     CHASSIS_VELOCITY_WARMUP,
     CHASSIS_VELOCITY_REJECTED,
-    CHASSIS_VELOCITY_FUSED
+    CHASSIS_VELOCITY_FUSED,
+    CHASSIS_VELOCITY_CONFIG_INVALID
 } ChassisFusedVelocityStatus_e;
 
 /* Raw inputs captured together before the observer runs. Source timestamps are
@@ -27,7 +29,7 @@ typedef struct {
     float imu_quaternion[4]; /* Unit [w,x,y,z], sensor to navigation frame. */
     float imu_accel_n_mps2[3]; /* Gravity-free sensor acceleration, before lever correction. */
     float imu_gyro_sensor_radps[3];
-    uint32_t imu_tick_ms, imu_sequence;
+    uint32_t imu_tick_ms, imu_sequence; /* Remote mode: receiver estimate, not source-board time. */
     bool imu_valid;
     uint16_t joint_ecd[2]; /* Raw yaw/pitch motor encoders. */
     int16_t joint_rpm[2];
@@ -44,6 +46,7 @@ typedef struct {
     ChassisFusedVelocityStatus_e status;
     bool valid;
     ChassisVelocityDiagnostics_s diagnostics;
+    ChassisRemoteFusionOutput_s remote; /* Remote timing/pairing diagnostics; zero in local modes. */
 } ChassisFusedVelocitySnapshot_s;
 
 #if CHASSIS_VELOCITY_FUSION_ENABLE

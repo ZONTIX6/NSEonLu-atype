@@ -29,7 +29,13 @@ test_chassis_velocity_uncalibrated.exe: test_chassis_velocity_diagnostics.c $(PR
 	    -DCHASSIS_VELOCITY_FUSION_CALIBRATED=0 $(INCLUDES) -include stubs/platform.h $< $(PRODUCTION_SOURCES) -lm -o $@
 
 .PHONY: test
-test: test_chassis_velocity_observer.exe test_chassis_velocity_diagnostics.exe test_chassis_velocity_uncalibrated.exe
+test: test_chassis_velocity_observer.exe test_chassis_velocity_diagnostics.exe test_chassis_velocity_uncalibrated.exe test_chassis_remote_observer.exe
 	./test_chassis_velocity_observer.exe
 	./test_chassis_velocity_diagnostics.exe
 	./test_chassis_velocity_uncalibrated.exe
+	./test_chassis_remote_observer.exe
+
+test_chassis_remote_observer.exe: test_chassis_remote_observer.c $(PRODUCTION_SOURCES) $(ALGORITHM)/chassis_remote_fusion.c $(ALGORITHM)/chassis_remote_fusion.h $(ROOT)/config/30_velocity_observation/chassis_remote_imu_config.h $(HEADERS)
+	$(CC) $(CFLAGS) -DONE_BOARD -DCHASSIS_VELOCITY_FUSION_ENABLE=1 -DCHASSIS_VELOCITY_FUSION_CALIBRATED=0 \
+	    -DCHASSIS_IMU_CAN_RX_ENABLE=1 -DCHASSIS_REMOTE_IMU_FUSION_ENABLE=1 $(INCLUDES) \
+	    -I$(ROOT)/Inc -I$(APPLICATION)/runtime -include stubs/platform.h $< $(PRODUCTION_SOURCES) $(ALGORITHM)/chassis_remote_fusion.c -lm -o $@

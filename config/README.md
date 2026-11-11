@@ -16,7 +16,7 @@
 | `20_chassis_power` | 功率阶段、预算、外环 PI、供电/缓冲与功率模型 | [chassis_power_config.c](20_chassis_power/chassis_power_config.c)、[chassis_power_config.h](20_chassis_power/chassis_power_config.h)、[chassis_energy_config.h](20_chassis_power/chassis_energy_config.h)、[chassis_power_model_config.h](20_chassis_power/chassis_power_model_config.h) |
 | `21_chassis_spin` | 固定、自适应和正弦小陀螺策略 | [chassis_spin_config.c](21_chassis_spin/chassis_spin_config.c)、[chassis_spin_config.h](21_chassis_spin/chassis_spin_config.h) |
 | `22_chassis_force` | 速度/力控选择、力控通用值、车辆标定和标定工具 | [chassis_control_config.h](22_chassis_force/chassis_control_config.h)、[chassis_force_config.c](22_chassis_force/chassis_force_config.c)、[chassis_force_config.h](22_chassis_force/chassis_force_config.h)、[chassis_force_vehicle_config.c](22_chassis_force/chassis_force_vehicle_config.c)、[chassis_force_vehicle_config.h](22_chassis_force/chassis_force_vehicle_config.h)、[force_calibration_config.h](22_chassis_force/force_calibration_config.h) |
-| `30_velocity_observation` | 速度时效、融合观测、预测功率和轮速影子滤波 | [chassis_velocity_config.h](30_velocity_observation/chassis_velocity_config.h)、[predictive_power_config.h](30_velocity_observation/predictive_power_config.h)、[speed_observation_config.h](30_velocity_observation/speed_observation_config.h) |
+| `30_velocity_observation` | 速度时效、远端 IMU 安装/融合、预测功率和轮速影子滤波 | [chassis_velocity_config.h](30_velocity_observation/chassis_velocity_config.h)、[chassis_remote_imu_config.h](30_velocity_observation/chassis_remote_imu_config.h)、[predictive_power_config.h](30_velocity_observation/predictive_power_config.h)、[speed_observation_config.h](30_velocity_observation/speed_observation_config.h) |
 | `31_telemetry` | USB/RTT 遥测、标定 CSV 字段与缓冲、网页源码覆盖值 | [usb_telemetry_config.h](31_telemetry/usb_telemetry_config.h)、[rtt_telemetry_config.h](31_telemetry/rtt_telemetry_config.h)、[tuning_overrides.h](31_telemetry/tuning_overrides.h) |
 | `32_capture` | IMU 采集/CAN 收发与 J-Scope 影子观测 | [imu_capture_config.h](32_capture/imu_capture_config.h)、[shadow_scope_config.h](32_capture/shadow_scope_config.h) |
 | `90_board` | 板级绑定/可选设备、裁判旧协议与超时、日志启停 | [board_config.h](90_board/board_config.h)、[referee_config.h](90_board/referee_config.h)、[log_config.h](90_board/log_config.h) |
@@ -27,6 +27,8 @@
 ## 第一块板与第二块板怎样切换
 
 打开 [`00_flash/board_flash_config.h`](00_flash/board_flash_config.h)，修改 `BOARD_FLASH_TARGET`：`1` 为第一块主整车板，接收 CAN1 IMU 并输出 FireWater；`2` 为第二块底盘 IMU 板，只采集、控温和发送 CAN1 数据。`BOARD_FLASH_PROGRAMMER` 选 `1` 使用 DAP/OpenOCD，选 `2` 使用 J-Link/J-Flash；编译 profile 和两组输出目录也在同一文件内。
+
+主板预设 `CHASSIS_REMOTE_IMU_FUSION_ENABLE=1`，用第二板 IMU 做在线速度融合观测；第二板该项为 `0`。主板的 `CHASSIS_VELOCITY_FUSION_CALIBRATED=0` 只表示没有启用本地云台 IMU 标定路径，**不再表示远端融合关闭**。要回到纯采集，在该文件把 `BOARD_FLASH_1_CHASSIS_REMOTE_IMU_FUSION_ENABLE` 改为 `0` 后重新构建、烧录；CAN1 接收及原始 CSV 保留。普通手动 Make/CMake 的新开关默认仍为 `0`，需要显式传 `CHASSIS_REMOTE_IMU_FUSION_ENABLE=1`。
 
 在仓库根目录运行：
 
@@ -49,6 +51,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Act
 2. 调运动与手感：底盘尺寸/跟随模式在 `02_chassis`，云台限位在 `03_gimbal`，摇杆和键鼠增益在 `05_remote`。
 3. 调发射：摩擦轮目标转速和拨弹参数在 `04_shoot/shoot_config.h`，单发热量、预留弹数和射频规划在同目录 `heat_control_config.h`。
 4. 调功率/自旋：功率外环独立 PI 的 `kp`、`ki` 在 `20_chassis_power/chassis_power_config.c` 的 `chassis_outer_loop_config`；小陀螺参数在 `21_chassis_spin`。这些不是电机 PID 参数。
+5. 调第二板 IMU 融合：在 `30_velocity_observation/chassis_remote_imu_config.h` 配置传感器到底盘的单位四元数、底盘中心到芯片的固定三维偏移、滤波噪声与时间门槛。坐标为前/左/上，偏移单位 m；默认单位旋转、零偏移和噪声仅供试运行。完成实测、独立验证并冻结参数后，才把 `CHASSIS_REMOTE_IMU_CONFIG_VERIFIED` 改为 `1`；此标识只记录审核声明，不控制算法是否运行，也不代替验收。参见 [融合说明](../docs/chassis-velocity-fusion.md) 与 [实测手册](../docs/kalman-chassis-test-and-acceptance.md)。
 
 MPU6500 与旧 BMI088 温控 PID 在 `01_pid/pid_config.c` 中分别命名，当前 A 板使用 MPU6500；温度目标和 IMU 安装参数在 `92_imu/imu_config.h`。
 
@@ -80,4 +83,4 @@ cmake --build build/cmake-follow-gimbal -j8
 
 底盘在线调参的启动恢复优先级从高到低为：有效且模式匹配的 Flash 保存值 → 启用且模式匹配的 `31_telemetry/tuning_overrides.h` → 普通配置默认值。在线调参修改运行副本；修改默认值不会自动清除已有 Flash 参数。网页“同步源码”写入 `31_telemetry/tuning_overrides.h`，重新编译烧录后才成为启动覆盖值，也不会自动替代已有有效 Flash 记录。
 
-Make 和 CMake 会包含各编号子目录，并按速度/力控模式选择配置源文件。原 `Inc/` 和 `modules/` 中的同名配置头仅作兼容转发，实际参数以本目录为准。协议常量、寄存器定义、数学换算、算法实现，以及 Cube/HAL/FreeRTOS 配置保留原模块；融合实测标定头仍从对应构建目录提供。
+Make 和 CMake 会包含各编号子目录，并按速度/力控模式选择配置源文件。原 `Inc/` 和 `modules/` 中的同名配置头仅作兼容转发，实际参数以本目录为准。协议常量、寄存器定义、数学换算、算法实现，以及 Cube/HAL/FreeRTOS 配置保留原模块；可选本地云台融合的实测标定头仍从对应构建目录提供，固定底盘远端 IMU 使用上述独立配置文件。

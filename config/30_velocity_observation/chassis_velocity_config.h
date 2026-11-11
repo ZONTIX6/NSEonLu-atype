@@ -9,7 +9,9 @@
 
 /* 融合开关由构建选项提供，不在此重复定义：
  * CHASSIS_VELOCITY_FUSION_ENABLE：默认 0 关闭，1 开启速度融合/观察路径；要求 ONE_BOARD 和速度后端。
- * CHASSIS_VELOCITY_FUSION_CALIBRATED：默认 0 走未标定观察路径；1 使用实测标定配置，必须同时 ENABLE=1。
+ * CHASSIS_VELOCITY_FUSION_CALIBRATED：0 关闭本地云台融合，1 使用本地实测标定，必须同时 ENABLE=1。
+ * 远端固定底盘IMU另用 CHASSIS_REMOTE_IMU_FUSION_ENABLE=1（仍保持 CALIBRATED=0）；
+ * 两条融合路径都未启用时，ENABLE=1只发布未标定轮速观察。
  * 用 make ... CHASSIS_VELOCITY_FUSION_ENABLE=1 或 CMake 的 -D 同名参数切换；
  * CALIBRATED 同理。标定头从对应 build 目录加载，切换时使用独立构建目录。
  * ENABLE 还决定数值计算文件的 -fno-fast-math 选项，因此不能只在头文件额外定义开关。 */

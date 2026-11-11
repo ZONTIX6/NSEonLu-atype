@@ -161,6 +161,7 @@ modules/algorithm/power_model.c \
 modules/algorithm/chassis_kinematics.c \
 modules/algorithm/chassis_velocity.c \
 modules/algorithm/chassis_velocity_fusion.c \
+modules/algorithm/chassis_remote_fusion.c \
 modules/algorithm/chassis_velocity_center.c \
 modules/algorithm/chassis_gimbal_imu.c \
 modules/algorithm/chassis_spin.c \
@@ -261,9 +262,13 @@ $(error CHASSIS_CONTROL_MODE must be 0 or 1)
 endif
 CHASSIS_VELOCITY_FUSION_ENABLE ?= 0
 CHASSIS_VELOCITY_FUSION_CALIBRATED ?= 0
+CHASSIS_REMOTE_IMU_FUSION_ENABLE ?= 0
 IMU_CAPTURE_ONLY ?= 0
 IMU_CAPTURE_CAN_TX_ENABLE ?= 0
 CHASSIS_IMU_CAN_RX_ENABLE ?= 0
+ifeq ($(filter $(CHASSIS_REMOTE_IMU_FUSION_ENABLE),0 1),)
+$(error CHASSIS_REMOTE_IMU_FUSION_ENABLE must be 0 or 1)
+endif
 ifeq ($(filter $(IMU_CAPTURE_ONLY),0 1),)
 $(error IMU_CAPTURE_ONLY must be 0 or 1)
 endif
@@ -424,7 +429,7 @@ OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
 NUMERIC_SOURCES := $(filter modules/chassis_force_calibration/% modules/chassis_force/% modules/chassis_power/% modules/algorithm/power_model.c modules/algorithm/chassis_power_% modules/algorithm/chassis_spin.c modules/motor/DJImotor/% modules/telemetry/chassis_force_telemetry.c modules/telemetry/force_calibration_protocol.c application/runtime/force_calibration_app.c application/chassis/% application/board/board_chassis_force.c application/board/board_force_calibration.c application/cmd/robot_cmd.c,$(C_SOURCES))
 NUMERIC_SOURCES += $(filter modules/predictive_power/%,$(C_SOURCES))
 NUMERIC_SOURCES += $(filter config/%,$(C_SOURCES))
-NUMERIC_SOURCES += modules/algorithm/chassis_velocity_fusion.c \
+NUMERIC_SOURCES += modules/algorithm/chassis_velocity_fusion.c modules/algorithm/chassis_remote_fusion.c \
                    modules/algorithm/chassis_velocity_center.c modules/algorithm/chassis_gimbal_imu.c
 ifeq ($(CHASSIS_VELOCITY_FUSION_ENABLE),1)
 NUMERIC_SOURCES += modules/imu/ins_service.c modules/algorithm/chassis_velocity.c

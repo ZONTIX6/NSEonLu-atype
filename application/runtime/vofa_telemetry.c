@@ -3,6 +3,9 @@
 #if CHASSIS_IMU_CAN_RX_ENABLE
 #include "chassis_imu_can.h"
 #endif
+#if CHASSIS_REMOTE_IMU_FUSION_ENABLE
+#include "../../config/30_velocity_observation/chassis_remote_imu_config.h"
+#endif
 
 #if VOFA_TELEMETRY_ENABLE
 #include "usart.h"
@@ -185,6 +188,13 @@ void VofaTelemetrySendMeasurement(const USBTelemetrySample_s *sample,
 #endif
 #if CHASSIS_IMU_CAN_RX_ENABLE
         | 32768U
+#endif
+#if CHASSIS_REMOTE_IMU_FUSION_ENABLE
+        /* Mode/provenance bits, not sample validity or precise synchronization. */
+        | 65536U | 131072U
+#if CHASSIS_REMOTE_IMU_CONFIG_VERIFIED
+        | 262144U
+#endif
 #endif
         ;
 

@@ -12,7 +12,7 @@
 
 在 [config/90_board/board_config.h](../config/90_board/board_config.h) 中修改 `VOFA_TELEMETRY_MODE` 后，正常编译烧录即可切换协议。构建命令也可显式覆盖该宏。力控模式、裁判使用 UART7 或 UART7 接有辅助设备时，默认关闭 VOFA+ 输出。USB 遥测可同时开启，也可用 `USB_TELEMETRY_ENABLE=0` 单独运行无线遥测。[A 板串口接线](atype-integration.md#接线)
 
-当前推荐两块 A 板通过 **CAN1** 传送底盘 IMU，主板将四轮、命令、功率和远端 IMU 汇总到 **一个 VOFA+ 窗口、一份 CSV**。第二块板刚性固定在底盘、尽量靠近几何中心。
+当前推荐两块 A 板通过 **CAN1** 传送底盘 IMU，主板在线运行远端 IMU 与轮速的卡尔曼速度观测，并将四轮、命令、功率、远端 IMU 和融合结果汇总到 **一个 VOFA+ 窗口、一份 CSV**。第二块板刚性固定在底盘、尽量靠近几何中心；融合结果仅观测，不参与底盘控制。
 
 日常切换使用 [`config/00_flash/board_flash_config.h`](../config/00_flash/board_flash_config.h)：`BOARD_FLASH_TARGET=1` 选择第一块主整车板，`2` 选择第二块底盘 IMU 板。两组编译参数、输出目录及下载器集中在该文件；下面的脚本读取当前选择并执行：
 
@@ -28,20 +28,28 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Act
 第一块主底盘/云台板的手动构建命令：
 
 ```powershell
-make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-can1-main CHASSIS_IMU_CAN_RX_ENABLE=1 CHASSIS_VELOCITY_FUSION_ENABLE=1 CHASSIS_VELOCITY_FUSION_CALIBRATED=0 VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=1
+make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-can1-main ONE_BOARD=1 CHASSIS_CONTROL_MODE=0 CHASSIS_IMU_CAN_RX_ENABLE=1 CHASSIS_VELOCITY_FUSION_ENABLE=1 CHASSIS_REMOTE_IMU_FUSION_ENABLE=1 CHASSIS_VELOCITY_FUSION_CALIBRATED=0 VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=1
 ```
 
-主板输出 schema 3 的 72 列，`I0=3`、`I63=0`、`I64=2`，`I5` bit 15 表示已选择远端 CAN IMU。`I33`–`I45` 只取第二块板的 IMU；缺片组不更新样本，最后一份完整样本超龄或源无效时标无效，不退回本地云台 IMU。四轮有效时状态为 `UNCALIBRATED`，速度估计仍来自轮速。
+主板输出 schema 3 的 72 列，`I0=3`、`I63=0`、`I64=2`，`I5` bit 15 表示已选择远端 CAN IMU，bit 16/17 表示开启远端融合并使用接收端估计时间。`I33`–`I45` 只取第二块板的 IMU；缺片组不更新样本，最后一份完整样本超龄或源无效时标无效，不退回本地云台 IMU。只有 `I6=9` 且 bit 3 有效时才是融合输出；拒绝、预热或远端失效时，四轮有效则退回轮速。
 
 第二块底盘 IMU 板只采样、控温并经 CAN1 发送，关闭本板 VOFA 和 USB 遥测：
 
 ```powershell
-make -j8 PROFILE=atype-vehicle BUILD_DIR=build/imu-can1-sender IMU_CAPTURE_ONLY=1 IMU_CAPTURE_CAN_TX_ENABLE=1 VOFA_TELEMETRY_ENABLE=0 USB_TELEMETRY_ENABLE=0 CHASSIS_VELOCITY_FUSION_ENABLE=0
+make -j8 PROFILE=atype-vehicle BUILD_DIR=build/imu-can1-sender IMU_CAPTURE_ONLY=1 IMU_CAPTURE_CAN_TX_ENABLE=1 VOFA_TELEMETRY_ENABLE=0 USB_TELEMETRY_ENABLE=0 CHASSIS_VELOCITY_FUSION_ENABLE=0 CHASSIS_REMOTE_IMU_FUSION_ENABLE=0
 ```
 
-该模式不初始化电机、底盘、云台或遥控，不运行整车速度融合。将两份固件分别烧入对应板，第二块板无需连接 VOFA+。远端 IMU 当前用于统一记录，**尚未输入主板的速度融合器或控制回路**；不能把底盘 IMU 数据套入原有云台杆臂补偿算法。
+该模式不初始化电机、底盘、云台或遥控，不运行整车速度融合。将两份固件分别烧入对应板，第二块板无需连接 VOFA+；在线融合运行在主板。
 
-本路线不要求云台杆臂实测，也不提供两板硬件同步。若另行验证主板原有的云台 IMU 融合路径，应关闭远端接收，提供目标车实测的 `chassis_velocity_fusion_calibration.h`，再设置 `CHASSIS_VELOCITY_FUSION_CALIBRATED=1`；不能使用 `tests/.../stubs` 的合成参数进行实车标定。[现有观测器的标定字段与读取方式](chassis-velocity-fusion.md)
+本路线使用 [远端 IMU 配置](../config/30_velocity_observation/chassis_remote_imu_config.h) 的固定安装旋转、芯片偏移、噪声和时间门槛，不依赖云台编码器。默认单位旋转与零偏移是名义安装，`CHASSIS_REMOTE_IMU_CONFIG_VERIFIED=0` 对应 bit 18 为 0；配置经实测审核后才改为 1。该位不会阻止算法运行，也不证明精度通过。两板没有硬件同步，`CALIBRATED=0` 只表示关闭本地云台标定路径。[参数、时间方法和诊断](chassis-velocity-fusion.md)
+
+需要纯采集回退时，在两板配置中把 `BOARD_FLASH_1_CHASSIS_REMOTE_IMU_FUSION_ENABLE` 改为 `0` 后重新构建、烧录；手动构建可使用独立目录：
+
+```powershell
+make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-can1-capture CHASSIS_IMU_CAN_RX_ENABLE=1 CHASSIS_VELOCITY_FUSION_ENABLE=1 CHASSIS_REMOTE_IMU_FUSION_ENABLE=0 CHASSIS_VELOCITY_FUSION_CALIBRATED=0 VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=1
+```
+
+若另行验证主板原有的本地云台 IMU 融合路径，必须关闭远端接收及远端融合，提供目标车实测的 `chassis_velocity_fusion_calibration.h`，再设置 `CHASSIS_VELOCITY_FUSION_CALIBRATED=1`；不使用 `tests/.../stubs` 的合成参数代替实车标定。
 
 FireWater schema 2/3 均替换原有 38 列功率测量格式，不能沿用旧列名；JustFloat 的 19 路格式保持兼容。不接 CAN 时仍可使用文末的[可选：独立双 CSV 采集](#可选独立双-csv-采集)。
 
@@ -75,7 +83,7 @@ FireWater schema 2/3 均替换原有 38 列功率测量格式，不能沿用旧�
 1. 连接方式选 **SerialPort**，选择主板调试器的虚拟 COM 号，设为 **115200、8 数据位、无校验、1 停止位、无流控**。CAN1 路线只使用这一个接收通道。
 2. 按固件档位选择 **JustFloat** 或 **FireWater**，再打开串口。右侧数据栏以 `I0`、`I1` 等显示通道，点击通道名可重命名。FireWater 模式下，在字节接收区用字符串显示（关闭 `Hex`），并在 `Rx` 设置里显示采样数据包，即可看到每组完整的逗号分隔数据。 [VOFA+ FireWater 协议](https://www.vofa.plus/docs/learning/dataengines/firewater/)
 3. 两板上电后先保持静止，等待 INS 完成启动标定。在 CAN1 路线确认 **`I0=3`、`I63=0`、`I64=2`、`I5` bit 15 为 1**，随后确认 bit 4 持续有效、`I65` 接近一组 CAN 发送周期且没有持续增长。`I65=-1` 表示尚无可报告的接收年龄。仅有 schema 和来源标记不能证明已收到有效 IMU。
-4. 从控件栏拖入「波形图」，右键在 Y 轴菜单勾选要看的通道。JustFloat 可对照 `I0` 和 `I4` 的左前轮实测/目标转速；FireWater 可先对照 `I21` 和 `I24` 的轮速反算/目标前向速度，并查看 `I40`–`I45` 的底盘 IMU 响应。CAN1 推荐构建尚无融合结果。标称 Δt 为 JustFloat `20 ms`、FireWater `80 ms`；实际间隔和缺帧由板端时间与发送序号判断。[VOFA+ 波形图操作](https://www.vofa.plus/docs/learning/widgets/wave/)
+4. 从控件栏拖入「波形图」，右键在 Y 轴菜单勾选要看的通道。JustFloat 可对照 `I0` 和 `I4` 的左前轮实测/目标转速；FireWater 先看 `I21/I24` 的轮速反算/目标速度和 `I40`–`I45` 的底盘 IMU 响应。远端融合配置须另确认 bit 16/17；待 `I6=9` 且 bit 3 为 1 后，用 `I27/I29`、`I28/I30` 比较融合与配对轮速，保留 `I11` 年龄。标称 Δt 为 JustFloat `20 ms`、FireWater `80 ms`；实际间隔和缺帧由板端时间与发送序号判断。[VOFA+ 波形图操作](https://www.vofa.plus/docs/learning/widgets/wave/)
 5. 采完后用左上角 **文件 → 保存数据** 将完整 **`I0`–`I71`** 另存为一份 `.csv`。切换固件档位或开启下一次测量前，先保存上一批，再清空采样缓冲区，分别命名文件。
 
 接收区可能按窗口宽度折行。即使 72 列在窗口里折行，每组在串口上仍只有一个行末换行，保存的 CSV 按组分行。
@@ -173,6 +181,9 @@ schema 3 的 `I33`–`I45` 始终来自远端第二板；远端失效时对应�
 | 13 | 供电配置为超电 | `1` 超电、`0` 直供；是构建配置，不代表电源在线 |
 | 14 | 独立 IMU 采集模式 | 与 `I63=1` 对应 |
 | 15 | 远端 CAN IMU 模式 | schema 3、`I64=2`；模式位本身不代表已接收有效数据 |
+| 16 | 远端 IMU 融合配置开启 | `CHASSIS_REMOTE_IMU_FUSION_ENABLE=1`；不是融合有效位 |
+| 17 | 使用接收端估计时间 | 远端融合按首片接收时间与源年龄估计采样时刻；不是两板同步或时间误差通过 |
+| 18 | 远端参数声明已实测审核 | `CHASSIS_REMOTE_IMU_CONFIG_VERIFIED=1`；默认 0，不控制算法是否运行，不代替精度验收 |
 
 主板本地观测的新鲜度上限为 20 ms，融合估计允许最多 60 ms。schema 3 的远端 IMU 单独要求源有效、完整组通过校验、发送时源年龄 `I66≤20 ms`，且已知年龄下界 `I33≤60 ms`；字段存在或模式位为 1 均不能代替 bit 4。保留的原始年龄可超过上限。无效测量填 0，年龄未知或不能表示时填 `-1`，应结合有效位区分真实零值。`I8` 逐轮检查在线、时间和数值，bit 0–3 与所有四轮数组使用同一轮序。
 
@@ -192,10 +203,11 @@ schema 3 的 `I33`–`I45` 始终来自远端第二板；远端失效时对应�
 | `7` | WARMUP | 等待中心补偿/融合历史 |
 | `8` | REJECTED | 姿态、中心补偿或滤波拒绝 |
 | `9` | FUSED | 观测已使用 IMU 融合 |
+| `10` | CONFIG_INVALID | 远端安装、滤波或时间配置不合法，融合不可用 |
 
-状态描述最后一次观测，是否仍新鲜必须看 `I5`。没有标定时，bit 3 不会置位，`I29`–`I32` 为 0；这不妨碍采集 `I13`–`I20` 和 `I33`–`I51` 的真实输入。
+状态描述最后一次观测，是否仍新鲜必须看 `I5`。远端融合不使用云台输入，bit 5 为 0 本身不阻止它进入 FUSED；原车驱动安全仍可能因本地 INS/yaw 故障停机。只有在关闭远端融合且未开启本地标定时，bit 3 才始终为 0、`I29`–`I32` 为 0。bit 18 为 0 的远端试运行仍可能融合，不能把 `CALIBRATED=0` 或“未审核”误读为纯轮速。
 
-CAN1 推荐构建中，`I6=2` 表示未标定的轮速估计，bit 3 为 0，`I29`–`I32` 为 0；收到有效远端 IMU 不会改变这一点。旧的独立 UART 采集模式仍输出 schema 2，其 `I6=-2`、`I63=1`，仅有 IMU 相关测量；详见文末可选路线。
+CAN1 纯采集构建（远端融合开关为 0）在四轮有效时仍为 `I6=2`，bit 3/16/17/18 为 0。推荐远端融合构建经历配对与预热后可为 `I6=9`；远端失效且四轮有效时保留轮速降级估计，四轮失效则整体估计无效。旧的独立 UART 采集模式仍输出 schema 2，其 `I6=-2`、`I63=1`，仅有 IMU 相关测量；详见文末可选路线。
 
 ### 时间、年龄与来源
 
@@ -205,7 +217,11 @@ schema 3 的 `I33 = 发送时源年龄 + (主板当前时间 − 本组首片接
 
 两板时钟没有同步。不要用主板 `I1/I2` 减源板 `I67/I68`，也不要把主板时间减 `I33` 当成同步后的精确样本时刻。主板本地样本及 schema 2 的本板样本才可按同一时钟，以本行时间减相应年龄还原 MCU 接收或读取完成时刻；这些时刻仍不同于设备内部采样时刻。各 INS 具有自己的导航参考系，源板导航系加速度也不能直接当作底盘前、右方向加速度。
 
-`I27`/`I28` 与 `I29`/`I30` 用于融合对应时刻的速度对照，估计时刻由 `I11` 还原；`I21`/`I22` 和原始 IMU 属于更新后的输入，各有自己的年龄。不能把整行所有量当成同时采样。估计减去配对轮速得到的是**后验差**，不是滤波器校正前的 innovation。
+远端融合用 `first_rx_tick_ms-source_age_ms` 在 32 项轮速历史中作有界配对/插值，源板时间用于中心补偿及滤波 dt，输出时间单独映射到主板时钟。重复源序号不重复更新、不刷新输出时刻；三点补偿每侧要求 15～30 ms，漏组形成约 40 ms 间隔时会重置并预热。异常时序、配对缺失、源重启及超龄也会拒绝或降级。
+
+`I27`/`I28` 与 `I29`/`I30` 用于融合对应时刻的速度对照，主板时间减 `I11` 还原输出时刻；远端融合得到的是主板时钟下的**估计**时刻，仍有未知传输和内部延迟。`I21`/`I22` 和 `I33`–`I45` 属于更新后的输入，各有自己的年龄，不一定是融合使用的中间样本。不能把整行所有量当成同时采样。估计减去配对轮速得到的是**后验差**，不是滤波器校正前的 innovation。
+
+配对跨度、源/接收步长、更新/重置计数等保留在 `chassis_fused_velocity.remote`，不占用新的 CSV 列。检查同一包是否重复融合、精确恢复时间和毫秒级延迟需要另行无停核记录；不能从 12.5 Hz CSV 的源序号跳变直接判断漏了几个 50 Hz CAN 组。
 
 ## CSV 采集与交付
 
@@ -218,26 +234,26 @@ schema 3 的 `I33 = 发送时源年龄 + (主板当前时间 − 本组首片接
 | 底盘、云台均静止 | 30–60 s | 零点、噪声与稳定性基线 |
 | 云台尽量保持固定，低速前进/后退及起停换向 | 30–60 s | 前向轮速符号、加速度响应与滞后 |
 | 云台尽量保持固定，低速左移/右移及起停换向 | 30–60 s | 横向轮速符号与响应 |
-| 低速自旋，分别记录两个方向 | 每个方向 20–30 s | 轮速与底盘 IMU 旋转响应、安装偏移影响 |
+| 零输出手推旋转；有动力时仅使用已验证受限配置，分别记录可执行的方向 | 每个方向 20–30 s | 轮速与底盘 IMU 旋转响应、安装偏移影响；默认自旋档不是低速档 |
 
 导出时保留完整 **`I0`–`I71`**、原有表头和 VOFA+ 时间列，不删除有效位、发送序号、来源、各年龄或拒绝组数，不用波形截图替代 CSV。可命名为 `CAN1_静止.csv`、`CAN1_前后起停.csv`、`CAN1_左右起停.csv`、`CAN1_正反自旋.csv`。提交 CSV 时一并说明两块板烧录的固件/提交号、完整构建命令、第二板安装轴向和芯片偏移、实际动作方向、地面与载荷，以及该段出现的抖动、延迟或拒绝计数增长。
 
 统一 CSV 表示主板在同一发送时刻汇总最新数据，不表示四轮与远端 IMU 同时采样。比较轮速与加速度时仍须保留各来源年龄、源样本序号和接收诊断，并考虑首片排队、传感器内部延迟与源板导航系方向。源序号可帮助识别同一样本被重复记录；拒绝组计数可帮助定位接收异常。
 
-这些数据用于初始噪声、符号、偏置、低频响应和融合参数分析。80 ms 输出是降采样，即使 CAN1 以 50 Hz 传输，也无法从该 CSV 逐次重放高频滤波更新或完整辨识 Q/R；需要精确重放时，须另外保留每个融合输入及其原始时间。当前远端数据尚未参与融合，实际车速误差和防滑效果还需要独立速度参考。
+这些数据用于初始噪声、符号、偏置、低频响应和融合参数分析。80 ms 输出是降采样，即使 CAN1 以 50 Hz 传输，也无法从该 CSV 逐次重放高频滤波更新或完整辨识 Q/R；需要精确重放时，须另外保留每个融合输入及其原始时间。实际车速误差仍需独立速度参考；融合尚未进入控制，不能凭曲线宣称防滑效果。[实测与验收步骤](kalman-chassis-test-and-acceptance.md)
 
 ## 可选：独立双 CSV 采集
 
 不接两板 CAN1 时，可保留原有的两板独立 UART7 记录方式。这是可选路线，输出 **schema 2、64 列**，需要两个独立接收通道与两份 CSV。主板构建：
 
 ```powershell
-make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-firewater CHASSIS_IMU_CAN_RX_ENABLE=0 VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=1 CHASSIS_VELOCITY_FUSION_ENABLE=1 CHASSIS_VELOCITY_FUSION_CALIBRATED=0
+make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-firewater CHASSIS_IMU_CAN_RX_ENABLE=0 CHASSIS_REMOTE_IMU_FUSION_ENABLE=0 VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=1 CHASSIS_VELOCITY_FUSION_ENABLE=1 CHASSIS_VELOCITY_FUSION_CALIBRATED=0
 ```
 
 第二块独立 IMU 板构建：
 
 ```powershell
-make -j8 PROFILE=atype-vehicle BUILD_DIR=build/imu-firewater IMU_CAPTURE_ONLY=1 IMU_CAPTURE_CAN_TX_ENABLE=0 VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=1 USB_TELEMETRY_ENABLE=0 CHASSIS_VELOCITY_FUSION_ENABLE=0
+make -j8 PROFILE=atype-vehicle BUILD_DIR=build/imu-firewater IMU_CAPTURE_ONLY=1 IMU_CAPTURE_CAN_TX_ENABLE=0 CHASSIS_REMOTE_IMU_FUSION_ENABLE=0 VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=1 USB_TELEMETRY_ENABLE=0 CHASSIS_VELOCITY_FUSION_ENABLE=0
 ```
 
 各自 UART7 接独立接收端，不把两个 TX 并接。主板 `I63=0`，`I33`–`I45` 来自本地云台 IMU；第二板 `I63=1`、`I6=-2`、`I5` bit 14 为 1，`I33`–`I45` 才是底盘 IMU。第二板的测量有效位仅使用 bit 0（采集快照）与 bit 4（IMU），底盘、轮速、云台和功率测量为 0、年龄为 `-1`、底盘模式为 `-1`。schema 2 没有 `I64`–`I71`。

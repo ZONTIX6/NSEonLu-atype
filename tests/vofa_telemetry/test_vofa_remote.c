@@ -6,6 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifndef CHASSIS_REMOTE_IMU_FUSION_ENABLE
+#define CHASSIS_REMOTE_IMU_FUSION_ENABLE 0
+#endif
+#ifndef CHASSIS_REMOTE_IMU_CONFIG_VERIFIED
+#define CHASSIS_REMOTE_IMU_CONFIG_VERIFIED 0
+#endif
+
 UART_HandleTypeDef huart7 = {.gState = HAL_UART_STATE_READY};
 static int32_t fields[72];
 static ChassisImuCanSnapshot_s remote;
@@ -33,6 +40,17 @@ HAL_StatusTypeDef HAL_UART_Transmit_IT(UART_HandleTypeDef *uart, const uint8_t *
         next = end + 1;
     }
     assert(next == row + length);
+    /* Configuration/estimated-time provenance is independent of sample validity. */
+#if CHASSIS_REMOTE_IMU_FUSION_ENABLE
+    assert((fields[5] & 196608) == 196608);
+#if CHASSIS_REMOTE_IMU_CONFIG_VERIFIED
+    assert(fields[5] & 262144);
+#else
+    assert(!(fields[5] & 262144));
+#endif
+#else
+    assert(!(fields[5] & 458752));
+#endif
     return HAL_OK;
 }
 
@@ -49,6 +67,7 @@ int main(void)
     assert(!(fields[5] & 16) && fields[33] == -1 && fields[65] == -1);
     assert(fields[34] == 0 && fields[35] == 0 && fields[36] == 0 && fields[40] == 0);
     assert(fields[66] == -1 && fields[69] == -1);
+    assert(!(fields[5] & 8));
 
     remote = (ChassisImuCanSnapshot_s){
         .available = true, .first_rx_tick_ms = 77, .last_rx_tick_ms = 79,
@@ -59,6 +78,19 @@ int main(void)
     };
     remote_usable = true;
     local.diagnostics.tick_ms = local.diagnostics.imu_tick_ms = 80;
+    local.diagnostics.wheel_online_mask = 15;
+    for (unsigned i = 0; i < 4; ++i) local.diagnostics.wheel_tick_ms[i] = 80;
+    local.wheel = (ChassisVelocity_s){.valid = true, .tick_ms = 80,
+        .vx_mps = .25f, .vy_mps = -.5f};
+    local.valid = true;
+    local.tick_ms = 60;
+    local.status = CHASSIS_VELOCITY_FUSED;
+    local.vx_mps = .5f;
+    local.vy_mps = -.75f;
+    local.paired_wheel_mps[0] = .125f;
+    local.paired_wheel_mps[1] = -.25f;
+    local.center_accel_n_mps2[0] = .5f;
+    local.center_accel_n_mps2[1] = -.75f;
     VofaTelemetrySendMeasurement(&sample, NULL, &local, 80);
     assert(fields[5] & 16);
     assert(fields[33] == 5 && fields[34] == 43981 && fields[35] == 4660);
@@ -68,12 +100,21 @@ int main(void)
     assert(fields[63] == 0 && fields[64] == 2 && fields[65] == 1 && fields[66] == 2);
     assert(fields[67] == 4660 && fields[68] == 22136 && fields[69] == 2);
     assert(fields[70] == 1 && fields[71] == 2);
+    assert((fields[5] & 12) == 12 && fields[6] == 9 && fields[11] == 20);
+    assert(fields[27] == 500 && fields[28] == -750);
+    assert(fields[29] == 125 && fields[30] == -250);
+    assert(fields[31] == 500 && fields[32] == -750);
 
     /* A fresh local sensor must not hide a stale or invalid remote source. */
     remote_usable = false;
     local.diagnostics.tick_ms = local.diagnostics.imu_tick_ms = 160;
+    for (unsigned i = 0; i < 4; ++i) local.diagnostics.wheel_tick_ms[i] = 160;
+    local.wheel.tick_ms = 160;
+    local.tick_ms = 99; /* Fresh wheels cannot make a 61 ms fused estimate fresh. */
     VofaTelemetrySendMeasurement(&sample, NULL, &local, 160);
     assert(!(fields[5] & 16) && fields[33] == 85 && fields[65] == 81);
+    assert(!(fields[5] & 12) && fields[11] == 61);
+    for (unsigned i = 27; i <= 32; ++i) assert(fields[i] == 0);
     for (unsigned i = 36; i <= 45; ++i) assert(fields[i] == 0);
     remote.sample.valid = false;
     remote.first_rx_tick_ms = remote.last_rx_tick_ms = 240;

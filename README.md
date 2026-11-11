@@ -10,6 +10,8 @@
 
 第一块主整车板与第二块底盘 IMU 板的日常切换，使用 [`config/00_flash/board_flash_config.h`](config/00_flash/board_flash_config.h)：`BOARD_FLASH_TARGET=1` 选择主板，`2` 选择 IMU 板；下载器、profile 和各自输出目录也在该文件内。
 
+主板预设开启 `CHASSIS_REMOTE_IMU_FUSION_ENABLE=1`：第二块固定底盘 IMU 经 CAN1 参与在线卡尔曼**速度观测**，结果和轮速一同由 UART7 输出；电机控制、PID、功控和安全门控仍使用原输入。安装旋转、芯片偏移与噪声参数见 [远端 IMU 配置](config/30_velocity_observation/chassis_remote_imu_config.h)，默认单位旋转、零偏移是名义安装，`CHASSIS_REMOTE_IMU_CONFIG_VERIFIED=0` 表示尚未实测审核。两板时钟未同步；融合运行不等于精度已验收。
+
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Show
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Build
@@ -61,6 +63,7 @@ node tools/usb-telemetry/serve.cjs
 | 云台限位和机械零点 | [03_gimbal/gimbal_config.h](config/03_gimbal/gimbal_config.h) |
 | 摩擦轮、拨弹和热量 | [04_shoot/shoot_config.h](config/04_shoot/shoot_config.h)、[heat_control_config.h](config/04_shoot/heat_control_config.h) |
 | 遥控器/键鼠手感 | [05_remote/remote_config.h](config/05_remote/remote_config.h) |
+| 第二板 IMU 融合安装、噪声与时间门槛 | [30_velocity_observation/chassis_remote_imu_config.h](config/30_velocity_observation/chassis_remote_imu_config.h) |
 
 开关取值和切换方式写在各配置项旁；完整分层目录、Make/CMake 示例和 Flash/源码优先级见 [配置目录说明](config/README.md)。
 
@@ -73,6 +76,7 @@ node tools/usb-telemetry/serve.cjs
 - [接线、CAN、单位、模块与安全条件](docs/atype-integration.md)
 - [验证结果和硬件验收清单](docs/atype-validation.md)
 - [整车平移速度融合观测、标定和验证](docs/chassis-velocity-fusion.md)
+- [卡尔曼底盘实车测试顺序与验收手册](docs/kalman-chassis-test-and-acceptance.md)
 - [底盘功率控制总览：模型、计算、分配与超级电容](docs/chassis-power-control.md)
 
 日常查数据和模式，打开“常用指针与宏速查”，用 `Ctrl+F` 搜中文用途、指针名、成员名或模式名即可。表中列出常用指针访问示例、编译模式开关，以及底盘、云台、发射、摩擦轮和拨弹的运行时模式值与赋值字段。宏的源码默认值不等于构建覆盖后或当前固件的实际值。字段的完整定义另见类型索引。

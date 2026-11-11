@@ -9,7 +9,7 @@
 #include <string.h>
 
 #if CHASSIS_IMU_CAN_RX_ENABLE && (!defined(ONE_BOARD) || CHASSIS_CONTROL_MODE != CHASSIS_CONTROL_SPEED || !CHASSIS_VELOCITY_FUSION_ENABLE || CHASSIS_VELOCITY_FUSION_CALIBRATED || !VOFA_TELEMETRY_ENABLE || VOFA_TELEMETRY_MODE != 1)
-#error CHASSIS_IMU_CAN_RX_ENABLE requires ONE_BOARD speed control, uncalibrated velocity observation and FireWater.
+#error CHASSIS_IMU_CAN_RX_ENABLE requires ONE_BOARD speed control, velocity observation without local gimbal calibration and FireWater.
 #endif
 
 static CANInstance *endpoint;

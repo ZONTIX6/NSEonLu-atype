@@ -80,9 +80,11 @@ class BoardFlashTests(unittest.TestCase):
         cases = (
             (main, {"IMU_CAPTURE_ONLY": "0", "IMU_CAPTURE_CAN_TX_ENABLE": "0",
                     "CHASSIS_IMU_CAN_RX_ENABLE": "1", "CHASSIS_VELOCITY_FUSION_ENABLE": "1",
+                    "CHASSIS_REMOTE_IMU_FUSION_ENABLE": "1",
                     "VOFA_TELEMETRY_ENABLE": "1", "USB_TELEMETRY_ENABLE": "1"}),
             (imu, {"IMU_CAPTURE_ONLY": "1", "IMU_CAPTURE_CAN_TX_ENABLE": "1",
                    "CHASSIS_IMU_CAN_RX_ENABLE": "0", "CHASSIS_VELOCITY_FUSION_ENABLE": "0",
+                   "CHASSIS_REMOTE_IMU_FUSION_ENABLE": "0",
                    "VOFA_TELEMETRY_ENABLE": "0", "USB_TELEMETRY_ENABLE": "0"}),
         )
         for selected, role in cases:
