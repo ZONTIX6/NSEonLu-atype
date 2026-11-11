@@ -158,6 +158,9 @@ modules/telemetry/chassis_power_capture.c \
 modules/algorithm/power_model.c \
 modules/algorithm/chassis_kinematics.c \
 modules/algorithm/chassis_velocity.c \
+modules/algorithm/chassis_velocity_fusion.c \
+modules/algorithm/chassis_velocity_center.c \
+modules/algorithm/chassis_gimbal_imu.c \
 modules/algorithm/chassis_spin.c \
 modules/algorithm/chassis_power_budget.c \
 modules/algorithm/chassis_power_outer_loop.c \
@@ -182,6 +185,7 @@ modules/alarm/buzzer.c \
 application/gimbal/gimbal.c \
 application/chassis/chassis.c \
 application/chassis/chassis_init.c \
+application/chassis/chassis_velocity_observer.c \
 application/chassis/chassis_tuning.c \
 application/shoot/shoot.c \
 application/cmd/robot_cmd.c \
@@ -251,6 +255,18 @@ C_DEFS =  \
 CHASSIS_CONTROL_MODE ?= 0
 ifeq ($(filter $(CHASSIS_CONTROL_MODE),0 1),)
 $(error CHASSIS_CONTROL_MODE must be 0 or 1)
+endif
+CHASSIS_VELOCITY_FUSION_ENABLE ?= 0
+CHASSIS_VELOCITY_FUSION_CALIBRATED ?= 0
+ifneq ($(CHASSIS_VELOCITY_FUSION_ENABLE),0)
+ifneq ($(CHASSIS_VELOCITY_FUSION_ENABLE),1)
+$(error CHASSIS_VELOCITY_FUSION_ENABLE must be 0 or 1)
+endif
+endif
+ifneq ($(CHASSIS_VELOCITY_FUSION_CALIBRATED),0)
+ifneq ($(CHASSIS_VELOCITY_FUSION_CALIBRATED),1)
+$(error CHASSIS_VELOCITY_FUSION_CALIBRATED must be 0 or 1)
+endif
 endif
 VOFA_TELEMETRY_MODE ?= 0
 ifneq ($(VOFA_TELEMETRY_MODE),0)
@@ -388,6 +404,11 @@ LDFLAGS += $(ATYPE_MODULE_LDFLAGS)
 OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
 NUMERIC_SOURCES := $(filter modules/chassis_force_calibration/% modules/chassis_force/% modules/chassis_power/% modules/algorithm/power_model.c modules/algorithm/chassis_power_% modules/algorithm/chassis_spin.c modules/motor/DJImotor/% modules/telemetry/chassis_force_telemetry.c modules/telemetry/force_calibration_protocol.c application/runtime/force_calibration_app.c application/chassis/% application/board/board_chassis_force.c application/board/board_force_calibration.c application/cmd/robot_cmd.c,$(C_SOURCES))
 NUMERIC_SOURCES += $(filter modules/predictive_power/%,$(C_SOURCES))
+NUMERIC_SOURCES += modules/algorithm/chassis_velocity_fusion.c \
+                   modules/algorithm/chassis_velocity_center.c modules/algorithm/chassis_gimbal_imu.c
+ifeq ($(CHASSIS_VELOCITY_FUSION_ENABLE),1)
+NUMERIC_SOURCES += modules/imu/ins_service.c modules/algorithm/chassis_velocity.c
+endif
 NUMERIC_SOURCES += modules/telemetry/chassis_speed_capture.c application/runtime/chassis_speed_observation.c
 NUMERIC_SOURCES += application/runtime/shadow_jscope.c
 NUMERIC_SOURCES += application/runtime/robot_telemetry.c application/runtime/vofa_telemetry.c \

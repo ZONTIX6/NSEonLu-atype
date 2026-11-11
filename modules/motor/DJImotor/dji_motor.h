@@ -46,7 +46,7 @@ typedef struct
     int32_t total_round; // 总圈数,注意方向
     uint32_t rx_sequence;
     uint32_t rx_tick_ms;
-#if CHASSIS_FORCE_CALIBRATION_ENABLE || CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE
+#if CHASSIS_FORCE_CALIBRATION_ENABLE || CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE || CHASSIS_VELOCITY_FUSION_ENABLE
     int16_t raw_rpm, raw_current;
     uint32_t rx_cycles;
 #endif

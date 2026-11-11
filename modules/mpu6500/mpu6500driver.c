@@ -245,6 +245,8 @@ bool MPU6500Read(MPU6500Instance *instance,IMUSample_s *sample)
     if(instance!=&device || !device.ready) return false;
     uint8_t raw[14];
     if(mpu_read_bytes(MPU6500_ACCEL_XOUT_H,raw,14)!=0) return false;
+    sample->rx_cycles=DWT_GetCycleCount();
+    sample->tick_ms=HAL_GetTick();
     for(unsigned axis=0;axis<3;++axis) {
         int16_t accel=(int16_t)((uint16_t)raw[axis*2]<<8 | raw[axis*2+1]);
         int16_t gyro=(int16_t)((uint16_t)raw[axis*2+8]<<8 | raw[axis*2+9]);
@@ -252,6 +254,6 @@ bool MPU6500Read(MPU6500Instance *instance,IMUSample_s *sample)
         sample->gyro_rad_s[axis]=gyro*MPU6500_GYRO_1000_SEN;
     }
     sample->temperature_c=MPU6500Temperature(raw[6],raw[7]);
-    sample->tick_ms=HAL_GetTick();sample->valid=true;
+    sample->valid=true;
     return true;
 }

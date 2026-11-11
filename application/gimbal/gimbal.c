@@ -18,6 +18,23 @@ static Subscriber_t *gimbal_sub;                  // cmd控制消息订阅者
 static Gimbal_Upload_Data_s gimbal_feedback_data; // 回传给cmd的云台状态信息
 static Gimbal_Ctrl_Cmd_s gimbal_cmd_recv;         // 来自cmd的控制信息
 
+#if CHASSIS_VELOCITY_FUSION_ENABLE
+bool GimbalGetEncoderSnapshot(GimbalEncoderSample_s samples[2])
+{
+    if (!samples || !yaw_motor || !pitch_motor) return false;
+    DJIMotorInstance *const motors[2]={yaw_motor,pitch_motor};
+    bool valid=true;
+    taskENTER_CRITICAL();
+    for (unsigned i=0;i<2;++i) {
+        const DJI_Motor_Measure_s *measure=&motors[i]->measure;
+        valid &= measure->rx_sequence!=0 && DaemonIsOnline(motors[i]->daemon) && measure->ecd<8192U;
+        samples[i]=(GimbalEncoderSample_s){.tick_ms=measure->rx_tick_ms,
+            .cycles=measure->rx_cycles,.ecd=measure->ecd,.rpm=measure->raw_rpm};
+    }
+    taskEXIT_CRITICAL();
+    return valid;
+}
+#endif
 
 void GimbalInit()
 {   

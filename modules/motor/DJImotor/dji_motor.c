@@ -244,6 +244,12 @@ static void DecodeDJIMotor(CANInstance *_instance)
     DJIMotorInstance *motor = (DJIMotorInstance *)_instance->id;
     DJI_Motor_Measure_s *measure = &motor->measure; // measure要多次使用,保存指针减小访存开销
 
+#if CHASSIS_VELOCITY_FUSION_ENABLE
+    if (_instance->rx_len!=8U) return;
+    const uint32_t received_tick=HAL_GetTick();
+    const uint32_t received_cycles=DWT_GetCycleCount();
+#endif
+
     DaemonReload(motor->daemon);
     motor->dt = DWT_GetDeltaT(&motor->feed_cnt);
 
@@ -263,12 +269,20 @@ static void DecodeDJIMotor(CANInstance *_instance)
     else if (measure->ecd - measure->last_ecd < -4096)
         measure->total_round++;
     measure->total_angle = measure->total_round * 360 + measure->angle_single_round;
-    measure->rx_tick_ms = HAL_GetTick();
+#if CHASSIS_VELOCITY_FUSION_ENABLE
+    measure->rx_tick_ms=received_tick;
+#else
+    measure->rx_tick_ms=HAL_GetTick();
+#endif
     ++measure->rx_sequence;
-#if CHASSIS_FORCE_CALIBRATION_ENABLE || CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE
+#if CHASSIS_FORCE_CALIBRATION_ENABLE || CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE || CHASSIS_VELOCITY_FUSION_ENABLE
     measure->raw_rpm=(int16_t)((uint16_t)rxbuff[2]<<8|rxbuff[3]);
     measure->raw_current=(int16_t)((uint16_t)rxbuff[4]<<8|rxbuff[5]);
+#if CHASSIS_VELOCITY_FUSION_ENABLE
+    measure->rx_cycles=received_cycles;
+#else
     measure->rx_cycles=DWT_GetCycleCount();
+#endif
 #endif
 #if CHASSIS_FORCE_CALIBRATION_ENABLE
     if(feedback_observer) feedback_observer(motor,measure->raw_rpm,measure->raw_current,measure->rx_cycles);

@@ -9,6 +9,7 @@ static uint8_t registers[128],sample_bytes[14];
 static unsigned transactions,last_length;
 static bool fail_transfer;
 uint32_t HAL_GetTick(void) {return 123;}
+uint32_t DWT_GetCycleCount(void) {return 7000U+transactions;}
 void DWT_Delay(float seconds) {(void)seconds;}
 SPIInstance *SPIRegister(SPI_Init_Config_s *config) {(void)config;return &spi;}
 BSP_SPI_Result_e SPITransferChecked(SPIInstance *instance,const uint8_t *tx,uint8_t *rx,uint16_t length,uint32_t timeout)
@@ -47,11 +48,12 @@ int main(int argc,char **argv)
     unsigned before=transactions;
     assert(MPU6500Read(device,&sample));
     assert(transactions==before+1 && last_length==15 && sample.valid && sample.tick_ms==123);
+    assert(sample.rx_cycles==7000U+before+1U);
     assert(fabsf(sample.accel_m_s2[0]-9.8f)<.01f && sample.accel_m_s2[1]<0);
     assert(fabsf(sample.gyro_rad_s[0]-.5321126f)<.00001f && sample.gyro_rad_s[1]<0);
     assert(sample.temperature_c<0 && sample.temperature_c>-20);
     fail_transfer=true;
-    assert(!MPU6500Read(device,&sample) && !sample.valid);
+    assert(!MPU6500Read(device,&sample) && !sample.valid && sample.rx_cycles==0);
     assert(!MPU6500Read(NULL,&sample));assert(!MPU6500Read(device,NULL));
     puts("PASS: MPU6500 single-CS 14-byte samples, units and failed sample invalidation");
 }

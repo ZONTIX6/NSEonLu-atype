@@ -39,6 +39,9 @@ extern ChassisPowerBudgetConfig_s chassis_budget_config;
 extern ChassisPowerOuterLoopConfig_s chassis_outer_loop_config;
 extern ChassisPower_Init_Config_s power_module_config;
 void ChassisTuningRegister(void);
+#if CHASSIS_VELOCITY_FUSION_ENABLE
+void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config);
+#endif
 bool ChassisTuningApplyPower(const float *values);
 bool ChassisTuningApplySpin(const float *values);
 

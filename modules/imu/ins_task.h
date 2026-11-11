@@ -46,6 +46,20 @@ typedef struct {attitude_t attitude; uint32_t tick_ms; bool valid, has_sample;} 
 bool INSServiceConfigure(const INSServiceConfig_s *config);
 bool INSGetSnapshot(INSSnapshot_s *snapshot);
 
+#if CHASSIS_VELOCITY_FUSION_ENABLE
+typedef struct
+{
+    float quaternion[4]; /* Unit [w,x,y,z], sensor frame to INS navigation frame. */
+    float accel_n_mps2[3]; /* Gravity removed at the sensor, before any lever correction. */
+    float gyro_sensor_radps[3];
+    uint32_t tick_ms, cycles; /* Paired read completion time, not sensor conversion time. */
+    uint32_t sequence;
+    bool valid;
+} INSMotionSnapshot_s;
+
+bool INSGetMotionSnapshot(INSMotionSnapshot_s *snapshot);
+#endif
+
 typedef struct
 {
     float q[4]; // 四元数估计值

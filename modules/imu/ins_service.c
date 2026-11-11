@@ -50,6 +50,10 @@ static INSServiceConfig_s service_config;
 static bool service_configured;
 static attitude_t published_attitude;
 static uint32_t sample_tick;
+#if CHASSIS_VELOCITY_FUSION_ENABLE
+static uint32_t sample_cycles;
+static INSMotionSnapshot_s published_motion;
+#endif
 static void IMU_Temperature_Update(float duty)
 {
     if(service_configured) service_config.heat(service_config.context,duty);
@@ -73,6 +77,28 @@ bool INSGetSnapshot(INSSnapshot_s *output)
     INS_UNLOCK();
     return output->valid;
 }
+#if CHASSIS_VELOCITY_FUSION_ENABLE
+bool INSGetMotionSnapshot(INSMotionSnapshot_s *output)
+{
+    if(output==NULL) return false;
+    INS_LOCK();
+    *output=published_motion;
+    output->valid=output->valid && (uint32_t)(HAL_GetTick()-output->tick_ms)<=10U;
+    INS_UNLOCK();
+    return output->valid;
+}
+#endif
+
+static void InvalidateINS(void)
+{
+    INS_LOCK();
+    ins_healthy=false;
+#if CHASSIS_VELOCITY_FUSION_ENABLE
+    published_motion.valid=false;
+#endif
+    INS_UNLOCK();
+}
+
 static bool ReadSample(IMUSample_s *sample)
 {
     if(!service_configured || !service_config.sample(service_config.context,sample) || !sample->valid ||
@@ -107,6 +133,29 @@ static void IMU_Param_Correction(IMU_Param_t *param, float gyro[3], float accel[
 static void mpu_get_data(void);
 void EarthFrameToBodyFrame(const float *vecEF, float *vecBF, float *q);
 void BodyFrameToEarthFrame(const float *vecBF, float *vecEF, float *q);
+
+#if CHASSIS_VELOCITY_FUSION_ENABLE
+static bool BuildMotionSnapshot(const float gravity_n[3],const float gyro_rad[3],INSMotionSnapshot_s *motion)
+{
+    float q_norm_sq=0.0f;
+    for(unsigned i=0;i<4;++i) q_norm_sq+=INS.q[i]*INS.q[i];
+    if(!isfinite(q_norm_sq) || q_norm_sq<.9f || q_norm_sq>1.1f) return false;
+    const float q_inverse_norm=1.0f/sqrtf(q_norm_sq);
+    for(unsigned i=0;i<4;++i) motion->quaternion[i]=INS.q[i]*q_inverse_norm;
+
+    /* Rotate before removing gravity, without filtering across sensor orientations. */
+    BodyFrameToEarthFrame(INS.Accel,motion->accel_n_mps2,motion->quaternion);
+    for(unsigned i=0;i<3;++i) {
+        motion->accel_n_mps2[i]-=gravity_n[i];
+        if(!isfinite(motion->accel_n_mps2[i]) || !isfinite(gyro_rad[i])) return false;
+        motion->gyro_sensor_radps[i]=gyro_rad[i];
+    }
+    motion->tick_ms=sample_tick;
+    motion->cycles=sample_cycles;
+    motion->valid=true;
+    return true;
+}
+#endif
 /**
  * @brief 温度控制
  *
@@ -144,6 +193,9 @@ static void mpu_get_data(void)
         mpu_data.Gyro[axis]=sample.gyro_rad_s[axis]-mpu_data.GyroOffset[axis];
     }
     mpu_data.Temperature=sample.temperature_c;sample_tick=sample.tick_ms;
+#if CHASSIS_VELOCITY_FUSION_ENABLE
+    sample_cycles=sample.rx_cycles;
+#endif
 }
 
 /**
@@ -339,7 +391,7 @@ void INS_Task(void)
     {
         mpu_get_data();
         if(!sample_valid || !isfinite(dt) || dt<=0 || dt>0.02f) {
-            ins_healthy=false;IMU_Temperature_Update(0);return;
+            InvalidateINS();IMU_Temperature_Update(0);return;
         }
 
         INS.Accel[0] = mpu_data.Accel[0];
@@ -383,8 +435,11 @@ void INS_Task(void)
         MPU6500ExportSample(gyro_rad,ekf_ypr,INS.Gyro,vehicle_ypr);
         INS.Yaw=vehicle_ypr[0];INS.Pitch=vehicle_ypr[1];INS.Roll=vehicle_ypr[2];
         INS.YawTotalAngle = QEKF_INS.YawTotalAngle;
-        ins_healthy=isfinite(INS.YawTotalAngle) && isfinite(INS.Pitch) && isfinite(INS.Roll);
-        if(ins_healthy) {
+        if(isfinite(INS.YawTotalAngle) && isfinite(INS.Pitch) && isfinite(INS.Roll)) {
+#if CHASSIS_VELOCITY_FUSION_ENABLE
+            INSMotionSnapshot_s motion;
+            const bool motion_valid=BuildMotionSnapshot(gravity,gyro_rad,&motion);
+#endif
             INS_LOCK();
             published_attitude=(attitude_t){.Roll=INS.Roll,.Pitch=INS.Pitch,.Yaw=INS.Yaw,
                 .YawTotalAngle=INS.YawTotalAngle};
@@ -392,8 +447,17 @@ void INS_Task(void)
             memcpy(published_attitude.Accel,INS.Accel,sizeof INS.Accel);
             ins_sample_tick=sample_tick;
             ins_has_sample=true;
+            ins_healthy=true;
+#if CHASSIS_VELOCITY_FUSION_ENABLE
+            if(motion_valid) {
+                motion.sequence=published_motion.sequence+1U;
+                published_motion=motion;
+            } else {
+                published_motion.valid=false;
+            }
+#endif
             INS_UNLOCK();
-        } else {IMU_Temperature_Update(0);return;}
+        } else {InvalidateINS();IMU_Temperature_Update(0);return;}
 
     }
 
