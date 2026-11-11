@@ -14,9 +14,6 @@
 #ifndef LOG_OUTPUT
 #define LOG_OUTPUT 1 /* 0: off, 1: RTT, 2: USART2, 3: both */
 #endif
-#ifndef VOFA_TELEMETRY_ENABLE
-#define VOFA_TELEMETRY_ENABLE 0
-#endif
 #ifndef VOFA_TELEMETRY_MODE
 #define VOFA_TELEMETRY_MODE 0 /* 0: JustFloat, 1: FireWater measurement */
 #endif
@@ -31,9 +28,6 @@
 #endif
 #if LOG_OUTPUT < 0 || LOG_OUTPUT > 3
 #error LOG_OUTPUT must be 0, 1, 2, or 3.
-#endif
-#if VOFA_TELEMETRY_ENABLE != 0 && VOFA_TELEMETRY_ENABLE != 1
-#error VOFA_TELEMETRY_ENABLE must be 0 or 1.
 #endif
 #if VOFA_TELEMETRY_MODE != 0 && VOFA_TELEMETRY_MODE != 1
 #error VOFA_TELEMETRY_MODE must be 0 or 1.
@@ -86,7 +80,19 @@
 #if REFEREE_ENABLE && REFEREE_UART_PORT == 7 && BOARD_AUX_UART7_DEVICE
 #error UART7 cannot be shared by the referee system and an auxiliary device.
 #endif
-#if VOFA_TELEMETRY_ENABLE && ((REFEREE_ENABLE && REFEREE_UART_PORT == 7) || BOARD_AUX_UART7_DEVICE)
+#define BOARD_UART7_RESERVED_FOR_DEVICE ((REFEREE_ENABLE && REFEREE_UART_PORT == 7) || BOARD_AUX_UART7_DEVICE)
+/* VOFA telemetry uses speed-control snapshots and needs a dedicated UART7. */
+#ifndef VOFA_TELEMETRY_ENABLE
+#if (!defined(CHASSIS_CONTROL_MODE) || CHASSIS_CONTROL_MODE == 0) && !BOARD_UART7_RESERVED_FOR_DEVICE
+#define VOFA_TELEMETRY_ENABLE 1
+#else
+#define VOFA_TELEMETRY_ENABLE 0
+#endif
+#endif
+#if VOFA_TELEMETRY_ENABLE != 0 && VOFA_TELEMETRY_ENABLE != 1
+#error VOFA_TELEMETRY_ENABLE must be 0 or 1.
+#endif
+#if VOFA_TELEMETRY_ENABLE && BOARD_UART7_RESERVED_FOR_DEVICE
 #error UART7 cannot be shared by VOFA telemetry and the referee system or an auxiliary device.
 #endif
 #if BOARD_AUX_UART2_DEVICE && BOARD_AUX_UART7_DEVICE && BOARD_AUX_UART2_DEVICE == BOARD_AUX_UART7_DEVICE

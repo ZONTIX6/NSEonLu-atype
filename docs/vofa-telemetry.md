@@ -2,21 +2,16 @@
 
 ## 编译固件
 
-`VOFA_TELEMETRY_ENABLE` 默认关闭。启用后，用 `VOFA_TELEMETRY_MODE` 选择 UART7 输出。两档使用独立构建目录，切换时烧录对应目录的 `basic_framework.hex`。
+普通 A 板固件在速度控制模式且 UART7 空闲时，默认通过 UART7 输出 JustFloat。正常构建烧录即可，包括 VS Code 的 `DAPlink` 调试配置。`VOFA_TELEMETRY_ENABLE=0` 可显式关闭输出。
 
 | `VOFA_TELEMETRY_MODE` | 用途 | VOFA+ 协议 |
 | --- | --- | --- |
 | `0`（默认） | 原有 19 路遥测，默认 50 Hz | JustFloat |
 | `1` | 38 路测量数据，每组一行，发送间隔至少 60 ms | FireWater |
 
-```powershell
-make -j8 PROFILE=atype-vehicle BUILD_DIR=build/vofa-justfloat VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=0
-make -j8 PROFILE=atype-vehicle BUILD_DIR=build/vofa-firewater VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=1
-```
+需要 FireWater 测量时，可以用 `VOFA_TELEMETRY_MODE=1` 覆盖协议。力控模式、裁判使用 UART7 或 UART7 接有辅助设备时，默认关闭 VOFA+ 输出。USB 遥测可同时开启，也可用 `USB_TELEMETRY_ENABLE=0` 单独运行无线遥测。[A 板串口接线](atype-integration.md#接线)
 
-该配置适用于速度控制模式（`CHASSIS_CONTROL_MODE=0`）。UART7 由 VOFA+ 遥测占用，裁判串口使用默认 USART6 或关闭裁判，并保持 `BOARD_AUX_UART7_DEVICE=0`。如果裁判线已经接在丝印 `7`，启用前先将其迁到 USART6。USB 遥测可同时开启，也可用 `USB_TELEMETRY_ENABLE=0` 单独运行无线遥测。[A 板串口接线](atype-integration.md#接线)
-
-当前整车默认直供，此时第 11–13 路无有效超电数据。已接入匹配的 F334 超电且整车使用超电供电时，在对应档位的构建命令后加 `CHASSIS_POWER_SOURCE_MODE=1`。第 12 路需要收到 F334 的 CAN `0x052` 输入功率反馈。 [超电协议](supercap-can-protocol.md)
+当前整车默认直供，此时第 11–13 路无有效超电数据。已接入匹配的 F334 超电且整车使用超电供电时，构建时设置 `CHASSIS_POWER_SOURCE_MODE=1`。第 12 路需要收到 F334 的 CAN `0x052` 输入功率反馈。 [超电协议](supercap-can-protocol.md)
 
 ```powershell
 make -j8 PROFILE=atype-vehicle BUILD_DIR=build/vofa-firewater-cap VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=1 CHASSIS_POWER_SOURCE_MODE=1

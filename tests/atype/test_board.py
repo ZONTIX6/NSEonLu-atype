@@ -24,7 +24,7 @@ class BoardConfiguration(unittest.TestCase):
         #if !BOARD_LOG_RTT_ENABLED || BOARD_LOG_UART_ENABLED
         #error Wrong default log transport
         #endif
-        #if !defined(VOFA_TELEMETRY_MODE) || VOFA_TELEMETRY_MODE != 0 || VOFA_TELEMETRY_ENABLE != 0
+        #if !defined(VOFA_TELEMETRY_MODE) || VOFA_TELEMETRY_MODE != 0 || VOFA_TELEMETRY_ENABLE != 1
         #error Wrong default VOFA configuration
         #endif
         ''')
@@ -66,6 +66,11 @@ class BoardConfiguration(unittest.TestCase):
 
     def test_vofa_reserves_uart7_only_when_enabled(self):
         enabled = "VOFA_TELEMETRY_ENABLE=1"
+        disabled = '''
+        #if VOFA_TELEMETRY_ENABLE
+        #error VOFA should be disabled
+        #endif
+        '''
         for mode in (0, 1):
             selector = f"VOFA_TELEMETRY_MODE={mode}"
             for owner in ("REFEREE_UART_PORT=7", "BOARD_AUX_UART7_DEVICE=1"):
@@ -73,7 +78,9 @@ class BoardConfiguration(unittest.TestCase):
                     conflict = self.compile("", enabled, selector, owner)
                     self.assertNotEqual(conflict.returncode, 0)
                     self.assertIn("UART7", conflict.stderr)
-                    self.assertEqual(self.compile("", selector, owner).returncode, 0)
+                    self.assertEqual(self.compile(disabled, selector, owner).returncode, 0)
+        self.assertEqual(self.compile(disabled, "VOFA_TELEMETRY_ENABLE=0").returncode, 0)
+        self.assertEqual(self.compile(disabled, "CHASSIS_CONTROL_MODE=1").returncode, 0)
         self.assertEqual(self.compile("", enabled, "LOG_OUTPUT=3").returncode, 0)
         self.assertEqual(self.compile("", enabled, "REFEREE_UART_PORT=7",
                                       "REFEREE_ENABLE=0").returncode, 0)
@@ -103,6 +110,9 @@ class BoardConfiguration(unittest.TestCase):
         #endif
         #if BOARD_AUX_UART7_DEVICE
                 &huart7,
+        #endif
+        #if VOFA_TELEMETRY_ENABLE
+                BOARD_VOFA_UART,
         #endif
             };
             for (unsigned i = 0; i < sizeof(ports) / sizeof(ports[0]); ++i)
