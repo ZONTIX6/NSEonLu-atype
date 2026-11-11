@@ -12,6 +12,8 @@
 #include "chassis_internal.h"
 #include "chassis_control_config.h"
 #include "chassis_velocity_observer.h"
+#include "gimbal.h"
+#include "ins_task.h"
 #include "FreeRTOS.h"
 #include "task.h"
 
@@ -43,8 +45,6 @@ bool ChassisGetFusedVelocitySnapshot(ChassisFusedVelocitySnapshot_s *snapshot)
 #include "chassis_gimbal_imu.h"
 #include "chassis_velocity_center.h"
 #include "chassis_velocity_fusion.h"
-#include "gimbal.h"
-#include "ins_task.h"
 #include "speed_observation_time.h"
 #include <math.h>
 
@@ -205,10 +205,10 @@ void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config)
     DJIMotorInstance *const motors[4]={motor_lf,motor_rf,motor_lb,motor_rb};
     ChassisVelocityInput_s wheels={0};
     ChassisFusedVelocitySnapshot_s snapshot={0};
-#if CHASSIS_VELOCITY_FUSION_CALIBRATED
-    uint32_t wheel_cycles[4]={0};
     INSMotionSnapshot_s imu={0};
     GimbalEncoderSample_s joints[2]={0};
+#if CHASSIS_VELOCITY_FUSION_CALIBRATED
+    uint32_t wheel_cycles[4]={0};
 #endif
     taskENTER_CRITICAL();
     for (unsigned i=0;i<4;++i) {
@@ -221,13 +221,36 @@ void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config)
         wheel_cycles[i]=motor->measure.rx_cycles;
 #endif
     }
-#if CHASSIS_VELOCITY_FUSION_CALIBRATED
     (void)INSGetMotionSnapshot(&imu);
     const bool joints_valid=GimbalGetEncoderSnapshot(joints);
+#if CHASSIS_VELOCITY_FUSION_CALIBRATED
     const uint32_t cycles=DWT_GetCycleCount();
 #endif
     wheels.now_ms=HAL_GetTick();
     taskEXIT_CRITICAL();
+
+    ChassisVelocityDiagnostics_s *diagnostics=&snapshot.diagnostics;
+    diagnostics->available=true;
+    diagnostics->tick_ms=wheels.now_ms;
+    diagnostics->wheel_online_mask=wheels.online_mask;
+    for (unsigned i=0;i<4;++i) {
+        diagnostics->raw_rpm[i]=wheels.rpm[i];
+        diagnostics->wheel_tick_ms[i]=wheels.feedback_tick_ms[i];
+        diagnostics->imu_quaternion[i]=imu.quaternion[i];
+    }
+    for (unsigned i=0;i<3;++i) {
+        diagnostics->imu_accel_n_mps2[i]=imu.accel_n_mps2[i];
+        diagnostics->imu_gyro_sensor_radps[i]=imu.gyro_sensor_radps[i];
+    }
+    diagnostics->imu_tick_ms=imu.tick_ms;
+    diagnostics->imu_sequence=imu.sequence;
+    diagnostics->imu_valid=imu.valid;
+    diagnostics->joints_valid=joints_valid;
+    for (unsigned i=0;i<2;++i) {
+        diagnostics->joint_ecd[i]=joints[i].ecd;
+        diagnostics->joint_rpm[i]=joints[i].rpm;
+        diagnostics->joint_tick_ms[i]=joints[i].tick_ms;
+    }
 
     snapshot.valid=ChassisEstimateVelocity(config,&wheels,&snapshot.wheel);
     snapshot.vx_mps=snapshot.wheel.vx_mps;

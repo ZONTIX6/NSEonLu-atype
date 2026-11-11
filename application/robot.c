@@ -1,10 +1,13 @@
 #include "bsp_init.h"
 #include "robot.h"
+#include "imu_capture_config.h"
 #include "robot_def.h"
 #include "runtime/robot_task.h"
+#if !IMU_CAPTURE_ONLY
 #include "tuning_flash.h"
 #include "runtime/tuning_policy.h"
 #include "jscope.h"
+#endif
 #include "board/board_devices.h"
 
 // 编译warning,提醒开发者修改机器人参数
@@ -13,11 +16,11 @@
 #pragma message "check if you have configured the parameters in robot_def.h, IF NOT, please refer to the comments AND DO IT, otherwise the robot will have FATAL ERRORS!!!"
 #endif // !ROBOT_DEF_PARAM_WARNING
 
-#if defined(ONE_BOARD) || defined(CHASSIS_BOARD)
+#if !IMU_CAPTURE_ONLY && (defined(ONE_BOARD) || defined(CHASSIS_BOARD))
 #include "chassis.h"
 #endif
 
-#if defined(ONE_BOARD) || defined(GIMBAL_BOARD)
+#if !IMU_CAPTURE_ONLY && (defined(ONE_BOARD) || defined(GIMBAL_BOARD))
 #include "gimbal.h"
 #include "shoot.h"
 #include "robot_cmd.h"
@@ -33,6 +36,7 @@ void RobotInit()
     
     BSPInit();
     (void)BoardDevicesInit();
+#if !IMU_CAPTURE_ONLY
     TuningFlashInit();
     TuningPolicyInit();
     JScopeInit();
@@ -46,6 +50,7 @@ void RobotInit()
 #if defined(ONE_BOARD) || defined(CHASSIS_BOARD)
     ChassisInit();
 #endif
+#endif /* !IMU_CAPTURE_ONLY */
 
     OSTaskInit(); // 创建基础任务
 
@@ -55,6 +60,7 @@ void RobotInit()
 
 void RobotTask()
 {
+#if !IMU_CAPTURE_ONLY
 #if defined(ONE_BOARD) || defined(GIMBAL_BOARD)
     RobotCMDTask();
     GimbalTask();
@@ -64,5 +70,6 @@ void RobotTask()
 #if defined(ONE_BOARD) || defined(CHASSIS_BOARD)
     ChassisTask();
 #endif
+#endif /* !IMU_CAPTURE_ONLY */
 
 }

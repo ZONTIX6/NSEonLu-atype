@@ -26,6 +26,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "board/board_optional.h"
+#include "imu_capture_config.h"
 
 /* USER CODE END Includes */
 
@@ -125,7 +126,9 @@ void StartDefaultTask(void const * argument)
 {
   /* init code for USB_DEVICE */
   MX_USB_DEVICE_Init();
+#if !IMU_CAPTURE_ONLY
   BoardOptionalInit();
+#endif
   /* USER CODE BEGIN StartDefaultTask */
   osThreadTerminate(NULL); // 避免空置和切换占用cpu
   /* USER CODE END StartDefaultTask */

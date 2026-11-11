@@ -1,4 +1,34 @@
 #include "robot_telemetry.h"
+#include "imu_capture_config.h"
+
+#if IMU_CAPTURE_ONLY
+#include "vofa_telemetry.h"
+#include "ins_task.h"
+#include "usart.h"
+#include <string.h>
+
+void RobotTelemetryInit(void) {}
+
+void RobotTelemetryTask(void)
+{
+    static ChassisFusedVelocitySnapshot_s velocity;
+    static const USBTelemetrySample_s empty_sample;
+    INSMotionSnapshot_s imu = {0};
+    (void)INSGetMotionSnapshot(&imu);
+    memset(&velocity, 0, sizeof velocity);
+    ChassisVelocityDiagnostics_s *d = &velocity.diagnostics;
+    d->tick_ms = HAL_GetTick();
+    d->available = true;
+    d->imu_tick_ms = imu.tick_ms;
+    d->imu_sequence = imu.sequence;
+    d->imu_valid = imu.valid;
+    memcpy(d->imu_quaternion, imu.quaternion, sizeof d->imu_quaternion);
+    memcpy(d->imu_accel_n_mps2, imu.accel_n_mps2, sizeof d->imu_accel_n_mps2);
+    memcpy(d->imu_gyro_sensor_radps, imu.gyro_sensor_radps, sizeof d->imu_gyro_sensor_radps);
+    VofaTelemetrySendMeasurement(&empty_sample, NULL, &velocity, HAL_GetTick());
+}
+
+#else
 #include "usb_telemetry.h"
 #include "tuning_flash.h"
 #include "runtime_tuning.h"
@@ -219,7 +249,16 @@ void RobotTelemetryTask(void)
 #endif
 #if VOFA_TELEMETRY_ENABLE
 #if VOFA_TELEMETRY_MODE == 1
-    VofaTelemetrySendMeasurement(&sample, model.registered ? &model : NULL, HAL_GetTick());
+#if CHASSIS_VELOCITY_FUSION_ENABLE
+    static ChassisFusedVelocitySnapshot_s velocity;
+    /* The getter also copies source diagnostics when the estimate is invalid. */
+    (void)ChassisGetFusedVelocitySnapshot(&velocity);
+    const ChassisFusedVelocitySnapshot_s *velocity_snapshot = &velocity;
+#else
+    const ChassisFusedVelocitySnapshot_s *velocity_snapshot = NULL;
+#endif
+    VofaTelemetrySendMeasurement(&sample, model.registered ? &model : NULL,
+                                 velocity_snapshot, HAL_GetTick());
 #else
     VofaTelemetrySend(&sample);
 #endif
@@ -228,3 +267,4 @@ void RobotTelemetryTask(void)
     USBTelemetryStreamSend(&sample, HAL_GetTick());
 #endif
 }
+#endif /* IMU_CAPTURE_ONLY */

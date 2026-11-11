@@ -61,9 +61,10 @@ void VofaTelemetrySend(const USBTelemetrySample_s *sample)
 #include <stdio.h>
 
 enum {
-    MEASUREMENT_PERIOD_MS = 60,
+    MEASUREMENT_PERIOD_MS = 80,
     MEASUREMENT_MAX_AGE_MS = 20,
-    MEASUREMENT_CHANNELS = 38,
+    MEASUREMENT_FUSED_MAX_AGE_MS = 60,
+    MEASUREMENT_CHANNELS = 64,
     // An int32 takes at most 11 characters plus one delimiter.
     MEASUREMENT_ROW_CAPACITY = MEASUREMENT_CHANNELS * 12 + 1
 };
@@ -73,8 +74,22 @@ static char row[MEASUREMENT_ROW_CAPACITY];
 _Static_assert((sizeof row - 1) * 10U * 1000U < 115200U * MEASUREMENT_PERIOD_MS,
                "FireWater row must fit in one send interval");
 
+static int32_t SampleAge(uint32_t now_ms, uint32_t tick_ms, bool known)
+{
+    const uint32_t age = now_ms - tick_ms;
+    return known && age <= INT32_MAX ? (int32_t)age : -1;
+}
+
+static bool FiniteVector(const float *values, unsigned count)
+{
+    for (unsigned i = 0; i < count; ++i)
+        if (!isfinite(values[i])) return false;
+    return true;
+}
+
 void VofaTelemetrySendMeasurement(const USBTelemetrySample_s *sample,
-                                  const ChassisPowerSnapshot_s *cycle, uint32_t now_ms)
+                                  const ChassisPowerSnapshot_s *cycle,
+                                  const ChassisFusedVelocitySnapshot_s *velocity, uint32_t now_ms)
 {
     static bool started;
     static uint32_t last_attempt_ms, next_sequence;
@@ -89,49 +104,126 @@ void VofaTelemetrySendMeasurement(const USBTelemetrySample_s *sample,
     const bool final_valid = cycle && cycle->registered && cycle->final_valid &&
                              (uint32_t)(now_ms - cycle->tick_ms) <= MEASUREMENT_MAX_AGE_MS;
     const bool power_valid = final_valid && sample->power_valid;
-    const bool meter_known = final_valid &&
+    const bool meter_known = cycle && cycle->registered && cycle->final_valid &&
         (cycle->meter_online || cycle->meter_sequence || cycle->meter_tick_ms);
-    const bool meter_valid = meter_known && cycle->meter_online &&
+    const bool meter_valid = final_valid && meter_known && cycle->meter_online &&
         (uint32_t)(now_ms - cycle->meter_tick_ms) <= MEASUREMENT_MAX_AGE_MS &&
         isfinite(cycle->measured_power_w);
-    const uint32_t meter_age = meter_known ? (uint32_t)(cycle->tick_ms - cycle->meter_tick_ms) : UINT32_MAX;
-    const uint32_t meter_sequence = meter_known ? cycle->meter_sequence : 0U;
-    const uint32_t cycle_tick = final_valid ? cycle->tick_ms : 0U;
+
+    static const ChassisFusedVelocitySnapshot_s empty_velocity;
+#if !IMU_CAPTURE_ONLY
+    const bool observer_enabled = velocity != NULL;
+#endif
+    if (!velocity) velocity = &empty_velocity;
+    const ChassisVelocityDiagnostics_s *d = &velocity->diagnostics;
+    const bool observed = d->available &&
+        (uint32_t)(now_ms - d->tick_ms) <= MEASUREMENT_MAX_AGE_MS;
     uint32_t online = 0;
-    if (final_valid) {
-        online = sample->motor_online_mask & 15U;
+    if (observed) {
+        online = d->wheel_online_mask & 15U;
         for (unsigned wheel = 0; wheel < 4; ++wheel) {
-            if ((uint32_t)(now_ms - cycle->feedback_tick_ms[wheel]) > MEASUREMENT_MAX_AGE_MS)
+            if ((uint32_t)(now_ms - d->wheel_tick_ms[wheel]) > MEASUREMENT_MAX_AGE_MS ||
+                !isfinite(d->raw_rpm[wheel]))
                 online &= ~(1U << wheel);
         }
     }
-    const uint32_t valid = (power_valid ? 1U : 0U) | (meter_valid ? 2U : 0U) |
-        (sample->cap_online ? 4U : 0U) | (sample->cap_input_online ? 8U : 0U) |
-        (sample->imu_valid ? 16U : 0U) | (sample->referee_online ? 32U : 0U) |
-        (final_valid ? 64U : 0U) | (final_valid && cycle->cycle_valid ? 128U : 0U);
+    const bool wheel_valid = online == 15U && velocity->wheel.valid &&
+        (uint32_t)(now_ms - velocity->wheel.tick_ms) <= MEASUREMENT_MAX_AGE_MS &&
+        isfinite(velocity->wheel.vx_mps) && isfinite(velocity->wheel.vy_mps) &&
+        isfinite(velocity->wheel.wz_rpm);
+    const bool estimate_valid = wheel_valid && velocity->valid &&
+        (uint32_t)(now_ms - velocity->tick_ms) <=
+            (velocity->status == CHASSIS_VELOCITY_FUSED ? MEASUREMENT_FUSED_MAX_AGE_MS : MEASUREMENT_MAX_AGE_MS) &&
+        isfinite(velocity->vx_mps) && isfinite(velocity->vy_mps);
+    const bool fused = estimate_valid && velocity->status == CHASSIS_VELOCITY_FUSED &&
+        FiniteVector(velocity->paired_wheel_mps, 2) && FiniteVector(velocity->center_accel_n_mps2, 2);
+    const bool imu_valid = observed && d->imu_valid &&
+        (uint32_t)(now_ms - d->imu_tick_ms) <= MEASUREMENT_MAX_AGE_MS &&
+        FiniteVector(d->imu_quaternion, 4) && FiniteVector(d->imu_accel_n_mps2, 3) &&
+        FiniteVector(d->imu_gyro_sensor_radps, 3);
+    const bool joints_valid = observed && d->joints_valid &&
+        d->joint_ecd[0] < 8192U && d->joint_ecd[1] < 8192U &&
+        (uint32_t)(now_ms - d->joint_tick_ms[0]) <= MEASUREMENT_MAX_AGE_MS &&
+        (uint32_t)(now_ms - d->joint_tick_ms[1]) <= MEASUREMENT_MAX_AGE_MS;
+    const bool chassis_valid = sample->chassis_valid &&
+        (uint32_t)(now_ms - sample->chassis_tick_ms) <= MEASUREMENT_MAX_AGE_MS;
+    const bool target_valid = chassis_valid && sample->velocity_target_valid &&
+        (uint32_t)(now_ms - sample->velocity_target_tick_ms) <= MEASUREMENT_MAX_AGE_MS;
+    const uint32_t valid = (observed ? 1U : 0U) | (wheel_valid ? 2U : 0U) |
+        (estimate_valid ? 4U : 0U) | (fused ? 8U : 0U) | (imu_valid ? 16U : 0U) |
+        (joints_valid ? 32U : 0U) | (chassis_valid ? 64U : 0U) | (power_valid ? 128U : 0U) |
+        (final_valid ? 256U : 0U) | (final_valid && cycle->cycle_valid ? 512U : 0U) |
+        (final_valid && cycle->can_submitted ? 1024U : 0U) | (target_valid ? 2048U : 0U) |
+        (meter_valid ? 4096U : 0U) | (sample->power_source == 1U ? 8192U : 0U)
+#if IMU_CAPTURE_ONLY
+        | 16384U
+#endif
+        ;
 
     /* Fixed-point units and order are documented in docs/vofa-telemetry.md. */
     const int32_t fields[] = {
-        online & 1U ? sample->rpm_lf : 0, online & 2U ? sample->rpm_rf : 0,
-        online & 4U ? sample->rpm_lb : 0, online & 8U ? sample->rpm_rb : 0,
-        online & 1U ? sample->target_lf_rpm : 0, online & 2U ? sample->target_rf_rpm : 0,
-        online & 4U ? sample->target_lb_rpm : 0, online & 8U ? sample->target_rb_rpm : 0,
-        meter_valid ? USBTelemetryFixed(cycle->measured_power_w, 100) : 0,
-        power_valid ? sample->p_limited_cw : 0, power_valid ? sample->effective_limit_cw : 0,
-        sample->cap_online ? sample->cap_chassis_cw : 0,
-        sample->cap_input_online ? sample->cap_input_cw : 0,
-        sample->cap_online ? sample->cap_energy_pm : 0,
-        sample->imu_valid ? sample->imu_yaw_mdeg : 0, sample->imu_valid ? sample->imu_pitch_mdeg : 0,
-        sample->imu_valid ? sample->imu_roll_mdeg : 0, online, valid,
+        2, now_ms >> 16, now_ms & UINT16_MAX, sequence >> 16, sequence & UINT16_MAX,
+        valid,
+#if IMU_CAPTURE_ONLY
+        -2,
+#else
+        observer_enabled ? (int32_t)velocity->status : -1,
+#endif
+        chassis_valid ? (int32_t)sample->chassis_mode : -1,
+        online, final_valid ? sample->motor_enabled_mask & 15U : 0U,
+        SampleAge(now_ms, d->tick_ms, d->available),
+        SampleAge(now_ms, velocity->tick_ms, velocity->valid),
+        SampleAge(now_ms, velocity->wheel.tick_ms, velocity->wheel.valid),
+        online & 1U ? USBTelemetryFixed(d->raw_rpm[0], 1) : 0,
+        online & 2U ? USBTelemetryFixed(d->raw_rpm[1], 1) : 0,
+        online & 4U ? USBTelemetryFixed(d->raw_rpm[2], 1) : 0,
+        online & 8U ? USBTelemetryFixed(d->raw_rpm[3], 1) : 0,
+        SampleAge(now_ms, d->wheel_tick_ms[0], d->available && (d->wheel_online_mask & 1U)),
+        SampleAge(now_ms, d->wheel_tick_ms[1], d->available && (d->wheel_online_mask & 2U)),
+        SampleAge(now_ms, d->wheel_tick_ms[2], d->available && (d->wheel_online_mask & 4U)),
+        SampleAge(now_ms, d->wheel_tick_ms[3], d->available && (d->wheel_online_mask & 8U)),
+        wheel_valid ? USBTelemetryFixed(velocity->wheel.vx_mps, 1000) : 0,
+        wheel_valid ? USBTelemetryFixed(velocity->wheel.vy_mps, 1000) : 0,
+        wheel_valid ? USBTelemetryFixed(velocity->wheel.wz_rpm, 1000.0f / 60.0f) : 0,
+        target_valid ? sample->velocity_target_vx_mmps : 0,
+        target_valid ? sample->velocity_target_vy_mmps : 0,
+        target_valid ? sample->velocity_target_wz_mrps : 0,
+        estimate_valid ? USBTelemetryFixed(velocity->vx_mps, 1000) : 0,
+        estimate_valid ? USBTelemetryFixed(velocity->vy_mps, 1000) : 0,
+        fused ? USBTelemetryFixed(velocity->paired_wheel_mps[0], 1000) : 0,
+        fused ? USBTelemetryFixed(velocity->paired_wheel_mps[1], 1000) : 0,
+        fused ? USBTelemetryFixed(velocity->center_accel_n_mps2[0], 1000) : 0,
+        fused ? USBTelemetryFixed(velocity->center_accel_n_mps2[1], 1000) : 0,
+        SampleAge(now_ms, d->imu_tick_ms, d->available && (d->imu_valid || d->imu_sequence)),
+        d->available ? d->imu_sequence >> 16 : 0U,
+        d->available ? d->imu_sequence & UINT16_MAX : 0U,
+        imu_valid ? USBTelemetryFixed(d->imu_quaternion[0], 1000000) : 0,
+        imu_valid ? USBTelemetryFixed(d->imu_quaternion[1], 1000000) : 0,
+        imu_valid ? USBTelemetryFixed(d->imu_quaternion[2], 1000000) : 0,
+        imu_valid ? USBTelemetryFixed(d->imu_quaternion[3], 1000000) : 0,
+        imu_valid ? USBTelemetryFixed(d->imu_accel_n_mps2[0], 1000) : 0,
+        imu_valid ? USBTelemetryFixed(d->imu_accel_n_mps2[1], 1000) : 0,
+        imu_valid ? USBTelemetryFixed(d->imu_accel_n_mps2[2], 1000) : 0,
+        imu_valid ? USBTelemetryFixed(d->imu_gyro_sensor_radps[0], 1000) : 0,
+        imu_valid ? USBTelemetryFixed(d->imu_gyro_sensor_radps[1], 1000) : 0,
+        imu_valid ? USBTelemetryFixed(d->imu_gyro_sensor_radps[2], 1000) : 0,
+        joints_valid ? d->joint_ecd[0] : 0, joints_valid ? d->joint_ecd[1] : 0,
+        joints_valid ? d->joint_rpm[0] : 0, joints_valid ? d->joint_rpm[1] : 0,
+        SampleAge(now_ms, d->joint_tick_ms[0], d->available && d->joints_valid),
+        SampleAge(now_ms, d->joint_tick_ms[1], d->available && d->joints_valid),
         final_valid ? cycle->final_current[0] : 0, final_valid ? cycle->final_current[1] : 0,
         final_valid ? cycle->final_current[2] : 0, final_valid ? cycle->final_current[3] : 0,
-        online & 1U ? sample->i_lf_fb : 0, online & 2U ? sample->i_rf_fb : 0,
-        online & 4U ? sample->i_lb_fb : 0, online & 8U ? sample->i_rb_fb : 0,
-        power_valid ? sample->p_unlimited_cw : 0, sample->referee_online ? sample->buffer_j : 0,
-        meter_age <= INT32_MAX ? (int32_t)meter_age : -1,
-        cycle_tick >> 16, cycle_tick & UINT16_MAX, sequence >> 16, sequence & UINT16_MAX,
-        final_valid ? sample->motor_enabled_mask & 15U : 0U,
-        meter_sequence >> 16, meter_sequence & UINT16_MAX, final_valid && cycle->can_submitted
+        power_valid ? sample->p_unlimited_cw : 0, power_valid ? sample->p_limited_cw : 0,
+        power_valid ? sample->effective_limit_cw : 0,
+        meter_valid ? USBTelemetryFixed(cycle->measured_power_w, 100) : 0,
+        SampleAge(now_ms, cycle ? cycle->tick_ms : 0, cycle && cycle->registered && cycle->final_valid),
+        SampleAge(now_ms, sample->velocity_target_tick_ms, sample->velocity_target_valid),
+        SampleAge(now_ms, cycle ? cycle->meter_tick_ms : 0, meter_known),
+#if IMU_CAPTURE_ONLY
+        1
+#else
+        0
+#endif
     };
     _Static_assert(sizeof fields / sizeof fields[0] == MEASUREMENT_CHANNELS,
                    "FireWater channel count must match the row layout");

@@ -46,7 +46,7 @@ typedef struct {attitude_t attitude; uint32_t tick_ms; bool valid, has_sample;} 
 bool INSServiceConfigure(const INSServiceConfig_s *config);
 bool INSGetSnapshot(INSSnapshot_s *snapshot);
 
-#if CHASSIS_VELOCITY_FUSION_ENABLE
+#if CHASSIS_VELOCITY_FUSION_ENABLE || IMU_CAPTURE_ONLY
 typedef struct
 {
     float quaternion[4]; /* Unit [w,x,y,z], sensor frame to INS navigation frame. */

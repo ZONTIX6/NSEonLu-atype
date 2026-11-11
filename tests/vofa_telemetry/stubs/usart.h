@@ -19,6 +19,7 @@ typedef struct {
 } UART_HandleTypeDef;
 
 extern UART_HandleTypeDef huart7;
+uint32_t HAL_GetTick(void);
 
 HAL_StatusTypeDef HAL_UART_Transmit_IT(UART_HandleTypeDef *uart,
                                        const uint8_t *data,

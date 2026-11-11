@@ -1,0 +1,1 @@
+void TuningFlashInit(void);

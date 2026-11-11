@@ -1,7 +1,9 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#ifndef CHASSIS_VELOCITY_FUSION_ENABLE
 #define CHASSIS_VELOCITY_FUSION_ENABLE 1
+#endif
 #include "../../modules/imu/ins_service.c"
 
 TestEKF QEKF_INS;

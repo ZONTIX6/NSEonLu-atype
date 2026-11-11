@@ -258,6 +258,10 @@ $(error CHASSIS_CONTROL_MODE must be 0 or 1)
 endif
 CHASSIS_VELOCITY_FUSION_ENABLE ?= 0
 CHASSIS_VELOCITY_FUSION_CALIBRATED ?= 0
+IMU_CAPTURE_ONLY ?= 0
+ifeq ($(filter $(IMU_CAPTURE_ONLY),0 1),)
+$(error IMU_CAPTURE_ONLY must be 0 or 1)
+endif
 ifneq ($(CHASSIS_VELOCITY_FUSION_ENABLE),0)
 ifneq ($(CHASSIS_VELOCITY_FUSION_ENABLE),1)
 $(error CHASSIS_VELOCITY_FUSION_ENABLE must be 0 or 1)
@@ -409,6 +413,9 @@ NUMERIC_SOURCES += modules/algorithm/chassis_velocity_fusion.c \
                    modules/algorithm/chassis_velocity_center.c modules/algorithm/chassis_gimbal_imu.c
 ifeq ($(CHASSIS_VELOCITY_FUSION_ENABLE),1)
 NUMERIC_SOURCES += modules/imu/ins_service.c modules/algorithm/chassis_velocity.c
+endif
+ifeq ($(IMU_CAPTURE_ONLY),1)
+NUMERIC_SOURCES += modules/imu/ins_service.c
 endif
 NUMERIC_SOURCES += modules/telemetry/chassis_speed_capture.c application/runtime/chassis_speed_observation.c
 NUMERIC_SOURCES += application/runtime/shadow_jscope.c

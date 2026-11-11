@@ -50,7 +50,7 @@ static INSServiceConfig_s service_config;
 static bool service_configured;
 static attitude_t published_attitude;
 static uint32_t sample_tick;
-#if CHASSIS_VELOCITY_FUSION_ENABLE
+#if CHASSIS_VELOCITY_FUSION_ENABLE || IMU_CAPTURE_ONLY
 static uint32_t sample_cycles;
 static INSMotionSnapshot_s published_motion;
 #endif
@@ -77,7 +77,7 @@ bool INSGetSnapshot(INSSnapshot_s *output)
     INS_UNLOCK();
     return output->valid;
 }
-#if CHASSIS_VELOCITY_FUSION_ENABLE
+#if CHASSIS_VELOCITY_FUSION_ENABLE || IMU_CAPTURE_ONLY
 bool INSGetMotionSnapshot(INSMotionSnapshot_s *output)
 {
     if(output==NULL) return false;
@@ -93,7 +93,7 @@ static void InvalidateINS(void)
 {
     INS_LOCK();
     ins_healthy=false;
-#if CHASSIS_VELOCITY_FUSION_ENABLE
+#if CHASSIS_VELOCITY_FUSION_ENABLE || IMU_CAPTURE_ONLY
     published_motion.valid=false;
 #endif
     INS_UNLOCK();
@@ -134,7 +134,7 @@ static void mpu_get_data(void);
 void EarthFrameToBodyFrame(const float *vecEF, float *vecBF, float *q);
 void BodyFrameToEarthFrame(const float *vecBF, float *vecEF, float *q);
 
-#if CHASSIS_VELOCITY_FUSION_ENABLE
+#if CHASSIS_VELOCITY_FUSION_ENABLE || IMU_CAPTURE_ONLY
 static bool BuildMotionSnapshot(const float gravity_n[3],const float gyro_rad[3],INSMotionSnapshot_s *motion)
 {
     float q_norm_sq=0.0f;
@@ -193,7 +193,7 @@ static void mpu_get_data(void)
         mpu_data.Gyro[axis]=sample.gyro_rad_s[axis]-mpu_data.GyroOffset[axis];
     }
     mpu_data.Temperature=sample.temperature_c;sample_tick=sample.tick_ms;
-#if CHASSIS_VELOCITY_FUSION_ENABLE
+#if CHASSIS_VELOCITY_FUSION_ENABLE || IMU_CAPTURE_ONLY
     sample_cycles=sample.rx_cycles;
 #endif
 }
@@ -436,7 +436,7 @@ void INS_Task(void)
         INS.Yaw=vehicle_ypr[0];INS.Pitch=vehicle_ypr[1];INS.Roll=vehicle_ypr[2];
         INS.YawTotalAngle = QEKF_INS.YawTotalAngle;
         if(isfinite(INS.YawTotalAngle) && isfinite(INS.Pitch) && isfinite(INS.Roll)) {
-#if CHASSIS_VELOCITY_FUSION_ENABLE
+#if CHASSIS_VELOCITY_FUSION_ENABLE || IMU_CAPTURE_ONLY
             INSMotionSnapshot_s motion;
             const bool motion_valid=BuildMotionSnapshot(gravity,gyro_rad,&motion);
 #endif
@@ -448,7 +448,7 @@ void INS_Task(void)
             ins_sample_tick=sample_tick;
             ins_has_sample=true;
             ins_healthy=true;
-#if CHASSIS_VELOCITY_FUSION_ENABLE
+#if CHASSIS_VELOCITY_FUSION_ENABLE || IMU_CAPTURE_ONLY
             if(motion_valid) {
                 motion.sequence=published_motion.sequence+1U;
                 published_motion=motion;

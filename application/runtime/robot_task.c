@@ -1,4 +1,54 @@
 #include "robot_task.h"
+#include "imu_capture_config.h"
+
+#if IMU_CAPTURE_ONLY
+#include "FreeRTOS.h"
+#include "task.h"
+#include "cmsis_os.h"
+#include "ins_task.h"
+#include "robot_telemetry.h"
+#include "board_config.h"
+#include "usb_telemetry_config.h"
+#include "chassis_control_config.h"
+
+#if !VOFA_TELEMETRY_ENABLE || VOFA_TELEMETRY_MODE != 1 || USB_TELEMETRY_ENABLE
+#error IMU_CAPTURE_ONLY requires VOFA_TELEMETRY_ENABLE=1, VOFA_TELEMETRY_MODE=1 and USB_TELEMETRY_ENABLE=0.
+#endif
+#if CHASSIS_CONTROL_MODE != CHASSIS_CONTROL_SPEED || CHASSIS_VELOCITY_FUSION_ENABLE
+#error IMU_CAPTURE_ONLY requires speed control selection and CHASSIS_VELOCITY_FUSION_ENABLE=0.
+#endif
+
+static void StartIMUCapture(void const *argument)
+{
+    (void)argument;
+    INS_Init();
+    for (;;) {
+        /* Keeps the existing local sensor sampling and temperature control. */
+        INS_Task();
+        osDelay(1);
+    }
+}
+
+static void StartCaptureTelemetry(void const *argument)
+{
+    (void)argument;
+    RobotTelemetryInit();
+    TickType_t previous_wake=xTaskGetTickCount();
+    for (;;) {
+        RobotTelemetryTask();
+        vTaskDelayUntil(&previous_wake,pdMS_TO_TICKS(USB_TELEMETRY_PERIOD_MS));
+    }
+}
+
+void OSTaskInit(void)
+{
+    osThreadDef(imucapture,StartIMUCapture,osPriorityAboveNormal,0,1024);
+    (void)osThreadCreate(osThread(imucapture),NULL);
+    osThreadDef(telemetry,StartCaptureTelemetry,osPriorityBelowNormal,0,768);
+    (void)osThreadCreate(osThread(telemetry),NULL);
+}
+
+#else /* Normal robot application tasks. */
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -260,3 +310,4 @@ static __attribute__((noreturn)) void StartUITASK(void const *argument)
     }
 }
 #endif
+#endif /* IMU_CAPTURE_ONLY */

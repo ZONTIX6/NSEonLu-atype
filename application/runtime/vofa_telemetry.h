@@ -7,8 +7,10 @@
 /* Call from the telemetry task with the latest freshness-checked sample. */
 #if VOFA_TELEMETRY_MODE == 1
 #include "chassis_power_types.h"
+#include "chassis_velocity_observer.h"
 void VofaTelemetrySendMeasurement(const USBTelemetrySample_s *sample,
-                                  const ChassisPowerSnapshot_s *cycle, uint32_t now_ms);
+                                  const ChassisPowerSnapshot_s *cycle,
+                                  const ChassisFusedVelocitySnapshot_s *velocity, uint32_t now_ms);
 #else
 void VofaTelemetrySend(const USBTelemetrySample_s *sample);
 #endif
