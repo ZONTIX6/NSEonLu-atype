@@ -1,4 +1,8 @@
 #include "vofa_telemetry.h"
+#include "imu_capture_config.h"
+#if CHASSIS_IMU_CAN_RX_ENABLE
+#include "chassis_imu_can.h"
+#endif
 
 #if VOFA_TELEMETRY_ENABLE
 #include "usart.h"
@@ -64,7 +68,7 @@ enum {
     MEASUREMENT_PERIOD_MS = 80,
     MEASUREMENT_MAX_AGE_MS = 20,
     MEASUREMENT_FUSED_MAX_AGE_MS = 60,
-    MEASUREMENT_CHANNELS = 64,
+    MEASUREMENT_CHANNELS = CHASSIS_IMU_CAN_RX_ENABLE ? 72 : 64,
     // An int32 takes at most 11 characters plus one delimiter.
     MEASUREMENT_ROW_CAPACITY = MEASUREMENT_CHANNELS * 12 + 1
 };
@@ -137,10 +141,31 @@ void VofaTelemetrySendMeasurement(const USBTelemetrySample_s *sample,
         isfinite(velocity->vx_mps) && isfinite(velocity->vy_mps);
     const bool fused = estimate_valid && velocity->status == CHASSIS_VELOCITY_FUSED &&
         FiniteVector(velocity->paired_wheel_mps, 2) && FiniteVector(velocity->center_accel_n_mps2, 2);
+    const float *imu_quaternion = d->imu_quaternion;
+    const float *imu_accel = d->imu_accel_n_mps2;
+    const float *imu_gyro = d->imu_gyro_sensor_radps;
+    uint32_t imu_sequence = d->available ? d->imu_sequence : 0U;
+    int32_t imu_age = SampleAge(now_ms, d->imu_tick_ms, d->available && (d->imu_valid || d->imu_sequence));
+#if CHASSIS_IMU_CAN_RX_ENABLE
+    static ChassisImuCanSnapshot_s remote;
+    const bool remote_usable = ChassisImuCanReadSnapshot(&remote, now_ms);
+    imu_quaternion = remote.sample.quaternion;
+    imu_accel = remote.sample.accel_n_mps2;
+    imu_gyro = remote.sample.gyro_sensor_radps;
+    imu_sequence = remote.available ? remote.sample.sequence : 0U;
+    /* Known age only: sender sample age plus time since the first frame reached
+     * this MCU. This is not a synchronized sensor timestamp or total latency. */
+    const uint64_t known_age = (uint64_t)(uint32_t)(now_ms - remote.first_rx_tick_ms) +
+                                remote.sample.source_age_ms;
+    imu_age = remote.available && remote.sample.source_age_ms != UINT16_MAX && known_age <= INT32_MAX ?
+        (int32_t)known_age : -1;
+    const bool imu_valid = remote_usable && FiniteVector(imu_quaternion, 4) &&
+        FiniteVector(imu_accel, 3) && FiniteVector(imu_gyro, 3);
+#else
     const bool imu_valid = observed && d->imu_valid &&
         (uint32_t)(now_ms - d->imu_tick_ms) <= MEASUREMENT_MAX_AGE_MS &&
-        FiniteVector(d->imu_quaternion, 4) && FiniteVector(d->imu_accel_n_mps2, 3) &&
-        FiniteVector(d->imu_gyro_sensor_radps, 3);
+        FiniteVector(imu_quaternion, 4) && FiniteVector(imu_accel, 3) && FiniteVector(imu_gyro, 3);
+#endif
     const bool joints_valid = observed && d->joints_valid &&
         d->joint_ecd[0] < 8192U && d->joint_ecd[1] < 8192U &&
         (uint32_t)(now_ms - d->joint_tick_ms[0]) <= MEASUREMENT_MAX_AGE_MS &&
@@ -158,11 +183,15 @@ void VofaTelemetrySendMeasurement(const USBTelemetrySample_s *sample,
 #if IMU_CAPTURE_ONLY
         | 16384U
 #endif
+#if CHASSIS_IMU_CAN_RX_ENABLE
+        | 32768U
+#endif
         ;
 
     /* Fixed-point units and order are documented in docs/vofa-telemetry.md. */
     const int32_t fields[] = {
-        2, now_ms >> 16, now_ms & UINT16_MAX, sequence >> 16, sequence & UINT16_MAX,
+        CHASSIS_IMU_CAN_RX_ENABLE ? 3 : 2,
+        now_ms >> 16, now_ms & UINT16_MAX, sequence >> 16, sequence & UINT16_MAX,
         valid,
 #if IMU_CAPTURE_ONLY
         -2,
@@ -194,19 +223,17 @@ void VofaTelemetrySendMeasurement(const USBTelemetrySample_s *sample,
         fused ? USBTelemetryFixed(velocity->paired_wheel_mps[1], 1000) : 0,
         fused ? USBTelemetryFixed(velocity->center_accel_n_mps2[0], 1000) : 0,
         fused ? USBTelemetryFixed(velocity->center_accel_n_mps2[1], 1000) : 0,
-        SampleAge(now_ms, d->imu_tick_ms, d->available && (d->imu_valid || d->imu_sequence)),
-        d->available ? d->imu_sequence >> 16 : 0U,
-        d->available ? d->imu_sequence & UINT16_MAX : 0U,
-        imu_valid ? USBTelemetryFixed(d->imu_quaternion[0], 1000000) : 0,
-        imu_valid ? USBTelemetryFixed(d->imu_quaternion[1], 1000000) : 0,
-        imu_valid ? USBTelemetryFixed(d->imu_quaternion[2], 1000000) : 0,
-        imu_valid ? USBTelemetryFixed(d->imu_quaternion[3], 1000000) : 0,
-        imu_valid ? USBTelemetryFixed(d->imu_accel_n_mps2[0], 1000) : 0,
-        imu_valid ? USBTelemetryFixed(d->imu_accel_n_mps2[1], 1000) : 0,
-        imu_valid ? USBTelemetryFixed(d->imu_accel_n_mps2[2], 1000) : 0,
-        imu_valid ? USBTelemetryFixed(d->imu_gyro_sensor_radps[0], 1000) : 0,
-        imu_valid ? USBTelemetryFixed(d->imu_gyro_sensor_radps[1], 1000) : 0,
-        imu_valid ? USBTelemetryFixed(d->imu_gyro_sensor_radps[2], 1000) : 0,
+        imu_age, imu_sequence >> 16, imu_sequence & UINT16_MAX,
+        imu_valid ? USBTelemetryFixed(imu_quaternion[0], 1000000) : 0,
+        imu_valid ? USBTelemetryFixed(imu_quaternion[1], 1000000) : 0,
+        imu_valid ? USBTelemetryFixed(imu_quaternion[2], 1000000) : 0,
+        imu_valid ? USBTelemetryFixed(imu_quaternion[3], 1000000) : 0,
+        imu_valid ? USBTelemetryFixed(imu_accel[0], 1000) : 0,
+        imu_valid ? USBTelemetryFixed(imu_accel[1], 1000) : 0,
+        imu_valid ? USBTelemetryFixed(imu_accel[2], 1000) : 0,
+        imu_valid ? USBTelemetryFixed(imu_gyro[0], 1000) : 0,
+        imu_valid ? USBTelemetryFixed(imu_gyro[1], 1000) : 0,
+        imu_valid ? USBTelemetryFixed(imu_gyro[2], 1000) : 0,
         joints_valid ? d->joint_ecd[0] : 0, joints_valid ? d->joint_ecd[1] : 0,
         joints_valid ? d->joint_rpm[0] : 0, joints_valid ? d->joint_rpm[1] : 0,
         SampleAge(now_ms, d->joint_tick_ms[0], d->available && d->joints_valid),
@@ -223,6 +250,14 @@ void VofaTelemetrySendMeasurement(const USBTelemetrySample_s *sample,
         1
 #else
         0
+#endif
+#if CHASSIS_IMU_CAN_RX_ENABLE
+        , 2, SampleAge(now_ms, remote.last_rx_tick_ms, remote.available),
+        remote.available && remote.sample.source_age_ms != UINT16_MAX ? remote.sample.source_age_ms : -1,
+        remote.available ? remote.sample.tick_ms >> 16 : 0U,
+        remote.available ? remote.sample.tick_ms & UINT16_MAX : 0U,
+        SampleAge(remote.last_rx_tick_ms, remote.first_rx_tick_ms, remote.available),
+        remote.rejected_groups >> 16, remote.rejected_groups & UINT16_MAX
 #endif
     };
     _Static_assert(sizeof fields / sizeof fields[0] == MEASUREMENT_CHANNELS,

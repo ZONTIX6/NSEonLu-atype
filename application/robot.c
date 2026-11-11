@@ -9,6 +9,9 @@
 #include "jscope.h"
 #endif
 #include "board/board_devices.h"
+#if IMU_CAPTURE_CAN_TX_ENABLE || CHASSIS_IMU_CAN_RX_ENABLE
+#include "runtime/chassis_imu_can.h"
+#endif
 
 // 编译warning,提醒开发者修改机器人参数
 #ifndef ROBOT_DEF_PARAM_WARNING
@@ -36,6 +39,9 @@ void RobotInit()
     
     BSPInit();
     (void)BoardDevicesInit();
+#if IMU_CAPTURE_CAN_TX_ENABLE || CHASSIS_IMU_CAN_RX_ENABLE
+    ChassisImuCanInit();
+#endif
 #if !IMU_CAPTURE_ONLY
     TuningFlashInit();
     TuningPolicyInit();

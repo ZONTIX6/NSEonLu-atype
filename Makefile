@@ -142,6 +142,8 @@ modules/motor/motor_task.c \
 modules/telemetry/rtt_telemetry.c \
 application/runtime/robot_telemetry.c \
 application/runtime/vofa_telemetry.c \
+application/runtime/chassis_imu_can.c \
+modules/imu/chassis_imu_can_protocol.c \
 application/runtime/shadow_jscope.c \
 modules/telemetry/usb_telemetry_format.c \
 modules/telemetry/usb_telemetry_imu.c \
@@ -259,8 +261,16 @@ endif
 CHASSIS_VELOCITY_FUSION_ENABLE ?= 0
 CHASSIS_VELOCITY_FUSION_CALIBRATED ?= 0
 IMU_CAPTURE_ONLY ?= 0
+IMU_CAPTURE_CAN_TX_ENABLE ?= 0
+CHASSIS_IMU_CAN_RX_ENABLE ?= 0
 ifeq ($(filter $(IMU_CAPTURE_ONLY),0 1),)
 $(error IMU_CAPTURE_ONLY must be 0 or 1)
+endif
+ifeq ($(filter $(IMU_CAPTURE_CAN_TX_ENABLE),0 1),)
+$(error IMU_CAPTURE_CAN_TX_ENABLE must be 0 or 1)
+endif
+ifeq ($(filter $(CHASSIS_IMU_CAN_RX_ENABLE),0 1),)
+$(error CHASSIS_IMU_CAN_RX_ENABLE must be 0 or 1)
 endif
 ifneq ($(CHASSIS_VELOCITY_FUSION_ENABLE),0)
 ifneq ($(CHASSIS_VELOCITY_FUSION_ENABLE),1)
@@ -420,6 +430,7 @@ endif
 NUMERIC_SOURCES += modules/telemetry/chassis_speed_capture.c application/runtime/chassis_speed_observation.c
 NUMERIC_SOURCES += application/runtime/shadow_jscope.c
 NUMERIC_SOURCES += application/runtime/robot_telemetry.c application/runtime/vofa_telemetry.c \
+    application/runtime/chassis_imu_can.c modules/imu/chassis_imu_can_protocol.c \
                    modules/telemetry/usb_telemetry_format.c modules/telemetry/usb_telemetry_imu.c \
                    modules/super_cap/super_cap_protocol.c
 $(addprefix $(BUILD_DIR)/,$(notdir $(NUMERIC_SOURCES:.c=.o))): CFLAGS += -fno-fast-math

@@ -11,8 +11,8 @@
 #include "usb_telemetry_config.h"
 #include "chassis_control_config.h"
 
-#if !VOFA_TELEMETRY_ENABLE || VOFA_TELEMETRY_MODE != 1 || USB_TELEMETRY_ENABLE
-#error IMU_CAPTURE_ONLY requires VOFA_TELEMETRY_ENABLE=1, VOFA_TELEMETRY_MODE=1 and USB_TELEMETRY_ENABLE=0.
+#if USB_TELEMETRY_ENABLE || (!IMU_CAPTURE_CAN_TX_ENABLE && !VOFA_TELEMETRY_ENABLE) || (VOFA_TELEMETRY_ENABLE && VOFA_TELEMETRY_MODE != 1)
+#error IMU_CAPTURE_ONLY requires CAN TX or FireWater, and USB_TELEMETRY_ENABLE=0.
 #endif
 #if CHASSIS_CONTROL_MODE != CHASSIS_CONTROL_SPEED || CHASSIS_VELOCITY_FUSION_ENABLE
 #error IMU_CAPTURE_ONLY requires speed control selection and CHASSIS_VELOCITY_FUSION_ENABLE=0.
@@ -36,7 +36,7 @@ static void StartCaptureTelemetry(void const *argument)
     TickType_t previous_wake=xTaskGetTickCount();
     for (;;) {
         RobotTelemetryTask();
-        vTaskDelayUntil(&previous_wake,pdMS_TO_TICKS(USB_TELEMETRY_PERIOD_MS));
+        vTaskDelayUntil(&previous_wake,pdMS_TO_TICKS(20));
     }
 }
 
