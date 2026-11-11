@@ -21,7 +21,7 @@ cmake -S . -B build/cmake-vehicle -G "MinGW Makefiles" -DATYPE_PROFILE=atype-veh
 cmake --build build/cmake-vehicle -j8
 ```
 
-默认配置为单板完整整车、X 全向轮、固定 Wz=4000、超级电容供电、阶段 3 功控、功率计和缓冲管理开启。atype-direct 为直供；atype-bench 默认直供且允许无裁判 50 W 回退，锁停云台与发射，仅在明确台架条件下整定选中底盘轮。
+默认配置为单板完整整车、X 全向轮、固定 Wz=4000、直供、阶段 3 功控、功率计和缓冲管理开启。超级电容需显式设置 `CHASSIS_POWER_SOURCE_MODE=1`；atype-direct 为直供；atype-bench 默认直供且允许无裁判 50 W 回退，锁停云台与发射，仅在明确台架条件下整定选中底盘轮。
 
 USART1 固定 DBUS；视觉 USART3、图传 UART8、裁判默认 USART6（编号 16 最左侧、丝印 6）；日志默认 RTT，可选 USART2 非阻塞中断输出。裁判 USART6 使用 RX/TX DMA；`REFEREE_UART_PORT=7` 可切换到 UART7（RX DMA、TX 中断），UART7 裁判与辅助设备同时启用会编译报错。接口对应及本次故障见 [裁判通讯修复说明](docs/referee-uart7-fix.md)。旧 `UART1_USE` 构建参数会报错，替代选项见 [配置指南](docs/configuration-guide.md)。USB 默认用于网页遥测；改用 USB 视觉时同时设置 `VISION_USE_VCP=1 USB_TELEMETRY_ENABLE=0`。
 
@@ -48,6 +48,7 @@ node tools/usb-telemetry/serve.cjs
 - [接线、CAN、单位、模块与安全条件](docs/atype-integration.md)
 - [验证结果和硬件验收清单](docs/atype-validation.md)
 - [整车平移速度融合观测、标定和验证](docs/chassis-velocity-fusion.md)
+- [底盘功率控制总览：模型、计算、分配与超级电容](docs/chassis-power-control.md)
 
 日常查数据和模式，打开“常用指针与宏速查”，用 `Ctrl+F` 搜中文用途、指针名、成员名或模式名即可。表中列出常用指针访问示例、编译模式开关，以及底盘、云台、发射、摩擦轮和拨弹的运行时模式值与赋值字段。宏的源码默认值不等于构建覆盖后或当前固件的实际值。字段的完整定义另见类型索引。
 
