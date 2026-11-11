@@ -30,6 +30,7 @@ try {
     }
     Run 'dji-no-meter' 'make' @('-B','-C','tests/dji_chassis_power_rtt','test','CC=gcc','POWER_METER_ENABLE=0')
     Run 'board-config' $Python @('tests/atype/test_board.py')
+    Run 'board-flash' $Python @('-m','unittest','discover','-s','tests/board_flash','-p','test_*.py')
     Run 'node' 'node' @('--test','tools/usb-telemetry/tests/*.test.cjs','tools/waveform-viewer/tests/core.test.cjs')
     if($FirmwareMatrix) {
         $cases=@(

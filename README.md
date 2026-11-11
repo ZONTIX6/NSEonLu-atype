@@ -8,6 +8,17 @@
 
 将 Arm GNU Toolchain、MinGW Make 加入 PATH；CMake 构建另需 CMake 3.16 或更新版本。
 
+第一块主整车板与第二块底盘 IMU 板的日常切换，使用 [`config/00_flash/board_flash_config.h`](config/00_flash/board_flash_config.h)：`BOARD_FLASH_TARGET=1` 选择主板，`2` 选择 IMU 板；下载器、profile 和各自输出目录也在该文件内。
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Show
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Build
+# 连接所选物理板；成功构建后再烧录
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Flash
+```
+
+VS Code 也提供 `show selected board`、`build selected board`、`flash selected board` 三个任务。[两板切换说明](config/README.md#第一块板与第二块板怎样切换)列出临时覆盖和下载器选择方法。下面的手动 Make/CMake、原有任务与 F5 调试入口继续使用各自参数，不读取此切换文件。
+
 ```powershell
 make -j8 PROFILE=atype-vehicle
 make -j8 PROFILE=atype-bench
@@ -40,10 +51,11 @@ node tools/usb-telemetry/serve.cjs
 
 ## 配置与验证
 
-`config/` 按名称升序排列：`01～06` 是最常用的应用调参，`20～22` 是底盘控制策略，`30～32` 是观测和调试，`90～92` 是硬件配置，`99_build` 是较少修改的构建入口。目录编号只决定查找顺序，不决定参数覆盖顺序。
+`config/` 按名称升序排列：`00_flash` 是两板构建与烧录选择，`01～06` 是最常用的应用调参，`20～22` 是底盘控制策略，`30～32` 是观测和调试，`90～92` 是硬件配置，`99_build` 是较少修改的构建入口。目录编号只决定查找顺序，不决定参数覆盖顺序。
 
 | 常用调整 | 直接入口 |
 | --- | --- |
+| 第一/第二块板构建与烧录 | [00_flash/board_flash_config.h](config/00_flash/board_flash_config.h) |
 | PID 增益与限幅 | [01_pid/pid_config.c](config/01_pid/pid_config.c) |
 | 底盘尺寸、轮向、随动模式 | [02_chassis/chassis_config.h](config/02_chassis/chassis_config.h) |
 | 云台限位和机械零点 | [03_gimbal/gimbal_config.h](config/03_gimbal/gimbal_config.h) |

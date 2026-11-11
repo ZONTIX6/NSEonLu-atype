@@ -2,7 +2,7 @@
 
 更新日期：2026-11-11。当前目标为 STM32F427 A 板。配套说明：[配置指南](configuration-guide.md)、[宏迁移表](atype-macro-migration.md)。
 
-由 `scripts/generate-configuration-index.py` 扫描 387 个项目 C/H 文件，记录 4342 条预处理、配置初始化和 HAL/NVIC 项。预处理条目包含互斥分支与保护宏，不能将所有条目同时理解为有效配置。可从构建命令覆盖的选项见 `config/99_build/atype-options.txt`；普通源码 PID/功率模型初值也列在所属文件下。
+由 `scripts/generate-configuration-index.py` 扫描 388 个项目 C/H 文件，记录 4376 条预处理、配置初始化和 HAL/NVIC 项。预处理条目包含互斥分支与保护宏，不能将所有条目同时理解为有效配置。可从构建命令覆盖的选项见 `config/99_build/atype-options.txt`；普通源码 PID/功率模型初值也列在所属文件下。
 
 `modules/imu/ins_task.c`、`BMI088driver.c`、`BMI088Middleware.c` 是未链接的旧 C 板实现；当前 INS 只链接 MPU6500 和公共数学接口。便携副本有独立 API，未加入固件链接。
 
@@ -1073,6 +1073,45 @@
 | [8](../bsp/usart/bsp_usart.h#L8) | 预处理 | `#define DEVICE_USART_CNT 6     // C板至多分配3个串口` |
 | [9](../bsp/usart/bsp_usart.h#L9) | 预处理 | `#define USART_RXBUFF_LIMIT 256 // 如果协议需要更大的buff,请修改这里` |
 | [93](../bsp/usart/bsp_usart.h#L93) | 预处理 | `#endif` |
+
+## config/00_flash/board_flash_config.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../config/00_flash/board_flash_config.h#L1) | 预处理 | `#ifndef BOARD_FLASH_CONFIG_H` |
+| [2](../config/00_flash/board_flash_config.h#L2) | 预处理 | `#define BOARD_FLASH_CONFIG_H` |
+| [11](../config/00_flash/board_flash_config.h#L11) | 预处理 | `#define BOARD_FLASH_TARGET 1 /* 烧录目标：1=第一块整车主板，2=第二块独立底盘IMU板；默认第一块。 */` |
+| [12](../config/00_flash/board_flash_config.h#L12) | 预处理 | `#define BOARD_FLASH_PROGRAMMER 1 /* 下载器：1=DAPLink/OpenOCD，2=J-Link/J-Flash；仅Flash动作使用。 */` |
+| [13](../config/00_flash/board_flash_config.h#L13) | 预处理 | `#define BOARD_FLASH_PROFILE "atype-vehicle" /* 共用构建配置；两板CAN1记录方案使用整车profile。 */` |
+| [17](../config/00_flash/board_flash_config.h#L17) | 预处理 | `#define BOARD_FLASH_1_NAME "第一块：整车主板" /* 命令执行前显示的板卡名称。 */` |
+| [18](../config/00_flash/board_flash_config.h#L18) | 预处理 | `#define BOARD_FLASH_1_BUILD_DIR "build/board-1-main" /* 第一块独立输出目录；build下使用英文字母/数字/下划线/连字符和斜杠。 */` |
+| [19](../config/00_flash/board_flash_config.h#L19) | 预处理 | `#define BOARD_FLASH_1_ONE_BOARD 1 /* 单板整车角色：必须为1，不与CHASSIS_BOARD或GIMBAL_BOARD同时定义。 */` |
+| [20](../config/00_flash/board_flash_config.h#L20) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_CONTROL_MODE 0 /* 控制后端：0=速度控制；当前CAN1记录接收路径要求0。 */` |
+| [21](../config/00_flash/board_flash_config.h#L21) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_FORCE_CALIBRATION_ENABLE 0 /* 力控标定工具：0=关闭；本方案不编译标定固件。 */` |
+| [22](../config/00_flash/board_flash_config.h#L22) | 预处理 | `#define BOARD_FLASH_1_ATYPE_BENCH_MODE 0 /* 台架门控：0=正常整车应用；此项不代替遥控器的启停。 */` |
+| [23](../config/00_flash/board_flash_config.h#L23) | 预处理 | `#define BOARD_FLASH_1_IMU_CAPTURE_ONLY 0 /* 0=完整整车任务；1仅用于第二块采集板。 */` |
+| [24](../config/00_flash/board_flash_config.h#L24) | 预处理 | `#define BOARD_FLASH_1_IMU_CAPTURE_CAN_TX_ENABLE 0 /* 0=本板不发送独立IMU采集CAN帧，避免与第二块重复发送。 */` |
+| [25](../config/00_flash/board_flash_config.h#L25) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_IMU_CAN_RX_ENABLE 1 /* 1=接收第二块经CAN1发送的IMU记录；0=关闭远端接收。 */` |
+| [26](../config/00_flash/board_flash_config.h#L26) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_VELOCITY_FUSION_ENABLE 1 /* 1=启用速度观测接口；当前远端接收路径要求1。 */` |
+| [27](../config/00_flash/board_flash_config.h#L27) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_VELOCITY_FUSION_CALIBRATED 0 /* 0=未标定观测；不能将本地云台杆臂标定用于远端底盘IMU。 */` |
+| [28](../config/00_flash/board_flash_config.h#L28) | 预处理 | `#define BOARD_FLASH_1_VOFA_TELEMETRY_ENABLE 1 /* 1=开启UART7统一遥测，需保持UART7未被裁判/辅助设备占用。 */` |
+| [29](../config/00_flash/board_flash_config.h#L29) | 预处理 | `#define BOARD_FLASH_1_VOFA_TELEMETRY_MODE 1 /* 1=FireWater文本格式，主板远端IMU记录要求此格式。 */` |
+| [30](../config/00_flash/board_flash_config.h#L30) | 预处理 | `#define BOARD_FLASH_1_USB_TELEMETRY_ENABLE 1 /* 1=保留USB网页遥测；视觉应使用UART，不能同时选USB视觉。 */` |
+| [33](../config/00_flash/board_flash_config.h#L33) | 预处理 | `#define BOARD_FLASH_2_NAME "第二块：底盘IMU板" /* 命令执行前显示的板卡名称。 */` |
+| [34](../config/00_flash/board_flash_config.h#L34) | 预处理 | `#define BOARD_FLASH_2_BUILD_DIR "build/board-2-imu" /* 第二块独立输出目录；不能与第一块相同。 */` |
+| [35](../config/00_flash/board_flash_config.h#L35) | 预处理 | `#define BOARD_FLASH_2_ONE_BOARD 1 /* 保持同工程默认角色；实际采集任务由IMU_CAPTURE_ONLY选择。 */` |
+| [36](../config/00_flash/board_flash_config.h#L36) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_CONTROL_MODE 0 /* 0=速度后端编译配置；采集模式要求0，但不会启动底盘控制。 */` |
+| [37](../config/00_flash/board_flash_config.h#L37) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_FORCE_CALIBRATION_ENABLE 0 /* 0=关闭力控标定工具，避免启动无关模块。 */` |
+| [38](../config/00_flash/board_flash_config.h#L38) | 预处理 | `#define BOARD_FLASH_2_ATYPE_BENCH_MODE 0 /* 0=不使用整车台架任务；采集模式有独立的任务集合。 */` |
+| [39](../config/00_flash/board_flash_config.h#L39) | 预处理 | `#define BOARD_FLASH_2_IMU_CAPTURE_ONLY 1 /* 1=独立IMU采集固件；不得改成0后仍把它当作专用采集板。 */` |
+| [40](../config/00_flash/board_flash_config.h#L40) | 预处理 | `#define BOARD_FLASH_2_IMU_CAPTURE_CAN_TX_ENABLE 1 /* 1=经CAN1发送IMU；第一块对应开启接收。 */` |
+| [41](../config/00_flash/board_flash_config.h#L41) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_IMU_CAN_RX_ENABLE 0 /* 0=不作为整车接收端；采集与接收模式不能同时开启。 */` |
+| [42](../config/00_flash/board_flash_config.h#L42) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_VELOCITY_FUSION_ENABLE 0 /* 0=关闭整车速度融合；采集模式要求关闭。 */` |
+| [43](../config/00_flash/board_flash_config.h#L43) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_VELOCITY_FUSION_CALIBRATED 0 /* 0=不加载整车融合标定。 */` |
+| [44](../config/00_flash/board_flash_config.h#L44) | 预处理 | `#define BOARD_FLASH_2_VOFA_TELEMETRY_ENABLE 0 /* 0=关闭本板UART7遥测，数据由第一块统一输出。 */` |
+| [45](../config/00_flash/board_flash_config.h#L45) | 预处理 | `#define BOARD_FLASH_2_VOFA_TELEMETRY_MODE 1 /* 预留FireWater格式；发送开关为0时本项不产生串口输出。 */` |
+| [46](../config/00_flash/board_flash_config.h#L46) | 预处理 | `#define BOARD_FLASH_2_USB_TELEMETRY_ENABLE 0 /* 0=关闭USB网页遥测；独立采集固件必须关闭。 */` |
+| [48](../config/00_flash/board_flash_config.h#L48) | 预处理 | `#endif` |
 
 ## config/01_pid/pid_config.c
 

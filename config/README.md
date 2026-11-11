@@ -6,6 +6,7 @@
 
 | 显示顺序 | 用途 | 调参文件 |
 | --- | --- | --- |
+| `00_flash` | 两块板的构建/烧录选择、下载器与独立输出目录 | [board_flash_config.h](00_flash/board_flash_config.h) |
 | `01_pid` | 最常用：底盘、云台、摩擦轮、拨弹和 IMU 温控 PID | [pid_config.c](01_pid/pid_config.c)、[pid_config.h](01_pid/pid_config.h) |
 | `02_chassis` | 底盘轮型、跟随模式、尺寸、减速比和轮向 | [chassis_config.h](02_chassis/chassis_config.h) |
 | `03_gimbal` | 云台机械零点、Pitch 限角和 Yaw 跟踪限幅 | [gimbal_config.h](03_gimbal/gimbal_config.h) |
@@ -22,6 +23,25 @@
 | `91_motor` | DJI 电机数量、反馈滤波与驱动参数 | [dji_motor_config.h](91_motor/dji_motor_config.h) |
 | `92_imu` | IMU 安装方向、零偏、重力、恒温、EKF 与低通 | [imu_config.h](92_imu/imu_config.h) |
 | `99_build` | 较少修改：构建配置、允许覆盖的宏、强制链接符号 | [atype.mk](99_build/atype.mk)、[atype-options.txt](99_build/atype-options.txt)、[atype-link-symbols.txt](99_build/atype-link-symbols.txt) |
+
+## 第一块板与第二块板怎样切换
+
+打开 [`00_flash/board_flash_config.h`](00_flash/board_flash_config.h)，修改 `BOARD_FLASH_TARGET`：`1` 为第一块主整车板，接收 CAN1 IMU 并输出 FireWater；`2` 为第二块底盘 IMU 板，只采集、控温和发送 CAN1 数据。`BOARD_FLASH_PROGRAMMER` 选 `1` 使用 DAP/OpenOCD，选 `2` 使用 J-Link/J-Flash；编译 profile 和两组输出目录也在同一文件内。
+
+在仓库根目录运行：
+
+```powershell
+# 查看当前选择、编译参数、输出目录和下载器，输出 JSON
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Show
+# 只构建当前选中的板
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Build
+# 构建成功后，使用同一选择的固件和下载器烧录
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Flash
+```
+
+也可在 VS Code 的“运行任务”中选择 `show selected board`、`build selected board` 或 `flash selected board`。临时操作第二块板可在命令末尾加 `-Board 2`，不会修改配置文件；`-Board 1` 同理。烧录选择决定固件和下载器，实际连接的应是对应物理板。
+
+这个头文件由 `build-board.ps1` 读取，属于构建/烧录配置；直接运行原有 Make、CMake 或 F5 调试入口时仍使用各自参数和路径。两板通过独立 `BUILD_DIR` 保存产物，`Flash` 会先完成所选板的构建，构建失败时停止。CAN1 数据用途及接线见 [VOFA 两板说明](../docs/vofa-telemetry.md)。
 
 ## 常用调参步骤
 

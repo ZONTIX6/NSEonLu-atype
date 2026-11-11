@@ -71,6 +71,63 @@
         "isDefault": false
       },
       "detail": "调试器生成的任务。"
+    },
+    {
+      "label": "build selected board",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/build-board.ps1",
+        "-Action",
+        "Build"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "只构建配置当前选择的第一块主整车板或第二块IMU板；选择文件：config/00_flash/board_flash_config.h。"
+    },
+    {
+      "label": "flash selected board",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/build-board.ps1",
+        "-Action",
+        "Flash"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "先成功构建，再烧录配置当前选择的板与下载器；连接对应物理板；选择文件：config/00_flash/board_flash_config.h。"
+    },
+    {
+      "label": "show selected board",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/build-board.ps1",
+        "-Action",
+        "Show"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "显示配置当前选择的板、参数、输出目录和下载器，不构建或烧录；选择文件：config/00_flash/board_flash_config.h。"
     }
   ]
 }

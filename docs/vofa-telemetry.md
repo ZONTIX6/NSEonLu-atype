@@ -2,7 +2,7 @@
 
 ## 编译固件
 
-版本库中的 A 板配置默认 `VOFA_TELEMETRY_MODE=0`，在速度控制模式且 UART7 空闲时输出 JustFloat。本地若已把 [Inc/board_config.h](../Inc/board_config.h) 改为 `1`，正常构建会使用 FireWater；下方命令显式指定采集配置，避免依赖本地默认值。`VOFA_TELEMETRY_ENABLE=0` 可关闭输出。
+版本库中的 A 板配置默认 `VOFA_TELEMETRY_MODE=0`，在速度控制模式且 UART7 空闲时输出 JustFloat。本地若已把 [config/90_board/board_config.h](../config/90_board/board_config.h) 改为 `1`，正常构建会使用 FireWater；下方命令显式指定采集配置，避免依赖本地默认值。`VOFA_TELEMETRY_ENABLE=0` 可关闭输出。
 
 | `VOFA_TELEMETRY_MODE` | 用途 | VOFA+ 协议 |
 | --- | --- | --- |
@@ -10,9 +10,22 @@
 | `1`，主板开启 CAN IMU 接收 | schema 3，72 路观测数据，每组一行，发送间隔至少 80 ms | FireWater |
 | `1`，未开启 CAN IMU 接收 | schema 2，64 路本板观测数据，发送间隔至少 80 ms | FireWater |
 
-在 [Inc/board_config.h](../Inc/board_config.h) 中修改 `VOFA_TELEMETRY_MODE` 后，正常编译烧录即可切换协议。构建命令也可显式覆盖该宏。力控模式、裁判使用 UART7 或 UART7 接有辅助设备时，默认关闭 VOFA+ 输出。USB 遥测可同时开启，也可用 `USB_TELEMETRY_ENABLE=0` 单独运行无线遥测。[A 板串口接线](atype-integration.md#接线)
+在 [config/90_board/board_config.h](../config/90_board/board_config.h) 中修改 `VOFA_TELEMETRY_MODE` 后，正常编译烧录即可切换协议。构建命令也可显式覆盖该宏。力控模式、裁判使用 UART7 或 UART7 接有辅助设备时，默认关闭 VOFA+ 输出。USB 遥测可同时开启，也可用 `USB_TELEMETRY_ENABLE=0` 单独运行无线遥测。[A 板串口接线](atype-integration.md#接线)
 
-当前推荐两块 A 板通过 **CAN1** 传送底盘 IMU，主板将四轮、命令、功率和远端 IMU 汇总到 **一个 VOFA+ 窗口、一份 CSV**。第二块板刚性固定在底盘、尽量靠近几何中心。同一工程分别构建两份固件，主底盘/云台板使用：
+当前推荐两块 A 板通过 **CAN1** 传送底盘 IMU，主板将四轮、命令、功率和远端 IMU 汇总到 **一个 VOFA+ 窗口、一份 CSV**。第二块板刚性固定在底盘、尽量靠近几何中心。
+
+日常切换使用 [`config/00_flash/board_flash_config.h`](../config/00_flash/board_flash_config.h)：`BOARD_FLASH_TARGET=1` 选择第一块主整车板，`2` 选择第二块底盘 IMU 板。两组编译参数、输出目录及下载器集中在该文件；下面的脚本读取当前选择并执行：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Show
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Build
+# 连接所选物理板；构建成功后再烧录同一输出目录的固件
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Flash
+```
+
+命令末尾可加 `-Board 1` 或 `-Board 2` 临时选择而不改文件。下载器和 VS Code 三个新增任务的用法见 [配置目录说明](../config/README.md#第一块板与第二块板怎样切换)。原有 Make/CMake 和 F5 入口不读取此切换文件；需要自行组合参数时，可继续使用下面的高级手动命令。
+
+第一块主底盘/云台板的手动构建命令：
 
 ```powershell
 make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-can1-main CHASSIS_IMU_CAN_RX_ENABLE=1 CHASSIS_VELOCITY_FUSION_ENABLE=1 CHASSIS_VELOCITY_FUSION_CALIBRATED=0 VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=1
