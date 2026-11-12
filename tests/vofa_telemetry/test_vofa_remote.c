@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#if VOFA_TELEMETRY_MODE == 2
+#include "justfloat_decode.h"
+#endif
 
 #ifndef CHASSIS_REMOTE_IMU_FUSION_ENABLE
 #define CHASSIS_REMOTE_IMU_FUSION_ENABLE 0
@@ -14,7 +17,7 @@
 #endif
 
 UART_HandleTypeDef huart7 = {.gState = HAL_UART_STATE_READY};
-static int32_t fields[72];
+static int64_t fields[72];
 static ChassisImuCanSnapshot_s remote;
 static bool remote_usable;
 
@@ -28,6 +31,9 @@ bool ChassisImuCanReadSnapshot(ChassisImuCanSnapshot_s *out, uint32_t now_ms)
 HAL_StatusTypeDef HAL_UART_Transmit_IT(UART_HandleTypeDef *uart, const uint8_t *data, uint16_t length)
 {
     assert(uart == &huart7 && length < 865);
+#if VOFA_TELEMETRY_MODE == 2
+    ReadJustFloatFields(data, length, fields, 72);
+#else
     assert(data[0] == '3' && data[1] == ',');
     char row[865];
     memcpy(row, data, length);
@@ -40,6 +46,7 @@ HAL_StatusTypeDef HAL_UART_Transmit_IT(UART_HandleTypeDef *uart, const uint8_t *
         next = end + 1;
     }
     assert(next == row + length);
+#endif
     /* Configuration/estimated-time provenance is independent of sample validity. */
 #if CHASSIS_REMOTE_IMU_FUSION_ENABLE
     assert((fields[5] & 196608) == 196608);
@@ -123,6 +130,6 @@ int main(void)
     VofaTelemetrySendMeasurement(&sample, NULL, &local, 240);
     assert(!(fields[5] & 16) && fields[33] == -1 && fields[65] == 0 && fields[66] == -1);
     assert(fields[40] == 0 && fields[67] == 4660 && fields[68] == 22136);
-    puts("PASS: FireWater identifies remote CAN IMU without silently using the local IMU");
+    puts("PASS: observation identifies remote CAN IMU without silently using the local IMU");
     return 0;
 }

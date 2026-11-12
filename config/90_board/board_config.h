@@ -18,7 +18,7 @@
 #define LOG_OUTPUT 1 /* 日志输出：0=关闭，1=RTT，2=USART2，3=RTT与USART2同时输出。 */
 #endif
 #ifndef VOFA_TELEMETRY_MODE
-#define VOFA_TELEMETRY_MODE 0 /* VOFA格式：0=JustFloat二进制，1=FireWater文本测量；与上位机解析方式配套。 */
+#define VOFA_TELEMETRY_MODE 2 /* VOFA格式：0=19路JustFloat，1=FireWater文本测量，2=全量JustFloat测量；与上位机解析方式配套。 */
 #endif
 #ifndef ATYPE_BENCH_MODE
 #define ATYPE_BENCH_MODE 0 /* 台架模式：0=整车正常控制，1=台架门控（云台/发射锁停）；atype-bench构建默认设1。 */
@@ -32,8 +32,8 @@
 #if LOG_OUTPUT < 0 || LOG_OUTPUT > 3
 #error LOG_OUTPUT must be 0, 1, 2, or 3.
 #endif
-#if VOFA_TELEMETRY_MODE != 0 && VOFA_TELEMETRY_MODE != 1
-#error VOFA_TELEMETRY_MODE must be 0 or 1.
+#if VOFA_TELEMETRY_MODE != 0 && VOFA_TELEMETRY_MODE != 1 && VOFA_TELEMETRY_MODE != 2
+#error VOFA_TELEMETRY_MODE must be 0, 1 or 2.
 #endif
 #if ATYPE_BENCH_MODE != 0 && ATYPE_BENCH_MODE != 1
 #error ATYPE_BENCH_MODE must be 0 or 1.

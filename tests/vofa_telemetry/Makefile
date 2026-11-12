@@ -7,13 +7,19 @@ MEASUREMENT_SOURCE := test_vofa_measurement.c ../../application/runtime/vofa_tel
 MEASUREMENT_INCLUDES := -I../../modules/chassis_power -I../../modules/power_meter -I../../modules/referee -I../../modules/super_cap -I../../application/chassis
 
 .PHONY: test
-test: test_vofa_telemetry.exe test_vofa_measurement.exe test_imu_capture.exe test_vofa_remote.exe test_vofa_remote_fusion.exe test_vofa_remote_verified.exe
+test: test_vofa_telemetry.exe test_vofa_measurement.exe test_imu_capture.exe test_vofa_remote.exe test_vofa_remote_fusion.exe test_vofa_remote_verified.exe test_measurement_justfloat.exe test_imu_justfloat.exe test_remote_justfloat.exe test_remote_fusion_justfloat.exe test_remote_verified_justfloat.exe test_measurement_transport.exe
 	./test_vofa_telemetry.exe
 	./test_vofa_measurement.exe
 	./test_imu_capture.exe
 	./test_vofa_remote.exe
 	./test_vofa_remote_fusion.exe
 	./test_vofa_remote_verified.exe
+	./test_measurement_justfloat.exe
+	./test_imu_justfloat.exe
+	./test_remote_justfloat.exe
+	./test_remote_fusion_justfloat.exe
+	./test_remote_verified_justfloat.exe
+	./test_measurement_transport.exe
 
 test_vofa_telemetry.exe: $(SOURCE) $(HEADERS)
 	$(CC) $(CFLAGS) $(INCLUDES) -DVOFA_TELEMETRY_ENABLE=1 -DVOFA_TELEMETRY_MODE=0 $(SOURCE) -o $@
@@ -36,3 +42,23 @@ test_vofa_remote_fusion.exe: $(REMOTE_SOURCE) $(REMOTE_HEADERS) ../../config/30_
 
 test_vofa_remote_verified.exe: $(REMOTE_SOURCE) $(REMOTE_HEADERS) ../../config/30_velocity_observation/chassis_remote_imu_config.h
 	$(CC) $(CFLAGS) $(INCLUDES) $(MEASUREMENT_INCLUDES) -I../../modules/imu $(REMOTE_FLAGS) -DCHASSIS_REMOTE_IMU_FUSION_ENABLE=1 -DCHASSIS_REMOTE_IMU_CONFIG_VERIFIED=1 $(REMOTE_SOURCE) -o $@
+
+test_measurement_justfloat.exe: $(MEASUREMENT_SOURCE) $(HEADERS) justfloat_decode.h
+	$(CC) $(CFLAGS) $(INCLUDES) $(MEASUREMENT_INCLUDES) -DVOFA_TELEMETRY_ENABLE=1 -DVOFA_TELEMETRY_MODE=2 $(MEASUREMENT_SOURCE) -o $@
+
+test_imu_justfloat.exe: $(IMU_SOURCE) $(HEADERS) justfloat_decode.h ../../modules/imu/ins_task.h
+	$(CC) $(CFLAGS) $(INCLUDES) $(MEASUREMENT_INCLUDES) -I../../modules/imu -DIMU_CAPTURE_ONLY=1 -DVOFA_TELEMETRY_ENABLE=1 -DVOFA_TELEMETRY_MODE=2 -DUSB_TELEMETRY_ENABLE=0 $(IMU_SOURCE) -o $@
+
+JUSTFLOAT_REMOTE_FLAGS := $(filter-out -DVOFA_TELEMETRY_MODE=1,$(REMOTE_FLAGS)) -DVOFA_TELEMETRY_MODE=2
+test_remote_justfloat.exe: $(REMOTE_SOURCE) $(REMOTE_HEADERS) justfloat_decode.h
+	$(CC) $(CFLAGS) $(INCLUDES) $(MEASUREMENT_INCLUDES) -I../../modules/imu $(JUSTFLOAT_REMOTE_FLAGS) -DCHASSIS_REMOTE_IMU_FUSION_ENABLE=0 $(REMOTE_SOURCE) -o $@
+
+test_remote_fusion_justfloat.exe: $(REMOTE_SOURCE) $(REMOTE_HEADERS) justfloat_decode.h ../../config/30_velocity_observation/chassis_remote_imu_config.h
+	$(CC) $(CFLAGS) $(INCLUDES) $(MEASUREMENT_INCLUDES) -I../../modules/imu $(JUSTFLOAT_REMOTE_FLAGS) -DCHASSIS_REMOTE_IMU_FUSION_ENABLE=1 $(REMOTE_SOURCE) -o $@
+
+test_remote_verified_justfloat.exe: $(REMOTE_SOURCE) $(REMOTE_HEADERS) justfloat_decode.h ../../config/30_velocity_observation/chassis_remote_imu_config.h
+	$(CC) $(CFLAGS) $(INCLUDES) $(MEASUREMENT_INCLUDES) -I../../modules/imu $(JUSTFLOAT_REMOTE_FLAGS) -DCHASSIS_REMOTE_IMU_FUSION_ENABLE=1 -DCHASSIS_REMOTE_IMU_CONFIG_VERIFIED=1 $(REMOTE_SOURCE) -o $@
+
+TRANSPORT_SOURCE := test_measurement_transport.c ../../application/runtime/vofa_telemetry.c ../../modules/telemetry/usb_telemetry_format.c
+test_measurement_transport.exe: $(TRANSPORT_SOURCE) $(HEADERS) justfloat_decode.h
+	$(CC) $(CFLAGS) $(INCLUDES) $(MEASUREMENT_INCLUDES) -DVOFA_TELEMETRY_ENABLE=1 -DVOFA_TELEMETRY_MODE=2 $(TRANSPORT_SOURCE) -o $@

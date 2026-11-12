@@ -7,6 +7,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#if VOFA_TELEMETRY_MODE == 2
+#include "justfloat_decode.h"
+#endif
 
 UART_HandleTypeDef huart7 = {.gState = HAL_UART_STATE_READY};
 static const uint8_t *active_data;
@@ -25,8 +28,11 @@ HAL_StatusTypeDef HAL_UART_Transmit_IT(UART_HandleTypeDef *uart, const uint8_t *
     return HAL_OK;
 }
 
-static void ReadRow(int32_t fields[64])
+static void ReadRow(int64_t fields[64])
 {
+#if VOFA_TELEMETRY_MODE == 2
+    ReadJustFloatFields(active_data, active_length, fields, 64);
+#else
     assert(active_data && active_length > 0 && active_length <= 768);
     assert(memchr(active_data, '\n', active_length) == active_data + active_length - 1);
     assert(memchr(active_data, '\r', active_length) == NULL);
@@ -40,6 +46,7 @@ static void ReadRow(int32_t fields[64])
         next = end + 1;
     }
     assert(next == (const char *)active_data + active_length);
+#endif
 }
 
 static void Freshen(USBTelemetrySample_s *s, ChassisPowerSnapshot_s *p,
@@ -87,7 +94,7 @@ int main(void)
             .joint_tick_ms = {UINT32_MAX - 3, UINT32_MAX - 4},
         },
     };
-    int32_t fields[64];
+    int64_t fields[64];
     VofaTelemetrySendMeasurement(&sample, &cycle, &velocity, 0);
     assert(frames_started == 1);
     ReadRow(fields);
@@ -111,7 +118,8 @@ int main(void)
     assert(frames_started == 1 && active_length == saved_length);
     assert(memcmp(saved, active_data, saved_length) == 0);
     huart7.gState = HAL_UART_STATE_READY;
-    VofaTelemetrySendMeasurement(&sample, &cycle, &velocity, 159);
+    VofaTelemetrySendMeasurement(&sample, &cycle, &velocity,
+                                  VOFA_TELEMETRY_MODE == 2 ? 119 : 159);
     assert(frames_started == 1);
     VofaTelemetrySendMeasurement(&sample, &cycle, &velocity, 160);
     ReadRow(fields);
@@ -158,7 +166,8 @@ int main(void)
     huart7.gState = HAL_UART_STATE_READY;
     VofaTelemetrySendMeasurement(&sample, &cycle, &velocity, 560);
     ReadRow(fields);
-    assert(fields[40] == INT32_MAX && fields[41] == INT32_MIN);
+    assert(fields[40] == (VOFA_TELEMETRY_MODE == 2 ? (int64_t)(float)INT32_MAX : INT32_MAX));
+    assert(fields[41] == INT32_MIN);
     /* Failed starts also consume a sequence, exposing a lost line. */
     huart7.gState = HAL_UART_STATE_READY;
     fail_send = true;
@@ -169,6 +178,6 @@ int main(void)
     VofaTelemetrySendMeasurement(&sample, &cycle, &velocity, 720);
     ReadRow(fields);
     assert(fields[4] == 9);
-    puts("PASS: FireWater Kalman CSV fields, validity, rollover and asynchronous transport");
+    puts("PASS: full observation fields, validity, rollover and asynchronous transport");
     return 0;
 }

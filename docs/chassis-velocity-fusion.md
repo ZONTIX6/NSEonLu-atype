@@ -1,6 +1,6 @@
 # 整车平移速度融合观测
 
-当前推荐路线是：第二块 A 板刚性固定在底盘，经 **CAN1** 将 IMU 送到主板，与轮速历史配对后在线运行卡尔曼速度观测，再由主板 UART7 汇总为 **一个 VOFA+ 窗口、一份 CSV**。融合结果仅供记录与对照，没有接入电机控制、PID、功控、随动、自旋或安全门控。
+当前推荐路线是：第二块 A 板刚性固定在底盘，经 **CAN1** 将 IMU 送到主板，与轮速历史配对后在线运行卡尔曼速度观测，再由主板 UART7 以 JustFloat 汇总到 **一个 VOFA+ 窗口**，采集后由 VOFA+ 导出一份 CSV。融合结果仅供记录与对照，没有接入电机控制、PID、功控、随动、自旋或安全门控。
 
 远端路径不依赖本地云台 IMU 或 yaw/pitch 编码器；它使用固定安装旋转和芯片偏移。本页后半部分保留可选的本地云台融合路径，两者配置不能混用。软件接入不代表实车精度通过；操作顺序和签字条件见 [测试与验收手册](kalman-chassis-test-and-acceptance.md)。
 
@@ -9,7 +9,7 @@
 主底盘/云台板构建：
 
 ```powershell
-make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-can1-main ONE_BOARD=1 CHASSIS_CONTROL_MODE=0 CHASSIS_IMU_CAN_RX_ENABLE=1 CHASSIS_VELOCITY_FUSION_ENABLE=1 CHASSIS_REMOTE_IMU_FUSION_ENABLE=1 CHASSIS_VELOCITY_FUSION_CALIBRATED=0 VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=1
+make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-can1-main ONE_BOARD=1 CHASSIS_CONTROL_MODE=0 CHASSIS_IMU_CAN_RX_ENABLE=1 CHASSIS_VELOCITY_FUSION_ENABLE=1 CHASSIS_REMOTE_IMU_FUSION_ENABLE=1 CHASSIS_VELOCITY_FUSION_CALIBRATED=0 VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=2
 ```
 
 第二块底盘 IMU 板构建：
@@ -22,7 +22,7 @@ make -j8 PROFILE=atype-vehicle BUILD_DIR=build/imu-can1-sender IMU_CAPTURE_ONLY=
 
 当前 CAN1 为 **1 Mbps**，新增标准 ID **`0x520`** 与当前工程已有 ID 无冲突。每 20 ms 尝试发送一组（50 Hz），每组 9 个 8 字节分片，承载源四元数 4 轴、导航系去重力加速度 3 轴、传感器系角速度 3 轴、样本序号、源板时间、发送时源年龄和有效标志。接收检查严格顺序、同组 tag、CRC16/CCITT-FALSE 和 10 ms 组装期限。发送失败即中止本组，缺片、错序或过期组不更新已发布样本。
 
-仅主板 UART7 接 VOFA+，选择 **FireWater、115200、8N1**。schema 3 固定 72 列，发送间隔至少 80 ms（标称 12.5 Hz）；导出完整 **`I0`–`I71`**。启动先静止，确认 `I0=3`、`I63=0`、`I64=2`、`I5` bit 15/16/17 为 1，再等待 bit 4 持续有效、`I65` 接收年龄保持较小，以及预热后 `I6=9` 且 bit 3 为 1。来源和配置位本身不表示收到有效输入或已进入融合。[完整字段与采集步骤](vofa-telemetry.md#firewater-卡尔曼观测通道表)
+仅主板 UART7 接 VOFA+，选择 **JustFloat、115200、8N1**。模式 `2` 使用 schema 3 的固定 72 路通道，发送间隔至少 40 ms（标称 25 Hz）；采集后由 VOFA+ 导出完整 **`I0`–`I71`**。启动先静止，确认 `I0=3`、`I63=0`、`I64=2`、`I5` bit 15/16/17 为 1，再等待 bit 4 持续有效、`I65` 接收年龄保持较小，以及预热后 `I6=9` 且 bit 3 为 1。来源和配置位本身不表示收到有效输入或已进入融合。[完整字段与采集步骤](vofa-telemetry.md#firewater-卡尔曼观测通道表)
 
 schema 3 保留 schema 2 前 64 列的布局，主要区别如下：
 
@@ -44,7 +44,7 @@ schema 3 保留 schema 2 前 64 列的布局，主要区别如下：
 需要纯采集基线时，使用独立目录并关闭新开关：
 
 ```powershell
-make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-can1-capture ONE_BOARD=1 CHASSIS_CONTROL_MODE=0 CHASSIS_IMU_CAN_RX_ENABLE=1 CHASSIS_VELOCITY_FUSION_ENABLE=1 CHASSIS_REMOTE_IMU_FUSION_ENABLE=0 CHASSIS_VELOCITY_FUSION_CALIBRATED=0 VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=1
+make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-can1-capture ONE_BOARD=1 CHASSIS_CONTROL_MODE=0 CHASSIS_IMU_CAN_RX_ENABLE=1 CHASSIS_VELOCITY_FUSION_ENABLE=1 CHASSIS_REMOTE_IMU_FUSION_ENABLE=0 CHASSIS_VELOCITY_FUSION_CALIBRATED=0 VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=2
 ```
 
 此时四轮有效则 `I6=2`（`UNCALIBRATED`），`I27/I28` 来自轮速，bit 3/16/17/18 为 0，`I29`–`I32` 为 0，原始 CAN 采集保留。切换配置后重新核对已烧录固件身份，不混合保存两种配置的 CSV。
@@ -69,7 +69,7 @@ make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-can1-capture ONE_BOARD=1 C
 
 源有效且完整组校验通过后，远端可用还要求发送时源年龄 `I66≤20 ms`、已知年龄下界 `I33≤60 ms`。`I33 = 发送时源年龄 + (主板当前时间 − 本组首片接收时间)`；它没有包含首片排队、总线仲裁前等待或传感器内部延迟，因此不是精确端到端年龄，也不是硬件同步后的采样时刻。`I65` 从完整组接收时刻算起，`I69` 表示分片到达跨度。无效测量填 0，未知或不可表示的年龄填 `-1`，使用数据必须检查 bit 4。
 
-高低位按 `高位×65536+低位` 还原。时钟、发送序号和源 INS 序号按 uint32 回绕；累计拒绝组数达到 `UINT32_MAX` 后饱和，不回绕。两板独立计时，不能用主板 `I1/I2` 直接减源板 `I67/I68`，也不能把主板时间减 `I33` 当成精确的跨板采样时刻。单份 CSV 只是汇总不同来源的最新观测；离线比较仍须考虑各自年龄、传感器延迟及第二板导航系方向。
+JustFloat 记录中的整数语义字段先四舍五入为整数，再做位运算；高低位按 `高位×65536+低位` 还原。float32 不保证所有 int32 大整数精确，分开的 16 位时间/计数仍可还原，详见[完整协议的精度说明](vofa-telemetry.md#firewater-卡尔曼观测通道表)。时钟、发送序号和源 INS 序号按 uint32 回绕；累计拒绝组数达到 `UINT32_MAX` 后饱和，不回绕。两板独立计时，不能用主板 `I1/I2` 直接减源板 `I67/I68`，也不能把主板时间减 `I33` 当成精确的跨板采样时刻。单份 CSV 只是汇总不同来源的最新观测；离线比较仍须考虑各自年龄、传感器延迟及第二板导航系方向。
 
 远端适配器把 `first_rx_tick_ms - source_age_ms` 作为主板时钟下的**估计采样时刻**，在 32 项固定轮速历史中作有界配对/插值；缺少合格历史时等待或降级，不把当前轮速冒充同刻轮速。中心三点差分与卡尔曼 dt 使用源板时间；输出另保存中间样本在主板时钟下的估计时刻。bit 17 提醒这个时间方法没有测得单向传输排队与传感器内部延迟，不能当作同步证据。
 
@@ -89,7 +89,7 @@ make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-can1-capture ONE_BOARD=1 C
 | `remote.updates/resets` | 饱和累计更新/重置计数；更新计数用于检查同一源包是否被重复处理，不等于 CSV 行数 |
 | `remote.timing_estimated` | 采用接收端估计时间；不是同步成功标志 |
 
-这些详细诊断不增加 FireWater 列。需要无停核日志或额外采集才能逐次验证计数、重置和延迟；调试器 halt 的记录不能用于实时性验收。`I27/I28` 和 `I29/I30` 是同一融合输出的速度与配对轮速，`I31/I32` 是导航系中心加速度。主板时间减 `I11` 可还原该输出的主板估计时刻，但不能消除跨板时间不确定度；`I33`–`I45` 仍是最新原始远端输入，与中间输出并不同刻。
+这些详细诊断不增加观测通道。需要无停核日志或额外采集才能逐次验证计数、重置和延迟；调试器 halt 的记录不能用于实时性验收。`I27/I28` 和 `I29/I30` 是同一融合输出的速度与配对轮速，`I31/I32` 是导航系中心加速度。主板时间减 `I11` 可还原该输出的主板估计时刻，但不能消除跨板时间不确定度；`I33`–`I45` 仍是最新原始远端输入，与中间输出并不同刻。
 
 ### 采集工况与交付
 
@@ -97,11 +97,11 @@ make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-can1-capture ONE_BOARD=1 C
 
 提交完整 `I0`–`I71`、原有表头和 VOFA+ 时间列，并附两板的固件身份、完整构建命令、第二板安装轴向、MPU6500 芯片相对底盘中心的偏移、实际动作方向、地面与载荷，以及拒绝计数增长或抖动情况。靠近几何中心不等于偏移严格为零。
 
-平移速度使用 mm/s，加速度使用 mm/s²，IMU 角速度使用 mrad/s。`I23`、`I26` 的车体旋转速度为 mrev/s（`1000×转/秒`），由 `wz_rpm×1000/60` 得到。80 ms CSV 是降采样，不能逐次重放高频滤波器或完整辨识 Q/R；实际速度误差和打滑表现还需独立速度参考。
+平移速度使用 mm/s，加速度使用 mm/s²，IMU 角速度使用 mrad/s。`I23`、`I26` 的车体旋转速度为 mrev/s（`1000×转/秒`），由 `wz_rpm×1000/60` 得到。模式 `2` 的 40 ms CSV 仍是降采样（旧模式 `1` 为 80 ms），不能逐次重放高频滤波器或完整辨识 Q/R；实际速度误差和打滑表现还需独立速度参考。
 
 ## 可选：独立双 CSV 采集
 
-不接 CAN1 时仍可分别记录两板 UART7。关闭主板 `CHASSIS_IMU_CAN_RX_ENABLE`、`CHASSIS_REMOTE_IMU_FUSION_ENABLE` 和第二板 `IMU_CAPTURE_CAN_TX_ENABLE`，第二板保持 `IMU_CAPTURE_ONLY=1` 并开启 FireWater 输出。该路线使用 schema 2 的 64 列，每个工况保存主板与第二板各一份 CSV，需要两个独立接收通道，不并接两个 TX。[两份完整构建命令与配对步骤](vofa-telemetry.md#可选独立双-csv-采集)
+不接 CAN1 时仍可分别记录两板 UART7。关闭主板 `CHASSIS_IMU_CAN_RX_ENABLE`、`CHASSIS_REMOTE_IMU_FUSION_ENABLE` 和第二板 `IMU_CAPTURE_CAN_TX_ENABLE`，第二板保持 `IMU_CAPTURE_ONLY=1` 并开启遥测输出。文末示例保留模式 `1` FireWater，也可把两端同时改为模式 `2` JustFloat。该路线使用 schema 2 的 64 列，每个工况保存主板与第二板各一份 CSV，需要两个独立接收通道，不并接两个 TX。[两份完整构建命令与配对步骤](vofa-telemetry.md#可选独立双-csv-采集)
 
 schema 2 主板 `I63=0`，IMU 列来自本地云台；独立第二板 `I63=1`、`I6=-2`、`I5` bit 14 为 1，IMU 列来自底盘。第二板仅有 bit 0 和 bit 4 对应的测量有效，保留时间、源序号及 IMU 数据，其余控制或观测测量不可用。保存各自完整 `I0`–`I63`，再离线处理时间偏移、时钟漂移和坐标方向。不能直接按 CSV 行号或两板开机毫秒配对。
 
@@ -139,7 +139,7 @@ make -j8 PROFILE=atype-vehicle BUILD_DIR=build/velocity-calibrated CHASSIS_IMU_C
 - IMU、云台编码器、时间对齐或滤波异常时，状态标出原因，估计退回当前轮速反算。四轮反馈不可用时，`valid` 为假。
 - `diagnostics` 在同一采集临界区保存四轮 raw rpm/接收时间、INS 四元数/去重力加速度/角速度/时间/序号，以及 yaw/pitch 原始编码器/转速/时间。未标定构建也发布这些输入。`available` 表示已采集过，调用方还需检查各来源有效位和年龄；getter 判定速度过期时不会擦除这些诊断。
 
-本地融合输出可用 schema 2 FireWater 记录。只有 `I5` bit 3 为 1 时，`I27`/`I28` 才是融合结果，`I29`/`I30` 为对应时刻的配对轮速，估计年龄为 `I11`。最新轮速和本地 IMU 另有年龄，不能把整行当成同时采样。估计减配对轮速是后验差，不是校正前 innovation，不能直接用来拟合 R。
+本地融合输出可用模式 `2` JustFloat 或模式 `1` FireWater 记录，均为 schema 2。只有 `I5` bit 3 为 1 时，`I27`/`I28` 才是融合结果，`I29`/`I30` 为对应时刻的配对轮速，估计年龄为 `I11`。最新轮速和本地 IMU 另有年龄，不能把整行当成同时采样。估计减配对轮速是后验差，不是校正前 innovation，不能直接用来拟合 R。
 
 ## 现有云台 IMU 融合路径的实车验证
 

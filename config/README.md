@@ -26,7 +26,7 @@
 
 ## 第一块板与第二块板怎样切换
 
-打开 [`00_flash/board_flash_config.h`](00_flash/board_flash_config.h)，修改 `BOARD_FLASH_TARGET`：`1` 为第一块主整车板，接收 CAN1 IMU 并输出 FireWater；`2` 为第二块底盘 IMU 板，只采集、控温和发送 CAN1 数据。`BOARD_FLASH_PROGRAMMER` 选 `1` 使用 DAP/OpenOCD，选 `2` 使用 J-Link/J-Flash；编译 profile 和两组输出目录也在同一文件内。
+打开 [`00_flash/board_flash_config.h`](00_flash/board_flash_config.h)，修改 `BOARD_FLASH_TARGET`：`1` 为第一块主整车板，接收 CAN1 IMU 并以模式 `2` 输出完整观测 JustFloat（40 ms 一组，CSV 由 VOFA+ 导出）；`2` 为第二块底盘 IMU 板，只采集、控温和发送 CAN1 数据。`BOARD_FLASH_PROGRAMMER` 选 `1` 使用 DAP/OpenOCD，选 `2` 使用 J-Link/J-Flash；编译 profile 和两组输出目录也在同一文件内。
 
 主板预设 `CHASSIS_REMOTE_IMU_FUSION_ENABLE=1`，用第二板 IMU 做在线速度融合观测；第二板该项为 `0`。主板的 `CHASSIS_VELOCITY_FUSION_CALIBRATED=0` 只表示没有启用本地云台 IMU 标定路径，**不再表示远端融合关闭**。要回到纯采集，在该文件把 `BOARD_FLASH_1_CHASSIS_REMOTE_IMU_FUSION_ENABLE` 改为 `0` 后重新构建、烧录；CAN1 接收及原始 CSV 保留。普通手动 Make/CMake 的新开关默认仍为 `0`，需要显式传 `CHASSIS_REMOTE_IMU_FUSION_ENABLE=1`。
 

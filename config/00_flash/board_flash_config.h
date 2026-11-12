@@ -12,7 +12,7 @@
 #define BOARD_FLASH_PROGRAMMER 1 /* 下载器：1=DAPLink/OpenOCD，2=J-Link/J-Flash；仅Flash动作使用。 */
 #define BOARD_FLASH_PROFILE "atype-vehicle" /* 共用构建配置；两板CAN1记录方案使用整车profile。 */
 
-/* 第一块：整车主板。CAN1接收第二块IMU，UART7输出FireWater统一记录；
+/* 第一块：整车主板。CAN1接收第二块IMU，UART7输出全量JustFloat统一记录；
  * 远端IMU参与只读速度融合观测，不进入控制；安装/噪声参数另见远端IMU配置。它不是CHASSIS_BOARD/GIMBAL_BOARD分板模式。 */
 #define BOARD_FLASH_1_NAME "第一块：整车主板" /* 命令执行前显示的板卡名称。 */
 #define BOARD_FLASH_1_BUILD_DIR "build/board-1-main" /* 第一块独立输出目录；build下使用英文字母/数字/下划线/连字符和斜杠。 */
@@ -27,7 +27,7 @@
 #define BOARD_FLASH_1_CHASSIS_VELOCITY_FUSION_CALIBRATED 0 /* 0=不启用本地云台标定；远端固定底盘IMU使用独立的安装与噪声配置。 */
 #define BOARD_FLASH_1_CHASSIS_REMOTE_IMU_FUSION_ENABLE 1 /* 1=用固定底盘IMU做只读卡尔曼观测；不表示安装与噪声参数已实测审核，也不接管控制。 */
 #define BOARD_FLASH_1_VOFA_TELEMETRY_ENABLE 1 /* 1=开启UART7统一遥测，需保持UART7未被裁判/辅助设备占用。 */
-#define BOARD_FLASH_1_VOFA_TELEMETRY_MODE 1 /* 1=FireWater文本格式，主板远端IMU记录要求此格式。 */
+#define BOARD_FLASH_1_VOFA_TELEMETRY_MODE 2 /* 2=全量JustFloat二进制测量；1可回退FireWater文本，均保留远端IMU观测字段。 */
 #define BOARD_FLASH_1_USB_TELEMETRY_ENABLE 1 /* 1=保留USB网页遥测；视觉应使用UART，不能同时选USB视觉。 */
 
 /* 第二块：刚性固定在底盘的独立IMU板。仅采样、温控和CAN1发送，不初始化整车电机/遥控任务。 */

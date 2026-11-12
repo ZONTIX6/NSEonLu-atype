@@ -5,7 +5,7 @@
 #include "usb_telemetry_format.h"
 
 /* Call from the telemetry task with the latest freshness-checked sample. */
-#if VOFA_TELEMETRY_MODE == 1
+#if VOFA_TELEMETRY_MODE == 1 || VOFA_TELEMETRY_MODE == 2
 #include "chassis_power_types.h"
 #include "chassis_velocity_observer.h"
 void VofaTelemetrySendMeasurement(const USBTelemetrySample_s *sample,

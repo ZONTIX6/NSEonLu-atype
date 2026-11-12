@@ -5,11 +5,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#if VOFA_TELEMETRY_MODE == 2
+#include "justfloat_decode.h"
+#endif
 
 UART_HandleTypeDef huart7 = {.gState = HAL_UART_STATE_READY};
 static uint32_t now;
 static unsigned frames;
-static int32_t fields[64];
+static int64_t fields[64];
 static INSMotionSnapshot_s imu = {
     .valid = true, .sequence = 0x1234abcdU, .quaternion = {1, 0, 0, 0},
     .accel_n_mps2 = {.125f, -.25f, .5f}, .gyro_sensor_radps = {1, -2, 3},
@@ -20,6 +23,9 @@ bool INSGetMotionSnapshot(INSMotionSnapshot_s *out) { *out = imu; return imu.val
 HAL_StatusTypeDef HAL_UART_Transmit_IT(UART_HandleTypeDef *uart, const uint8_t *data, uint16_t length)
 {
     assert(uart == &huart7 && length < 769);
+#if VOFA_TELEMETRY_MODE == 2
+    ReadJustFloatFields(data, length, fields, 64);
+#else
     char row[769];
     memcpy(row, data, length);
     row[length] = 0;
@@ -31,6 +37,7 @@ HAL_StatusTypeDef HAL_UART_Transmit_IT(UART_HandleTypeDef *uart, const uint8_t *
         next = end + 1;
     }
     assert(next == row + length);
+#endif
     ++frames;
     return HAL_OK;
 }

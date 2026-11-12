@@ -151,7 +151,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Act
 | `IMU_CAPTURE_CAN_TX_ENABLE` / `CHASSIS_IMU_CAN_RX_ENABLE` | `0` / `1` | `1` / `0` |
 | `CHASSIS_VELOCITY_FUSION_ENABLE` / `CHASSIS_VELOCITY_FUSION_CALIBRATED` | `1` / `0` | `0` / `0` |
 | `CHASSIS_REMOTE_IMU_FUSION_ENABLE` | `1`，推荐融合；纯采集改 `0` | `0` |
-| `VOFA_TELEMETRY_ENABLE` / `VOFA_TELEMETRY_MODE` | `1` / `1` | `0` / `1`（关闭时格式不参与输出） |
+| `VOFA_TELEMETRY_ENABLE` / `VOFA_TELEMETRY_MODE` | `1` / `2` | `0` / `1`（关闭时格式不参与输出） |
 | `USB_TELEMETRY_ENABLE` | 当前预设 `1` | `0` |
 | 输出目录 | 当前 `build/board-1-main` | 当前 `build/board-2-imu` |
 
@@ -188,9 +188,9 @@ Get-FileHash -Algorithm SHA256 -LiteralPath build/board-2-imu/basic_framework.bi
 
 只把**主板 UART7 TX（PE8）接接收器 RX，GND 接 GND**。接口针序和接收器供电按实际硬件核对。UART7 不得同时被裁判或辅助设备占用。第二板不需要再接第二个 VOFA 窗口。接线图入口见 [A 板接线](atype-integration.md#接线)。
 
-VOFA+ 选择 `SerialPort → 正确 COM → 115200 / 8N1 / 无流控 → FireWater`。每行应有 `I0`～`I71` 共 72 个固件数据通道；导出文件可能另含 VOFA 时间列，不把它计入 72 列。
+VOFA+ 选择 `SerialPort → 正确 COM → 115200 / 8N1 / 无流控 → JustFloat`（主板模式 `2`）。每帧应有 `I0`～`I71` 共 72 个固件数据通道；导出文件可能另含 VOFA 时间列，不把它计入 72 列。
 
-每工况开始前清空旧缓存；结束后“文件 → 保存数据”，保留全部通道、表头和时间列。不要只保存勾选的几条波形，不用截图替代 CSV。完整字段表见 [FireWater 通道定义](vofa-telemetry.md#firewater-卡尔曼观测通道表)。
+每工况开始前清空旧缓存；结束后在 VOFA+ 中“文件 → 保存数据”导出 CSV，保留全部通道、表头和时间列。不要只保存勾选的几条波形，不用截图替代 CSV。完整字段表见 [完整观测通道定义](vofa-telemetry.md#firewater-卡尔曼观测通道表)。
 
 ## 5. 测试时先看这几组数据
 
@@ -208,13 +208,13 @@ VOFA+ 选择 `SerialPort → 正确 COM → 115200 / 8N1 / 无流控 → FireWat
 | CAN IMU 时序 | `I65` 完整组接收年龄；`I66` 发送时源年龄；`I33` 已知年龄下界；`I69` 首末片跨度，单位 ms |
 | 输出和功控 | `I9` 最终使能位，`I52`～`I55` 最终尝试提交的电流命令；`I56`～`I59` 除以 100 得 W；分别结合 `I5` bit 7/8/9/10/12 使用 |
 
-bit 判断方法是 `(I5 & (1 << n)) != 0`。例如 bit 4 对应掩码 16，bit 3 对应 8。**无效数据可能填 0；年龄未知是 -1。先看有效位，再看数值。** “CAN 提交成功”只表示入队成功，不证明电调实际执行。
+JustFloat CSV 中的整数语义字段先四舍五入再用于位运算或时间/序号组合，避免帧尾防碰撞带来的微小浮点变化。float32 不能精确表示全部 int32 大整数；高低 16 位字段仍可还原，详见[精度说明](vofa-telemetry.md#firewater-卡尔曼观测通道表)。bit 判断方法是 `(round(I5) & (1 << n)) != 0`（先将 `round` 结果转为整数）。例如 bit 4 对应掩码 16，bit 3 对应 8。**无效数据可能填 0；年龄未知是 -1。先看有效位，再看数值。** “CAN 提交成功”只表示入队成功，不证明电调实际执行。
 
 高低位还原：主板时间 `t=I1×65536+I2`，发送尝试序号 `seq=I3×65536+I4`，源 INS 序号 `s=I34×65536+I35`，拒绝组数 `reject=I70×65536+I71`。时间/序号按 uint32 回绕，拒绝计数饱和。设备重启要分段，不能当作一次正常回绕拼接。
 
 ### 5.1 时间和坐标的三个限制
 
-1. 主板 FireWater 间隔至少 80 ms，标称 12.5 Hz；CAN 的 50 Hz 数据在这里被降采样。源 INS 序号跳变是正常现象，不能用它计算 CAN 丢包率。发送尝试序号缺口表示 UART 忙或后续传输/接收等环节遗漏，不等于电机 CAN 丢帧。
+1. 主板模式 `2` JustFloat 间隔至少 40 ms，标称 25 Hz（旧模式 `1` FireWater 为 80 ms / 12.5 Hz）；CAN 的 50 Hz 数据在这里被降采样。源 INS 序号跳变是正常现象，不能用它计算 CAN 丢包率。发送尝试序号缺口表示 UART 忙或后续传输/接收等环节遗漏，不等于电机 CAN 丢帧。
 2. 两板时钟未同步；不能用主板时间直接减第二板 `I67/I68`。`I33` 不含全部排队和传感器内部延迟，是已知年龄下界；有效远端输入要求 `I66≤20 ms` 且 `I33≤60 ms`，不证明真实端到端延迟小于 60 ms。远端融合按 `first_rx-source_age` 估计主板时刻作轮速历史配对，源板时间用于差分/KF 的 dt；bit 17 提醒时间是估计。主板时间减 `I11` 得到的远端融合时刻也有这项不确定度，不能当成同步后的真值时刻。
 3. 速度输出前/右为正；标定几何使用前/左/上。`I40`～`I42` 属于源板导航系，`I43`～`I45` 属于传感器系，不能直接当成车体系前/右加速度。先确认安装旋转和参考坐标，再做定量比较。
 
@@ -244,7 +244,7 @@ bit 判断方法是 `(I5 & (1 << n)) != 0`。例如 bit 4 对应掩码 16，bit 
 | 单轮反馈缺失（A/B/C） | 架空、零输出、断电后安排单电机独立反馈支路失联，再上电观察；保留其他总线节点和终端，不带动力拔共享 CAN | 该轮在线位清零，轮速 bit 1、估计 bit 2、融合 bit 3 清零，状态为轮不可用。不能只看速度填 0 就说停车保护通过；驱动行为另看安全链和最终输出 |
 | 遥控失联/急停（A/B/C） | 仅在 T2 已验证的架空低速条件下做，记录触发与恢复 | 驱动停止、恢复须重新满足中立及健康条件；CSV 只能证明采样时刻状态，停止延迟要靠高频日志或同步录像测量 |
 | 本地 IMU/云台反馈无效（B/C） | 由电控人员用已验证的台架故障注入或独立支路方法施加；不在运动中破坏共享线路 | B：远端与轮速仍有效时，不应仅因本地输入无效就失去远端融合；C：bit 3 清零并退回轮速。两种配置都可能因原车本地 INS/yaw 安全条件失效而停驱，分别记录观测状态与安全门控 |
-| 重复源包、漏组、时间跳变（B） | 先执行远端模块与应用主机测试；上板只由电控人员用已验证的注入固件/设备、架空零输出施加，并保留注入日志和逐次诊断 | 同源包不重复推进 `remote.updates`，不刷新融合输出时刻；超龄后降级。约 40 ms 源间隔、重启或异常时序应清历史/预热；合格新数据恢复后再 FUSED。12.5 Hz CSV 无法单独证明每次更新行为 |
+| 重复源包、漏组、时间跳变（B） | 先执行远端模块与应用主机测试；上板只由电控人员用已验证的注入固件/设备、架空零输出施加，并保留注入日志和逐次诊断 | 同源包不重复推进 `remote.updates`，不刷新融合输出时刻；超龄后降级。约 40 ms 源间隔、重启或异常时序应清历史/预热；合格新数据恢复后再 FUSED。25 Hz CSV 无法单独证明每次更新行为 |
 
 远端协议的错序、缺片、CRC、10 ms 期限和时间回绕先由主机协议测试覆盖，融合层时序另由远端模块/应用测试覆盖；普通外场不通过短接总线制造故障。没有合适注入设备时，将硬件注入项标为未执行并保留软件结果；不得把软件结果写成该项硬件已通过。
 
@@ -270,7 +270,7 @@ bit 判断方法是 `(I5 & (1 << n)) != 0`。例如 bit 4 对应掩码 16，bit 
 按 4.2 的板 1 预设开启远端融合并重新构建、烧录。若使用手动 Make，显式带入新开关并使用独立目录；实际供电、受限自旋及其他本车覆盖参数也必须带入并归档：
 
 ```powershell
-make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-remote-verified ONE_BOARD=1 CHASSIS_CONTROL_MODE=0 IMU_CAPTURE_ONLY=0 IMU_CAPTURE_CAN_TX_ENABLE=0 CHASSIS_IMU_CAN_RX_ENABLE=1 CHASSIS_VELOCITY_FUSION_ENABLE=1 CHASSIS_REMOTE_IMU_FUSION_ENABLE=1 CHASSIS_VELOCITY_FUSION_CALIBRATED=0 VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=1
+make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-remote-verified ONE_BOARD=1 CHASSIS_CONTROL_MODE=0 IMU_CAPTURE_ONLY=0 IMU_CAPTURE_CAN_TX_ENABLE=0 CHASSIS_IMU_CAN_RX_ENABLE=1 CHASSIS_VELOCITY_FUSION_ENABLE=1 CHASSIS_REMOTE_IMU_FUSION_ENABLE=1 CHASSIS_VELOCITY_FUSION_CALIBRATED=0 VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=2
 # 仅在构建成功并确认连接主板后执行；J-Link 使用对应 download_jlink
 make download_dap BUILD_DIR=build/kalman-remote-verified
 ```
@@ -278,7 +278,7 @@ make download_dap BUILD_DIR=build/kalman-remote-verified
 重新核对 T1～T3：schema 3、bit 15/16/17 为 1，已审核固件 bit 18 为 1；预热后再看 `I6=9` 和 bit 3。第二板仍用原采集固件。用相同安装和已通过动作对照纯采集固件时，只关闭远端融合，保留 CAN/遥测：
 
 ```powershell
-make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-remote-capture ONE_BOARD=1 CHASSIS_CONTROL_MODE=0 CHASSIS_IMU_CAN_RX_ENABLE=1 CHASSIS_VELOCITY_FUSION_ENABLE=1 CHASSIS_REMOTE_IMU_FUSION_ENABLE=0 CHASSIS_VELOCITY_FUSION_CALIBRATED=0 VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=1
+make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-remote-capture ONE_BOARD=1 CHASSIS_CONTROL_MODE=0 CHASSIS_IMU_CAN_RX_ENABLE=1 CHASSIS_VELOCITY_FUSION_ENABLE=1 CHASSIS_REMOTE_IMU_FUSION_ENABLE=0 CHASSIS_VELOCITY_FUSION_CALIBRATED=0 VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=2
 ```
 
 纯采集四轮正常时 `I6=2`，bit 3/16/17/18 为 0；需要上板对照时先确认该构建成功，再下载同目录 BIN。两种结果分别归档，不能把降级轮速误计为融合。
@@ -301,7 +301,7 @@ C 只适用于主板 IMU 随云台 yaw/pitch 运动的原有实现。执行人�
 先创建 `build/kalman-local-verified` 并放入审核后的头文件，再执行：
 
 ```powershell
-make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-local-verified ONE_BOARD=1 CHASSIS_CONTROL_MODE=0 IMU_CAPTURE_ONLY=0 IMU_CAPTURE_CAN_TX_ENABLE=0 CHASSIS_IMU_CAN_RX_ENABLE=0 CHASSIS_REMOTE_IMU_FUSION_ENABLE=0 CHASSIS_VELOCITY_FUSION_ENABLE=1 CHASSIS_VELOCITY_FUSION_CALIBRATED=1 VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=1
+make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-local-verified ONE_BOARD=1 CHASSIS_CONTROL_MODE=0 IMU_CAPTURE_ONLY=0 IMU_CAPTURE_CAN_TX_ENABLE=0 CHASSIS_IMU_CAN_RX_ENABLE=0 CHASSIS_REMOTE_IMU_FUSION_ENABLE=0 CHASSIS_VELOCITY_FUSION_ENABLE=1 CHASSIS_VELOCITY_FUSION_CALIBRATED=1 VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=2
 # 仅在构建成功并确认连接主板后执行；J-Link 使用对应 download_jlink
 make download_dap BUILD_DIR=build/kalman-local-verified
 ```
@@ -345,7 +345,7 @@ B 再重复 T7 已通过的受限旋转：用独立位姿确认中心是否平�
 4. 逐轴计算误差 `e=v_est-v_ref`，记录均值、RMSE=`sqrt(mean(e²))`、绝对误差 P95/最大值；轮速基线使用同一参考、同一时刻和同一工况。每主工况建议至少 5 次独立正式重复，评估改善时保留至少 10 组可比试次。
 5. 正常测试段的失效、拒绝和降级全部进入可用率统计；精度表明确有效样本覆盖率。不能只截取好看曲线、删除所有难测段后宣布通过。
 
-当前 CSV 没有完整高频输入、协方差或校正前 innovation。`估计－配对轮速` 是后验差，不能直接据此拟合 R；`chassis-speed-capture.py`、`wheel-speed-replay.py` 也不是这个 FireWater CSV 的解析/回放工具。需要高频复现、毫秒级迟滞或精确 Q/R 辨识时，由电控人员另行提供逐次输入/输出及同源时间记录。
+当前 CSV 没有完整高频输入、协方差或校正前 innovation。`估计－配对轮速` 是后验差，不能直接据此拟合 R；`chassis-speed-capture.py`、`wheel-speed-replay.py` 也不是这个 VOFA+ 观测 CSV 的解析/回放工具。需要高频复现、毫秒级迟滞或精确 Q/R 辨识时，由电控人员另行提供逐次输入/输出及同源时间记录。
 
 ### 8.4 最后测故障、任务耗时与资源
 
@@ -353,7 +353,7 @@ B 再重复 T7 已通过的受限旋转：用独立位姿确认中心是否平�
 
 在相同供电、载荷、遥测和动作下，对比开启/关闭融合的固件；B 使用 7.2 的融合/纯采集配置，保留相同 CAN 流量和遥测。每种配置记录至少 10 min。记录应用、INS、电机任务的**最大执行时间、启动间隔、超期次数、最小剩余栈和最小空闲堆**，包含遥测和 CAN 最繁忙时刻。
 
-当前任务源码在 INS >1 ms、电机 >2 ms、应用 >5 ms 时告警，这些是代码中的执行耗时告警线。任务使用 `osDelay`，不能把这些数值当作已经实测的精确启动周期。也不能把单次变量、日志没报错或 FireWater 12.5 Hz 曲线当作最坏耗时证据。
+当前任务源码在 INS >1 ms、电机 >2 ms、应用 >5 ms 时告警，这些是代码中的执行耗时告警线。任务使用 `osDelay`，不能把这些数值当作已经实测的精确启动周期。也不能把单次变量、日志没报错或模式 `2` 的 25 Hz 遥测曲线当作最坏耗时证据。
 
 若现有固件没有导出所需最大值，由电控人员先补充无停核的统计或 GPIO/逻辑分析仪测量，再验实时性。默认 CAN1 采集 CSV 不含这些指标。栈高水位按 FreeRTOS words 记录并注明单位；参考 `.su`/map 只能辅助，不能代替实测。调试器 halt 的试次不用于实时验收。
 

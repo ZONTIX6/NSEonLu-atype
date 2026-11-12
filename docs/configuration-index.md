@@ -1,8 +1,8 @@
 # 完整宏与初始化参数索引
 
-更新日期：2026-11-11。当前目标为 STM32F427 A 板。配套说明：[配置指南](configuration-guide.md)、[宏迁移表](atype-macro-migration.md)。
+更新日期：2026-11-12。当前目标为 STM32F427 A 板。配套说明：[配置指南](configuration-guide.md)、[宏迁移表](atype-macro-migration.md)。
 
-由 `scripts/generate-configuration-index.py` 扫描 388 个项目 C/H 文件，记录 4376 条预处理、配置初始化和 HAL/NVIC 项。预处理条目包含互斥分支与保护宏，不能将所有条目同时理解为有效配置。可从构建命令覆盖的选项见 `config/99_build/atype-options.txt`；普通源码 PID/功率模型初值也列在所属文件下。
+由 `scripts/generate-configuration-index.py` 扫描 388 个项目 C/H 文件，记录 4400 条预处理、配置初始化和 HAL/NVIC 项。预处理条目包含互斥分支与保护宏，不能将所有条目同时理解为有效配置。可从构建命令覆盖的选项见 `config/99_build/atype-options.txt`；普通源码 PID/功率模型初值也列在所属文件下。
 
 `modules/imu/ins_task.c`、`BMI088driver.c`、`BMI088Middleware.c` 是未链接的旧 C 板实现；当前 INS 只链接 MPU6500 和公共数学接口。便携副本有独立 API，未加入固件链接。
 
@@ -574,7 +574,7 @@
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
 | [3](../application/runtime/chassis_imu_can.c#L3) | 预处理 | `#if IMU_CAPTURE_CAN_TX_ENABLE &#124;&#124; CHASSIS_IMU_CAN_RX_ENABLE` |
-| [11](../application/runtime/chassis_imu_can.c#L11) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE && (!defined(ONE_BOARD) &#124;&#124; CHASSIS_CONTROL_MODE != CHASSIS_CONTROL_SPEED &#124;&#124; !CHASSIS_VELOCITY_FUSION_ENABLE &#124;&#124; CHASSIS_VELOCITY_FUSION_CALIBRATED &#124;&#124; !VOFA_TELEMETRY_ENABLE &#124;&#124; VOFA_TELEMETRY_MODE != 1)` |
+| [11](../application/runtime/chassis_imu_can.c#L11) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE && (!defined(ONE_BOARD) &#124;&#124; CHASSIS_CONTROL_MODE != CHASSIS_CONTROL_SPEED &#124;&#124; !CHASSIS_VELOCITY_FUSION_ENABLE &#124;&#124; CHASSIS_VELOCITY_FUSION_CALIBRATED &#124;&#124; !VOFA_TELEMETRY_ENABLE &#124;&#124; (VOFA_TELEMETRY_MODE != 1 && VOFA_TELEMETRY_MODE != 2))` |
 | [13](../application/runtime/chassis_imu_can.c#L13) | 预处理 | `#endif` |
 | [17](../application/runtime/chassis_imu_can.c#L17) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
 | [37](../application/runtime/chassis_imu_can.c#L37) | 预处理 | `#endif` |
@@ -665,7 +665,7 @@
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
 | [4](../application/runtime/robot_task.c#L4) | 预处理 | `#if IMU_CAPTURE_ONLY` |
-| [14](../application/runtime/robot_task.c#L14) | 预处理 | `#if USB_TELEMETRY_ENABLE &#124;&#124; (!IMU_CAPTURE_CAN_TX_ENABLE && !VOFA_TELEMETRY_ENABLE) &#124;&#124; (VOFA_TELEMETRY_ENABLE && VOFA_TELEMETRY_MODE != 1)` |
+| [14](../application/runtime/robot_task.c#L14) | 预处理 | `#if USB_TELEMETRY_ENABLE &#124;&#124; (!IMU_CAPTURE_CAN_TX_ENABLE && !VOFA_TELEMETRY_ENABLE) &#124;&#124; (VOFA_TELEMETRY_ENABLE && VOFA_TELEMETRY_MODE != 1 && VOFA_TELEMETRY_MODE != 2)` |
 | [16](../application/runtime/robot_task.c#L16) | 预处理 | `#endif` |
 | [17](../application/runtime/robot_task.c#L17) | 预处理 | `#if CHASSIS_CONTROL_MODE != CHASSIS_CONTROL_SPEED &#124;&#124; CHASSIS_VELOCITY_FUSION_ENABLE` |
 | [19](../application/runtime/robot_task.c#L19) | 预处理 | `#endif` |
@@ -743,7 +743,7 @@
 | [256](../application/runtime/robot_telemetry.c#L256) | 预处理 | `#if (USB_TELEMETRY_ENABLE &#124;&#124; VOFA_TELEMETRY_ENABLE) && CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_SPEED` |
 | [258](../application/runtime/robot_telemetry.c#L258) | 预处理 | `#endif` |
 | [259](../application/runtime/robot_telemetry.c#L259) | 预处理 | `#if VOFA_TELEMETRY_ENABLE` |
-| [260](../application/runtime/robot_telemetry.c#L260) | 预处理 | `#if VOFA_TELEMETRY_MODE == 1` |
+| [260](../application/runtime/robot_telemetry.c#L260) | 预处理 | `#if VOFA_TELEMETRY_MODE == 1 &#124;&#124; VOFA_TELEMETRY_MODE == 2` |
 | [261](../application/runtime/robot_telemetry.c#L261) | 预处理 | `#if CHASSIS_VELOCITY_FUSION_ENABLE` |
 | [266](../application/runtime/robot_telemetry.c#L266) | 预处理 | `#else` |
 | [268](../application/runtime/robot_telemetry.c#L268) | 预处理 | `#endif` |
@@ -809,28 +809,43 @@
 | --- | --- | --- |
 | [3](../application/runtime/vofa_telemetry.c#L3) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
 | [5](../application/runtime/vofa_telemetry.c#L5) | 预处理 | `#endif` |
-| [7](../application/runtime/vofa_telemetry.c#L7) | 预处理 | `#if VOFA_TELEMETRY_ENABLE` |
-| [9](../application/runtime/vofa_telemetry.c#L9) | 预处理 | `#if VOFA_TELEMETRY_MODE == 0` |
-| [63](../application/runtime/vofa_telemetry.c#L63) | 预处理 | `#else` |
-| [118](../application/runtime/vofa_telemetry.c#L118) | 预处理 | `#if !IMU_CAPTURE_ONLY` |
-| [120](../application/runtime/vofa_telemetry.c#L120) | 预处理 | `#endif` |
-| [149](../application/runtime/vofa_telemetry.c#L149) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
-| [164](../application/runtime/vofa_telemetry.c#L164) | 预处理 | `#else` |
-| [168](../application/runtime/vofa_telemetry.c#L168) | 预处理 | `#endif` |
-| [183](../application/runtime/vofa_telemetry.c#L183) | 预处理 | `#if IMU_CAPTURE_ONLY` |
-| [185](../application/runtime/vofa_telemetry.c#L185) | 预处理 | `#endif` |
-| [186](../application/runtime/vofa_telemetry.c#L186) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
-| [188](../application/runtime/vofa_telemetry.c#L188) | 预处理 | `#endif` |
-| [196](../application/runtime/vofa_telemetry.c#L196) | 预处理 | `#if IMU_CAPTURE_ONLY` |
-| [198](../application/runtime/vofa_telemetry.c#L198) | 预处理 | `#else` |
-| [200](../application/runtime/vofa_telemetry.c#L200) | 预处理 | `#endif` |
-| [249](../application/runtime/vofa_telemetry.c#L249) | 预处理 | `#if IMU_CAPTURE_ONLY` |
-| [251](../application/runtime/vofa_telemetry.c#L251) | 预处理 | `#else` |
-| [253](../application/runtime/vofa_telemetry.c#L253) | 预处理 | `#endif` |
-| [254](../application/runtime/vofa_telemetry.c#L254) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
-| [261](../application/runtime/vofa_telemetry.c#L261) | 预处理 | `#endif` |
-| [275](../application/runtime/vofa_telemetry.c#L275) | 预处理 | `#endif` |
-| [276](../application/runtime/vofa_telemetry.c#L276) | 预处理 | `#endif` |
+| [6](../application/runtime/vofa_telemetry.c#L6) | 预处理 | `#if CHASSIS_REMOTE_IMU_FUSION_ENABLE` |
+| [8](../application/runtime/vofa_telemetry.c#L8) | 预处理 | `#endif` |
+| [10](../application/runtime/vofa_telemetry.c#L10) | 预处理 | `#if VOFA_TELEMETRY_ENABLE` |
+| [12](../application/runtime/vofa_telemetry.c#L12) | 预处理 | `#if VOFA_TELEMETRY_MODE == 0` |
+| [66](../application/runtime/vofa_telemetry.c#L66) | 预处理 | `#else` |
+| [68](../application/runtime/vofa_telemetry.c#L68) | 预处理 | `#if VOFA_TELEMETRY_MODE == 1` |
+| [70](../application/runtime/vofa_telemetry.c#L70) | 预处理 | `#else` |
+| [72](../application/runtime/vofa_telemetry.c#L72) | 预处理 | `#endif` |
+| [84](../application/runtime/vofa_telemetry.c#L84) | 预处理 | `#if VOFA_TELEMETRY_MODE == 1` |
+| [88](../application/runtime/vofa_telemetry.c#L88) | 预处理 | `#else` |
+| [98](../application/runtime/vofa_telemetry.c#L98) | 预处理 | `#endif` |
+| [137](../application/runtime/vofa_telemetry.c#L137) | 预处理 | `#if !IMU_CAPTURE_ONLY` |
+| [139](../application/runtime/vofa_telemetry.c#L139) | 预处理 | `#endif` |
+| [168](../application/runtime/vofa_telemetry.c#L168) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
+| [183](../application/runtime/vofa_telemetry.c#L183) | 预处理 | `#else` |
+| [187](../application/runtime/vofa_telemetry.c#L187) | 预处理 | `#endif` |
+| [202](../application/runtime/vofa_telemetry.c#L202) | 预处理 | `#if IMU_CAPTURE_ONLY` |
+| [204](../application/runtime/vofa_telemetry.c#L204) | 预处理 | `#endif` |
+| [205](../application/runtime/vofa_telemetry.c#L205) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
+| [207](../application/runtime/vofa_telemetry.c#L207) | 预处理 | `#endif` |
+| [208](../application/runtime/vofa_telemetry.c#L208) | 预处理 | `#if CHASSIS_REMOTE_IMU_FUSION_ENABLE` |
+| [211](../application/runtime/vofa_telemetry.c#L211) | 预处理 | `#if CHASSIS_REMOTE_IMU_CONFIG_VERIFIED` |
+| [213](../application/runtime/vofa_telemetry.c#L213) | 预处理 | `#endif` |
+| [214](../application/runtime/vofa_telemetry.c#L214) | 预处理 | `#endif` |
+| [222](../application/runtime/vofa_telemetry.c#L222) | 预处理 | `#if IMU_CAPTURE_ONLY` |
+| [224](../application/runtime/vofa_telemetry.c#L224) | 预处理 | `#else` |
+| [226](../application/runtime/vofa_telemetry.c#L226) | 预处理 | `#endif` |
+| [275](../application/runtime/vofa_telemetry.c#L275) | 预处理 | `#if IMU_CAPTURE_ONLY` |
+| [277](../application/runtime/vofa_telemetry.c#L277) | 预处理 | `#else` |
+| [279](../application/runtime/vofa_telemetry.c#L279) | 预处理 | `#endif` |
+| [280](../application/runtime/vofa_telemetry.c#L280) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
+| [287](../application/runtime/vofa_telemetry.c#L287) | 预处理 | `#endif` |
+| [292](../application/runtime/vofa_telemetry.c#L292) | 预处理 | `#if VOFA_TELEMETRY_MODE == 1` |
+| [301](../application/runtime/vofa_telemetry.c#L301) | 预处理 | `#else` |
+| [315](../application/runtime/vofa_telemetry.c#L315) | 预处理 | `#endif` |
+| [317](../application/runtime/vofa_telemetry.c#L317) | 预处理 | `#endif` |
+| [318](../application/runtime/vofa_telemetry.c#L318) | 预处理 | `#endif` |
 
 ## application/runtime/vofa_telemetry.h
 
@@ -838,7 +853,7 @@
 | --- | --- | --- |
 | [1](../application/runtime/vofa_telemetry.h#L1) | 预处理 | `#ifndef VOFA_TELEMETRY_H` |
 | [2](../application/runtime/vofa_telemetry.h#L2) | 预处理 | `#define VOFA_TELEMETRY_H` |
-| [8](../application/runtime/vofa_telemetry.h#L8) | 预处理 | `#if VOFA_TELEMETRY_MODE == 1` |
+| [8](../application/runtime/vofa_telemetry.h#L8) | 预处理 | `#if VOFA_TELEMETRY_MODE == 1 &#124;&#124; VOFA_TELEMETRY_MODE == 2` |
 | [14](../application/runtime/vofa_telemetry.h#L14) | 预处理 | `#else` |
 | [16](../application/runtime/vofa_telemetry.h#L16) | 预处理 | `#endif` |
 | [18](../application/runtime/vofa_telemetry.h#L18) | 预处理 | `#endif` |
@@ -1093,25 +1108,27 @@
 | [24](../config/00_flash/board_flash_config.h#L24) | 预处理 | `#define BOARD_FLASH_1_IMU_CAPTURE_CAN_TX_ENABLE 0 /* 0=本板不发送独立IMU采集CAN帧，避免与第二块重复发送。 */` |
 | [25](../config/00_flash/board_flash_config.h#L25) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_IMU_CAN_RX_ENABLE 1 /* 1=接收第二块经CAN1发送的IMU记录；0=关闭远端接收。 */` |
 | [26](../config/00_flash/board_flash_config.h#L26) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_VELOCITY_FUSION_ENABLE 1 /* 1=启用速度观测接口；当前远端接收路径要求1。 */` |
-| [27](../config/00_flash/board_flash_config.h#L27) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_VELOCITY_FUSION_CALIBRATED 0 /* 0=未标定观测；不能将本地云台杆臂标定用于远端底盘IMU。 */` |
-| [28](../config/00_flash/board_flash_config.h#L28) | 预处理 | `#define BOARD_FLASH_1_VOFA_TELEMETRY_ENABLE 1 /* 1=开启UART7统一遥测，需保持UART7未被裁判/辅助设备占用。 */` |
-| [29](../config/00_flash/board_flash_config.h#L29) | 预处理 | `#define BOARD_FLASH_1_VOFA_TELEMETRY_MODE 1 /* 1=FireWater文本格式，主板远端IMU记录要求此格式。 */` |
-| [30](../config/00_flash/board_flash_config.h#L30) | 预处理 | `#define BOARD_FLASH_1_USB_TELEMETRY_ENABLE 1 /* 1=保留USB网页遥测；视觉应使用UART，不能同时选USB视觉。 */` |
-| [33](../config/00_flash/board_flash_config.h#L33) | 预处理 | `#define BOARD_FLASH_2_NAME "第二块：底盘IMU板" /* 命令执行前显示的板卡名称。 */` |
-| [34](../config/00_flash/board_flash_config.h#L34) | 预处理 | `#define BOARD_FLASH_2_BUILD_DIR "build/board-2-imu" /* 第二块独立输出目录；不能与第一块相同。 */` |
-| [35](../config/00_flash/board_flash_config.h#L35) | 预处理 | `#define BOARD_FLASH_2_ONE_BOARD 1 /* 保持同工程默认角色；实际采集任务由IMU_CAPTURE_ONLY选择。 */` |
-| [36](../config/00_flash/board_flash_config.h#L36) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_CONTROL_MODE 0 /* 0=速度后端编译配置；采集模式要求0，但不会启动底盘控制。 */` |
-| [37](../config/00_flash/board_flash_config.h#L37) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_FORCE_CALIBRATION_ENABLE 0 /* 0=关闭力控标定工具，避免启动无关模块。 */` |
-| [38](../config/00_flash/board_flash_config.h#L38) | 预处理 | `#define BOARD_FLASH_2_ATYPE_BENCH_MODE 0 /* 0=不使用整车台架任务；采集模式有独立的任务集合。 */` |
-| [39](../config/00_flash/board_flash_config.h#L39) | 预处理 | `#define BOARD_FLASH_2_IMU_CAPTURE_ONLY 1 /* 1=独立IMU采集固件；不得改成0后仍把它当作专用采集板。 */` |
-| [40](../config/00_flash/board_flash_config.h#L40) | 预处理 | `#define BOARD_FLASH_2_IMU_CAPTURE_CAN_TX_ENABLE 1 /* 1=经CAN1发送IMU；第一块对应开启接收。 */` |
-| [41](../config/00_flash/board_flash_config.h#L41) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_IMU_CAN_RX_ENABLE 0 /* 0=不作为整车接收端；采集与接收模式不能同时开启。 */` |
-| [42](../config/00_flash/board_flash_config.h#L42) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_VELOCITY_FUSION_ENABLE 0 /* 0=关闭整车速度融合；采集模式要求关闭。 */` |
-| [43](../config/00_flash/board_flash_config.h#L43) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_VELOCITY_FUSION_CALIBRATED 0 /* 0=不加载整车融合标定。 */` |
-| [44](../config/00_flash/board_flash_config.h#L44) | 预处理 | `#define BOARD_FLASH_2_VOFA_TELEMETRY_ENABLE 0 /* 0=关闭本板UART7遥测，数据由第一块统一输出。 */` |
-| [45](../config/00_flash/board_flash_config.h#L45) | 预处理 | `#define BOARD_FLASH_2_VOFA_TELEMETRY_MODE 1 /* 预留FireWater格式；发送开关为0时本项不产生串口输出。 */` |
-| [46](../config/00_flash/board_flash_config.h#L46) | 预处理 | `#define BOARD_FLASH_2_USB_TELEMETRY_ENABLE 0 /* 0=关闭USB网页遥测；独立采集固件必须关闭。 */` |
-| [48](../config/00_flash/board_flash_config.h#L48) | 预处理 | `#endif` |
+| [27](../config/00_flash/board_flash_config.h#L27) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_VELOCITY_FUSION_CALIBRATED 0 /* 0=不启用本地云台标定；远端固定底盘IMU使用独立的安装与噪声配置。 */` |
+| [28](../config/00_flash/board_flash_config.h#L28) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_REMOTE_IMU_FUSION_ENABLE 1 /* 1=用固定底盘IMU做只读卡尔曼观测；不表示安装与噪声参数已实测审核，也不接管控制。 */` |
+| [29](../config/00_flash/board_flash_config.h#L29) | 预处理 | `#define BOARD_FLASH_1_VOFA_TELEMETRY_ENABLE 1 /* 1=开启UART7统一遥测，需保持UART7未被裁判/辅助设备占用。 */` |
+| [30](../config/00_flash/board_flash_config.h#L30) | 预处理 | `#define BOARD_FLASH_1_VOFA_TELEMETRY_MODE 2 /* 2=全量JustFloat二进制测量；1可回退FireWater文本，均保留远端IMU观测字段。 */` |
+| [31](../config/00_flash/board_flash_config.h#L31) | 预处理 | `#define BOARD_FLASH_1_USB_TELEMETRY_ENABLE 1 /* 1=保留USB网页遥测；视觉应使用UART，不能同时选USB视觉。 */` |
+| [34](../config/00_flash/board_flash_config.h#L34) | 预处理 | `#define BOARD_FLASH_2_NAME "第二块：底盘IMU板" /* 命令执行前显示的板卡名称。 */` |
+| [35](../config/00_flash/board_flash_config.h#L35) | 预处理 | `#define BOARD_FLASH_2_BUILD_DIR "build/board-2-imu" /* 第二块独立输出目录；不能与第一块相同。 */` |
+| [36](../config/00_flash/board_flash_config.h#L36) | 预处理 | `#define BOARD_FLASH_2_ONE_BOARD 1 /* 保持同工程默认角色；实际采集任务由IMU_CAPTURE_ONLY选择。 */` |
+| [37](../config/00_flash/board_flash_config.h#L37) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_CONTROL_MODE 0 /* 0=速度后端编译配置；采集模式要求0，但不会启动底盘控制。 */` |
+| [38](../config/00_flash/board_flash_config.h#L38) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_FORCE_CALIBRATION_ENABLE 0 /* 0=关闭力控标定工具，避免启动无关模块。 */` |
+| [39](../config/00_flash/board_flash_config.h#L39) | 预处理 | `#define BOARD_FLASH_2_ATYPE_BENCH_MODE 0 /* 0=不使用整车台架任务；采集模式有独立的任务集合。 */` |
+| [40](../config/00_flash/board_flash_config.h#L40) | 预处理 | `#define BOARD_FLASH_2_IMU_CAPTURE_ONLY 1 /* 1=独立IMU采集固件；不得改成0后仍把它当作专用采集板。 */` |
+| [41](../config/00_flash/board_flash_config.h#L41) | 预处理 | `#define BOARD_FLASH_2_IMU_CAPTURE_CAN_TX_ENABLE 1 /* 1=经CAN1发送IMU；第一块对应开启接收。 */` |
+| [42](../config/00_flash/board_flash_config.h#L42) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_IMU_CAN_RX_ENABLE 0 /* 0=不作为整车接收端；采集与接收模式不能同时开启。 */` |
+| [43](../config/00_flash/board_flash_config.h#L43) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_VELOCITY_FUSION_ENABLE 0 /* 0=关闭整车速度融合；采集模式要求关闭。 */` |
+| [44](../config/00_flash/board_flash_config.h#L44) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_VELOCITY_FUSION_CALIBRATED 0 /* 0=不加载整车融合标定。 */` |
+| [45](../config/00_flash/board_flash_config.h#L45) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_REMOTE_IMU_FUSION_ENABLE 0 /* 0=采集板只发送IMU，不运行主板的远端融合观测。 */` |
+| [46](../config/00_flash/board_flash_config.h#L46) | 预处理 | `#define BOARD_FLASH_2_VOFA_TELEMETRY_ENABLE 0 /* 0=关闭本板UART7遥测，数据由第一块统一输出。 */` |
+| [47](../config/00_flash/board_flash_config.h#L47) | 预处理 | `#define BOARD_FLASH_2_VOFA_TELEMETRY_MODE 1 /* 预留FireWater格式；发送开关为0时本项不产生串口输出。 */` |
+| [48](../config/00_flash/board_flash_config.h#L48) | 预处理 | `#define BOARD_FLASH_2_USB_TELEMETRY_ENABLE 0 /* 0=关闭USB网页遥测；独立采集固件必须关闭。 */` |
+| [50](../config/00_flash/board_flash_config.h#L50) | 预处理 | `#endif` |
 
 ## config/01_pid/pid_config.c
 
@@ -2098,15 +2115,22 @@
 | [18](../config/32_capture/imu_capture_config.h#L18) | 预处理 | `#ifndef CHASSIS_IMU_CAN_RX_ENABLE` |
 | [19](../config/32_capture/imu_capture_config.h#L19) | 预处理 | `#define CHASSIS_IMU_CAN_RX_ENABLE 0 /* 默认 0：不接收外部 IMU CAN 帧；1：启用整车端接收，须满足下方接收约束。 */` |
 | [20](../config/32_capture/imu_capture_config.h#L20) | 预处理 | `#endif` |
-| [21](../config/32_capture/imu_capture_config.h#L21) | 预处理 | `#if IMU_CAPTURE_CAN_TX_ENABLE != 0 && IMU_CAPTURE_CAN_TX_ENABLE != 1` |
+| [21](../config/32_capture/imu_capture_config.h#L21) | 预处理 | `#ifndef CHASSIS_REMOTE_IMU_FUSION_ENABLE` |
+| [22](../config/32_capture/imu_capture_config.h#L22) | 预处理 | `#define CHASSIS_REMOTE_IMU_FUSION_ENABLE 0 /* 0=仅记录远端IMU；1=固定底盘IMU融合观测，仍不进入控制。须同时传给构建系统。 */` |
 | [23](../config/32_capture/imu_capture_config.h#L23) | 预处理 | `#endif` |
-| [24](../config/32_capture/imu_capture_config.h#L24) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE != 0 && CHASSIS_IMU_CAN_RX_ENABLE != 1` |
+| [24](../config/32_capture/imu_capture_config.h#L24) | 预处理 | `#if CHASSIS_REMOTE_IMU_FUSION_ENABLE != 0 && CHASSIS_REMOTE_IMU_FUSION_ENABLE != 1` |
 | [26](../config/32_capture/imu_capture_config.h#L26) | 预处理 | `#endif` |
-| [27](../config/32_capture/imu_capture_config.h#L27) | 预处理 | `#if IMU_CAPTURE_CAN_TX_ENABLE && !IMU_CAPTURE_ONLY` |
-| [29](../config/32_capture/imu_capture_config.h#L29) | 预处理 | `#endif` |
-| [33](../config/32_capture/imu_capture_config.h#L33) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE && IMU_CAPTURE_ONLY` |
-| [35](../config/32_capture/imu_capture_config.h#L35) | 预处理 | `#endif` |
-| [37](../config/32_capture/imu_capture_config.h#L37) | 预处理 | `#endif` |
+| [28](../config/32_capture/imu_capture_config.h#L28) | 预处理 | `#if CHASSIS_REMOTE_IMU_FUSION_ENABLE && (!CHASSIS_IMU_CAN_RX_ENABLE &#124;&#124; !CHASSIS_VELOCITY_FUSION_ENABLE &#124;&#124; CHASSIS_VELOCITY_FUSION_CALIBRATED &#124;&#124; IMU_CAPTURE_ONLY)` |
+| [30](../config/32_capture/imu_capture_config.h#L30) | 预处理 | `#endif` |
+| [31](../config/32_capture/imu_capture_config.h#L31) | 预处理 | `#if IMU_CAPTURE_CAN_TX_ENABLE != 0 && IMU_CAPTURE_CAN_TX_ENABLE != 1` |
+| [33](../config/32_capture/imu_capture_config.h#L33) | 预处理 | `#endif` |
+| [34](../config/32_capture/imu_capture_config.h#L34) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE != 0 && CHASSIS_IMU_CAN_RX_ENABLE != 1` |
+| [36](../config/32_capture/imu_capture_config.h#L36) | 预处理 | `#endif` |
+| [37](../config/32_capture/imu_capture_config.h#L37) | 预处理 | `#if IMU_CAPTURE_CAN_TX_ENABLE && !IMU_CAPTURE_ONLY` |
+| [39](../config/32_capture/imu_capture_config.h#L39) | 预处理 | `#endif` |
+| [43](../config/32_capture/imu_capture_config.h#L43) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE && IMU_CAPTURE_ONLY` |
+| [45](../config/32_capture/imu_capture_config.h#L45) | 预处理 | `#endif` |
+| [47](../config/32_capture/imu_capture_config.h#L47) | 预处理 | `#endif` |
 
 ## config/32_capture/shadow_scope_config.h
 
@@ -2149,7 +2173,7 @@
 | [18](../config/90_board/board_config.h#L18) | 预处理 | `#define LOG_OUTPUT 1 /* 日志输出：0=关闭，1=RTT，2=USART2，3=RTT与USART2同时输出。 */` |
 | [19](../config/90_board/board_config.h#L19) | 预处理 | `#endif` |
 | [20](../config/90_board/board_config.h#L20) | 预处理 | `#ifndef VOFA_TELEMETRY_MODE` |
-| [21](../config/90_board/board_config.h#L21) | 预处理 | `#define VOFA_TELEMETRY_MODE 0 /* VOFA格式：0=JustFloat二进制，1=FireWater文本测量；与上位机解析方式配套。 */` |
+| [21](../config/90_board/board_config.h#L21) | 预处理 | `#define VOFA_TELEMETRY_MODE 2 /* VOFA格式：0=19路JustFloat，1=FireWater文本测量，2=全量JustFloat测量；与上位机解析方式配套。 */` |
 | [22](../config/90_board/board_config.h#L22) | 预处理 | `#endif` |
 | [23](../config/90_board/board_config.h#L23) | 预处理 | `#ifndef ATYPE_BENCH_MODE` |
 | [24](../config/90_board/board_config.h#L24) | 预处理 | `#define ATYPE_BENCH_MODE 0 /* 台架模式：0=整车正常控制，1=台架门控（云台/发射锁停）；atype-bench构建默认设1。 */` |
@@ -2160,7 +2184,7 @@
 | [31](../config/90_board/board_config.h#L31) | 预处理 | `#endif` |
 | [32](../config/90_board/board_config.h#L32) | 预处理 | `#if LOG_OUTPUT < 0 &#124;&#124; LOG_OUTPUT > 3` |
 | [34](../config/90_board/board_config.h#L34) | 预处理 | `#endif` |
-| [35](../config/90_board/board_config.h#L35) | 预处理 | `#if VOFA_TELEMETRY_MODE != 0 && VOFA_TELEMETRY_MODE != 1` |
+| [35](../config/90_board/board_config.h#L35) | 预处理 | `#if VOFA_TELEMETRY_MODE != 0 && VOFA_TELEMETRY_MODE != 1 && VOFA_TELEMETRY_MODE != 2` |
 | [37](../config/90_board/board_config.h#L37) | 预处理 | `#endif` |
 | [38](../config/90_board/board_config.h#L38) | 预处理 | `#if ATYPE_BENCH_MODE != 0 && ATYPE_BENCH_MODE != 1` |
 | [40](../config/90_board/board_config.h#L40) | 预处理 | `#endif` |

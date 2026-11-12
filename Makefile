@@ -291,7 +291,9 @@ endif
 ifneq ($(origin VOFA_TELEMETRY_MODE),undefined)
 ifneq ($(VOFA_TELEMETRY_MODE),0)
 ifneq ($(VOFA_TELEMETRY_MODE),1)
-$(error VOFA_TELEMETRY_MODE must be 0 or 1)
+ifneq ($(VOFA_TELEMETRY_MODE),2)
+$(error VOFA_TELEMETRY_MODE must be 0, 1 or 2)
+endif
 endif
 endif
 endif

@@ -65,10 +65,14 @@ void VofaTelemetrySend(const USBTelemetrySample_s *sample)
 }
 #else
 #include <math.h>
+#if VOFA_TELEMETRY_MODE == 1
 #include <stdio.h>
+#else
+#include <string.h>
+#endif
 
 enum {
-    MEASUREMENT_PERIOD_MS = 80,
+    MEASUREMENT_PERIOD_MS = VOFA_TELEMETRY_MODE == 2 ? 40 : 80,
     MEASUREMENT_MAX_AGE_MS = 20,
     MEASUREMENT_FUSED_MAX_AGE_MS = 60,
     MEASUREMENT_CHANNELS = CHASSIS_IMU_CAN_RX_ENABLE ? 72 : 64,
@@ -77,9 +81,21 @@ enum {
 };
 
 /* Only the telemetry task writes this buffer, while TX is idle. */
+#if VOFA_TELEMETRY_MODE == 1
 static char row[MEASUREMENT_ROW_CAPACITY];
 _Static_assert((sizeof row - 1) * 10U * 1000U < 115200U * MEASUREMENT_PERIOD_MS,
                "FireWater row must fit in one send interval");
+#else
+/* STM32F427 uses the little-endian IEEE 754 float32 wire representation. */
+static struct {
+    float channels[MEASUREMENT_CHANNELS];
+    uint8_t tail[4];
+} measurement_frame = {.tail = {0x00, 0x00, 0x80, 0x7f}};
+_Static_assert(sizeof(float) == 4 && sizeof(measurement_frame) == (MEASUREMENT_CHANNELS + 1) * 4,
+               "JustFloat measurement frame layout");
+_Static_assert(sizeof(measurement_frame) * 10U * 1000U < 115200U * MEASUREMENT_PERIOD_MS,
+               "JustFloat measurement frame must fit in one send interval");
+#endif
 
 static int32_t SampleAge(uint32_t now_ms, uint32_t tick_ms, bool known)
 {
@@ -271,8 +287,9 @@ void VofaTelemetrySendMeasurement(const USBTelemetrySample_s *sample,
 #endif
     };
     _Static_assert(sizeof fields / sizeof fields[0] == MEASUREMENT_CHANNELS,
-                   "FireWater channel count must match the row layout");
+                   "Measurement channel count must match the field layout");
 
+#if VOFA_TELEMETRY_MODE == 1
     size_t used = 0;
     for (size_t i = 0; i < MEASUREMENT_CHANNELS; ++i) {
         const int written = snprintf(row + used, sizeof row - used, "%ld,", (long)fields[i]);
@@ -281,6 +298,21 @@ void VofaTelemetrySendMeasurement(const USBTelemetrySample_s *sample,
     }
     row[used - 1] = '\n';
     (void)HAL_UART_Transmit_IT(uart, (uint8_t *)row, (uint16_t)used);
+#else
+    for (size_t i = 0; i < MEASUREMENT_CHANNELS; ++i)
+        measurement_frame.channels[i] = (float)fields[i];
+
+    /* As in the 19-channel mode, avoid false delimiters spanning floats.
+     * Consumers round integer-semantic metadata before decoding it. */
+    uint8_t *bytes = (uint8_t *)&measurement_frame;
+    for (size_t i = 0; i + sizeof(measurement_frame.tail) <= sizeof(measurement_frame.channels); ++i) {
+        if (memcmp(bytes + i, measurement_frame.tail, sizeof(measurement_frame.tail)) == 0) {
+            const size_t last = i + sizeof(measurement_frame.tail) - 1;
+            bytes[last - last % sizeof(float)] ^= 1U;
+        }
+    }
+    (void)HAL_UART_Transmit_IT(uart, bytes, sizeof(measurement_frame));
+#endif
 }
 #endif
 #endif

@@ -257,7 +257,7 @@ void RobotTelemetryTask(void)
     Collect(HAL_GetTick());
 #endif
 #if VOFA_TELEMETRY_ENABLE
-#if VOFA_TELEMETRY_MODE == 1
+#if VOFA_TELEMETRY_MODE == 1 || VOFA_TELEMETRY_MODE == 2
 #if CHASSIS_VELOCITY_FUSION_ENABLE
     static ChassisFusedVelocitySnapshot_s velocity;
     /* The getter also copies source diagnostics when the estimate is invalid. */

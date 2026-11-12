@@ -24,7 +24,7 @@ class BoardConfiguration(unittest.TestCase):
         #if !BOARD_LOG_RTT_ENABLED || BOARD_LOG_UART_ENABLED
         #error Wrong default log transport
         #endif
-        #if !defined(VOFA_TELEMETRY_MODE) || VOFA_TELEMETRY_MODE != 0 || VOFA_TELEMETRY_ENABLE != 1
+        #if !defined(VOFA_TELEMETRY_MODE) || VOFA_TELEMETRY_MODE != 2 || VOFA_TELEMETRY_ENABLE != 1
         #error Wrong default VOFA configuration
         #endif
         ''')
@@ -71,7 +71,7 @@ class BoardConfiguration(unittest.TestCase):
         #error VOFA should be disabled
         #endif
         '''
-        for mode in (0, 1):
+        for mode in (0, 1, 2):
             selector = f"VOFA_TELEMETRY_MODE={mode}"
             for owner in ("REFEREE_UART_PORT=7", "BOARD_AUX_UART7_DEVICE=1"):
                 with self.subTest(mode=mode, owner=owner):
@@ -86,7 +86,7 @@ class BoardConfiguration(unittest.TestCase):
                                       "REFEREE_ENABLE=0").returncode, 0)
 
     def test_vofa_mode_rejects_values_outside_protocols(self):
-        for mode in (-1, 2):
+        for mode in (-1, 3):
             with self.subTest(mode=mode):
                 result = self.compile("", f"VOFA_TELEMETRY_MODE={mode}")
                 self.assertNotEqual(result.returncode, 0)
