@@ -119,7 +119,7 @@ int main(void)
     assert(memcmp(saved, active_data, saved_length) == 0);
     huart7.gState = HAL_UART_STATE_READY;
     VofaTelemetrySendMeasurement(&sample, &cycle, &velocity,
-                                  VOFA_TELEMETRY_MODE == 2 ? 119 : 159);
+                                  VOFA_TELEMETRY_MODE == 2 ? 99 : 159);
     assert(frames_started == 1);
     VofaTelemetrySendMeasurement(&sample, &cycle, &velocity, 160);
     ReadRow(fields);

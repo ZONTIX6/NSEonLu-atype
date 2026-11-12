@@ -72,7 +72,7 @@ void VofaTelemetrySend(const USBTelemetrySample_s *sample)
 #endif
 
 enum {
-    MEASUREMENT_PERIOD_MS = VOFA_TELEMETRY_MODE == 2 ? 40 : 80,
+    MEASUREMENT_PERIOD_MS = VOFA_TELEMETRY_MODE == 2 ? 20 : 80,
     MEASUREMENT_MAX_AGE_MS = 20,
     MEASUREMENT_FUSED_MAX_AGE_MS = 60,
     MEASUREMENT_CHANNELS = CHASSIS_IMU_CAN_RX_ENABLE ? 72 : 64,
@@ -83,7 +83,7 @@ enum {
 /* Only the telemetry task writes this buffer, while TX is idle. */
 #if VOFA_TELEMETRY_MODE == 1
 static char row[MEASUREMENT_ROW_CAPACITY];
-_Static_assert((sizeof row - 1) * 10U * 1000U < 115200U * MEASUREMENT_PERIOD_MS,
+_Static_assert((sizeof row - 1) * 10U * 1000U < BOARD_UART7_BAUDRATE * MEASUREMENT_PERIOD_MS,
                "FireWater row must fit in one send interval");
 #else
 /* STM32F427 uses the little-endian IEEE 754 float32 wire representation. */
@@ -93,7 +93,7 @@ static struct {
 } measurement_frame = {.tail = {0x00, 0x00, 0x80, 0x7f}};
 _Static_assert(sizeof(float) == 4 && sizeof(measurement_frame) == (MEASUREMENT_CHANNELS + 1) * 4,
                "JustFloat measurement frame layout");
-_Static_assert(sizeof(measurement_frame) * 10U * 1000U < 115200U * MEASUREMENT_PERIOD_MS,
+_Static_assert(sizeof(measurement_frame) * 10U * 1000U < BOARD_UART7_BAUDRATE * MEASUREMENT_PERIOD_MS,
                "JustFloat measurement frame must fit in one send interval");
 #endif
 
@@ -116,9 +116,18 @@ void VofaTelemetrySendMeasurement(const USBTelemetrySample_s *sample,
 {
     static bool started;
     static uint32_t last_attempt_ms, next_sequence;
+#if VOFA_TELEMETRY_MODE == 2
+    const uint32_t elapsed = now_ms - last_attempt_ms;
+    if (started && elapsed < MEASUREMENT_PERIOD_MS) return;
+    /* Preserve the 20 ms phase when a task wakes slightly late. Skip overdue
+     * slots rather than sending a burst of stale snapshots after a long pause. */
+    last_attempt_ms = started ? now_ms - elapsed % MEASUREMENT_PERIOD_MS : now_ms;
+    started = true;
+#else
     if (started && (uint32_t)(now_ms - last_attempt_ms) < MEASUREMENT_PERIOD_MS) return;
     started = true;
     last_attempt_ms = now_ms;
+#endif
     const uint32_t sequence = next_sequence++;
 
     UART_HandleTypeDef *uart = BOARD_VOFA_UART;

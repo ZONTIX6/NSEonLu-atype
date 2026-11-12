@@ -92,6 +92,26 @@ class BoardConfiguration(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn("VOFA_TELEMETRY_MODE", result.stderr)
 
+    def test_uart7_high_baud_is_exclusive_to_full_justfloat(self):
+        cases = [
+            (("VOFA_TELEMETRY_MODE=2",), 230400),
+            (("VOFA_TELEMETRY_MODE=0",), 115200),
+            (("VOFA_TELEMETRY_MODE=1",), 115200),
+            (("VOFA_TELEMETRY_MODE=2", "VOFA_TELEMETRY_ENABLE=0"), 115200),
+            (("VOFA_TELEMETRY_MODE=2", "REFEREE_UART_PORT=7"), 115200),
+            (("VOFA_TELEMETRY_MODE=2", "CHASSIS_CONTROL_MODE=1"), 115200),
+        ]
+        cases += [(("VOFA_TELEMETRY_MODE=2", f"BOARD_AUX_UART7_DEVICE={device}"), 115200)
+                  for device in (1, 2, 3)]
+        for defines, expected in cases:
+            with self.subTest(defines=defines):
+                result = self.compile(f'''
+                #if !defined(BOARD_UART7_BAUDRATE) || BOARD_UART7_BAUDRATE != {expected}
+                #error Unexpected UART7 baud rate for its selected owner
+                #endif
+                ''', *defines)
+                self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_registered_uart_handles_are_distinct(self):
         source = '''
         #include "board_config.h"

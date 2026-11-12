@@ -1,8 +1,8 @@
 # 完整宏与初始化参数索引
 
-更新日期：2026-11-12。当前目标为 STM32F427 A 板。配套说明：[配置指南](configuration-guide.md)、[宏迁移表](atype-macro-migration.md)。
+更新日期：2026-11-13。当前目标为 STM32F427 A 板。配套说明：[配置指南](configuration-guide.md)、[宏迁移表](atype-macro-migration.md)。
 
-由 `scripts/generate-configuration-index.py` 扫描 393 个项目 C/H 文件，记录 4410 条预处理、配置初始化和 HAL/NVIC 项。预处理条目包含互斥分支与保护宏，不能将所有条目同时理解为有效配置。可从构建命令覆盖的选项见 `config/99_build/atype-options.txt`；普通源码 PID/功率模型初值也列在所属文件下。
+由 `scripts/generate-configuration-index.py` 扫描 393 个项目 C/H 文件，记录 4418 条预处理、配置初始化和 HAL/NVIC 项。预处理条目包含互斥分支与保护宏，不能将所有条目同时理解为有效配置。可从构建命令覆盖的选项见 `config/99_build/atype-options.txt`；普通源码 PID/功率模型初值也列在所属文件下。
 
 `modules/imu/ins_task.c`、`BMI088driver.c`、`BMI088Middleware.c` 是未链接的旧 C 板实现；当前 INS 只链接 MPU6500 和公共数学接口。便携副本有独立 API，未加入固件链接。
 
@@ -819,32 +819,35 @@
 | [84](../application/runtime/vofa_telemetry.c#L84) | 预处理 | `#if VOFA_TELEMETRY_MODE == 1` |
 | [88](../application/runtime/vofa_telemetry.c#L88) | 预处理 | `#else` |
 | [98](../application/runtime/vofa_telemetry.c#L98) | 预处理 | `#endif` |
-| [137](../application/runtime/vofa_telemetry.c#L137) | 预处理 | `#if !IMU_CAPTURE_ONLY` |
-| [139](../application/runtime/vofa_telemetry.c#L139) | 预处理 | `#endif` |
-| [168](../application/runtime/vofa_telemetry.c#L168) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
-| [183](../application/runtime/vofa_telemetry.c#L183) | 预处理 | `#else` |
-| [187](../application/runtime/vofa_telemetry.c#L187) | 预处理 | `#endif` |
-| [202](../application/runtime/vofa_telemetry.c#L202) | 预处理 | `#if IMU_CAPTURE_ONLY` |
-| [204](../application/runtime/vofa_telemetry.c#L204) | 预处理 | `#endif` |
-| [205](../application/runtime/vofa_telemetry.c#L205) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
-| [208](../application/runtime/vofa_telemetry.c#L208) | 预处理 | `#endif` |
-| [209](../application/runtime/vofa_telemetry.c#L209) | 预处理 | `#if CHASSIS_REMOTE_IMU_FUSION_ENABLE` |
-| [212](../application/runtime/vofa_telemetry.c#L212) | 预处理 | `#if CHASSIS_REMOTE_IMU_CONFIG_VERIFIED` |
-| [214](../application/runtime/vofa_telemetry.c#L214) | 预处理 | `#endif` |
-| [215](../application/runtime/vofa_telemetry.c#L215) | 预处理 | `#endif` |
-| [223](../application/runtime/vofa_telemetry.c#L223) | 预处理 | `#if IMU_CAPTURE_ONLY` |
-| [225](../application/runtime/vofa_telemetry.c#L225) | 预处理 | `#else` |
-| [227](../application/runtime/vofa_telemetry.c#L227) | 预处理 | `#endif` |
-| [276](../application/runtime/vofa_telemetry.c#L276) | 预处理 | `#if IMU_CAPTURE_ONLY` |
-| [278](../application/runtime/vofa_telemetry.c#L278) | 预处理 | `#else` |
-| [280](../application/runtime/vofa_telemetry.c#L280) | 预处理 | `#endif` |
-| [281](../application/runtime/vofa_telemetry.c#L281) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
-| [288](../application/runtime/vofa_telemetry.c#L288) | 预处理 | `#endif` |
-| [293](../application/runtime/vofa_telemetry.c#L293) | 预处理 | `#if VOFA_TELEMETRY_MODE == 1` |
-| [302](../application/runtime/vofa_telemetry.c#L302) | 预处理 | `#else` |
-| [316](../application/runtime/vofa_telemetry.c#L316) | 预处理 | `#endif` |
-| [318](../application/runtime/vofa_telemetry.c#L318) | 预处理 | `#endif` |
-| [319](../application/runtime/vofa_telemetry.c#L319) | 预处理 | `#endif` |
+| [119](../application/runtime/vofa_telemetry.c#L119) | 预处理 | `#if VOFA_TELEMETRY_MODE == 2` |
+| [126](../application/runtime/vofa_telemetry.c#L126) | 预处理 | `#else` |
+| [130](../application/runtime/vofa_telemetry.c#L130) | 预处理 | `#endif` |
+| [146](../application/runtime/vofa_telemetry.c#L146) | 预处理 | `#if !IMU_CAPTURE_ONLY` |
+| [148](../application/runtime/vofa_telemetry.c#L148) | 预处理 | `#endif` |
+| [177](../application/runtime/vofa_telemetry.c#L177) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
+| [192](../application/runtime/vofa_telemetry.c#L192) | 预处理 | `#else` |
+| [196](../application/runtime/vofa_telemetry.c#L196) | 预处理 | `#endif` |
+| [211](../application/runtime/vofa_telemetry.c#L211) | 预处理 | `#if IMU_CAPTURE_ONLY` |
+| [213](../application/runtime/vofa_telemetry.c#L213) | 预处理 | `#endif` |
+| [214](../application/runtime/vofa_telemetry.c#L214) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
+| [217](../application/runtime/vofa_telemetry.c#L217) | 预处理 | `#endif` |
+| [218](../application/runtime/vofa_telemetry.c#L218) | 预处理 | `#if CHASSIS_REMOTE_IMU_FUSION_ENABLE` |
+| [221](../application/runtime/vofa_telemetry.c#L221) | 预处理 | `#if CHASSIS_REMOTE_IMU_CONFIG_VERIFIED` |
+| [223](../application/runtime/vofa_telemetry.c#L223) | 预处理 | `#endif` |
+| [224](../application/runtime/vofa_telemetry.c#L224) | 预处理 | `#endif` |
+| [232](../application/runtime/vofa_telemetry.c#L232) | 预处理 | `#if IMU_CAPTURE_ONLY` |
+| [234](../application/runtime/vofa_telemetry.c#L234) | 预处理 | `#else` |
+| [236](../application/runtime/vofa_telemetry.c#L236) | 预处理 | `#endif` |
+| [285](../application/runtime/vofa_telemetry.c#L285) | 预处理 | `#if IMU_CAPTURE_ONLY` |
+| [287](../application/runtime/vofa_telemetry.c#L287) | 预处理 | `#else` |
+| [289](../application/runtime/vofa_telemetry.c#L289) | 预处理 | `#endif` |
+| [290](../application/runtime/vofa_telemetry.c#L290) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
+| [297](../application/runtime/vofa_telemetry.c#L297) | 预处理 | `#endif` |
+| [302](../application/runtime/vofa_telemetry.c#L302) | 预处理 | `#if VOFA_TELEMETRY_MODE == 1` |
+| [311](../application/runtime/vofa_telemetry.c#L311) | 预处理 | `#else` |
+| [325](../application/runtime/vofa_telemetry.c#L325) | 预处理 | `#endif` |
+| [327](../application/runtime/vofa_telemetry.c#L327) | 预处理 | `#endif` |
+| [328](../application/runtime/vofa_telemetry.c#L328) | 预处理 | `#endif` |
 
 ## application/runtime/vofa_telemetry.h
 
@@ -2236,11 +2239,16 @@
 | [99](../config/90_board/board_config.h#L99) | 预处理 | `#endif` |
 | [100](../config/90_board/board_config.h#L100) | 预处理 | `#if VOFA_TELEMETRY_ENABLE && BOARD_UART7_RESERVED_FOR_DEVICE` |
 | [102](../config/90_board/board_config.h#L102) | 预处理 | `#endif` |
-| [103](../config/90_board/board_config.h#L103) | 预处理 | `#if BOARD_AUX_UART2_DEVICE && BOARD_AUX_UART7_DEVICE && BOARD_AUX_UART2_DEVICE == BOARD_AUX_UART7_DEVICE` |
-| [105](../config/90_board/board_config.h#L105) | 预处理 | `#endif` |
-| [106](../config/90_board/board_config.h#L106) | 预处理 | `#if BOARD_OLED_ENABLE < 0 &#124;&#124; BOARD_OLED_ENABLE > 1 &#124;&#124; BOARD_KEY_ENABLE < 0 &#124;&#124; BOARD_KEY_ENABLE > 1` |
+| [104](../config/90_board/board_config.h#L104) | 预处理 | `#if VOFA_TELEMETRY_ENABLE && VOFA_TELEMETRY_MODE == 2` |
+| [105](../config/90_board/board_config.h#L105) | 预处理 | `#define BOARD_UART7_BAUDRATE 230400U /* 模式2配合20ms输出；VOFA和串口接收设备须使用相同波特率。 */` |
+| [106](../config/90_board/board_config.h#L106) | 预处理 | `#else` |
+| [107](../config/90_board/board_config.h#L107) | 预处理 | `#define BOARD_UART7_BAUDRATE 115200U /* 模式0/1、VOFA关闭、裁判或辅助设备使用UART7时保留原值。 */` |
 | [108](../config/90_board/board_config.h#L108) | 预处理 | `#endif` |
-| [110](../config/90_board/board_config.h#L110) | 预处理 | `#endif` |
+| [109](../config/90_board/board_config.h#L109) | 预处理 | `#if BOARD_AUX_UART2_DEVICE && BOARD_AUX_UART7_DEVICE && BOARD_AUX_UART2_DEVICE == BOARD_AUX_UART7_DEVICE` |
+| [111](../config/90_board/board_config.h#L111) | 预处理 | `#endif` |
+| [112](../config/90_board/board_config.h#L112) | 预处理 | `#if BOARD_OLED_ENABLE < 0 &#124;&#124; BOARD_OLED_ENABLE > 1 &#124;&#124; BOARD_KEY_ENABLE < 0 &#124;&#124; BOARD_KEY_ENABLE > 1` |
+| [114](../config/90_board/board_config.h#L114) | 预处理 | `#endif` |
+| [116](../config/90_board/board_config.h#L116) | 预处理 | `#endif` |
 
 ## config/90_board/log_config.h
 
@@ -5651,153 +5659,153 @@
 
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
-| [55](../Src/usart.c#L55) | HAL/NVIC | `huart7.Init.BaudRate = 115200;` |
-| [56](../Src/usart.c#L56) | HAL/NVIC | `huart7.Init.WordLength = UART_WORDLENGTH_8B;` |
-| [57](../Src/usart.c#L57) | HAL/NVIC | `huart7.Init.StopBits = UART_STOPBITS_1;` |
-| [58](../Src/usart.c#L58) | HAL/NVIC | `huart7.Init.Parity = UART_PARITY_NONE;` |
-| [59](../Src/usart.c#L59) | HAL/NVIC | `huart7.Init.Mode = UART_MODE_TX_RX;` |
-| [60](../Src/usart.c#L60) | HAL/NVIC | `huart7.Init.HwFlowCtl = UART_HWCONTROL_NONE;` |
-| [61](../Src/usart.c#L61) | HAL/NVIC | `huart7.Init.OverSampling = UART_OVERSAMPLING_16;` |
-| [83](../Src/usart.c#L83) | HAL/NVIC | `huart8.Init.BaudRate = 115200;` |
-| [84](../Src/usart.c#L84) | HAL/NVIC | `huart8.Init.WordLength = UART_WORDLENGTH_8B;` |
-| [85](../Src/usart.c#L85) | HAL/NVIC | `huart8.Init.StopBits = UART_STOPBITS_1;` |
-| [86](../Src/usart.c#L86) | HAL/NVIC | `huart8.Init.Parity = UART_PARITY_NONE;` |
-| [87](../Src/usart.c#L87) | HAL/NVIC | `huart8.Init.Mode = UART_MODE_TX_RX;` |
-| [88](../Src/usart.c#L88) | HAL/NVIC | `huart8.Init.HwFlowCtl = UART_HWCONTROL_NONE;` |
-| [89](../Src/usart.c#L89) | HAL/NVIC | `huart8.Init.OverSampling = UART_OVERSAMPLING_16;` |
-| [112](../Src/usart.c#L112) | HAL/NVIC | `huart1.Init.BaudRate = 100000;` |
-| [113](../Src/usart.c#L113) | HAL/NVIC | `huart1.Init.WordLength = UART_WORDLENGTH_9B;` |
-| [114](../Src/usart.c#L114) | HAL/NVIC | `huart1.Init.StopBits = UART_STOPBITS_1;` |
-| [115](../Src/usart.c#L115) | HAL/NVIC | `huart1.Init.Parity = UART_PARITY_EVEN;` |
-| [116](../Src/usart.c#L116) | HAL/NVIC | `huart1.Init.Mode = UART_MODE_TX_RX;` |
-| [117](../Src/usart.c#L117) | HAL/NVIC | `huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;` |
-| [118](../Src/usart.c#L118) | HAL/NVIC | `huart1.Init.OverSampling = UART_OVERSAMPLING_16;` |
-| [141](../Src/usart.c#L141) | HAL/NVIC | `huart2.Init.BaudRate = 115200;` |
-| [142](../Src/usart.c#L142) | HAL/NVIC | `huart2.Init.WordLength = UART_WORDLENGTH_8B;` |
-| [143](../Src/usart.c#L143) | HAL/NVIC | `huart2.Init.StopBits = UART_STOPBITS_1;` |
-| [144](../Src/usart.c#L144) | HAL/NVIC | `huart2.Init.Parity = UART_PARITY_NONE;` |
-| [145](../Src/usart.c#L145) | HAL/NVIC | `huart2.Init.Mode = UART_MODE_TX_RX;` |
-| [146](../Src/usart.c#L146) | HAL/NVIC | `huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;` |
-| [147](../Src/usart.c#L147) | HAL/NVIC | `huart2.Init.OverSampling = UART_OVERSAMPLING_16;` |
-| [170](../Src/usart.c#L170) | HAL/NVIC | `huart3.Init.BaudRate = 9600;` |
-| [171](../Src/usart.c#L171) | HAL/NVIC | `huart3.Init.WordLength = UART_WORDLENGTH_8B;` |
-| [172](../Src/usart.c#L172) | HAL/NVIC | `huart3.Init.StopBits = UART_STOPBITS_1;` |
-| [173](../Src/usart.c#L173) | HAL/NVIC | `huart3.Init.Parity = UART_PARITY_NONE;` |
-| [174](../Src/usart.c#L174) | HAL/NVIC | `huart3.Init.Mode = UART_MODE_TX_RX;` |
-| [175](../Src/usart.c#L175) | HAL/NVIC | `huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;` |
-| [176](../Src/usart.c#L176) | HAL/NVIC | `huart3.Init.OverSampling = UART_OVERSAMPLING_16;` |
-| [199](../Src/usart.c#L199) | HAL/NVIC | `huart6.Init.BaudRate = 115200;` |
-| [200](../Src/usart.c#L200) | HAL/NVIC | `huart6.Init.WordLength = UART_WORDLENGTH_8B;` |
-| [201](../Src/usart.c#L201) | HAL/NVIC | `huart6.Init.StopBits = UART_STOPBITS_1;` |
-| [202](../Src/usart.c#L202) | HAL/NVIC | `huart6.Init.Parity = UART_PARITY_NONE;` |
-| [203](../Src/usart.c#L203) | HAL/NVIC | `huart6.Init.Mode = UART_MODE_TX_RX;` |
-| [204](../Src/usart.c#L204) | HAL/NVIC | `huart6.Init.HwFlowCtl = UART_HWCONTROL_NONE;` |
-| [205](../Src/usart.c#L205) | HAL/NVIC | `huart6.Init.OverSampling = UART_OVERSAMPLING_16;` |
-| [243](../Src/usart.c#L243) | HAL/NVIC | `hdma_uart7_rx.Init.Channel = DMA_CHANNEL_5;` |
-| [244](../Src/usart.c#L244) | HAL/NVIC | `hdma_uart7_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
-| [245](../Src/usart.c#L245) | HAL/NVIC | `hdma_uart7_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
-| [246](../Src/usart.c#L246) | HAL/NVIC | `hdma_uart7_rx.Init.MemInc = DMA_MINC_ENABLE;` |
-| [247](../Src/usart.c#L247) | HAL/NVIC | `hdma_uart7_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
-| [248](../Src/usart.c#L248) | HAL/NVIC | `hdma_uart7_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
-| [249](../Src/usart.c#L249) | HAL/NVIC | `hdma_uart7_rx.Init.Mode = DMA_NORMAL;` |
-| [250](../Src/usart.c#L250) | HAL/NVIC | `hdma_uart7_rx.Init.Priority = DMA_PRIORITY_LOW;` |
-| [251](../Src/usart.c#L251) | HAL/NVIC | `hdma_uart7_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
-| [252](../Src/usart.c#L252) | HAL/NVIC | `hdma_uart7_rx.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;` |
-| [253](../Src/usart.c#L253) | HAL/NVIC | `hdma_uart7_rx.Init.MemBurst = DMA_MBURST_SINGLE;` |
-| [254](../Src/usart.c#L254) | HAL/NVIC | `hdma_uart7_rx.Init.PeriphBurst = DMA_PBURST_SINGLE;` |
-| [263](../Src/usart.c#L263) | HAL/NVIC | `HAL_NVIC_SetPriority(UART7_IRQn, 5, 0);` |
-| [264](../Src/usart.c#L264) | HAL/NVIC | `HAL_NVIC_EnableIRQ(UART7_IRQn);` |
-| [292](../Src/usart.c#L292) | HAL/NVIC | `hdma_uart8_rx.Init.Channel = DMA_CHANNEL_5;` |
-| [293](../Src/usart.c#L293) | HAL/NVIC | `hdma_uart8_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
-| [294](../Src/usart.c#L294) | HAL/NVIC | `hdma_uart8_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
-| [295](../Src/usart.c#L295) | HAL/NVIC | `hdma_uart8_rx.Init.MemInc = DMA_MINC_ENABLE;` |
-| [296](../Src/usart.c#L296) | HAL/NVIC | `hdma_uart8_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
-| [297](../Src/usart.c#L297) | HAL/NVIC | `hdma_uart8_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
-| [298](../Src/usart.c#L298) | HAL/NVIC | `hdma_uart8_rx.Init.Mode = DMA_NORMAL;` |
-| [299](../Src/usart.c#L299) | HAL/NVIC | `hdma_uart8_rx.Init.Priority = DMA_PRIORITY_LOW;` |
-| [300](../Src/usart.c#L300) | HAL/NVIC | `hdma_uart8_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
-| [301](../Src/usart.c#L301) | HAL/NVIC | `hdma_uart8_rx.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;` |
-| [302](../Src/usart.c#L302) | HAL/NVIC | `hdma_uart8_rx.Init.MemBurst = DMA_MBURST_SINGLE;` |
-| [303](../Src/usart.c#L303) | HAL/NVIC | `hdma_uart8_rx.Init.PeriphBurst = DMA_PBURST_SINGLE;` |
-| [313](../Src/usart.c#L313) | HAL/NVIC | `hdma_uart8_tx.Init.Channel = DMA_CHANNEL_5;` |
-| [314](../Src/usart.c#L314) | HAL/NVIC | `hdma_uart8_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;` |
-| [315](../Src/usart.c#L315) | HAL/NVIC | `hdma_uart8_tx.Init.PeriphInc = DMA_PINC_DISABLE;` |
-| [316](../Src/usart.c#L316) | HAL/NVIC | `hdma_uart8_tx.Init.MemInc = DMA_MINC_ENABLE;` |
-| [317](../Src/usart.c#L317) | HAL/NVIC | `hdma_uart8_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
-| [318](../Src/usart.c#L318) | HAL/NVIC | `hdma_uart8_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
-| [319](../Src/usart.c#L319) | HAL/NVIC | `hdma_uart8_tx.Init.Mode = DMA_NORMAL;` |
-| [320](../Src/usart.c#L320) | HAL/NVIC | `hdma_uart8_tx.Init.Priority = DMA_PRIORITY_LOW;` |
-| [321](../Src/usart.c#L321) | HAL/NVIC | `hdma_uart8_tx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
-| [330](../Src/usart.c#L330) | HAL/NVIC | `HAL_NVIC_SetPriority(UART8_IRQn, 5, 0);` |
-| [331](../Src/usart.c#L331) | HAL/NVIC | `HAL_NVIC_EnableIRQ(UART8_IRQn);` |
-| [359](../Src/usart.c#L359) | HAL/NVIC | `hdma_usart1_rx.Init.Channel = DMA_CHANNEL_4;` |
-| [360](../Src/usart.c#L360) | HAL/NVIC | `hdma_usart1_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
-| [361](../Src/usart.c#L361) | HAL/NVIC | `hdma_usart1_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
-| [362](../Src/usart.c#L362) | HAL/NVIC | `hdma_usart1_rx.Init.MemInc = DMA_MINC_ENABLE;` |
-| [363](../Src/usart.c#L363) | HAL/NVIC | `hdma_usart1_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
-| [364](../Src/usart.c#L364) | HAL/NVIC | `hdma_usart1_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
-| [365](../Src/usart.c#L365) | HAL/NVIC | `hdma_usart1_rx.Init.Mode = DMA_NORMAL;` |
-| [366](../Src/usart.c#L366) | HAL/NVIC | `hdma_usart1_rx.Init.Priority = DMA_PRIORITY_LOW;` |
-| [367](../Src/usart.c#L367) | HAL/NVIC | `hdma_usart1_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
-| [376](../Src/usart.c#L376) | HAL/NVIC | `HAL_NVIC_SetPriority(USART1_IRQn, 5, 0);` |
-| [377](../Src/usart.c#L377) | HAL/NVIC | `HAL_NVIC_EnableIRQ(USART1_IRQn);` |
-| [405](../Src/usart.c#L405) | HAL/NVIC | `hdma_usart2_rx.Init.Channel = DMA_CHANNEL_4;` |
-| [406](../Src/usart.c#L406) | HAL/NVIC | `hdma_usart2_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
-| [407](../Src/usart.c#L407) | HAL/NVIC | `hdma_usart2_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
-| [408](../Src/usart.c#L408) | HAL/NVIC | `hdma_usart2_rx.Init.MemInc = DMA_MINC_ENABLE;` |
-| [409](../Src/usart.c#L409) | HAL/NVIC | `hdma_usart2_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
-| [410](../Src/usart.c#L410) | HAL/NVIC | `hdma_usart2_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
-| [411](../Src/usart.c#L411) | HAL/NVIC | `hdma_usart2_rx.Init.Mode = DMA_NORMAL;` |
-| [412](../Src/usart.c#L412) | HAL/NVIC | `hdma_usart2_rx.Init.Priority = DMA_PRIORITY_HIGH;` |
-| [413](../Src/usart.c#L413) | HAL/NVIC | `hdma_usart2_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
-| [422](../Src/usart.c#L422) | HAL/NVIC | `HAL_NVIC_SetPriority(USART2_IRQn, 5, 0);` |
-| [423](../Src/usart.c#L423) | HAL/NVIC | `HAL_NVIC_EnableIRQ(USART2_IRQn);` |
-| [451](../Src/usart.c#L451) | HAL/NVIC | `hdma_usart3_rx.Init.Channel = DMA_CHANNEL_4;` |
-| [452](../Src/usart.c#L452) | HAL/NVIC | `hdma_usart3_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
-| [453](../Src/usart.c#L453) | HAL/NVIC | `hdma_usart3_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
-| [454](../Src/usart.c#L454) | HAL/NVIC | `hdma_usart3_rx.Init.MemInc = DMA_MINC_ENABLE;` |
-| [455](../Src/usart.c#L455) | HAL/NVIC | `hdma_usart3_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
-| [456](../Src/usart.c#L456) | HAL/NVIC | `hdma_usart3_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
-| [457](../Src/usart.c#L457) | HAL/NVIC | `hdma_usart3_rx.Init.Mode = DMA_NORMAL;` |
-| [458](../Src/usart.c#L458) | HAL/NVIC | `hdma_usart3_rx.Init.Priority = DMA_PRIORITY_VERY_HIGH;` |
-| [459](../Src/usart.c#L459) | HAL/NVIC | `hdma_usart3_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
-| [469](../Src/usart.c#L469) | HAL/NVIC | `hdma_usart3_tx.Init.Channel = DMA_CHANNEL_7;` |
-| [470](../Src/usart.c#L470) | HAL/NVIC | `hdma_usart3_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;` |
-| [471](../Src/usart.c#L471) | HAL/NVIC | `hdma_usart3_tx.Init.PeriphInc = DMA_PINC_DISABLE;` |
-| [472](../Src/usart.c#L472) | HAL/NVIC | `hdma_usart3_tx.Init.MemInc = DMA_MINC_ENABLE;` |
-| [473](../Src/usart.c#L473) | HAL/NVIC | `hdma_usart3_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
-| [474](../Src/usart.c#L474) | HAL/NVIC | `hdma_usart3_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
-| [475](../Src/usart.c#L475) | HAL/NVIC | `hdma_usart3_tx.Init.Mode = DMA_NORMAL;` |
-| [476](../Src/usart.c#L476) | HAL/NVIC | `hdma_usart3_tx.Init.Priority = DMA_PRIORITY_VERY_HIGH;` |
-| [477](../Src/usart.c#L477) | HAL/NVIC | `hdma_usart3_tx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
-| [486](../Src/usart.c#L486) | HAL/NVIC | `HAL_NVIC_SetPriority(USART3_IRQn, 5, 0);` |
-| [487](../Src/usart.c#L487) | HAL/NVIC | `HAL_NVIC_EnableIRQ(USART3_IRQn);` |
-| [515](../Src/usart.c#L515) | HAL/NVIC | `hdma_usart6_rx.Init.Channel = DMA_CHANNEL_5;` |
-| [516](../Src/usart.c#L516) | HAL/NVIC | `hdma_usart6_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
-| [517](../Src/usart.c#L517) | HAL/NVIC | `hdma_usart6_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
-| [518](../Src/usart.c#L518) | HAL/NVIC | `hdma_usart6_rx.Init.MemInc = DMA_MINC_ENABLE;` |
-| [519](../Src/usart.c#L519) | HAL/NVIC | `hdma_usart6_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
-| [520](../Src/usart.c#L520) | HAL/NVIC | `hdma_usart6_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
-| [521](../Src/usart.c#L521) | HAL/NVIC | `hdma_usart6_rx.Init.Mode = DMA_NORMAL;` |
-| [522](../Src/usart.c#L522) | HAL/NVIC | `hdma_usart6_rx.Init.Priority = DMA_PRIORITY_HIGH;` |
-| [523](../Src/usart.c#L523) | HAL/NVIC | `hdma_usart6_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
-| [533](../Src/usart.c#L533) | HAL/NVIC | `hdma_usart6_tx.Init.Channel = DMA_CHANNEL_5;` |
-| [534](../Src/usart.c#L534) | HAL/NVIC | `hdma_usart6_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;` |
-| [535](../Src/usart.c#L535) | HAL/NVIC | `hdma_usart6_tx.Init.PeriphInc = DMA_PINC_DISABLE;` |
-| [536](../Src/usart.c#L536) | HAL/NVIC | `hdma_usart6_tx.Init.MemInc = DMA_MINC_ENABLE;` |
-| [537](../Src/usart.c#L537) | HAL/NVIC | `hdma_usart6_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
-| [538](../Src/usart.c#L538) | HAL/NVIC | `hdma_usart6_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
-| [539](../Src/usart.c#L539) | HAL/NVIC | `hdma_usart6_tx.Init.Mode = DMA_NORMAL;` |
-| [540](../Src/usart.c#L540) | HAL/NVIC | `hdma_usart6_tx.Init.Priority = DMA_PRIORITY_HIGH;` |
-| [541](../Src/usart.c#L541) | HAL/NVIC | `hdma_usart6_tx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
-| [550](../Src/usart.c#L550) | HAL/NVIC | `HAL_NVIC_SetPriority(USART6_IRQn, 5, 0);` |
-| [551](../Src/usart.c#L551) | HAL/NVIC | `HAL_NVIC_EnableIRQ(USART6_IRQn);` |
-| [579](../Src/usart.c#L579) | HAL/NVIC | `HAL_NVIC_DisableIRQ(UART7_IRQn);` |
-| [603](../Src/usart.c#L603) | HAL/NVIC | `HAL_NVIC_DisableIRQ(UART8_IRQn);` |
-| [626](../Src/usart.c#L626) | HAL/NVIC | `HAL_NVIC_DisableIRQ(USART1_IRQn);` |
-| [649](../Src/usart.c#L649) | HAL/NVIC | `HAL_NVIC_DisableIRQ(USART2_IRQn);` |
-| [673](../Src/usart.c#L673) | HAL/NVIC | `HAL_NVIC_DisableIRQ(USART3_IRQn);` |
-| [697](../Src/usart.c#L697) | HAL/NVIC | `HAL_NVIC_DisableIRQ(USART6_IRQn);` |
+| [56](../Src/usart.c#L56) | HAL/NVIC | `huart7.Init.BaudRate = BOARD_UART7_BAUDRATE;` |
+| [57](../Src/usart.c#L57) | HAL/NVIC | `huart7.Init.WordLength = UART_WORDLENGTH_8B;` |
+| [58](../Src/usart.c#L58) | HAL/NVIC | `huart7.Init.StopBits = UART_STOPBITS_1;` |
+| [59](../Src/usart.c#L59) | HAL/NVIC | `huart7.Init.Parity = UART_PARITY_NONE;` |
+| [60](../Src/usart.c#L60) | HAL/NVIC | `huart7.Init.Mode = UART_MODE_TX_RX;` |
+| [61](../Src/usart.c#L61) | HAL/NVIC | `huart7.Init.HwFlowCtl = UART_HWCONTROL_NONE;` |
+| [62](../Src/usart.c#L62) | HAL/NVIC | `huart7.Init.OverSampling = UART_OVERSAMPLING_16;` |
+| [84](../Src/usart.c#L84) | HAL/NVIC | `huart8.Init.BaudRate = 115200;` |
+| [85](../Src/usart.c#L85) | HAL/NVIC | `huart8.Init.WordLength = UART_WORDLENGTH_8B;` |
+| [86](../Src/usart.c#L86) | HAL/NVIC | `huart8.Init.StopBits = UART_STOPBITS_1;` |
+| [87](../Src/usart.c#L87) | HAL/NVIC | `huart8.Init.Parity = UART_PARITY_NONE;` |
+| [88](../Src/usart.c#L88) | HAL/NVIC | `huart8.Init.Mode = UART_MODE_TX_RX;` |
+| [89](../Src/usart.c#L89) | HAL/NVIC | `huart8.Init.HwFlowCtl = UART_HWCONTROL_NONE;` |
+| [90](../Src/usart.c#L90) | HAL/NVIC | `huart8.Init.OverSampling = UART_OVERSAMPLING_16;` |
+| [113](../Src/usart.c#L113) | HAL/NVIC | `huart1.Init.BaudRate = 100000;` |
+| [114](../Src/usart.c#L114) | HAL/NVIC | `huart1.Init.WordLength = UART_WORDLENGTH_9B;` |
+| [115](../Src/usart.c#L115) | HAL/NVIC | `huart1.Init.StopBits = UART_STOPBITS_1;` |
+| [116](../Src/usart.c#L116) | HAL/NVIC | `huart1.Init.Parity = UART_PARITY_EVEN;` |
+| [117](../Src/usart.c#L117) | HAL/NVIC | `huart1.Init.Mode = UART_MODE_TX_RX;` |
+| [118](../Src/usart.c#L118) | HAL/NVIC | `huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;` |
+| [119](../Src/usart.c#L119) | HAL/NVIC | `huart1.Init.OverSampling = UART_OVERSAMPLING_16;` |
+| [142](../Src/usart.c#L142) | HAL/NVIC | `huart2.Init.BaudRate = 115200;` |
+| [143](../Src/usart.c#L143) | HAL/NVIC | `huart2.Init.WordLength = UART_WORDLENGTH_8B;` |
+| [144](../Src/usart.c#L144) | HAL/NVIC | `huart2.Init.StopBits = UART_STOPBITS_1;` |
+| [145](../Src/usart.c#L145) | HAL/NVIC | `huart2.Init.Parity = UART_PARITY_NONE;` |
+| [146](../Src/usart.c#L146) | HAL/NVIC | `huart2.Init.Mode = UART_MODE_TX_RX;` |
+| [147](../Src/usart.c#L147) | HAL/NVIC | `huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;` |
+| [148](../Src/usart.c#L148) | HAL/NVIC | `huart2.Init.OverSampling = UART_OVERSAMPLING_16;` |
+| [171](../Src/usart.c#L171) | HAL/NVIC | `huart3.Init.BaudRate = 9600;` |
+| [172](../Src/usart.c#L172) | HAL/NVIC | `huart3.Init.WordLength = UART_WORDLENGTH_8B;` |
+| [173](../Src/usart.c#L173) | HAL/NVIC | `huart3.Init.StopBits = UART_STOPBITS_1;` |
+| [174](../Src/usart.c#L174) | HAL/NVIC | `huart3.Init.Parity = UART_PARITY_NONE;` |
+| [175](../Src/usart.c#L175) | HAL/NVIC | `huart3.Init.Mode = UART_MODE_TX_RX;` |
+| [176](../Src/usart.c#L176) | HAL/NVIC | `huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;` |
+| [177](../Src/usart.c#L177) | HAL/NVIC | `huart3.Init.OverSampling = UART_OVERSAMPLING_16;` |
+| [200](../Src/usart.c#L200) | HAL/NVIC | `huart6.Init.BaudRate = 115200;` |
+| [201](../Src/usart.c#L201) | HAL/NVIC | `huart6.Init.WordLength = UART_WORDLENGTH_8B;` |
+| [202](../Src/usart.c#L202) | HAL/NVIC | `huart6.Init.StopBits = UART_STOPBITS_1;` |
+| [203](../Src/usart.c#L203) | HAL/NVIC | `huart6.Init.Parity = UART_PARITY_NONE;` |
+| [204](../Src/usart.c#L204) | HAL/NVIC | `huart6.Init.Mode = UART_MODE_TX_RX;` |
+| [205](../Src/usart.c#L205) | HAL/NVIC | `huart6.Init.HwFlowCtl = UART_HWCONTROL_NONE;` |
+| [206](../Src/usart.c#L206) | HAL/NVIC | `huart6.Init.OverSampling = UART_OVERSAMPLING_16;` |
+| [244](../Src/usart.c#L244) | HAL/NVIC | `hdma_uart7_rx.Init.Channel = DMA_CHANNEL_5;` |
+| [245](../Src/usart.c#L245) | HAL/NVIC | `hdma_uart7_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
+| [246](../Src/usart.c#L246) | HAL/NVIC | `hdma_uart7_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
+| [247](../Src/usart.c#L247) | HAL/NVIC | `hdma_uart7_rx.Init.MemInc = DMA_MINC_ENABLE;` |
+| [248](../Src/usart.c#L248) | HAL/NVIC | `hdma_uart7_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
+| [249](../Src/usart.c#L249) | HAL/NVIC | `hdma_uart7_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
+| [250](../Src/usart.c#L250) | HAL/NVIC | `hdma_uart7_rx.Init.Mode = DMA_NORMAL;` |
+| [251](../Src/usart.c#L251) | HAL/NVIC | `hdma_uart7_rx.Init.Priority = DMA_PRIORITY_LOW;` |
+| [252](../Src/usart.c#L252) | HAL/NVIC | `hdma_uart7_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
+| [253](../Src/usart.c#L253) | HAL/NVIC | `hdma_uart7_rx.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;` |
+| [254](../Src/usart.c#L254) | HAL/NVIC | `hdma_uart7_rx.Init.MemBurst = DMA_MBURST_SINGLE;` |
+| [255](../Src/usart.c#L255) | HAL/NVIC | `hdma_uart7_rx.Init.PeriphBurst = DMA_PBURST_SINGLE;` |
+| [264](../Src/usart.c#L264) | HAL/NVIC | `HAL_NVIC_SetPriority(UART7_IRQn, 5, 0);` |
+| [265](../Src/usart.c#L265) | HAL/NVIC | `HAL_NVIC_EnableIRQ(UART7_IRQn);` |
+| [293](../Src/usart.c#L293) | HAL/NVIC | `hdma_uart8_rx.Init.Channel = DMA_CHANNEL_5;` |
+| [294](../Src/usart.c#L294) | HAL/NVIC | `hdma_uart8_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
+| [295](../Src/usart.c#L295) | HAL/NVIC | `hdma_uart8_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
+| [296](../Src/usart.c#L296) | HAL/NVIC | `hdma_uart8_rx.Init.MemInc = DMA_MINC_ENABLE;` |
+| [297](../Src/usart.c#L297) | HAL/NVIC | `hdma_uart8_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
+| [298](../Src/usart.c#L298) | HAL/NVIC | `hdma_uart8_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
+| [299](../Src/usart.c#L299) | HAL/NVIC | `hdma_uart8_rx.Init.Mode = DMA_NORMAL;` |
+| [300](../Src/usart.c#L300) | HAL/NVIC | `hdma_uart8_rx.Init.Priority = DMA_PRIORITY_LOW;` |
+| [301](../Src/usart.c#L301) | HAL/NVIC | `hdma_uart8_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
+| [302](../Src/usart.c#L302) | HAL/NVIC | `hdma_uart8_rx.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;` |
+| [303](../Src/usart.c#L303) | HAL/NVIC | `hdma_uart8_rx.Init.MemBurst = DMA_MBURST_SINGLE;` |
+| [304](../Src/usart.c#L304) | HAL/NVIC | `hdma_uart8_rx.Init.PeriphBurst = DMA_PBURST_SINGLE;` |
+| [314](../Src/usart.c#L314) | HAL/NVIC | `hdma_uart8_tx.Init.Channel = DMA_CHANNEL_5;` |
+| [315](../Src/usart.c#L315) | HAL/NVIC | `hdma_uart8_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;` |
+| [316](../Src/usart.c#L316) | HAL/NVIC | `hdma_uart8_tx.Init.PeriphInc = DMA_PINC_DISABLE;` |
+| [317](../Src/usart.c#L317) | HAL/NVIC | `hdma_uart8_tx.Init.MemInc = DMA_MINC_ENABLE;` |
+| [318](../Src/usart.c#L318) | HAL/NVIC | `hdma_uart8_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
+| [319](../Src/usart.c#L319) | HAL/NVIC | `hdma_uart8_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
+| [320](../Src/usart.c#L320) | HAL/NVIC | `hdma_uart8_tx.Init.Mode = DMA_NORMAL;` |
+| [321](../Src/usart.c#L321) | HAL/NVIC | `hdma_uart8_tx.Init.Priority = DMA_PRIORITY_LOW;` |
+| [322](../Src/usart.c#L322) | HAL/NVIC | `hdma_uart8_tx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
+| [331](../Src/usart.c#L331) | HAL/NVIC | `HAL_NVIC_SetPriority(UART8_IRQn, 5, 0);` |
+| [332](../Src/usart.c#L332) | HAL/NVIC | `HAL_NVIC_EnableIRQ(UART8_IRQn);` |
+| [360](../Src/usart.c#L360) | HAL/NVIC | `hdma_usart1_rx.Init.Channel = DMA_CHANNEL_4;` |
+| [361](../Src/usart.c#L361) | HAL/NVIC | `hdma_usart1_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
+| [362](../Src/usart.c#L362) | HAL/NVIC | `hdma_usart1_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
+| [363](../Src/usart.c#L363) | HAL/NVIC | `hdma_usart1_rx.Init.MemInc = DMA_MINC_ENABLE;` |
+| [364](../Src/usart.c#L364) | HAL/NVIC | `hdma_usart1_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
+| [365](../Src/usart.c#L365) | HAL/NVIC | `hdma_usart1_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
+| [366](../Src/usart.c#L366) | HAL/NVIC | `hdma_usart1_rx.Init.Mode = DMA_NORMAL;` |
+| [367](../Src/usart.c#L367) | HAL/NVIC | `hdma_usart1_rx.Init.Priority = DMA_PRIORITY_LOW;` |
+| [368](../Src/usart.c#L368) | HAL/NVIC | `hdma_usart1_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
+| [377](../Src/usart.c#L377) | HAL/NVIC | `HAL_NVIC_SetPriority(USART1_IRQn, 5, 0);` |
+| [378](../Src/usart.c#L378) | HAL/NVIC | `HAL_NVIC_EnableIRQ(USART1_IRQn);` |
+| [406](../Src/usart.c#L406) | HAL/NVIC | `hdma_usart2_rx.Init.Channel = DMA_CHANNEL_4;` |
+| [407](../Src/usart.c#L407) | HAL/NVIC | `hdma_usart2_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
+| [408](../Src/usart.c#L408) | HAL/NVIC | `hdma_usart2_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
+| [409](../Src/usart.c#L409) | HAL/NVIC | `hdma_usart2_rx.Init.MemInc = DMA_MINC_ENABLE;` |
+| [410](../Src/usart.c#L410) | HAL/NVIC | `hdma_usart2_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
+| [411](../Src/usart.c#L411) | HAL/NVIC | `hdma_usart2_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
+| [412](../Src/usart.c#L412) | HAL/NVIC | `hdma_usart2_rx.Init.Mode = DMA_NORMAL;` |
+| [413](../Src/usart.c#L413) | HAL/NVIC | `hdma_usart2_rx.Init.Priority = DMA_PRIORITY_HIGH;` |
+| [414](../Src/usart.c#L414) | HAL/NVIC | `hdma_usart2_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
+| [423](../Src/usart.c#L423) | HAL/NVIC | `HAL_NVIC_SetPriority(USART2_IRQn, 5, 0);` |
+| [424](../Src/usart.c#L424) | HAL/NVIC | `HAL_NVIC_EnableIRQ(USART2_IRQn);` |
+| [452](../Src/usart.c#L452) | HAL/NVIC | `hdma_usart3_rx.Init.Channel = DMA_CHANNEL_4;` |
+| [453](../Src/usart.c#L453) | HAL/NVIC | `hdma_usart3_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
+| [454](../Src/usart.c#L454) | HAL/NVIC | `hdma_usart3_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
+| [455](../Src/usart.c#L455) | HAL/NVIC | `hdma_usart3_rx.Init.MemInc = DMA_MINC_ENABLE;` |
+| [456](../Src/usart.c#L456) | HAL/NVIC | `hdma_usart3_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
+| [457](../Src/usart.c#L457) | HAL/NVIC | `hdma_usart3_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
+| [458](../Src/usart.c#L458) | HAL/NVIC | `hdma_usart3_rx.Init.Mode = DMA_NORMAL;` |
+| [459](../Src/usart.c#L459) | HAL/NVIC | `hdma_usart3_rx.Init.Priority = DMA_PRIORITY_VERY_HIGH;` |
+| [460](../Src/usart.c#L460) | HAL/NVIC | `hdma_usart3_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
+| [470](../Src/usart.c#L470) | HAL/NVIC | `hdma_usart3_tx.Init.Channel = DMA_CHANNEL_7;` |
+| [471](../Src/usart.c#L471) | HAL/NVIC | `hdma_usart3_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;` |
+| [472](../Src/usart.c#L472) | HAL/NVIC | `hdma_usart3_tx.Init.PeriphInc = DMA_PINC_DISABLE;` |
+| [473](../Src/usart.c#L473) | HAL/NVIC | `hdma_usart3_tx.Init.MemInc = DMA_MINC_ENABLE;` |
+| [474](../Src/usart.c#L474) | HAL/NVIC | `hdma_usart3_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
+| [475](../Src/usart.c#L475) | HAL/NVIC | `hdma_usart3_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
+| [476](../Src/usart.c#L476) | HAL/NVIC | `hdma_usart3_tx.Init.Mode = DMA_NORMAL;` |
+| [477](../Src/usart.c#L477) | HAL/NVIC | `hdma_usart3_tx.Init.Priority = DMA_PRIORITY_VERY_HIGH;` |
+| [478](../Src/usart.c#L478) | HAL/NVIC | `hdma_usart3_tx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
+| [487](../Src/usart.c#L487) | HAL/NVIC | `HAL_NVIC_SetPriority(USART3_IRQn, 5, 0);` |
+| [488](../Src/usart.c#L488) | HAL/NVIC | `HAL_NVIC_EnableIRQ(USART3_IRQn);` |
+| [516](../Src/usart.c#L516) | HAL/NVIC | `hdma_usart6_rx.Init.Channel = DMA_CHANNEL_5;` |
+| [517](../Src/usart.c#L517) | HAL/NVIC | `hdma_usart6_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;` |
+| [518](../Src/usart.c#L518) | HAL/NVIC | `hdma_usart6_rx.Init.PeriphInc = DMA_PINC_DISABLE;` |
+| [519](../Src/usart.c#L519) | HAL/NVIC | `hdma_usart6_rx.Init.MemInc = DMA_MINC_ENABLE;` |
+| [520](../Src/usart.c#L520) | HAL/NVIC | `hdma_usart6_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
+| [521](../Src/usart.c#L521) | HAL/NVIC | `hdma_usart6_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
+| [522](../Src/usart.c#L522) | HAL/NVIC | `hdma_usart6_rx.Init.Mode = DMA_NORMAL;` |
+| [523](../Src/usart.c#L523) | HAL/NVIC | `hdma_usart6_rx.Init.Priority = DMA_PRIORITY_HIGH;` |
+| [524](../Src/usart.c#L524) | HAL/NVIC | `hdma_usart6_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
+| [534](../Src/usart.c#L534) | HAL/NVIC | `hdma_usart6_tx.Init.Channel = DMA_CHANNEL_5;` |
+| [535](../Src/usart.c#L535) | HAL/NVIC | `hdma_usart6_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;` |
+| [536](../Src/usart.c#L536) | HAL/NVIC | `hdma_usart6_tx.Init.PeriphInc = DMA_PINC_DISABLE;` |
+| [537](../Src/usart.c#L537) | HAL/NVIC | `hdma_usart6_tx.Init.MemInc = DMA_MINC_ENABLE;` |
+| [538](../Src/usart.c#L538) | HAL/NVIC | `hdma_usart6_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;` |
+| [539](../Src/usart.c#L539) | HAL/NVIC | `hdma_usart6_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;` |
+| [540](../Src/usart.c#L540) | HAL/NVIC | `hdma_usart6_tx.Init.Mode = DMA_NORMAL;` |
+| [541](../Src/usart.c#L541) | HAL/NVIC | `hdma_usart6_tx.Init.Priority = DMA_PRIORITY_HIGH;` |
+| [542](../Src/usart.c#L542) | HAL/NVIC | `hdma_usart6_tx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;` |
+| [551](../Src/usart.c#L551) | HAL/NVIC | `HAL_NVIC_SetPriority(USART6_IRQn, 5, 0);` |
+| [552](../Src/usart.c#L552) | HAL/NVIC | `HAL_NVIC_EnableIRQ(USART6_IRQn);` |
+| [580](../Src/usart.c#L580) | HAL/NVIC | `HAL_NVIC_DisableIRQ(UART7_IRQn);` |
+| [604](../Src/usart.c#L604) | HAL/NVIC | `HAL_NVIC_DisableIRQ(UART8_IRQn);` |
+| [627](../Src/usart.c#L627) | HAL/NVIC | `HAL_NVIC_DisableIRQ(USART1_IRQn);` |
+| [650](../Src/usart.c#L650) | HAL/NVIC | `HAL_NVIC_DisableIRQ(USART2_IRQn);` |
+| [674](../Src/usart.c#L674) | HAL/NVIC | `HAL_NVIC_DisableIRQ(USART3_IRQn);` |
+| [698](../Src/usart.c#L698) | HAL/NVIC | `HAL_NVIC_DisableIRQ(USART6_IRQn);` |
 
 ## Src/usbd_conf.c
 

@@ -100,6 +100,12 @@
 #if VOFA_TELEMETRY_ENABLE && BOARD_UART7_RESERVED_FOR_DEVICE
 #error UART7 cannot be shared by VOFA telemetry and the referee system or an auxiliary device.
 #endif
+/* UART7实际波特率：仅全量JustFloat提速；旧VOFA模式及其他UART7用途保持115200。 */
+#if VOFA_TELEMETRY_ENABLE && VOFA_TELEMETRY_MODE == 2
+#define BOARD_UART7_BAUDRATE 230400U /* 模式2配合20ms输出；VOFA和串口接收设备须使用相同波特率。 */
+#else
+#define BOARD_UART7_BAUDRATE 115200U /* 模式0/1、VOFA关闭、裁判或辅助设备使用UART7时保留原值。 */
+#endif
 #if BOARD_AUX_UART2_DEVICE && BOARD_AUX_UART7_DEVICE && BOARD_AUX_UART2_DEVICE == BOARD_AUX_UART7_DEVICE
 #error TFmini, HC05 and bus servo each support one UART instance.
 #endif

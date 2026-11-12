@@ -28,7 +28,7 @@
 
 打开 [`00_flash/board_flash_config.h`](00_flash/board_flash_config.h)，主板配置沿用 `BOARD_FLASH_1_` 前缀。当前只支持主板 `1`，`-Board 2` 会报错，旧第二板预设和采集 CAN 发送已移除。`BOARD_FLASH_PROGRAMMER` 选 `1` 使用 DAP/OpenOCD，选 `2` 使用 J-Link/J-Flash；profile、输出目录也在同一文件。
 
-主板预设 `CHASSIS_IMU_CAN_RX_ENABLE=1` 接收 CAN2 的 DM-IMU-L1，`CHASSIS_REMOTE_IMU_FUSION_ENABLE=1` 开启只读速度融合，模式 `2` 输出完整观测 JustFloat（40 ms 一组，CSV 由 VOFA+ 导出）。`CHASSIS_VELOCITY_FUSION_CALIBRATED=0` 只表示未启用本地云台标定路径。要记录轮速基线，把 `BOARD_FLASH_1_CHASSIS_REMOTE_IMU_FUSION_ENABLE` 改为 `0` 后重新构建，DM 接收及遥测保留。
+主板预设 `CHASSIS_IMU_CAN_RX_ENABLE=1` 接收 CAN2 的 DM-IMU-L1，`CHASSIS_REMOTE_IMU_FUSION_ENABLE=1` 开启只读速度融合，模式 `2` 输出完整观测 JustFloat（230400 波特率、20 ms 一组，CSV 由 VOFA+ 导出）。`CHASSIS_VELOCITY_FUSION_CALIBRATED=0` 只表示未启用本地云台标定路径。要记录轮速基线，把 `BOARD_FLASH_1_CHASSIS_REMOTE_IMU_FUSION_ENABLE` 改为 `0` 后重新构建，DM 接收及遥测保留。
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Show -Board 1
