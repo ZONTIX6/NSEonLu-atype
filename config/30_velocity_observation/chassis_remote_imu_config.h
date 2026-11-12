@@ -1,7 +1,7 @@
 #ifndef CHASSIS_REMOTE_IMU_CONFIG_H
 #define CHASSIS_REMOTE_IMU_CONFIG_H
 
-/* 第二块板固定到底盘的融合观测参数。修改后重新构建/烧录主板。
+/* 固定底盘DM-IMU-L1的融合观测参数。修改后重新构建/烧录主板。
  * 初值仅支持名义安装的观测试运行，不是实车标定；不参与底盘控制。
  * 内部坐标 +X前/+Y左/+Z上；对外速度接口仍为前/右正方向。
  * 名义安装：传感器轴与底盘轴重合，芯片在底盘中心。必须按实物修改；
@@ -16,7 +16,7 @@
 
 /* Hamilton [w,x,y,z]，从传感器坐标旋转到固定底盘坐标。 */
 #define CHASSIS_REMOTE_IMU_SENSOR_TO_BODY {1.0f, 0.0f, 0.0f, 0.0f}
-/* 底盘中心到MPU6500芯片的向量，底盘前/左/上，单位m。 */
+/* 底盘中心到当前所选IMU传感器的向量，底盘前/左/上，单位m。换模块须重新测量。 */
 #define CHASSIS_REMOTE_IMU_OFFSET_BODY_M {0.0f, 0.0f, 0.0f}
 
 /* 观测试运行初值；分别为(m/s)^2、(m/s²)^2、m²/s⁵、m/s。
@@ -26,7 +26,7 @@
 #define CHASSIS_REMOTE_IMU_JERK_DENSITY 1.0f
 #define CHASSIS_REMOTE_IMU_MAX_RESIDUAL_MPS 1.5f
 
-/* 配对只约束主板估计时刻，不证明跨板真实同步。
+/* 配对只约束主板估计时刻，不证明真实同步；DM无源时间戳，使用完整组首帧接收时刻。
  * 源年龄<=20ms、已知年龄<=60ms、当前轮速<=20ms另由适配器检查。
  * 三点中心补偿每侧15~30ms；漏一组50Hz数据会重置后重新预热。 */
 #define CHASSIS_REMOTE_IMU_MAX_PAIR_SPAN_MS 15U

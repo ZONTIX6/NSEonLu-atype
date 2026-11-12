@@ -20,7 +20,4 @@ typedef struct {
 extern CAN_HandleTypeDef hcan1,hcan2;
 CANInstance *CANRegister(CAN_Init_Config_s *config);
 void CANSetDLC(CANInstance *instance,uint8_t length);
-uint8_t CANTransmit(CANInstance *instance,float timeout);
-uint32_t HAL_CAN_IsTxMessagePending(CAN_HandleTypeDef *can,uint32_t mask);
-HAL_StatusTypeDef HAL_CAN_AbortTxRequest(CAN_HandleTypeDef *can,uint32_t mask);
 #endif

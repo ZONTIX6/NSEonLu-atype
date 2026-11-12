@@ -1,53 +1,20 @@
 # 整车平移速度融合观测
 
-当前推荐路线是：第二块 A 板刚性固定在底盘，经 **CAN1** 将 IMU 送到主板，与轮速历史配对后在线运行卡尔曼速度观测，再由主板 UART7 以 JustFloat 汇总到 **一个 VOFA+ 窗口**，采集后由 VOFA+ 导出一份 CSV。融合结果仅供记录与对照，没有接入电机控制、PID、功控、随动、自旋或安全门控。
+当前推荐路线是：**DM-IMU-L1 刚性固定在底盘，经 CAN2** 将 IMU 送到主板，与轮速历史配对后在线运行卡尔曼速度观测，再由主板 UART7 以 JustFloat 汇总到 **一个 VOFA+ 窗口**，采集后由 VOFA+ 导出一份 CSV。融合结果仅供记录与对照，没有接入电机控制、PID、功控、随动、自旋或安全门控。
 
 远端路径不依赖本地云台 IMU 或 yaw/pitch 编码器；它使用固定安装旋转和芯片偏移。本页后半部分保留可选的本地云台融合路径，两者配置不能混用。软件接入不代表实车精度通过；操作顺序和签字条件见 [测试与验收手册](kalman-chassis-test-and-acceptance.md)。
 
-## 推荐：CAN1 在线融合并汇总到一份 CSV
+## 推荐：DM-IMU-L1 接 CAN2
 
-主底盘/云台板构建：
+日常运行 `scripts/build-board.ps1 -Action Show -Board 1` 核对 DM 接收与融合开关均为 `1`，再用 `-Action Build -Board 1` 构建主板。DM 模块通过厂商上位机设为 CAN 1 Mbps、主动上报 100 Hz，加速度/角速度/四元数开启（Euler 可选），`MST_ID` 与 `config/92_imu/dm_imu_config.h` 的 `DM_IMU_CAN_RX_ID` 一致，项目示例为 `0x11`。主板被动接收，不自动改写模块设置，也无需第二块 A 板。
 
-```powershell
-make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-can1-main ONE_BOARD=1 CHASSIS_CONTROL_MODE=0 CHASSIS_IMU_CAN_RX_ENABLE=1 CHASSIS_VELOCITY_FUSION_ENABLE=1 CHASSIS_REMOTE_IMU_FUSION_ENABLE=1 CHASSIS_VELOCITY_FUSION_CALIBRATED=0 VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=2
-```
+接收完整组按至少 18 ms 首片接收间隔（名义 100 Hz 输入约发布 50 Hz，为接收抖动留余量）发布，沿用固定安装补偿、轮速历史配对及卡尔曼观测。原始加速度含重力，先按四元数旋转到导航系，再减去 `DM_IMU_GRAVITY_MPS2=9.80665f`；角速度转换为 rad/s。四元数按传感器→导航系解释，这一方向仍需实物倾斜静止检查，不能以编译通过代替确认。
 
-第二块底盘 IMU 板构建：
+schema 3/72 列和 `I64=2` 保持；`I5` bit 19（524288）为 DM 来源。`I34/I35` 序号与 `I67/I68` 时间由主板接收端生成/估计，`I66=0`，不是模块源时钟或零传感器延迟。断流超龄后清 IMU/融合有效位，四轮有效则回退轮速。接线、模块设置、首测步骤和时间限制见 [DM 集成说明](dm-imu-integration.md)。
 
-```powershell
-make -j8 PROFILE=atype-vehicle BUILD_DIR=build/imu-can1-sender IMU_CAPTURE_ONLY=1 IMU_CAPTURE_CAN_TX_ENABLE=1 VOFA_TELEMETRY_ENABLE=0 USB_TELEMETRY_ENABLE=0 CHASSIS_VELOCITY_FUSION_ENABLE=0 CHASSIS_REMOTE_IMU_FUSION_ENABLE=0
-```
+旧第二板 CAN 采集协议与构建预设已删除，仅保留[历史验证记录](superpowers/verification/2026-11-12-remote-imu-fusion.md)。需要轮速基线时只关闭 `CHASSIS_REMOTE_IMU_FUSION_ENABLE`，保留 DM 接收与同样遥测；四轮正常时状态为 `I6=2`，bit 3/16/17/18 为 0。
 
-第二板只运行 INS 采样、温控和 CAN1 发送，不初始化电机、底盘、云台或遥控。分别将两份固件烧入对应板。沿主板现有 CAN1 总线接入第二板，连接 `CAN_H` 对 `CAN_H`、`CAN_L` 对 `CAN_L` 和参考地；按板卡丝印及实际接线图确认物理引脚。终端电阻按总线两端配置，不因增加节点盲目添加第三只终端。
-
-当前 CAN1 为 **1 Mbps**，新增标准 ID **`0x520`** 与当前工程已有 ID 无冲突。每 20 ms 尝试发送一组（50 Hz），每组 9 个 8 字节分片，承载源四元数 4 轴、导航系去重力加速度 3 轴、传感器系角速度 3 轴、样本序号、源板时间、发送时源年龄和有效标志。接收检查严格顺序、同组 tag、CRC16/CCITT-FALSE 和 10 ms 组装期限。发送失败即中止本组，缺片、错序或过期组不更新已发布样本。
-
-仅主板 UART7 接 VOFA+，选择 **JustFloat、115200、8N1**。模式 `2` 使用 schema 3 的固定 72 路通道，发送间隔至少 40 ms（标称 25 Hz）；采集后由 VOFA+ 导出完整 **`I0`–`I71`**。启动先静止，确认 `I0=3`、`I63=0`、`I64=2`、`I5` bit 15/16/17 为 1，再等待 bit 4 持续有效、`I65` 接收年龄保持较小，以及预热后 `I6=9` 且 bit 3 为 1。来源和配置位本身不表示收到有效输入或已进入融合。[完整字段与采集步骤](vofa-telemetry.md#firewater-卡尔曼观测通道表)
-
-schema 3 保留 schema 2 前 64 列的布局，主要区别如下：
-
-| 字段 | CAN1 路线含义 |
-| --- | --- |
-| `I0` | schema 版本 `3` |
-| `I5` bit 4 / bit 15 | 远端 IMU 当前有效 / 已选择远端 CAN IMU 模式 |
-| `I5` bit 16 / bit 17 / bit 18 | 已配置远端融合 / 使用接收端估计时间 / 配置声明已实测审核；均不是有效位或精度结论 |
-| `I27`–`I32` | 估计速度、配对轮速、导航系中心加速度；bit 3 有效时才是融合结果及其配对量 |
-| `I33`–`I45` | 第二板的样本年龄下界、源序号、四元数、去重力加速度和角速度；远端失效时标无效，不退回本地云台 IMU |
-| `I63` / `I64` | 记录板为主板 `0` / IMU 来源为 CAN1 `2` |
-| `I65` / `I66` | 主板完整组接收年龄 / 第二板发送时源样本年龄，ms |
-| `I67`、`I68` | 源板样本毫秒时间的高、低 16 位，仅诊断 |
-| `I69` | 本组首末片主板接收间隔，ms |
-| `I70`、`I71` | 累计拒绝组数的高、低 16 位，达到 `UINT32_MAX` 后饱和 |
-
-`CHASSIS_REMOTE_IMU_FUSION_ENABLE` 普通构建默认 `0`，两板脚本的板 1 预设为 `1`、板 2 为 `0`。开启需要单板整车速度后端、CAN IMU 接收和整车观测同时开启；`CHASSIS_VELOCITY_FUSION_CALIBRATED` 保持 `0`，这个旧宏只选择本地云台标定路径。
-
-需要纯采集基线时，使用独立目录并关闭新开关：
-
-```powershell
-make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-can1-capture ONE_BOARD=1 CHASSIS_CONTROL_MODE=0 CHASSIS_IMU_CAN_RX_ENABLE=1 CHASSIS_VELOCITY_FUSION_ENABLE=1 CHASSIS_REMOTE_IMU_FUSION_ENABLE=0 CHASSIS_VELOCITY_FUSION_CALIBRATED=0 VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=2
-```
-
-此时四轮有效则 `I6=2`（`UNCALIBRATED`），`I27/I28` 来自轮速，bit 3/16/17/18 为 0，`I29`–`I32` 为 0，原始 CAN 采集保留。切换配置后重新核对已烧录固件身份，不混合保存两种配置的 CSV。
+## 固定底盘 DM 的融合参数与状态
 
 ### 固定底盘 IMU 参数
 
@@ -58,22 +25,22 @@ make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-can1-capture ONE_BOARD=1 C
 | `CHASSIS_REMOTE_IMU_SENSOR_TO_BODY` → `sensor_to_body_quaternion` | 原生传感器坐标到底盘前/左/上的安装旋转，Hamilton `[w,x,y,z]` 单位四元数；不是传感器到导航系的实时姿态 |
 | `CHASSIS_REMOTE_IMU_OFFSET_BODY_M` → `imu_offset_body_m` | 底盘几何中心到 IMU 芯片的固定三维向量，底盘前/左/上，单位 m；靠近中心不等于零偏移 |
 | `filter.wheel_variance`、`accel_variance`、`jerk_density`、`max_velocity_residual_mps` | 用辨识数据设定、独立验证段检查，再冻结；单位与约束见 [滤波头](../modules/algorithm/chassis_velocity_fusion.h) |
-| `filter.max_age_us/max_skew_us/max_gap_us`、`max_pair_span_ms/max_wheel_skew_ms/max_timing_jitter_ms` | 分别约束滤波时间、轮速配对跨度、四轮反馈偏差和跨板估计时间抖动；按实际配置记录，不通过放宽门槛隐藏传输异常 |
+| `filter.max_age_us/max_skew_us/max_gap_us`、`max_pair_span_ms/max_wheel_skew_ms/max_timing_jitter_ms` | 分别约束滤波时间、轮速配对跨度、四轮反馈偏差和接收估计时间抖动；按实际配置记录，不通过放宽门槛隐藏传输异常 |
 | `CHASSIS_REMOTE_IMU_CONFIG_VERIFIED` | 默认 `0`；安装、噪声和时间参数完成实测审核后改为 `1`，对应 bit 18。只是审核声明，不阻止算法运行，也不能代替实车验收 |
 
 默认单位四元数、零偏移是假定芯片轴已对齐、芯片在底盘中心的**名义安装**，噪声也是试运行初值。实物不符合这些假定时，不能把默认值生成的 FUSED 曲线用作定量验收。远端路径没有云台关节参数，不加载 `chassis_velocity_fusion_calibration.h`。
 
-当前配对跨度、四轮反馈偏差、时间抖动的初值分别为 15 ms、3 ms、10 ms，对应 `CHASSIS_REMOTE_IMU_MAX_PAIR_SPAN_MS/MAX_WHEEL_SKEW_MS/MAX_TIMING_JITTER_MS`。滤波输入在配对后使用同一个源时刻，因此初始化器中的 `filter.max_skew_us=0` 不表示真实传感器零偏斜；`max_age_us/max_gap_us=60000` 也不取消中心算法每侧 15～30 ms 的约束。
+当前配对跨度、四轮反馈偏差、时间抖动的初值分别为 15 ms、3 ms、10 ms，对应 `CHASSIS_REMOTE_IMU_MAX_PAIR_SPAN_MS/MAX_WHEEL_SKEW_MS/MAX_TIMING_JITTER_MS`。滤波输入在配对后使用同一个估计样本时刻，因此初始化器中的 `filter.max_skew_us=0` 不表示真实传感器零偏斜；`max_age_us/max_gap_us=60000` 也不取消中心算法每侧 15～30 ms 的约束。
 
 ### 时间和有效性
 
-源有效且完整组校验通过后，远端可用还要求发送时源年龄 `I66≤20 ms`、已知年龄下界 `I33≤60 ms`。`I33 = 发送时源年龄 + (主板当前时间 − 本组首片接收时间)`；它没有包含首片排队、总线仲裁前等待或传感器内部延迟，因此不是精确端到端年龄，也不是硬件同步后的采样时刻。`I65` 从完整组接收时刻算起，`I69` 表示分片到达跨度。无效测量填 0，未知或不可表示的年龄填 `-1`，使用数据必须检查 bit 4。
+DM 协议没有源时钟或序号，适配器将首片接收时刻作为样本时间估计，并在发布完整组时生成序号，`source_age_ms=0`。`I33=主板当前时间−首片接收时间` 是已知年龄下界，要求不超过 60 ms；`I65` 为完整组接收年龄，`I69` 为组装跨度。该方法不包含模块内部采样/滤波与 CAN 排队延迟，bit 17 和 `timing_estimated` 提醒它不是硬件同步时间。
 
-JustFloat 记录中的整数语义字段先四舍五入为整数，再做位运算；高低位按 `高位×65536+低位` 还原。float32 不保证所有 int32 大整数精确，分开的 16 位时间/计数仍可还原，详见[完整协议的精度说明](vofa-telemetry.md#firewater-卡尔曼观测通道表)。时钟、发送序号和源 INS 序号按 uint32 回绕；累计拒绝组数达到 `UINT32_MAX` 后饱和，不回绕。两板独立计时，不能用主板 `I1/I2` 直接减源板 `I67/I68`，也不能把主板时间减 `I33` 当成精确的跨板采样时刻。单份 CSV 只是汇总不同来源的最新观测；离线比较仍须考虑各自年龄、传感器延迟及第二板导航系方向。
+32 项轮速历史按估计采样时刻有界配对/插值，缺少合格历史时等待或降级，不把当前轮速冒充同刻轮速。中心差分和卡尔曼 dt 使用接收端估计时刻；输出保存三点中间样本时刻。`I67/I68` 属于主板时钟，但不能据此宣称知道模块真实采样时刻。
 
-远端适配器把 `first_rx_tick_ms - source_age_ms` 作为主板时钟下的**估计采样时刻**，在 32 项固定轮速历史中作有界配对/插值；缺少合格历史时等待或降级，不把当前轮速冒充同刻轮速。中心三点差分与卡尔曼 dt 使用源板时间；输出另保存中间样本在主板时钟下的估计时刻。bit 17 提醒这个时间方法没有测得单向传输排队与传感器内部延迟，不能当作同步证据。
+同一已发布序号最多推进一次，重复读取不重复校正或刷新输出时间。DM 按至少 18 ms 首片接收间隔（名义 100 Hz 输入约发布 50 Hz，为接收抖动留余量）发布，三点中心补偿要求每侧 15～30 ms；异常间隔、无效姿态、超龄和时间倒退会拒绝或重置。协议没有组序号，无法识别在线重传的一整组相同测量；静止时相同量化值也不意味着重传。
 
-每个新源序号最多推进一次，重复样本不会重复校正或刷新输出时间。三点中心补偿要求每侧 15～30 ms，正常 CAN 组间隔约 20 ms；漏一组导致约 40 ms 间隔时重置并重新预热。源重启、序号/时刻倒退、异常时间抖动、无效姿态或超龄也会拒绝或重置。远端不可用且四轮有效时退回当前轮速；四轮不可用时整体估计无效。不会自动切换到本地云台 IMU。
+DM 不可用且四轮有效时退回当前轮速；四轮不可用时整体估计无效，不自动切回本地云台 IMU。模块断电后没有源重启字段，只能通过断流和时间间隔触发重置，因此实测必须保留停流/恢复证据。
 
 ### 融合状态与诊断
 
@@ -84,26 +51,22 @@ JustFloat 记录中的整数语义字段先四舍五入为整数，再做位运�
 | 成员 | 含义 |
 | --- | --- |
 | `remote.tick_ms` | 融合输出对应的中间样本在主板时钟下的估计时刻；没有新样本时不刷新 |
-| `remote.source_sequence/source_tick_ms/estimated_sample_ms` | 最近检查的源身份、源时刻及主板估计采样时刻；不一定是当前中间输出对应的源包 |
-| `remote.source_step_ms/receive_step_ms/pair_span_ms` | 源时刻步长、首片接收步长、轮速配对跨度，用于检查漏组、抖动和历史配对 |
+| `remote.source_sequence/source_tick_ms/estimated_sample_ms` | 最近检查的接收端生成序号、样本估计时刻及主板配对时刻；不一定是当前中间输出对应的源包 |
+| `remote.source_step_ms/receive_step_ms/pair_span_ms` | 样本估计时刻步长、首片接收步长、轮速配对跨度，用于检查漏组、抖动和历史配对 |
 | `remote.updates/resets` | 饱和累计更新/重置计数；更新计数用于检查同一源包是否被重复处理，不等于 CSV 行数 |
 | `remote.timing_estimated` | 采用接收端估计时间；不是同步成功标志 |
 
-这些详细诊断不增加观测通道。需要无停核日志或额外采集才能逐次验证计数、重置和延迟；调试器 halt 的记录不能用于实时性验收。`I27/I28` 和 `I29/I30` 是同一融合输出的速度与配对轮速，`I31/I32` 是导航系中心加速度。主板时间减 `I11` 可还原该输出的主板估计时刻，但不能消除跨板时间不确定度；`I33`–`I45` 仍是最新原始远端输入，与中间输出并不同刻。
+这些详细诊断不增加观测通道。需要无停核日志或额外采集才能逐次验证计数、重置和延迟；调试器 halt 的记录不能用于实时性验收。`I27/I28` 和 `I29/I30` 是同一融合输出的速度与配对轮速，`I31/I32` 是导航系中心加速度。主板时间减 `I11` 可还原该输出的主板估计时刻，但不能消除采样时间不确定度；`I33`–`I45` 仍是最新原始远端输入，与中间输出并不同刻。
 
 ### 采集工况与交付
 
-两板上电后保持静止，等待启动标定与远端有效位稳定。每个工况保存一份 CSV：静止 30–60 s、低速前后起停/换向 30–60 s、低速左右起停/换向 30–60 s，以及两个方向旋转各 20–30 s。旋转按 [手册 T7](kalman-chassis-test-and-acceptance.md#6-t1t8按表执行双板实测) 先零输出手推，有动力时仅用已验证的受限配置；默认自旋档不能直接当作低速档。各动作前后保留约 5 s 静止，重复 3–5 次，保留起停与换向过程。
+主板与所选外部 IMU 上电后保持静止，等待姿态与远端有效位稳定；DM 先完成倾斜静止核对。每个工况保存一份 CSV：静止 30–60 s、低速前后起停/换向 30–60 s、低速左右起停/换向 30–60 s，以及两个方向旋转各 20–30 s。旋转按 [手册 T7](kalman-chassis-test-and-acceptance.md#6-t1t8按表执行实测) 先零输出手推，有动力时仅用已验证的受限配置；默认自旋档不能直接当作低速档。各动作前后保留约 5 s 静止，重复 3–5 次，保留起停与换向过程。
 
-提交完整 `I0`–`I71`、原有表头和 VOFA+ 时间列，并附两板的固件身份、完整构建命令、第二板安装轴向、MPU6500 芯片相对底盘中心的偏移、实际动作方向、地面与载荷，以及拒绝计数增长或抖动情况。靠近几何中心不等于偏移严格为零。
+提交完整 `I0`–`I71`、原有表头和 VOFA+ 时间列，并附主板固件身份、完整构建命令、外部 IMU 安装轴向和芯片相对底盘中心的偏移；附模块设置截图和 bit 19、实际动作方向、地面与载荷，以及拒绝计数增长或抖动情况。靠近几何中心不等于偏移严格为零。
 
-平移速度使用 mm/s，加速度使用 mm/s²，IMU 角速度使用 mrad/s。`I23`、`I26` 的车体旋转速度为 mrev/s（`1000×转/秒`），由 `wz_rpm×1000/60` 得到。模式 `2` 的 40 ms CSV 仍是降采样（旧模式 `1` 为 80 ms），不能逐次重放高频滤波器或完整辨识 Q/R；实际速度误差和打滑表现还需独立速度参考。
+平移速度使用 mm/s，加速度使用 mm/s²，IMU 角速度使用 mrad/s。`I23`、`I26` 的车体旋转速度为 mrev/s（`1000×转/秒`），由 `wz_rpm×1000/60` 得到。模式 `2` 的 20 ms CSV 记录最新快照（旧模式 `1` 为 80 ms），不会提高 IMU 或融合器的内部更新率，也不能保证捕获每个输入样本、逐次重放高频滤波器或完整辨识 Q/R；实际速度误差和打滑表现还需独立速度参考。
 
-## 可选：独立双 CSV 采集
-
-不接 CAN1 时仍可分别记录两板 UART7。关闭主板 `CHASSIS_IMU_CAN_RX_ENABLE`、`CHASSIS_REMOTE_IMU_FUSION_ENABLE` 和第二板 `IMU_CAPTURE_CAN_TX_ENABLE`，第二板保持 `IMU_CAPTURE_ONLY=1` 并开启遥测输出。文末示例保留模式 `1` FireWater，也可把两端同时改为模式 `2` JustFloat。该路线使用 schema 2 的 64 列，每个工况保存主板与第二板各一份 CSV，需要两个独立接收通道，不并接两个 TX。[两份完整构建命令与配对步骤](vofa-telemetry.md#可选独立双-csv-采集)
-
-schema 2 主板 `I63=0`，IMU 列来自本地云台；独立第二板 `I63=1`、`I6=-2`、`I5` bit 14 为 1，IMU 列来自底盘。第二板仅有 bit 0 和 bit 4 对应的测量有效，保留时间、源序号及 IMU 数据，其余控制或观测测量不可用。保存各自完整 `I0`–`I63`，再离线处理时间偏移、时钟漂移和坐标方向。不能直接按 CSV 行号或两板开机毫秒配对。
+本地 IMU 采样与 UART 诊断仍可独立使用，见 [VOFA 本地诊断](vofa-telemetry.md#本地-imu-uart-诊断)；它不替代 DM 融合或另建第二板 CAN 链路。
 
 ## 现有云台 IMU 融合路径：构建与读取
 
@@ -143,7 +106,7 @@ make -j8 PROFILE=atype-vehicle BUILD_DIR=build/velocity-calibrated CHASSIS_IMU_C
 
 ## 现有云台 IMU 融合路径的实车验证
 
-以下针对本页已有的云台 IMU 融合路径；使用第二块底盘中心采集板时，不把该路径的杆臂参数直接移作中心 IMU 配置。
+以下针对本页已有的云台 IMU 融合路径；使用底盘 DM 模块时，不把该路径的杆臂参数直接移作中心 IMU 配置。
 
 1. 校准实际轮径、轮向、两轴编码器零位和方向、转轴偏置及 IMU 安装姿态。[合成配置头](../tests/chassis_velocity_observer/stubs/chassis_velocity_fusion_calibration.h)仅供主机和固件构建验证。
 2. 底盘保持静止，先记录云台静止基线，再分别转 yaw、pitch，最后做两轴组合动作。同步检查中心加速度和融合速度是否随云台运动产生偏差。

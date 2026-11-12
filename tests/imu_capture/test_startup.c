@@ -28,11 +28,7 @@ int main(void)
     RobotInit();
     assert(bsp==1 && imu==1 && tasks==1 && !irq_disabled);
     assert(other==0);
-#if IMU_CAPTURE_CAN_TX_ENABLE
-    assert(can==1);
-#else
     assert(can==0);
-#endif
     /* Even an accidental caller must not execute actuator applications. */
     RobotTask();
     assert(other==0);

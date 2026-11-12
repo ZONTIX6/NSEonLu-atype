@@ -2,14 +2,6 @@
 #include "imu_capture_config.h"
 
 #if IMU_CAPTURE_ONLY
-#if IMU_CAPTURE_CAN_TX_ENABLE
-#include "chassis_imu_can.h"
-#include "usart.h"
-
-void RobotTelemetryInit(void) {}
-void RobotTelemetryTask(void) { ChassisImuCanSend(HAL_GetTick()); }
-
-#else
 #include "vofa_telemetry.h"
 #include "ins_task.h"
 #include "usart.h"
@@ -35,7 +27,6 @@ void RobotTelemetryTask(void)
     memcpy(d->imu_gyro_sensor_radps, imu.gyro_sensor_radps, sizeof d->imu_gyro_sensor_radps);
     VofaTelemetrySendMeasurement(&empty_sample, NULL, &velocity, HAL_GetTick());
 }
-#endif /* IMU_CAPTURE_CAN_TX_ENABLE */
 
 #else
 #include "usb_telemetry.h"

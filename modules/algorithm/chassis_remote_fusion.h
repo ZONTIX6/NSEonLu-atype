@@ -4,7 +4,7 @@
 #include "chassis_velocity.h"
 #include "chassis_velocity_center.h"
 #include "chassis_velocity_fusion.h"
-#include "../imu/chassis_imu_can_protocol.h"
+#include "../imu/chassis_imu_sample.h"
 
 #define CHASSIS_REMOTE_WHEEL_HISTORY_CAPACITY 32U
 
@@ -54,8 +54,9 @@ typedef struct {
 
 void ChassisRemoteFusionReset(ChassisRemoteFusion_s *state);
 /* Source age <=20 ms, known total age <=60 ms, wheel age <=20 ms.
- * The source clock supplies physical dt; first_rx-source_age only pairs wheel
- * history and labels the output. It omits unknown one-way transport latency.
+ * DM supplies receive-estimated dt. first_rx-source_age pairs wheel history
+ * and labels the output; it omits unknown sensor/transport latency and is not
+ * hardware synchronized. The DM adapter always sets source_age_ms to zero.
  * Repeated source identities never refresh the estimate or reapply measurements.
  * A missing wheel invalidates everything; other failures return current wheels. */
 void ChassisRemoteFusionUpdate(ChassisRemoteFusion_s *state,

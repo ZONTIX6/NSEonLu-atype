@@ -204,6 +204,7 @@ void VofaTelemetrySendMeasurement(const USBTelemetrySample_s *sample,
 #endif
 #if CHASSIS_IMU_CAN_RX_ENABLE
         | 32768U
+        | 524288U /* DM-IMU-L1, receiver-generated sequence and estimated timestamp. */
 #endif
 #if CHASSIS_REMOTE_IMU_FUSION_ENABLE
         /* Mode/provenance bits, not sample validity or precise synchronization. */

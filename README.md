@@ -8,9 +8,9 @@
 
 将 Arm GNU Toolchain、MinGW Make 加入 PATH；CMake 构建另需 CMake 3.16 或更新版本。
 
-第一块主整车板与第二块底盘 IMU 板的日常切换，使用 [`config/00_flash/board_flash_config.h`](config/00_flash/board_flash_config.h)：`BOARD_FLASH_TARGET=1` 选择主板，`2` 选择 IMU 板；下载器、profile 和各自输出目录也在该文件内。
+主板构建与烧录使用 [`config/00_flash/board_flash_config.h`](config/00_flash/board_flash_config.h)：目标为主板 `1`，下载器、profile 和输出目录集中在该文件。第二板采集固件及预设已移除。
 
-主板预设开启 `CHASSIS_REMOTE_IMU_FUSION_ENABLE=1`：第二块固定底盘 IMU 经 CAN1 参与在线卡尔曼**速度观测**，结果和轮速一同由 UART7 输出；电机控制、PID、功控和安全门控仍使用原输入。安装旋转、芯片偏移与噪声参数见 [远端 IMU 配置](config/30_velocity_observation/chassis_remote_imu_config.h)，默认单位旋转、零偏移是名义安装，`CHASSIS_REMOTE_IMU_CONFIG_VERIFIED=0` 表示尚未实测审核。两板时钟未同步；融合运行不等于精度已验收。
+主板预设开启 `CHASSIS_REMOTE_IMU_FUSION_ENABLE=1`：刚性固定在底盘的 **DM-IMU-L1 经 CAN2** 参与在线卡尔曼**速度观测**，结果和轮速一同由 UART7 输出；电机控制、PID、功控和安全门控仍使用原输入。安装旋转、芯片偏移与噪声参数见 [远端 IMU 配置](config/30_velocity_observation/chassis_remote_imu_config.h)，默认单位旋转、零偏移是名义安装，`CHASSIS_REMOTE_IMU_CONFIG_VERIFIED=0` 表示尚未实测审核。DM 时间与序号由主板接收端估计和生成，不是模块采样时钟；融合运行不等于精度已验收。模块配置、接线与首次核对见 [DM-IMU-L1 集成说明](docs/dm-imu-integration.md)。
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Show
@@ -19,7 +19,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Act
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Flash
 ```
 
-VS Code 也提供 `show selected board`、`build selected board`、`flash selected board` 三个任务。[两板切换说明](config/README.md#第一块板与第二块板怎样切换)列出临时覆盖和下载器选择方法。下面的手动 Make/CMake、原有任务与 F5 调试入口继续使用各自参数，不读取此切换文件。
+VS Code 也提供 `show selected board`、`build selected board`、`flash selected board` 三个任务。[主板构建说明](config/README.md#主板怎样构建与烧录)列出下载器选择方法。下面的手动 Make/CMake、原有任务与 F5 调试入口继续使用各自参数，不读取此切换文件。
 
 ```powershell
 make -j8 PROFILE=atype-vehicle
@@ -53,17 +53,17 @@ node tools/usb-telemetry/serve.cjs
 
 ## 配置与验证
 
-`config/` 按名称升序排列：`00_flash` 是两板构建与烧录选择，`01～06` 是最常用的应用调参，`20～22` 是底盘控制策略，`30～32` 是观测和调试，`90～92` 是硬件配置，`99_build` 是较少修改的构建入口。目录编号只决定查找顺序，不决定参数覆盖顺序。
+`config/` 按名称升序排列：`00_flash` 是主板构建与烧录配置，`01～06` 是最常用的应用调参，`20～22` 是底盘控制策略，`30～32` 是观测和调试，`90～92` 是硬件配置，`99_build` 是较少修改的构建入口。目录编号只决定查找顺序，不决定参数覆盖顺序。
 
 | 常用调整 | 直接入口 |
 | --- | --- |
-| 第一/第二块板构建与烧录 | [00_flash/board_flash_config.h](config/00_flash/board_flash_config.h) |
+| 主板构建与烧录 | [00_flash/board_flash_config.h](config/00_flash/board_flash_config.h) |
 | PID 增益与限幅 | [01_pid/pid_config.c](config/01_pid/pid_config.c) |
 | 底盘尺寸、轮向、随动模式 | [02_chassis/chassis_config.h](config/02_chassis/chassis_config.h) |
 | 云台限位和机械零点 | [03_gimbal/gimbal_config.h](config/03_gimbal/gimbal_config.h) |
 | 摩擦轮、拨弹和热量 | [04_shoot/shoot_config.h](config/04_shoot/shoot_config.h)、[heat_control_config.h](config/04_shoot/heat_control_config.h) |
 | 遥控器/键鼠手感 | [05_remote/remote_config.h](config/05_remote/remote_config.h) |
-| 第二板 IMU 融合安装、噪声与时间门槛 | [30_velocity_observation/chassis_remote_imu_config.h](config/30_velocity_observation/chassis_remote_imu_config.h) |
+| 底盘 IMU 融合安装、噪声与时间门槛 | [30_velocity_observation/chassis_remote_imu_config.h](config/30_velocity_observation/chassis_remote_imu_config.h) |
 
 开关取值和切换方式写在各配置项旁；完整分层目录、Make/CMake 示例和 Flash/源码优先级见 [配置目录说明](config/README.md)。
 
@@ -75,6 +75,7 @@ node tools/usb-telemetry/serve.cjs
 - [宏迁移对照与输入基线](docs/atype-macro-migration.md)
 - [接线、CAN、单位、模块与安全条件](docs/atype-integration.md)
 - [验证结果和硬件验收清单](docs/atype-validation.md)
+- [DM-IMU-L1 接 CAN2：接线、模块设置与来源核对](docs/dm-imu-integration.md)
 - [整车平移速度融合观测、标定和验证](docs/chassis-velocity-fusion.md)
 - [卡尔曼底盘实车测试顺序与验收手册](docs/kalman-chassis-test-and-acceptance.md)
 - [底盘功率控制总览：模型、计算、分配与超级电容](docs/chassis-power-control.md)
