@@ -27,8 +27,22 @@ class BoardConfiguration(unittest.TestCase):
         #if !defined(VOFA_TELEMETRY_MODE) || VOFA_TELEMETRY_MODE != 2 || VOFA_TELEMETRY_ENABLE != 1
         #error Wrong default VOFA configuration
         #endif
+        #if !defined(VOFA_OBSERVATION_PROFILE) || VOFA_OBSERVATION_PROFILE != 2
+        #error Wrong default VOFA observation profile
+        #endif
         ''')
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_observation_profile_accepts_only_documented_values(self):
+        for mode in (0, 1, 2):
+            for profile in (0, 1, 2):
+                result = self.compile("", f"VOFA_TELEMETRY_MODE={mode}",
+                                      f"VOFA_OBSERVATION_PROFILE={profile}")
+                self.assertEqual(result.returncode, 0, result.stderr)
+        for profile in (-1, 3):
+            result = self.compile("", f"VOFA_OBSERVATION_PROFILE={profile}")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("VOFA_OBSERVATION_PROFILE", result.stderr)
 
     def test_retired_uart1_selector_is_rejected(self):
         result = self.compile("", "UART1_USE=0")

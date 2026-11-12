@@ -246,7 +246,15 @@ void ChassisRemoteFusionUpdate(ChassisRemoteFusion_s *state,
         input.accel_n_mps2[i]=center.accel_n_mps2[i];
     }
     ChassisVelocityFusionOutput_s filtered;
+    s->attempt=(ChassisRemoteFusionAttempt_s){
+        .sequence=s->attempt.sequence+1U,
+        .receiver_call_ms=now_ms,.middle_receiver_ms=middle_local_ms,
+        .resets_before=s->resets,.pair_span_ms=middle_span,
+        .source_step_ms=out->source_step_ms,.receive_step_ms=out->receive_step_ms,
+        .input=input,.config=*config,.available=true,
+        .initialized_before=s->filter.initialized};
     ChassisVelocityFusionUpdate(&s->filter,&config->filter,&input,&filtered);
+    s->attempt.output=filtered;
     const float a=center.body_to_nav_xy[0][0],b=center.body_to_nav_xy[0][1];
     const float c=center.body_to_nav_xy[1][0],d=center.body_to_nav_xy[1][1];
     const float det=a*d-b*c;
@@ -265,4 +273,5 @@ void ChassisRemoteFusionUpdate(ChassisRemoteFusion_s *state,
     PublishHeld(s,out);
 done:
     out->updates=s->updates;out->resets=s->resets;
+    out->attempt=s->attempt;
 }

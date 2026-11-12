@@ -81,12 +81,18 @@ int main(void)
     assert(local_imu_reads==0);
     assert(out.diagnostics.imu_valid && out.diagnostics.imu_sequence==remote.sample.sequence);
     assert(out.diagnostics.imu_accel_n_mps2[0]==1);
+    assert(out.remote.attempt.available && out.remote.attempt.output.fused);
+    assert(out.remote.attempt.input.accel_n_mps2[0]==1);
+    assert(out.remote.attempt.middle_receiver_ms==out.tick_ms);
+    assert(out.remote.attempt.receiver_call_ms==tick);
+    const uint32_t attempt_sequence=out.remote.attempt.sequence;
     const uint32_t fused_tick=out.tick_ms;
     const float fused_vx=out.vx_mps;
     tick+=5;
     out=Step(false);
     assert(out.status==CHASSIS_VELOCITY_FUSED && out.tick_ms==fused_tick);
     assert(out.vx_mps==fused_vx);
+    assert(out.remote.attempt.sequence==attempt_sequence);
 
     remote_usable=false;
     tick+=5;
@@ -94,6 +100,8 @@ int main(void)
     assert(out.status==CHASSIS_VELOCITY_IMU_UNAVAILABLE && out.valid);
     assert(out.vx_mps==0 && out.vy_mps==0);
     assert(!out.diagnostics.imu_valid && local_imu_reads==0);
+    assert(out.remote.attempt.available && out.remote.attempt.sequence==attempt_sequence);
+    assert(out.remote.attempt.output.fused && out.remote.attempt.middle_receiver_ms==fused_tick);
     out=Run(40);
     assert(out.status==CHASSIS_VELOCITY_FUSED && out.valid);
     online[2]=false;
@@ -105,6 +113,7 @@ int main(void)
     assert(out.status==CHASSIS_VELOCITY_FUSED && out.valid);
     tick+=21;
     assert(!ChassisGetFusedVelocitySnapshot(&out));
+    assert(out.remote.attempt.available && out.remote.attempt.output.fused);
     puts("PASS: remote IMU drives observation KF without local INS/gimbal or control writes");
     return 0;
 }

@@ -127,13 +127,17 @@ bool SuperCapSendCommand(const SuperCapCommand_s *command)
     if (cap == NULL || cap->can_ins == NULL)
         return false;
 
+    const uint32_t attempted_ms=HAL_GetTick();
     const bool success = SuperCapProtocolEncodeCommand(command, cap->can_ins->tx_buff) &&
                          CANTransmit(cap->can_ins, 1.0f) != 0U;
-    if (!success) {
-        taskENTER_CRITICAL();
-        cap->snapshot.command_fail_count++;
-        taskEXIT_CRITICAL();
-    }
+    taskENTER_CRITICAL();
+    cap->snapshot.last_command=command ? *command : (SuperCapCommand_s){0};
+    cap->snapshot.command_attempt_tick_ms=attempted_ms;
+    ++cap->snapshot.command_attempt_sequence;
+    cap->snapshot.command_attempted=command!=NULL;
+    cap->snapshot.command_submitted=success;
+    if (!success) cap->snapshot.command_fail_count++;
+    taskEXIT_CRITICAL();
     return success;
 }
 

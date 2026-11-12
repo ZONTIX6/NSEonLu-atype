@@ -52,8 +52,11 @@ foreach($key in $settings.Keys) {
 # Keep the main-board observation contract explicit; diagnostic/tool switches use their defaults.
 foreach($required in @('ONE_BOARD','CHASSIS_CONTROL_MODE','CHASSIS_IMU_CAN_RX_ENABLE',
     'CHASSIS_VELOCITY_FUSION_ENABLE','CHASSIS_VELOCITY_FUSION_CALIBRATED','CHASSIS_REMOTE_IMU_FUSION_ENABLE',
-    'VOFA_TELEMETRY_ENABLE','VOFA_TELEMETRY_MODE','USB_TELEMETRY_ENABLE')) {
+    'VOFA_TELEMETRY_ENABLE','VOFA_TELEMETRY_MODE','VOFA_OBSERVATION_PROFILE','USB_TELEMETRY_ENABLE')) {
     if(-not $optionValues.ContainsKey($required)) { throw "Missing board option: $prefix$required" }
+}
+if($optionValues['VOFA_OBSERVATION_PROFILE'] -notin @('0','1','2')) {
+    throw 'VOFA_OBSERVATION_PROFILE must be 0, 1 or 2.'
 }
 $options=@($optionValues.Keys | Sort-Object | ForEach-Object { "$_=$($optionValues[$_])" })
 $common=@("PROFILE=$profile","BUILD_DIR=$buildDirectory")+$options

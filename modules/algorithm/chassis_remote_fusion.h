@@ -26,6 +26,22 @@ typedef struct {
     uint32_t max_pair_span_ms, max_wheel_skew_ms, max_timing_jitter_ms;
 } ChassisRemoteFusionConfig_s;
 
+/* Last actual production-filter call, including rejected calls. The input and
+ * effective config are copied BEFORE the filter runs. Pipeline resets and
+ * repeated source samples preserve this record; only a new call replaces it.
+ * All us times are the filter's wrapping uint32 clock, not receiver uptime.
+ * source/receive steps describe the newest source that completed this attempt;
+ * middle_receiver_ms and pair_span_ms describe the paired middle sample. */
+typedef struct {
+    uint32_t sequence; /* Wrapping call count; available remains true at zero. */
+    uint32_t receiver_call_ms, middle_receiver_ms, resets_before;
+    uint32_t pair_span_ms, source_step_ms, receive_step_ms;
+    ChassisVelocityFusionInput_s input;
+    ChassisVelocityFusionOutput_s output;
+    ChassisRemoteFusionConfig_s config;
+    bool available, initialized_before;
+} ChassisRemoteFusionAttempt_s;
+
 typedef struct {
     bool valid, timing_estimated;
     ChassisRemoteFusionStatus_e status;
@@ -36,6 +52,7 @@ typedef struct {
     uint32_t source_sequence, source_tick_ms, estimated_sample_ms;
     uint32_t source_step_ms, receive_step_ms, pair_span_ms;
     uint32_t updates, resets; /* Saturating counters; updates counts accepted filter pairs. */
+    ChassisRemoteFusionAttempt_s attempt;
 } ChassisRemoteFusionOutput_s;
 
 /* Fixed storage, no allocation. Reset on startup or explicit configuration change. */
@@ -50,6 +67,7 @@ typedef struct {
     uint32_t source_step_ms, receive_step_ms, pair_span_ms;
     uint32_t updates, resets, last_now_ms;
     bool have_source, have_now;
+    ChassisRemoteFusionAttempt_s attempt;
 } ChassisRemoteFusion_s;
 
 void ChassisRemoteFusionReset(ChassisRemoteFusion_s *state);

@@ -32,6 +32,8 @@ class Bridge:
         self.lib.FitBaseline.restype = None
         self.lib.FitPredict.argtypes = [ct.POINTER(Model), ct.POINTER(ct.c_float), ct.POINTER(ct.c_float)]
         self.lib.FitPredict.restype = ct.c_float
+        self.lib.PowerModelPredict.argtypes = [ct.POINTER(Model), ct.c_float, ct.c_float]
+        self.lib.PowerModelPredict.restype = ct.c_float
         self.lib.FitLimit.argtypes = self.lib.FitPredict.argtypes + [ct.c_float,
             ct.POINTER(ct.c_float), ct.POINTER(ct.c_float), ct.POINTER(ct.c_uint)]
         self.lib.FitLimit.restype = ct.c_int
@@ -39,7 +41,21 @@ class Bridge:
         self.lib.FitBaseline(ct.byref(self.baseline))
 
     def predict(self, model, sample):
+        if isinstance(model, (tuple, list)):
+            if len(model) != 4:
+                raise ValueError('four actual wheel models are required')
+            return sum(self.lib.PowerModelPredict(ct.byref(m), u, n)
+                       for m, u, n in zip(model, sample['command'], sample['rpm']))
         return self.lib.FitPredict(ct.byref(model), F4(*sample['command']), F4(*sample['rpm']))
+
+    def close(self):
+        if self.lib is not None:
+            import _ctypes
+            if sys.platform == 'win32':
+                _ctypes.FreeLibrary(self.lib._handle)
+            else:
+                _ctypes.dlclose(self.lib._handle)
+            self.lib = None
 
     def limit(self, model, sample, budget):
         final, total, flags = F4(), ct.c_float(), ct.c_uint()

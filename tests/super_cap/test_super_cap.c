@@ -171,6 +171,7 @@ static void TestUninitializedOperationsFailAndInitRegistersDependencies(void)
     ASSERT_FALSE(SuperCapGetSnapshot(0, NULL));
     ASSERT_TRUE(SuperCapGetSnapshot(0, &snapshot));
     ASSERT_FALSE(snapshot.status.online);
+    ASSERT_FALSE(snapshot.command_attempted);
     ASSERT_EQ_U32(input_feedback_enabled, snapshot.input_feedback_enabled);
 }
 
@@ -214,16 +215,32 @@ static void TestCommandUsesOwnedInstance(void)
 
     transmit_calls = 0U;
     transmit_result = 1U;
+    fake_tick_ms = UINT32_MAX;
     ASSERT_TRUE(SuperCapSendCommand(&command));
     ASSERT_EQ_U32(1U, transmit_calls);
     ASSERT_TRUE(memcmp(expected, fake_can_instance.tx_buff, sizeof(expected)) == 0);
-    ASSERT_FALSE(SuperCapSendCommand(NULL));
-
-    transmit_result = 0U;
-    ASSERT_FALSE(SuperCapSendCommand(&command));
     SuperCapSnapshot_s snapshot;
     ASSERT_TRUE(SuperCapGetSnapshot(fake_tick_ms, &snapshot));
+    ASSERT_TRUE(snapshot.command_attempted && snapshot.command_submitted);
+    ASSERT_EQ_U32(1, snapshot.command_attempt_sequence);
+    ASSERT_EQ_U32(UINT32_MAX, snapshot.command_attempt_tick_ms);
+    ASSERT_EQ_U32(100, snapshot.last_command.referee_power_limit_w);
+    ASSERT_FALSE(SuperCapSendCommand(NULL));
+    ASSERT_TRUE(SuperCapGetSnapshot(fake_tick_ms, &snapshot));
+    ASSERT_FALSE(snapshot.command_attempted); /* No fabricated command for NULL. */
+    ASSERT_FALSE(snapshot.command_submitted);
+    ASSERT_EQ_U32(2, snapshot.command_attempt_sequence);
+
+    transmit_result = 0U;
+    fake_tick_ms = 0;
+    ASSERT_FALSE(SuperCapSendCommand(&command));
+    ASSERT_TRUE(SuperCapGetSnapshot(fake_tick_ms, &snapshot));
     ASSERT_EQ_U32(2, snapshot.command_fail_count);
+    ASSERT_TRUE(snapshot.command_attempted);
+    ASSERT_FALSE(snapshot.command_submitted);
+    ASSERT_EQ_U32(3, snapshot.command_attempt_sequence);
+    ASSERT_EQ_U32(0, snapshot.command_attempt_tick_ms);
+    ASSERT_EQ_U32(100, snapshot.last_command.referee_power_limit_w);
 }
 
 static void TestStatusUsesOwnedInstanceAndOfflineCallback(void)

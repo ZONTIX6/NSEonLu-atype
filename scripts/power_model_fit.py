@@ -53,7 +53,7 @@ def source_identity(bridge):
         gcc=subprocess.run(['gcc', '--version'], capture_output=True, text=True, check=True).stdout.splitlines()[0])
 
 
-def fit_model(dataset, bridge):
+def fit_model(dataset, bridge, baseline_models=None):
     experiments = dataset['experiments']
     groups = {split: [s for e in experiments if e['split'] == split for s in e['samples']]
               for split in SPLITS}
@@ -85,7 +85,7 @@ def fit_model(dataset, bridge):
     beta = result.x/scale
     converted = legacy_coefficients(beta)
     model_c = Model(**converted)
-    current = bridge.baseline
+    current = bridge.baseline if baseline_models is None else baseline_models
     predicted = {split: np.asarray([bridge.predict(model_c, s) for s in samples])
                  for split, samples in groups.items()}
     baseline = {split: np.asarray([bridge.predict(current, s) for s in samples])
@@ -169,7 +169,9 @@ def fit_model(dataset, bridge):
             infeasible_budgets=infeasible, budget_violations=violations,
             guard_infeasible_checks=guard_infeasible, guard_search_exhausted_checks=search_exhausted,
             limiter_config='static allocation plus two TransientUpdate samples and Stage 3 guard; safety=1, max_command=15000, error=1000 rpm each wheel, fresh feedback, zero acceleration, reset hysteresis, no startup/meter correction',
-            baseline_coefficients={name: getattr(current, name) for name, _ in Model._fields_}),
+            baseline_coefficients=([{name: getattr(m, name) for name, _ in Model._fields_} for m in current]
+                if isinstance(current, (tuple, list)) else
+                {name: getattr(current, name) for name, _ in Model._fields_})),
         outside_training_feature_box=outside, manifest=dataset['manifest'],
         provenance=source_identity(bridge))
     return report, model

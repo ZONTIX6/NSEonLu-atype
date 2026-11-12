@@ -142,6 +142,7 @@ modules/motor/motor_task.c \
 modules/telemetry/rtt_telemetry.c \
 application/runtime/robot_telemetry.c \
 application/runtime/vofa_telemetry.c \
+application/runtime/vofa_observation.c \
 application/runtime/chassis_imu_can.c \
 modules/imu/dm_imu_can_protocol.c \
 application/runtime/shadow_jscope.c \
@@ -294,6 +295,15 @@ endif
 endif
 endif
 include config/99_build/atype.mk
+ifneq ($(origin VOFA_OBSERVATION_PROFILE),undefined)
+ifneq ($(VOFA_OBSERVATION_PROFILE),0)
+ifneq ($(VOFA_OBSERVATION_PROFILE),1)
+ifneq ($(VOFA_OBSERVATION_PROFILE),2)
+$(error VOFA_OBSERVATION_PROFILE must be 0, 1 or 2)
+endif
+endif
+endif
+endif
 CHASSIS_FORCE_CALIBRATION_ENABLE ?= 0
 ifneq ($(filter $(CHASSIS_FORCE_CALIBRATION_ENABLE),0 1),$(CHASSIS_FORCE_CALIBRATION_ENABLE))
 $(error CHASSIS_FORCE_CALIBRATION_ENABLE must be 0 or 1)
@@ -438,6 +448,7 @@ endif
 NUMERIC_SOURCES += modules/telemetry/chassis_speed_capture.c application/runtime/chassis_speed_observation.c
 NUMERIC_SOURCES += application/runtime/shadow_jscope.c
 NUMERIC_SOURCES += application/runtime/robot_telemetry.c application/runtime/vofa_telemetry.c \
+    application/runtime/vofa_observation.c \
     application/runtime/chassis_imu_can.c modules/imu/dm_imu_can_protocol.c \
                    modules/telemetry/usb_telemetry_format.c modules/telemetry/usb_telemetry_imu.c \
                    modules/super_cap/super_cap_protocol.c

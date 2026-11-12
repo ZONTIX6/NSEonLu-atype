@@ -1,7 +1,7 @@
 #include "chassis_internal.h"
 #include "../../config/01_pid/pid_config.h"
 #include "dji_power_adapter.h"
-#include "chassis_power_model_config.h"
+#include "../../config/20_chassis_power/chassis_power_defaults.h"
 #include "chassis_power_config.h"
 #include "chassis_energy_config.h"
 #include "board_config.h"
@@ -29,9 +29,6 @@ DJIMotorInstance *motor_lf, *motor_rf, *motor_lb, *motor_rb;
 bool chassis_power_ready;
 static bool chassis_power_feedback_ready;
 Publisher_t *heat_pub;
-
-static const MotorPowerModelConfig_s m3508_power_model =
-    CHASSIS_SPEED_POWER_MODEL_INITIALIZER;
 
 void ChassisInit()
 {
@@ -70,21 +67,8 @@ void ChassisInit()
     chassis_motor_config.controller_setting_init_config.motor_reverse_flag = MOTOR_DIRECTION_NORMAL;
     motor_rb = DJIMotorInit(&chassis_motor_config);
 
-    ChassisPower_Init_Config_s power_config = {
-        .budget=chassis_budget_config,.outer=chassis_outer_loop_config,
-        .transient=ChassisPowerTransientDefaultConfig(),.stage=CHASSIS_POWER_CONTROL_STAGE,
-        .use_supercap=CHASSIS_POWER_SOURCE_MODE==CHASSIS_POWER_SOURCE_SUPERCAP,
-        .meter_enabled=POWER_METER_ENABLE!=0,.buffer_enabled=CHASSIS_BUFFER_POWER_ENABLE!=0,
-        .algorithm = {
-            .safety_factor = CHASSIS_POWER_SAFETY_FACTOR,
-            .small_error_threshold_rpm = CHASSIS_POWER_SMALL_ERROR_RPM,
-            .reserved_power_threshold_w = CHASSIS_POWER_RESERVED_THRESHOLD_W,
-            .per_motor_reserved_power_w = CHASSIS_POWER_PER_MOTOR_RESERVED_W,
-            .max_current_command = CHASSIS_POWER_MAX_CURRENT_COMMAND,
-        },
-    };
-    for (size_t i = 0; i < POWER_MODEL_MOTOR_COUNT; ++i)
-        power_config.models[i] = m3508_power_model;
+    ChassisPower_Init_Config_s power_config=ChassisPowerSpeedDefaultConfig();
+    power_config.tuning_source=RuntimeTuningSource(TUNING_POWER);
 
     power_module_config=power_config;
     const DJIPowerAdapterConfig_s adapter_config={.motors={motor_lf,motor_rf,motor_lb,motor_rb},

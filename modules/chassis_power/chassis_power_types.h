@@ -22,7 +22,16 @@ typedef struct
     uint8_t stage;
     bool use_supercap, meter_enabled, buffer_enabled;
     bool force_control;
+    uint8_t tuning_source; /* RuntimeTuning source of this complete configuration. */
 } ChassisPower_Init_Config_s;
+
+typedef struct
+{
+    uint32_t fingerprint;
+    uint8_t tuning_source;
+    bool available;
+    ChassisPowerOuterLoopConfig_s outer;
+} ChassisPowerConfigObservation_s;
 
 typedef struct
 {
@@ -39,6 +48,7 @@ typedef struct
     ChassisPowerBudgetOutput_s budget;
     ChassisPowerOuterLoopOutput_s outer;
     ChassisPowerControlSnapshot_s control;
+    ChassisPowerConfigObservation_s config;
     SuperCapCommand_s cap_command;
     bool cap_command_valid, valid, buffer_estimate_valid;
     float physical_load_target_w, confirmed_input_target_w;
@@ -52,6 +62,8 @@ typedef struct
     ChassisPowerOutput_s power;
     ChassisPowerTelemetry_s telemetry;
     uint32_t control_version, control_tick_ms, tick_ms, config_version;
+    ChassisPowerControlSnapshot_s cycle_control;
+    ChassisPowerConfigObservation_s cycle_config;
     float raw_current[4], feedback_current[4], proposed_current[4];
     uint32_t feedback_sequence[4], feedback_tick_ms[4];
     uint8_t online_mask;
@@ -63,6 +75,7 @@ typedef struct
     bool cycle_valid, final_valid, can_submitted;
     uint32_t final_tick_ms;
     int16_t final_current[4];
+    uint8_t submitted_groups, successful_groups;
     ChassisPowerPolicyOutput_s policy;
     uint32_t policy_tick_ms;
 } ChassisPowerSnapshot_s;

@@ -77,6 +77,7 @@ class BoardFlashTests(unittest.TestCase):
             "IMU_CAPTURE_ONLY": "0", "CHASSIS_IMU_CAN_RX_ENABLE": "1",
             "CHASSIS_VELOCITY_FUSION_ENABLE": "1", "CHASSIS_REMOTE_IMU_FUSION_ENABLE": "1",
             "VOFA_TELEMETRY_ENABLE": "1", "VOFA_TELEMETRY_MODE": "2", "USB_TELEMETRY_ENABLE": "1",
+            "VOFA_OBSERVATION_PROFILE": "2",
         }
         options = dict(option.split("=", 1) for option in main["options"])
         for key, value in expected.items():
@@ -87,6 +88,30 @@ class BoardFlashTests(unittest.TestCase):
         self.assertIn("BUILD_DIR=" + main["buildDirectory"], main["flashArguments"])
         self.assertTrue(set(main["options"]) <= set(main["buildArguments"]))
         self.assertNotIn("BOARD_FLASH_2_", CONFIG.read_text(encoding="utf-8-sig"))
+
+    def test_observation_profile_is_forwarded_without_changing_transport(self):
+        for profile in (0, 1, 2):
+            with self.subTest(profile=profile):
+                selected = self.show("-ConfigFile", self.config_with(
+                    BOARD_FLASH_1_VOFA_OBSERVATION_PROFILE=profile))
+                options = dict(option.split("=", 1) for option in selected["options"])
+                self.assertEqual(options["VOFA_OBSERVATION_PROFILE"], str(profile))
+                self.assertEqual(options["VOFA_TELEMETRY_MODE"], "2")
+                self.assertIn(f"VOFA_OBSERVATION_PROFILE={profile}", selected["buildArguments"])
+        self.assertEqual(self.commands(), [])
+
+    def test_invalid_or_missing_observation_profile_stops_before_tools(self):
+        path = self.config_with(BOARD_FLASH_1_VOFA_OBSERVATION_PROFILE=3)
+        result = self.invoke("-ConfigFile", path, "-Action", "Flash")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("VOFA_OBSERVATION_PROFILE", result.stderr)
+        source = CONFIG.read_text(encoding="utf-8-sig")
+        path.write_text(re.sub(r"^#define BOARD_FLASH_1_VOFA_OBSERVATION_PROFILE.*$", "",
+                               source, flags=re.M), encoding="utf-8")
+        result = self.invoke("-ConfigFile", path, "-Action", "Flash")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Missing board option", result.stderr)
+        self.assertEqual(self.commands(), [])
 
     def test_zero_and_one_select_the_same_main_board(self):
         self.assertEqual(self.show("-Board", 0), self.show("-Board", 1))

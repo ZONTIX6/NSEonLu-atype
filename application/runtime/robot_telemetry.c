@@ -3,6 +3,9 @@
 
 #if IMU_CAPTURE_ONLY
 #include "vofa_telemetry.h"
+#if VOFA_TELEMETRY_MODE == 2 && VOFA_OBSERVATION_PROFILE != 0
+#include "vofa_observation.h"
+#endif
 #include "ins_task.h"
 #include "usart.h"
 #include <string.h>
@@ -25,7 +28,11 @@ void RobotTelemetryTask(void)
     memcpy(d->imu_quaternion, imu.quaternion, sizeof d->imu_quaternion);
     memcpy(d->imu_accel_n_mps2, imu.accel_n_mps2, sizeof d->imu_accel_n_mps2);
     memcpy(d->imu_gyro_sensor_radps, imu.gyro_sensor_radps, sizeof d->imu_gyro_sensor_radps);
+#if VOFA_TELEMETRY_MODE == 2 && VOFA_OBSERVATION_PROFILE != 0
+    VofaObservationSend(&empty_sample, NULL, &velocity, NULL, NULL, HAL_GetTick());
+#else
     VofaTelemetrySendMeasurement(&empty_sample, NULL, &velocity, HAL_GetTick());
+#endif
 }
 
 #else
@@ -37,6 +44,9 @@ void RobotTelemetryTask(void)
 
 #if VOFA_TELEMETRY_ENABLE
 #include "vofa_telemetry.h"
+#if VOFA_TELEMETRY_MODE == 2 && VOFA_OBSERVATION_PROFILE != 0
+#include "vofa_observation.h"
+#endif
 #if CHASSIS_CONTROL_MODE != CHASSIS_CONTROL_SPEED
 #error VOFA telemetry requires CHASSIS_CONTROL_MODE=0 for speed-control snapshots.
 #endif
@@ -65,6 +75,8 @@ static USBTelemetrySample_s sample;
 static ChassisPowerSnapshot_s model;
 static ChassisTelemetrySnapshot_s chassis;
 static RemoteControlSnapshot_s remote;
+static RefereePowerSnapshot_s referee;
+static SuperCapSnapshot_s capacitor;
 
 static uint32_t Age(uint32_t now_ms, uint32_t tick_ms, bool known)
 {
@@ -196,7 +208,7 @@ static void Collect(uint32_t now_ms)
                                  meter.online || meter.last_rx_tick_ms != 0);
         sample.p_meter_cw = USBTelemetryFixed(meter.power_w, 100);
     }
-    RefereePowerSnapshot_s referee = {0};
+    memset(&referee, 0, sizeof referee);
     if (RefereeGetPowerSnapshot(&referee)) {
         sample.referee_online = referee.valid;
         sample.referee_limit_cw = (int32_t)referee.chassis_power_limit_w * 100;
@@ -204,7 +216,7 @@ static void Collect(uint32_t now_ms)
         sample.buffer_age_ms = Age(HAL_GetTick(), referee.buffer_tick_ms,
                                   referee.valid || referee.buffer_tick_ms != 0);
     }
-    SuperCapSnapshot_s capacitor = {0};
+    memset(&capacitor, 0, sizeof capacitor);
     if (SuperCapGetSnapshot(HAL_GetTick(), &capacitor)) {
         const SuperCapStatus_s cap = capacitor.status;
         sample.cap_online = cap.online && isfinite(cap.energy_ratio) && isfinite(cap.chassis_power_w);
@@ -257,8 +269,13 @@ void RobotTelemetryTask(void)
 #else
     const ChassisFusedVelocitySnapshot_s *velocity_snapshot = NULL;
 #endif
+#if VOFA_TELEMETRY_MODE == 2 && VOFA_OBSERVATION_PROFILE != 0
+    VofaObservationSend(&sample, model.registered ? &model : NULL,
+                        velocity_snapshot, &capacitor, &referee, HAL_GetTick());
+#else
     VofaTelemetrySendMeasurement(&sample, model.registered ? &model : NULL,
                                  velocity_snapshot, HAL_GetTick());
+#endif
 #else
     VofaTelemetrySend(&sample);
 #endif

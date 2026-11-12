@@ -246,7 +246,11 @@ static void EstimateSpeed(void)
 
 static void UpdateChassisPowerBudget(void)
 {
-    ChassisPowerPolicyInput_s input={.now_ms=HAL_GetTick(),
+    /* Only the robot task owns these snapshots. Keep full diagnostic copies
+     * off its stack, including headroom for floating-point context saves. */
+    static ChassisPowerPolicyInput_s input;
+    static ChassisPowerPolicyOutput_s output;
+    input=(ChassisPowerPolicyInput_s){.now_ms=HAL_GetTick(),
         .dt_s=DWT_GetDeltaT(&chassis_budget_dwt_count),
         .zero_force=chassis_cmd_recv.chassis_mode==CHASSIS_ZERO_FORCE,
         .bench_enabled=CHASSIS_POWER_BENCH_TEST!=0,.bench_limit_w=CHASSIS_POWER_BENCH_LIMIT_W};
@@ -274,7 +278,6 @@ static void UpdateChassisPowerBudget(void)
             fabsf(input.previous.raw_current[w])>=maximum;
     }
 #endif
-    ChassisPowerPolicyOutput_s output;
     (void)ChassisPowerUpdatePolicy(&input,&output);
     if(output.cap_command_valid) {
         const bool submitted=SuperCapSendCommand(&output.cap_command);
@@ -285,7 +288,8 @@ static void UpdateChassisPowerBudget(void)
     pending_power_control=output.control;
     pending_power_control.control_enabled &= chassis_power_ready;
 #if CHASSIS_SPIN_DYNAMIC_ENABLED && POWER_METER_ENABLE
-    const ChassisPowerSnapshot_s power_state=input.previous;
+    static ChassisPowerSnapshot_s power_state;
+    power_state=input.previous;
     const bool power_state_valid=input.previous_valid;
     PowerMeterStatus_s meter_status=input.meter;
     bool meter_valid=meter_status.online;

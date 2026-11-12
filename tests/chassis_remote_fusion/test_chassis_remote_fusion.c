@@ -290,6 +290,107 @@ static void BothClocksAndSequenceCanWrap(void)
     assert(out.status==CHASSIS_REMOTE_FUSED && out.updates==2);
     assert(out.tick_ms==receiver_start+62);
     Near(out.vy_mps,.4f,.00001f);
+    assert(out.attempt.available && out.attempt.sequence==2);
+    assert(out.attempt.receiver_call_ms==receiver_start+85);
+    assert(out.attempt.middle_receiver_ms==receiver_start+62);
+    assert(out.attempt.input.wheel_us==(source_start+65)*1000U);
+    assert(out.attempt.input.imu_us==(source_start+65)*1000U);
+    assert(out.attempt.input.now_us==(source_start+88)*1000U);
+}
+
+/* Catch recording the newest IMU or body-frame wheels instead of the exact
+ * middle-sample navigation-frame input passed to the production filter. */
+static void AttemptRecordsMiddleNavigationInputAndEffectiveConfig(void)
+{
+    ChassisRemoteFusion_s state={0};
+    ChassisRemoteFusionConfig_s config=Config();
+    ChassisImuCanSnapshot_s packet={0};
+    ChassisRemoteFusionOutput_s out={0};
+    for(uint32_t t=100;t<=165;t+=5) {
+        if(t>=125 && (t-125)%20==0) {
+            packet=Packet(900000+t-3,t-1,t);
+            packet.sample.quaternion[0]=sqrtf(.5f);
+            packet.sample.quaternion[3]=sqrtf(.5f);
+            packet.sample.accel_n_mps2[0]=(float)(t-95)*.1f;
+            packet.sample.accel_n_mps2[1]=.25f;
+        }
+        out=Run(&state,&config,packet.available?&packet:NULL,t,1,2);
+    }
+    const ChassisRemoteFusionAttempt_s *attempt=&out.attempt;
+    assert(attempt->available && attempt->sequence==1 && !attempt->initialized_before);
+    assert(attempt->receiver_call_ms==165 && attempt->middle_receiver_ms==142);
+    assert(attempt->input.now_us==900165000 && attempt->input.wheel_us==900142000);
+    assert(attempt->input.imu_us==900142000);
+    assert(attempt->input.wheel_valid && attempt->input.imu_valid);
+    Near(attempt->input.wheel_n_mps[0],2,.00001f);
+    Near(attempt->input.wheel_n_mps[1],1,.00001f);
+    Near(attempt->input.accel_n_mps2[0],5,.00001f);
+    Near(attempt->input.accel_n_mps2[1],.25f,.00001f);
+    assert(attempt->output.valid && attempt->output.fused);
+    assert(attempt->output.sample_us==900142000);
+    Near(attempt->output.velocity_n_mps[0],2,.00001f);
+    assert(attempt->resets_before==0 && attempt->pair_span_ms==5);
+    assert(attempt->source_step_ms==20 && attempt->receive_step_ms==20);
+    assert(attempt->config.filter.wheel_variance==.01f);
+    assert(attempt->config.filter.accel_variance==.04f);
+    assert(attempt->config.filter.jerk_density==.25f);
+    assert(attempt->config.filter.max_velocity_residual_mps==2);
+    assert(attempt->config.filter.max_age_us==60000);
+    assert(attempt->config.filter.max_skew_us==0 && attempt->config.filter.max_gap_us==30000);
+    assert(attempt->config.sensor_to_body_quaternion[0]==1);
+    assert(attempt->config.imu_offset_body_m[0]==0);
+    assert(attempt->config.max_pair_span_ms==15 && attempt->config.max_wheel_skew_ms==3);
+    assert(attempt->config.max_timing_jitter_ms==10);
+    out=Run(&state,&config,&packet,170,4,6);
+    assert(out.attempt.sequence==1 && out.attempt.receiver_call_ms==165);
+    Near(out.attempt.input.accel_n_mps2[0],5,.00001f);
+}
+
+/* Catch dropping rejected inputs when ResetPipeline clears the held result,
+ * or incrementing the attempt sequence on observer calls that skip the KF. */
+static void RejectedAttemptSurvivesResetAndReacquiresWithNewIdentity(void)
+{
+    ChassisRemoteFusion_s state;
+    ChassisRemoteFusionConfig_s config=Config();
+    ChassisImuCanSnapshot_s packet={0};
+    ChassisRemoteFusionOutput_s out=Prime(&state,&config,&packet);
+    for(uint32_t t=170;t<=205;t+=5) {
+        if(t==185 || t==205) packet=Packet(900000+t-3,t-1,t);
+        out=Run(&state,&config,&packet,t,100,0);
+    }
+    assert(out.status==CHASSIS_REMOTE_REJECTED && out.resets==1);
+    assert(out.attempt.available && out.attempt.sequence==3);
+    assert(out.attempt.initialized_before && out.attempt.resets_before==0);
+    assert(out.attempt.input.wheel_n_mps[0]==100);
+    assert(out.attempt.output.valid && !out.attempt.output.fused);
+    assert(out.attempt.receiver_call_ms==205 && out.attempt.middle_receiver_ms==182);
+    ChassisVelocity_s wheel={.valid=false};
+    ChassisRemoteFusionUpdate(&state,&config,&wheel,0,&packet,true,210,&out);
+    assert(out.status==CHASSIS_REMOTE_WHEEL_UNAVAILABLE);
+    assert(out.attempt.sequence==3 && out.attempt.input.wheel_n_mps[0]==100);
+    assert(out.attempt.receiver_call_ms==205 && !out.attempt.output.fused);
+    for(uint32_t t=215;t<=265;t+=5) {
+        if(t>=225 && (t-225)%20==0) packet=Packet(900000+t-3,t-1,t);
+        out=Run(&state,&config,&packet,t,100,0);
+    }
+    assert(out.status==CHASSIS_REMOTE_FUSED && out.attempt.sequence==4);
+    assert(!out.attempt.initialized_before && out.attempt.resets_before==1);
+    assert(out.attempt.input.wheel_n_mps[0]==100);
+}
+
+static void AttemptSequenceWrapIsNotUnavailable(void)
+{
+    ChassisRemoteFusion_s state;
+    ChassisRemoteFusionConfig_s config=Config();
+    ChassisImuCanSnapshot_s packet={0};
+    ChassisRemoteFusionOutput_s out=Prime(&state,&config,&packet);
+    state.attempt.sequence=UINT32_MAX;
+    for(uint32_t t=170;t<=185;t+=5) {
+        if(t==185) packet=Packet(900182,184,185);
+        out=Run(&state,&config,&packet,t,1,0);
+    }
+    assert(out.attempt.available && out.attempt.sequence==0);
+    assert(out.attempt.initialized_before && out.status==CHASSIS_REMOTE_FUSED);
 }
 
 int main(void)
@@ -305,6 +406,9 @@ int main(void)
     NoHistoryAndWideWheelSkewNeverFakeAlignment();
     InvalidDataCannotPublishFusion();
     BothClocksAndSequenceCanWrap();
+    AttemptRecordsMiddleNavigationInputAndEffectiveConfig();
+    RejectedAttemptSurvivesResetAndReacquiresWithNewIdentity();
+    AttemptSequenceWrapIsNotUnavailable();
     puts("PASS: remote chassis velocity fusion");
     return 0;
 }

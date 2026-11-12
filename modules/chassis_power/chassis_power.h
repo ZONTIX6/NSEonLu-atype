@@ -4,6 +4,8 @@
 #include "chassis_power_types.h"
 
 bool ChassisPowerInit(const ChassisPower_Init_Config_s *config);
+/* FNV-1a32 over canonical little-endian fields; excludes provenance and padding. */
+uint32_t ChassisPowerConfigFingerprint(const ChassisPower_Init_Config_s *config);
 bool ChassisPowerUpdatePolicy(const ChassisPowerPolicyInput_s *input,
                               ChassisPowerPolicyOutput_s *output);
 bool ChassisPowerLimit(const ChassisPowerCycleInput_s *input,

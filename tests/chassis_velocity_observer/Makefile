@@ -15,7 +15,7 @@ PRODUCTION_SOURCES = $(CHASSIS)/chassis_velocity_observer.c \
 SOURCES = test_chassis_velocity_observer.c $(PRODUCTION_SOURCES)
 HEADERS = $(ROOT)/config/30_velocity_observation/chassis_velocity_config.h $(ROOT)/config/30_velocity_observation/speed_observation_config.h $(wildcard stubs/*.h) $(CHASSIS)/chassis_velocity_observer.h \
     $(CHASSIS)/chassis_internal.h $(wildcard $(ALGORITHM)/chassis_velocity*.h) \
-    $(ALGORITHM)/chassis_gimbal_imu.h $(APPLICATION)/gimbal/gimbal.h \
+    $(ALGORITHM)/chassis_gimbal_imu.h $(ALGORITHM)/chassis_remote_fusion.h $(APPLICATION)/gimbal/gimbal.h \
     $(MODULES)/imu/ins_task.h $(TIME)/speed_observation_time.h
 
 test_chassis_velocity_observer.exe: $(SOURCES) $(HEADERS)

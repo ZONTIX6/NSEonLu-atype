@@ -11,6 +11,7 @@ bool ChassisPowerLimit(const ChassisPowerCycleInput_s *i, ChassisPowerCycleOutpu
     POWER_LOCK();
     if (i->control.config_version == p->slow_version && p->config_version != p->slow_version) {
         p->config=p->slow_config;
+        p->config_observation=p->slow_observation;
         p->config_version=p->slow_version;
     }
     const bool config_matches=i->control.config_version==p->config_version;
@@ -21,6 +22,8 @@ bool ChassisPowerLimit(const ChassisPowerCycleInput_s *i, ChassisPowerCycleOutpu
         .config_version=i->control.config_version,.measured_power_w=i->meter.power_w,
         .meter_online=i->meter.online,.meter_tick_ms=i->meter.last_rx_tick_ms,
         .meter_sequence=i->meter.rx_sequence};
+    state->cycle_control=i->control;
+    state->cycle_config=p->config_observation;
     p->control=i->control;
     p->input.referee_power_limit_w=i->control.legacy_budget_w;
     ChassisPowerTransientInput_s transient={.budget_w=i->control.nominal_budget_w,
@@ -112,6 +115,7 @@ bool ChassisPowerRecordFinal(const ChassisPowerFinalInput_s *i)
         state->telemetry.actual_speed_rpm[w]=actual_rpm[w];
     }
     state->final_valid=true;state->final_tick_ms=i->now_ms;state->can_submitted=i->can_submitted;
+    state->submitted_groups=i->submitted_groups;state->successful_groups=i->successful_groups;
     /* Failed attempts remain in diagnostics, not in the growth-limit baseline.
      * A successful submission is still not an acknowledgement of execution. */
     if (i->can_submitted) ChassisPowerTransientRecordSent(&p->transient,current);

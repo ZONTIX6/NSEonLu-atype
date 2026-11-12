@@ -58,7 +58,19 @@ int main(int argc,char **argv)
     assert(!ChassisPowerInit(NULL));
     config.models[0].current_conversion=0;
     assert(!ChassisPowerInit(&config));
-    config=Config();assert(ChassisPowerInit(&config));
+    config=Config();config.tuning_source=2;assert(ChassisPowerInit(&config));
+    ChassisPowerSnapshot_s initialized_snapshot;
+    assert(ChassisPowerGetSnapshot(&initialized_snapshot));
+    assert(!initialized_snapshot.policy.config.available);
+    const uint32_t original_fingerprint=ChassisPowerConfigFingerprint(&config);
+    assert(original_fingerprint!=0);
+    ChassisPower_Init_Config_s same=config;
+    same.tuning_source=3; /* Provenance is separate from the effective values. */
+    assert(ChassisPowerConfigFingerprint(&same)==original_fingerprint);
+    same.models[3].k0+=1;
+    assert(ChassisPowerConfigFingerprint(&same)!=original_fingerprint);
+    same=config;same.transient.startup_window_ms++;
+    assert(ChassisPowerConfigFingerprint(&same)!=original_fingerprint);
     assert(!ChassisPowerInit(&config));
     ChassisPowerFinalInput_s premature_final={0};
     assert(!ChassisPowerRecordFinal(&premature_final));
@@ -80,7 +92,8 @@ int main(int argc,char **argv)
     assert(output.valid && output.control_version==42);
     for(unsigned w=0;w<4;++w) assert(isfinite(output.current[w]) && output.current[w]>=0 && output.current[w]<5000);
     /* Safety after limiting must replace all final diagnostics with actual zeros. */
-    ChassisPowerFinalInput_s final={.now_ms=100,.control_version=42,.can_submitted=true};
+    ChassisPowerFinalInput_s final={.now_ms=100,.control_version=42,.can_submitted=true,
+        .submitted_groups=3,.successful_groups=1};
     assert(ChassisPowerRecordFinal(&final));
     assert(!ChassisPowerRecordFinal(&final)); /* A cycle publishes only once. */
     ChassisPowerSnapshot_s snapshot;
@@ -88,6 +101,12 @@ int main(int argc,char **argv)
     assert(snapshot.final_valid && snapshot.can_submitted);
     assert(snapshot.measured_power_w==19 && snapshot.meter_tick_ms==100);
     assert(snapshot.meter_sequence==UINT32_C(0x01234567));
+    assert(snapshot.cycle_control.nominal_budget_w==20 && snapshot.cycle_control.target_power_w==19);
+    assert(snapshot.cycle_control.version==42 && snapshot.cycle_control.tick_ms==100);
+    assert(snapshot.cycle_config.fingerprint==original_fingerprint && snapshot.cycle_config.tuning_source==2);
+    assert(snapshot.cycle_config.outer.kp==config.outer.kp);
+    assert(snapshot.cycle_config.available && snapshot.policy.config.available);
+    assert(snapshot.submitted_groups==3 && snapshot.successful_groups==1);
     for(unsigned w=0;w<4;++w) assert(snapshot.final_current[w]==0 && snapshot.telemetry.current_command[w]==0);
     final.control_version=41;assert(!ChassisPowerRecordFinal(&final));
     /* The slow publication switches complete configuration versions at a boundary. */
@@ -100,7 +119,7 @@ int main(int argc,char **argv)
     assert(!ChassisPowerRequestConfig(&next,7));
     next=config;next.outer.low_demand_decay_w_per_s=0;
     assert(!ChassisPowerRequestConfig(&next,7));
-    next=config;next.algorithm.max_current_command=1000;
+    next=config;next.algorithm.max_current_command=1000;next.tuning_source=3;next.outer.kp=2;
     assert(ChassisPowerRequestConfig(&next,7));
     assert(!ChassisPowerRequestConfig(&next,7));
     assert(!ChassisPowerRequestConfig(&next,6));
@@ -115,10 +134,21 @@ int main(int argc,char **argv)
     assert(policy_output.control.config_version==7);
     assert(ChassisPowerGetSnapshot(&snapshot));
     assert(snapshot.control_version==42 && snapshot.policy.control.config_version==7);
+    assert(snapshot.cycle_control.nominal_budget_w==20 && snapshot.cycle_control.config_version==0);
+    assert(snapshot.cycle_config.fingerprint==original_fingerprint && snapshot.cycle_config.tuning_source==2);
+    assert(snapshot.policy.config.fingerprint==ChassisPowerConfigFingerprint(&next));
+    assert(snapshot.policy.config.tuning_source==3 && snapshot.policy.config.outer.kp==2);
     assert(ChassisPowerLimit(&input,&output)); /* An in-flight version 0 still uses old config. */
     input.control.config_version=7;
     assert(ChassisPowerLimit(&input,&output));
     for(unsigned w=0;w<4;++w) assert(output.current[w]<=1000);
+    final.control_version=42;final.can_submitted=false;final.successful_groups=0;
+    assert(ChassisPowerRecordFinal(&final));
+    assert(ChassisPowerGetSnapshot(&snapshot));
+    assert(snapshot.cycle_config.fingerprint==ChassisPowerConfigFingerprint(&next));
+    assert(snapshot.cycle_config.tuning_source==3 && snapshot.cycle_config.outer.kp==2);
+    assert(snapshot.cycle_control.config_version==7 && !snapshot.can_submitted);
+    assert(snapshot.submitted_groups==3 && snapshot.successful_groups==0);
     input.control.config_version=0;
     assert(!ChassisPowerLimit(&input,&output)); /* Do not silently use new config for old input. */
     input.control.config_version=7;

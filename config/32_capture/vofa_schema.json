@@ -1,0 +1,1009 @@
+{
+  "4": {
+    "name": "power",
+    "channels": [
+      {
+        "name": "schema",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "tick_ms_hi",
+        "type": "u16",
+        "unit": "ms"
+      },
+      {
+        "name": "tick_ms_lo",
+        "type": "u16",
+        "unit": "ms"
+      },
+      {
+        "name": "tx_sequence_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "tx_sequence_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "valid",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "state",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "wheel_masks",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "cycle_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "final_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "control_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "control_version_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "control_version_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "config_version_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "config_version_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "provenance",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "config_fingerprint_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "config_fingerprint_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "policy_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "policy_version_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "policy_version_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "policy_config_version_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "policy_config_version_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "policy_config_fingerprint_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "policy_config_fingerprint_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "target_rpm_lf",
+        "type": "f32",
+        "unit": "rotor rpm"
+      },
+      {
+        "name": "target_rpm_rf",
+        "type": "f32",
+        "unit": "rotor rpm"
+      },
+      {
+        "name": "target_rpm_lb",
+        "type": "f32",
+        "unit": "rotor rpm"
+      },
+      {
+        "name": "target_rpm_rb",
+        "type": "f32",
+        "unit": "rotor rpm"
+      },
+      {
+        "name": "actual_rpm_lf",
+        "type": "f32",
+        "unit": "rotor rpm"
+      },
+      {
+        "name": "actual_rpm_rf",
+        "type": "f32",
+        "unit": "rotor rpm"
+      },
+      {
+        "name": "actual_rpm_lb",
+        "type": "f32",
+        "unit": "rotor rpm"
+      },
+      {
+        "name": "actual_rpm_rb",
+        "type": "f32",
+        "unit": "rotor rpm"
+      },
+      {
+        "name": "raw_current_lf",
+        "type": "f32",
+        "unit": "DJI count"
+      },
+      {
+        "name": "raw_current_rf",
+        "type": "f32",
+        "unit": "DJI count"
+      },
+      {
+        "name": "raw_current_lb",
+        "type": "f32",
+        "unit": "DJI count"
+      },
+      {
+        "name": "raw_current_rb",
+        "type": "f32",
+        "unit": "DJI count"
+      },
+      {
+        "name": "final_current_lf",
+        "type": "i16",
+        "unit": "DJI count"
+      },
+      {
+        "name": "final_current_rf",
+        "type": "i16",
+        "unit": "DJI count"
+      },
+      {
+        "name": "final_current_lb",
+        "type": "i16",
+        "unit": "DJI count"
+      },
+      {
+        "name": "final_current_rb",
+        "type": "i16",
+        "unit": "DJI count"
+      },
+      {
+        "name": "feedback_current_lf",
+        "type": "f32",
+        "unit": "DJI count"
+      },
+      {
+        "name": "feedback_current_rf",
+        "type": "f32",
+        "unit": "DJI count"
+      },
+      {
+        "name": "feedback_current_lb",
+        "type": "f32",
+        "unit": "DJI count"
+      },
+      {
+        "name": "feedback_current_rb",
+        "type": "f32",
+        "unit": "DJI count"
+      },
+      {
+        "name": "wheel_age_ms_lf",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "wheel_age_ms_rf",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "wheel_age_ms_lb",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "wheel_age_ms_rb",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "meter_power_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "meter_sequence_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "meter_sequence_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "meter_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "model_unlimited_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "model_final_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "nominal_budget_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "target_power_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "power_ceiling_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "slow_requested_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "slow_applied_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "fast_correction_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "effective_limit_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "filtered_power_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "guard_allowed_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "guard_power_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "guard_candidate_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "guard_scale",
+        "type": "f32",
+        "unit": "1"
+      },
+      {
+        "name": "excess_energy_j",
+        "type": "f32",
+        "unit": "J"
+      },
+      {
+        "name": "startup_allowance_j",
+        "type": "f32",
+        "unit": "J"
+      },
+      {
+        "name": "policy_nominal_budget_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "policy_target_power_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "policy_slow_correction_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "policy_filtered_power_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "policy_power_ceiling_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "cap_output_power_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "cap_input_power_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "cap_energy_ratio",
+        "type": "f32",
+        "unit": "1"
+      },
+      {
+        "name": "cap_available_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "cap_error",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "cap_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "cap_input_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "cap_command_target_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "cap_echo_target_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "cap_command_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "cap_failures_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "cap_failures_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "referee_limit_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "referee_buffer_j",
+        "type": "f32",
+        "unit": "J"
+      },
+      {
+        "name": "referee_robot_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "referee_buffer_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "buffer_lower_j",
+        "type": "f32",
+        "unit": "J"
+      },
+      {
+        "name": "buffer_predicted_j",
+        "type": "f32",
+        "unit": "J"
+      },
+      {
+        "name": "buffer_recovery_w",
+        "type": "f32",
+        "unit": "W"
+      },
+      {
+        "name": "outer_kp",
+        "type": "f32",
+        "unit": "1"
+      },
+      {
+        "name": "outer_ki",
+        "type": "f32",
+        "unit": "1/s"
+      },
+      {
+        "name": "outer_tau_s",
+        "type": "f32",
+        "unit": "s"
+      }
+    ],
+    "valid_bits": {
+      "cycle": 0,
+      "final": 1,
+      "can_submitted": 2,
+      "meter": 3,
+      "policy": 4,
+      "cap_status": 5,
+      "cap_input": 6,
+      "referee": 7,
+      "buffer": 8,
+      "config": 9,
+      "cap_command": 10,
+      "cap_submitted": 11,
+      "cap_output_enabled": 12,
+      "cap_input_active": 13,
+      "control_enabled": 14,
+      "cap_input_command_enabled": 15
+    },
+    "state_encoding": "transient bits0..2, outer bits3..4, budget bits5..6, recovering bit7, power_source bits8..9",
+    "provenance_encoding": "cycle source bits0..1, policy source bits2..3, submitted_groups bits4..9, successful_groups bits10..15",
+    "wheel_masks_encoding": "online bits0..3, enabled bits4..7, drive bits8..11, brake bits12..15"
+  },
+  "5": {
+    "name": "kalman",
+    "channels": [
+      {
+        "name": "schema",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "tick_ms_hi",
+        "type": "u16",
+        "unit": "ms"
+      },
+      {
+        "name": "tick_ms_lo",
+        "type": "u16",
+        "unit": "ms"
+      },
+      {
+        "name": "tx_sequence_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "tx_sequence_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "valid",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "observer_status",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "config_source",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "config_fingerprint_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "config_fingerprint_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "imu_source",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "wheel_online_mask",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "raw_rpm_lf",
+        "type": "f32",
+        "unit": "rotor rpm"
+      },
+      {
+        "name": "raw_rpm_rf",
+        "type": "f32",
+        "unit": "rotor rpm"
+      },
+      {
+        "name": "raw_rpm_lb",
+        "type": "f32",
+        "unit": "rotor rpm"
+      },
+      {
+        "name": "raw_rpm_rb",
+        "type": "f32",
+        "unit": "rotor rpm"
+      },
+      {
+        "name": "wheel_age_ms_lf",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "wheel_age_ms_rf",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "wheel_age_ms_lb",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "wheel_age_ms_rb",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "wheel_vx_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "wheel_vy_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "wheel_wz_radps",
+        "type": "f32",
+        "unit": "rad/s"
+      },
+      {
+        "name": "target_vx_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "target_vy_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "target_wz_radps",
+        "type": "f32",
+        "unit": "rad/s"
+      },
+      {
+        "name": "velocity_vx_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "velocity_vy_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "velocity_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "imu_qw",
+        "type": "f32",
+        "unit": "1"
+      },
+      {
+        "name": "imu_qx",
+        "type": "f32",
+        "unit": "1"
+      },
+      {
+        "name": "imu_qy",
+        "type": "f32",
+        "unit": "1"
+      },
+      {
+        "name": "imu_qz",
+        "type": "f32",
+        "unit": "1"
+      },
+      {
+        "name": "imu_ax_mps2",
+        "type": "f32",
+        "unit": "m/s^2"
+      },
+      {
+        "name": "imu_ay_mps2",
+        "type": "f32",
+        "unit": "m/s^2"
+      },
+      {
+        "name": "imu_az_mps2",
+        "type": "f32",
+        "unit": "m/s^2"
+      },
+      {
+        "name": "imu_gx_radps",
+        "type": "f32",
+        "unit": "rad/s"
+      },
+      {
+        "name": "imu_gy_radps",
+        "type": "f32",
+        "unit": "rad/s"
+      },
+      {
+        "name": "imu_gz_radps",
+        "type": "f32",
+        "unit": "rad/s"
+      },
+      {
+        "name": "imu_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "imu_receive_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "imu_source_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "imu_sequence_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "imu_sequence_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "imu_tick_ms_hi",
+        "type": "u16",
+        "unit": "ms"
+      },
+      {
+        "name": "imu_tick_ms_lo",
+        "type": "u16",
+        "unit": "ms"
+      },
+      {
+        "name": "attempt_sequence_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "attempt_sequence_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "attempt_flags",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "call_receiver_ms_hi",
+        "type": "u16",
+        "unit": "ms"
+      },
+      {
+        "name": "call_receiver_ms_lo",
+        "type": "u16",
+        "unit": "ms"
+      },
+      {
+        "name": "call_us_hi",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "call_us_lo",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "wheel_us_hi",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "wheel_us_lo",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "imu_us_hi",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "imu_us_lo",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "middle_receiver_ms_hi",
+        "type": "u16",
+        "unit": "ms"
+      },
+      {
+        "name": "middle_receiver_ms_lo",
+        "type": "u16",
+        "unit": "ms"
+      },
+      {
+        "name": "wheel_n_x_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "wheel_n_y_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "accel_n_x_mps2",
+        "type": "f32",
+        "unit": "m/s^2"
+      },
+      {
+        "name": "accel_n_y_mps2",
+        "type": "f32",
+        "unit": "m/s^2"
+      },
+      {
+        "name": "output_n_x_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "output_n_y_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "output_sample_us_hi",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "output_sample_us_lo",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "update_count_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "update_count_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "reset_count_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "reset_count_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "resets_before_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "resets_before_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "pair_span_ms",
+        "type": "f32",
+        "unit": "ms"
+      },
+      {
+        "name": "source_step_ms",
+        "type": "f32",
+        "unit": "ms"
+      },
+      {
+        "name": "receive_step_ms",
+        "type": "f32",
+        "unit": "ms"
+      },
+      {
+        "name": "fusion_wheel_variance",
+        "type": "f32",
+        "unit": "(m/s)^2"
+      },
+      {
+        "name": "fusion_accel_variance",
+        "type": "f32",
+        "unit": "(m/s^2)^2"
+      },
+      {
+        "name": "fusion_jerk_density",
+        "type": "f32",
+        "unit": "m^2/s^5"
+      },
+      {
+        "name": "fusion_max_residual_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "fusion_max_age_us_hi",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "fusion_max_age_us_lo",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "fusion_max_skew_us_hi",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "fusion_max_skew_us_lo",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "fusion_max_gap_us_hi",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "fusion_max_gap_us_lo",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "mount_qw",
+        "type": "f32",
+        "unit": "1"
+      },
+      {
+        "name": "mount_qx",
+        "type": "f32",
+        "unit": "1"
+      },
+      {
+        "name": "mount_qy",
+        "type": "f32",
+        "unit": "1"
+      },
+      {
+        "name": "mount_qz",
+        "type": "f32",
+        "unit": "1"
+      },
+      {
+        "name": "offset_x_m",
+        "type": "f32",
+        "unit": "m"
+      },
+      {
+        "name": "offset_y_m",
+        "type": "f32",
+        "unit": "m"
+      },
+      {
+        "name": "offset_z_m",
+        "type": "f32",
+        "unit": "m"
+      },
+      {
+        "name": "max_pair_span_ms",
+        "type": "f32",
+        "unit": "ms"
+      },
+      {
+        "name": "max_wheel_skew_ms",
+        "type": "f32",
+        "unit": "ms"
+      },
+      {
+        "name": "max_timing_jitter_ms",
+        "type": "f32",
+        "unit": "ms"
+      }
+    ],
+    "valid_bits": {
+      "wheels": 0,
+      "target": 1,
+      "estimate": 2,
+      "imu": 3,
+      "attempt": 4,
+      "verified": 5
+    },
+    "attempt_flags": {
+      "available": 0,
+      "wheel_valid": 1,
+      "imu_valid": 2,
+      "initialized_before": 3,
+      "output_valid": 4,
+      "output_fused": 5
+    }
+  }
+}

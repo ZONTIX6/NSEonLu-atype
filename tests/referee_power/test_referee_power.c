@@ -433,6 +433,24 @@ static void TestRejectsNullPointersAndUnknownCommands(void)
     ASSERT_FALSE(RefereePowerBuildSnapshot(&state, 0U, NULL));
 }
 
+static void TestObservationKeepsKnownTimesAtZeroAndAfterExpiry(void)
+{
+    RefereePowerState_s state={0};
+    RefereePowerSnapshot_s snapshot;
+    ASSERT_TRUE(RefereePowerBuildSnapshot(&state,0,&snapshot));
+    ASSERT_FALSE(snapshot.has_robot_state || snapshot.has_power_heat);
+    ASSERT_TRUE(RefereePowerStateAcceptFrame(&state,0x0201U,robot_state_enabled,13U,0));
+    ASSERT_TRUE(RefereePowerBuildSnapshot(&state,0,&snapshot));
+    ASSERT_TRUE(snapshot.has_robot_state && !snapshot.has_power_heat);
+    ASSERT_EQ_U32(0,snapshot.robot_state_tick_ms);
+    ASSERT_TRUE(RefereePowerStateAcceptFrame(&state,0x0202U,power_heat,14U,10));
+    ASSERT_TRUE(RefereePowerBuildSnapshot(&state,301,&snapshot));
+    ASSERT_FALSE(snapshot.valid);
+    ASSERT_TRUE(snapshot.has_robot_state && snapshot.has_power_heat);
+    ASSERT_EQ_U32(0,snapshot.robot_state_tick_ms);
+    ASSERT_EQ_U32(10,snapshot.buffer_tick_ms);
+}
+
 int main(void)
 {
     RefereePowerState_s partial_state = {0};
@@ -464,6 +482,7 @@ int main(void)
     TestChassisOutputUsesBitOne();
     TestFreshnessHandlesTickWrap();
     TestRejectsNullPointersAndUnknownCommands();
+    TestObservationKeepsKnownTimesAtZeroAndAfterExpiry();
 
     if (failures == 0)
     {

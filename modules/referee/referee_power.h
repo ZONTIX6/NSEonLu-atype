@@ -34,6 +34,8 @@ typedef struct
     uint16_t chassis_power_limit_w;
     uint16_t buffer_energy_j;
     uint32_t buffer_tick_ms;
+    uint32_t robot_state_tick_ms;
+    bool has_robot_state, has_power_heat;
     float chassis_power_w;
     bool chassis_power_valid;
 } RefereePowerSnapshot_s;

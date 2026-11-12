@@ -10,6 +10,7 @@ bool ChassisPowerForceBegin(const ChassisPowerControlSnapshot_s *control,const P
     POWER_LOCK();
     if(control->config_version==p->slow_version && p->config_version!=p->slow_version) {
         p->config=p->slow_config;p->config_version=p->slow_version;
+        p->config_observation=p->slow_observation;
         ChassisPowerTransientReset(&p->transient);
     }
     POWER_UNLOCK();
@@ -82,6 +83,8 @@ bool ChassisPowerForceRecord(const ChassisForceCycleInput_s *i,const ChassisForc
         s->telemetry.predicted_total_power_w+=s->telemetry.predicted_power_w[w];
     }
     s->telemetry.motor_enabled_mask=i->enabled_mask;
+    s->cycle_control=p->control;s->control_tick_ms=p->control.tick_ms;
+    s->cycle_config=p->config_observation;
     const bool driving=o->valid && !o->faults && o->can_submitted && o->drive_mask && !o->brake_mask &&
         !o->braking && i->meter_valid && i->load_power_w>=0 && i->online_mask==15 && i->enabled_mask==15;
     ChassisPowerTransientState_s *t=&p->transient;

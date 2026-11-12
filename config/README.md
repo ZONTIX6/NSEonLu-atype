@@ -18,7 +18,7 @@
 | `22_chassis_force` | 速度/力控选择、力控通用值、车辆标定和标定工具 | [chassis_control_config.h](22_chassis_force/chassis_control_config.h)、[chassis_force_config.c](22_chassis_force/chassis_force_config.c)、[chassis_force_config.h](22_chassis_force/chassis_force_config.h)、[chassis_force_vehicle_config.c](22_chassis_force/chassis_force_vehicle_config.c)、[chassis_force_vehicle_config.h](22_chassis_force/chassis_force_vehicle_config.h)、[force_calibration_config.h](22_chassis_force/force_calibration_config.h) |
 | `30_velocity_observation` | 速度时效、远端 IMU 安装/融合、预测功率和轮速影子滤波 | [chassis_velocity_config.h](30_velocity_observation/chassis_velocity_config.h)、[chassis_remote_imu_config.h](30_velocity_observation/chassis_remote_imu_config.h)、[predictive_power_config.h](30_velocity_observation/predictive_power_config.h)、[speed_observation_config.h](30_velocity_observation/speed_observation_config.h) |
 | `31_telemetry` | USB/RTT 遥测、标定 CSV 字段与缓冲、网页源码覆盖值 | [usb_telemetry_config.h](31_telemetry/usb_telemetry_config.h)、[rtt_telemetry_config.h](31_telemetry/rtt_telemetry_config.h)、[tuning_overrides.h](31_telemetry/tuning_overrides.h) |
-| `32_capture` | 本地 IMU 诊断、DM CAN 接收与 J-Scope 影子观测 | [imu_capture_config.h](32_capture/imu_capture_config.h)、[shadow_scope_config.h](32_capture/shadow_scope_config.h) |
+| `32_capture` | VOFA 新档通道定义、本地 IMU 诊断、DM CAN 接收与 J-Scope 影子观测 | [vofa_schema.json](32_capture/vofa_schema.json)、[imu_capture_config.h](32_capture/imu_capture_config.h)、[shadow_scope_config.h](32_capture/shadow_scope_config.h) |
 | `90_board` | 板级绑定/可选设备、裁判旧协议与超时、日志启停 | [board_config.h](90_board/board_config.h)、[referee_config.h](90_board/referee_config.h)、[log_config.h](90_board/log_config.h) |
 | `91_motor` | DJI 电机数量、反馈滤波与驱动参数 | [dji_motor_config.h](91_motor/dji_motor_config.h) |
 | `92_imu` | 本地 IMU 参数；DM 模块 CAN 总线、接收 ID 与重力常量 | [imu_config.h](92_imu/imu_config.h)、[dm_imu_config.h](92_imu/dm_imu_config.h) |
@@ -28,7 +28,11 @@
 
 打开 [`00_flash/board_flash_config.h`](00_flash/board_flash_config.h)，主板配置沿用 `BOARD_FLASH_1_` 前缀。当前只支持主板 `1`，`-Board 2` 会报错，旧第二板预设和采集 CAN 发送已移除。`BOARD_FLASH_PROGRAMMER` 选 `1` 使用 DAP/OpenOCD，选 `2` 使用 J-Link/J-Flash；profile、输出目录也在同一文件。
 
-主板预设 `CHASSIS_IMU_CAN_RX_ENABLE=1` 接收 CAN2 的 DM-IMU-L1，`CHASSIS_REMOTE_IMU_FUSION_ENABLE=1` 开启只读速度融合，模式 `2` 输出完整观测 JustFloat（230400 波特率、20 ms 一组，CSV 由 VOFA+ 导出）。`CHASSIS_VELOCITY_FUSION_CALIBRATED=0` 只表示未启用本地云台标定路径。要记录轮速基线，把 `BOARD_FLASH_1_CHASSIS_REMOTE_IMU_FUSION_ENABLE` 改为 `0` 后重新构建，DM 接收及遥测保留。
+日常只修改 `BOARD_FLASH_1_VOFA_OBSERVATION_PROFILE`：**`1`=功率/超电，`2`=卡尔曼（默认）**，保持 `BOARD_FLASH_1_VOFA_TELEMETRY_MODE=2`。两档分别输出新 schema 4/5，各 96 路，UART7 JustFloat、230400 / 8N1、20 ms 目标周期。切换后重新构建和烧录，VOFA+ 直接导出完整原始 CSV，不需要手动列名映射或单位换算。通道顺序和单位以 [`32_capture/vofa_schema.json`](32_capture/vofa_schema.json) 为准；[操作说明与两套采集动作](../docs/vofa-telemetry.md#csv-采集与交付)列出简短步骤。
+
+`VOFA_OBSERVATION_PROFILE=0` 保留旧 schema 2/3；传输模式 `0/1` 忽略用途选项，继续使用旧 19 路 JustFloat/64 或 72 路 FireWater。手动 Make/CMake 使用去前缀选项 `VOFA_OBSERVATION_PROFILE=1/2` 或 `-DVOFA_OBSERVATION_PROFILE=1/2`。新旧 schema 的布局和单位不同，不能混用解析表。
+
+主板预设 `CHASSIS_IMU_CAN_RX_ENABLE=1` 接收 CAN2 的 DM-IMU-L1，`CHASSIS_REMOTE_IMU_FUSION_ENABLE=1` 开启只读速度融合，不接管控制。`CHASSIS_VELOCITY_FUSION_CALIBRATED=0` 只表示未启用本地云台标定路径。要记录轮速基线，把 `BOARD_FLASH_1_CHASSIS_REMOTE_IMU_FUSION_ENABLE` 改为 `0` 后重新构建，DM 接收及遥测保留。
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Show -Board 1

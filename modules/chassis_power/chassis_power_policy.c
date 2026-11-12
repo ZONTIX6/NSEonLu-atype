@@ -13,6 +13,7 @@ bool ChassisPowerUpdatePolicy(const ChassisPowerPolicyInput_s *i, ChassisPowerPo
     const bool changed=p->config_pending;
     if (changed) {
         p->slow_config=p->pending_config;
+        p->slow_observation=p->pending_observation;
         p->slow_version=p->pending_version;
         p->config_pending=false;
     }
@@ -22,6 +23,7 @@ bool ChassisPowerUpdatePolicy(const ChassisPowerPolicyInput_s *i, ChassisPowerPo
         p->budget_state.spin_sample_valid=false;
     }
     const ChassisPower_Init_Config_s *c=&p->slow_config;
+    o->config=p->slow_observation;
     const ChassisPowerSnapshot_s *s=&i->previous;
     const ChassisPowerCommandInput_s command_input={.referee=i->referee,
         .bench_enabled=i->bench_enabled,.bench_limit_w=i->bench_limit_w,.chassis_zero_force=i->zero_force};

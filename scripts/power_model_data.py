@@ -31,11 +31,12 @@ def read_sample(row, fmt):
     """Missing legacy evidence stays None; it is never converted into success."""
     if None in row or any(value is None for value in row.values()):
         raise ValueError('CSV row width does not match its header')
-    if fmt == 'aligned_static':
+    if fmt in ('aligned_static', 'vofa4'):
         return dict(tick=integer(row['tick_ms']), event=integer(row['meter_sequence']),
             submitted=integer(row['submitted'], 1), online=integer(row['meter_online'], 1),
             age=number(row['meter_age_ms']), enabled=integer(row['enabled_mask'], 15),
-            motor_online=integer(row['online_mask'], 15), motor_age=None,
+            motor_online=integer(row['online_mask'], 15),
+            motor_age=[number(row[f'motor_age_ms_{w}']) for w in range(4)] if fmt == 'vofa4' else None,
             power=number(row['load_w']), flags=0,
             command=[integer(row[f'command{w}'], 32767, -32768) for w in range(4)],
             rpm=[number(row[f'rpm{w}']) for w in range(4)])
@@ -125,7 +126,7 @@ def select_samples(rows, fmt, steady):
             accepted.append(sample)
         else:
             rejected['not_steady'] += 1
-    evidence = [] if fmt == 'aligned_static' else [
+    evidence = [] if fmt in ('aligned_static', 'vofa4') else [
         'submission_unavailable', 'receive_time_only', 'meter_sequence_unavailable',
         'motor_online_unavailable']
     return accepted, dict(total_rows=total, accepted_rows=len(accepted),

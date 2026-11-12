@@ -17,6 +17,7 @@
 typedef struct
 {
     ChassisPower_Init_Config_s config, slow_config, pending_config;
+    ChassisPowerConfigObservation_s config_observation, slow_observation, pending_observation;
     uint32_t config_version, slow_version, pending_version;
     bool config_pending;
     ChassisPowerInput_s input;

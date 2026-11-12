@@ -48,6 +48,7 @@ bool ChassisTuningApplyPower(const float *v)
         !ChassisBufferBudgetConfigIsValid(&budget.buffer)) return false;
     if (chassis_power_ready) {
         ChassisPower_Init_Config_s next=power_module_config;
+        next.tuning_source=TUNING_SOURCE_RUNTIME;
         next.outer=outer;next.budget=budget;
         if (!ChassisPowerRequestConfig(&next,power_config_version+1)) return false;
         ++power_config_version;power_module_config=next;
