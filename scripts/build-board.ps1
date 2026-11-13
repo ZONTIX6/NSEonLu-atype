@@ -49,6 +49,22 @@ foreach($key in $settings.Keys) {
     if($settings[$key] -notmatch '^[A-Za-z0-9_.+-]+$') { throw "Invalid option value: $key" }
     $optionValues[$option]=$settings[$key]
 }
+# Share the firmware default; an explicit legacy/custom board setting still overrides it.
+if(-not $optionValues.ContainsKey('VOFA_OBSERVATION_PROFILE')) {
+    $vofaConfig=Join-Path $boardProjectRoot 'config/vofa_config.h'
+    $vofaSource=Get-Content -LiteralPath $vofaConfig -Raw -Encoding UTF8
+    $vofaSource=[regex]::Replace($vofaSource,'/\*.*?\*/',' ',[Text.RegularExpressions.RegexOptions]::Singleline)
+    $vofaSource=[regex]::Replace($vofaSource,'//[^\r\n]*','')
+    $vofaDefinitions=[regex]::Matches($vofaSource,'(?m)^[ \t]*#define[ \t]+VOFA_OBSERVATION_PROFILE\b([^\r\n]*)')
+    if($vofaDefinitions.Count -ne 1) {
+        throw 'config/vofa_config.h must define VOFA_OBSERVATION_PROFILE exactly once.'
+    }
+    $vofaValue=$vofaDefinitions[0].Groups[1].Value.Trim()
+    if($vofaValue -notmatch '^\d+$') {
+        throw 'Use a single integer for VOFA_OBSERVATION_PROFILE in config/vofa_config.h.'
+    }
+    $optionValues['VOFA_OBSERVATION_PROFILE']=$vofaValue
+}
 # Keep the main-board observation contract explicit; diagnostic/tool switches use their defaults.
 foreach($required in @('ONE_BOARD','CHASSIS_CONTROL_MODE','CHASSIS_IMU_CAN_RX_ENABLE',
     'CHASSIS_VELOCITY_FUSION_ENABLE','CHASSIS_VELOCITY_FUSION_CALIBRATED','CHASSIS_REMOTE_IMU_FUSION_ENABLE',

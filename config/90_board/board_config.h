@@ -20,9 +20,7 @@
 #ifndef VOFA_TELEMETRY_MODE
 #define VOFA_TELEMETRY_MODE 2 /* VOFA传输：0=旧19路JustFloat，1=旧FireWater，2=JustFloat用途观测。 */
 #endif
-#ifndef VOFA_OBSERVATION_PROFILE
-#define VOFA_OBSERVATION_PROFILE 2 /* 模式2用途：0=旧schema 2/3，1=功率/超电，2=卡尔曼；模式0/1忽略此项。 */
-#endif
+#include "../vofa_config.h" /* 功率/卡尔曼的日常切换入口。 */
 #ifndef ATYPE_BENCH_MODE
 #define ATYPE_BENCH_MODE 0 /* 台架模式：0=整车正常控制，1=台架门控（云台/发射锁停）；atype-bench构建默认设1。 */
 #endif

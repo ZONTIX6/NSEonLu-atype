@@ -2,7 +2,7 @@
 
 ## 编译固件
 
-日常在 [`config/00_flash/board_flash_config.h`](../config/00_flash/board_flash_config.h) 只修改 `BOARD_FLASH_1_VOFA_OBSERVATION_PROFILE`：`1` 为功率/超级电容，`2` 为卡尔曼（默认）。保持 `BOARD_FLASH_1_VOFA_TELEMETRY_MODE=2`，重新构建并烧录后切换用途。两档均通过 UART7 输出 JustFloat，使用 **230400 / 8N1，20 ms 目标周期，96 通道**。用 VOFA+ 自带功能导出原始 CSV，不需要配置字段、改列名、换算单位或转换文件。
+日常在 [`config/vofa_config.h`](../config/vofa_config.h) 只修改 `VOFA_OBSERVATION_PROFILE`：`1` 为功率/超级电容，`2` 为卡尔曼（默认）。保持 `config/00_flash/board_flash_config.h` 中的 `BOARD_FLASH_1_VOFA_TELEMETRY_MODE=2`，重新构建并烧录后切换用途。固件和烧录脚本共用该默认档位，显式构建参数或旧自定义预设可覆盖它。两档均通过 UART7 输出 JustFloat，使用 **230400 / 8N1，20 ms 目标周期，96 通道**。用 VOFA+ 自带功能导出原始 CSV，不需要配置字段、改列名、换算单位或转换文件。
 
 | 用途选项 | schema | 内容 |
 | --- | --- | --- |

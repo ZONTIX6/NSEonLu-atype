@@ -26,8 +26,8 @@
 #define BOARD_FLASH_1_CHASSIS_VELOCITY_FUSION_CALIBRATED 0 /* 0=不启用本地云台标定；远端固定底盘IMU使用独立的安装与噪声配置。 */
 #define BOARD_FLASH_1_CHASSIS_REMOTE_IMU_FUSION_ENABLE 1 /* 1=用固定底盘IMU做只读卡尔曼观测；不表示安装与噪声参数已实测审核，也不接管控制。 */
 #define BOARD_FLASH_1_VOFA_TELEMETRY_ENABLE 1 /* 1=开启UART7统一遥测，需保持UART7未被裁判/辅助设备占用。 */
-#define BOARD_FLASH_1_VOFA_TELEMETRY_MODE 2 /* 2=JustFloat二进制观测；0/1保留旧格式，不使用下方用途选择。 */
-#define BOARD_FLASH_1_VOFA_OBSERVATION_PROFILE 2 /* 日常只改此项：1=功率/超电，2=卡尔曼（默认），0=旧schema 2/3；仅模式2生效。 */
+#define BOARD_FLASH_1_VOFA_TELEMETRY_MODE 2 /* 2=JustFloat二进制观测；0/1保留旧格式，不使用用途选择。 */
+/* 功率/卡尔曼切换统一修改 ../vofa_config.h 中的 VOFA_OBSERVATION_PROFILE。 */
 #define BOARD_FLASH_1_USB_TELEMETRY_ENABLE 1 /* 1=保留USB网页遥测；视觉应使用UART，不能同时选USB视觉。 */
 
 #endif

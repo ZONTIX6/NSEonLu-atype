@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -32,10 +33,10 @@ class BoardFlashTests(unittest.TestCase):
             )
             (self.directory / f"{name}.cmd").write_bytes(content.encode("ascii"))
 
-    def invoke(self, *arguments):
+    def invoke(self, *arguments, script=SCRIPT):
         return subprocess.run(
             ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
-             str(SCRIPT), *map(str, arguments)],
+             str(script), *map(str, arguments)],
             cwd=ROOT, env=self.env, capture_output=True, encoding="utf-8",
             errors="replace", timeout=30,
         )
@@ -52,7 +53,10 @@ class BoardFlashTests(unittest.TestCase):
                 rf"(^\s*#define\s+{re.escape(name)}\s+)\d+",
                 lambda match: match.group(1) + str(value), source, flags=re.M,
             )
-            self.assertEqual(count, 1, name)
+            if count == 0 and name == "BOARD_FLASH_1_VOFA_OBSERVATION_PROFILE":
+                source += f"\n#define {name} {value}\n"
+            else:
+                self.assertEqual(count, 1, name)
         # The repository and optional config path may both contain spaces.
         path = self.directory / "board flash config.h"
         path.write_text(source, encoding="utf-8")
@@ -60,6 +64,54 @@ class BoardFlashTests(unittest.TestCase):
 
     def commands(self):
         return self.log.read_text(encoding="utf-8").splitlines() if self.log.exists() else []
+
+    def shared_config_fixture(self, definition):
+        project = self.directory / "shared config project"
+        for relative in ("scripts/build-board.ps1", "config/99_build/atype-options.txt",
+                         "config/90_board/board_config.h", "config/00_flash/board_flash_config.h"):
+            target = project / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / relative, target)
+        board = project / "config/00_flash/board_flash_config.h"
+        board.write_text(re.sub(r"^#define BOARD_FLASH_1_VOFA_OBSERVATION_PROFILE.*$", "",
+                               board.read_text(encoding="utf-8-sig"), flags=re.M), encoding="utf-8")
+        (project / "config/vofa_config.h").write_text(
+            "#ifndef VOFA_OBSERVATION_PROFILE\n" + definition + "\n#endif\n", encoding="utf-8")
+        return project
+
+    def test_shared_profile_drives_build_and_flash_arguments(self):
+        for profile in (0, 1, 2):
+            with self.subTest(profile=profile):
+                project = self.shared_config_fixture(f"#define VOFA_OBSERVATION_PROFILE {profile}")
+                result = self.invoke("-Action", "Show", script=project / "scripts/build-board.ps1")
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                selected = json.loads(result.stdout.lstrip("\ufeff"))
+                for key in ("options", "buildArguments", "flashArguments"):
+                    self.assertIn(f"VOFA_OBSERVATION_PROFILE={profile}", selected[key])
+        self.assertEqual(self.commands(), [])
+
+    def test_shared_profile_is_firmware_default_and_can_be_overridden(self):
+        project = self.shared_config_fixture("#define VOFA_OBSERVATION_PROFILE 1")
+        for expected, options in ((1, []), (2, ["-DVOFA_OBSERVATION_PROFILE=2"])):
+            with self.subTest(expected=expected):
+                result = subprocess.run(
+                    ["gcc", "-x", "c", "-std=c11", "-fsyntax-only", "-I", str(project), *options, "-"],
+                    input='#include "config/90_board/board_config.h"\n'
+                          f'_Static_assert(VOFA_OBSERVATION_PROFILE == {expected}, "shared profile");\n',
+                    cwd=project, text=True, capture_output=True, timeout=30,
+                )
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_invalid_shared_profile_stops_before_tools(self):
+        for definition in ("", "#define VOFA_OBSERVATION_PROFILE 3",
+                           "#define VOFA_OBSERVATION_PROFILE 1 + 1",
+                           "#define VOFA_OBSERVATION_PROFILE 1\n#define VOFA_OBSERVATION_PROFILE 2"):
+            with self.subTest(definition=definition):
+                project = self.shared_config_fixture(definition)
+                result = self.invoke("-Action", "Flash", script=project / "scripts/build-board.ps1")
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("VOFA_OBSERVATION_PROFILE", result.stderr)
+        self.assertEqual(self.commands(), [])
 
     def test_default_entry_reads_the_config_without_running_tools(self):
         selected = self.show()
@@ -100,17 +152,11 @@ class BoardFlashTests(unittest.TestCase):
                 self.assertIn(f"VOFA_OBSERVATION_PROFILE={profile}", selected["buildArguments"])
         self.assertEqual(self.commands(), [])
 
-    def test_invalid_or_missing_observation_profile_stops_before_tools(self):
+    def test_invalid_explicit_observation_profile_stops_before_tools(self):
         path = self.config_with(BOARD_FLASH_1_VOFA_OBSERVATION_PROFILE=3)
         result = self.invoke("-ConfigFile", path, "-Action", "Flash")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("VOFA_OBSERVATION_PROFILE", result.stderr)
-        source = CONFIG.read_text(encoding="utf-8-sig")
-        path.write_text(re.sub(r"^#define BOARD_FLASH_1_VOFA_OBSERVATION_PROFILE.*$", "",
-                               source, flags=re.M), encoding="utf-8")
-        result = self.invoke("-ConfigFile", path, "-Action", "Flash")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("Missing board option", result.stderr)
         self.assertEqual(self.commands(), [])
 
     def test_zero_and_one_select_the_same_main_board(self):
