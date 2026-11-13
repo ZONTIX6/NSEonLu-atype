@@ -51,17 +51,17 @@ foreach($key in $settings.Keys) {
 }
 # Share the firmware default; an explicit legacy/custom board setting still overrides it.
 if(-not $optionValues.ContainsKey('VOFA_OBSERVATION_PROFILE')) {
-    $vofaConfig=Join-Path $boardProjectRoot 'config/vofa_config.h'
+    $vofaConfig=Join-Path $boardProjectRoot 'config/_vofa/vofa_config.h'
     $vofaSource=Get-Content -LiteralPath $vofaConfig -Raw -Encoding UTF8
     $vofaSource=[regex]::Replace($vofaSource,'/\*.*?\*/',' ',[Text.RegularExpressions.RegexOptions]::Singleline)
     $vofaSource=[regex]::Replace($vofaSource,'//[^\r\n]*','')
     $vofaDefinitions=[regex]::Matches($vofaSource,'(?m)^[ \t]*#define[ \t]+VOFA_OBSERVATION_PROFILE\b([^\r\n]*)')
     if($vofaDefinitions.Count -ne 1) {
-        throw 'config/vofa_config.h must define VOFA_OBSERVATION_PROFILE exactly once.'
+        throw 'config/_vofa/vofa_config.h must define VOFA_OBSERVATION_PROFILE exactly once.'
     }
     $vofaValue=$vofaDefinitions[0].Groups[1].Value.Trim()
     if($vofaValue -notmatch '^\d+$') {
-        throw 'Use a single integer for VOFA_OBSERVATION_PROFILE in config/vofa_config.h.'
+        throw 'Use a single integer for VOFA_OBSERVATION_PROFILE in config/_vofa/vofa_config.h.'
     }
     $optionValues['VOFA_OBSERVATION_PROFILE']=$vofaValue
 }

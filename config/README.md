@@ -6,7 +6,7 @@
 
 | 显示顺序 | 用途 | 调参文件 |
 | --- | --- | --- |
-| 根目录 | VOFA 功率/卡尔曼日常切换 | [vofa_config.h](vofa_config.h) |
+| `_vofa` | VOFA 功率/卡尔曼日常切换 | [vofa_config.h](_vofa/vofa_config.h) |
 | `00_flash` | 主板构建/烧录、下载器与输出目录 | [board_flash_config.h](00_flash/board_flash_config.h) |
 | `01_pid` | 最常用：底盘、云台、摩擦轮、拨弹和 IMU 温控 PID | [pid_config.c](01_pid/pid_config.c)、[pid_config.h](01_pid/pid_config.h) |
 | `02_chassis` | 底盘轮型、跟随模式、尺寸、减速比和轮向 | [chassis_config.h](02_chassis/chassis_config.h) |
@@ -29,9 +29,9 @@
 
 打开 [`00_flash/board_flash_config.h`](00_flash/board_flash_config.h)，主板配置沿用 `BOARD_FLASH_1_` 前缀。当前只支持主板 `1`，`-Board 2` 会报错，旧第二板预设和采集 CAN 发送已移除。`BOARD_FLASH_PROGRAMMER` 选 `1` 使用 DAP/OpenOCD，选 `2` 使用 J-Link/J-Flash；profile、输出目录也在同一文件。
 
-日常只修改根目录 [`vofa_config.h`](vofa_config.h) 中的 `VOFA_OBSERVATION_PROFILE`：**`1`=功率/超电，`2`=卡尔曼（默认）**，保持 `00_flash/board_flash_config.h` 中的 `BOARD_FLASH_1_VOFA_TELEMETRY_MODE=2`。两档分别输出新 schema 4/5，各 96 路，UART7 JustFloat、230400 / 8N1、20 ms 目标周期。切换后重新构建和烧录，VOFA+ 直接导出完整原始 CSV，不需要手动列名映射或单位换算。通道顺序和单位以 [`32_capture/vofa_schema.json`](32_capture/vofa_schema.json) 为准；[操作说明与两套采集动作](../docs/vofa-telemetry.md#csv-采集与交付)列出简短步骤。
+日常只修改 [`_vofa/vofa_config.h`](_vofa/vofa_config.h) 中的 `VOFA_OBSERVATION_PROFILE`：**`1`=功率/超电，`2`=卡尔曼（默认）**，保持 `00_flash/board_flash_config.h` 中的 `BOARD_FLASH_1_VOFA_TELEMETRY_MODE=2`。两档分别输出新 schema 4/5，各 96 路，UART7 JustFloat、230400 / 8N1、20 ms 目标周期。切换后重新构建和烧录，VOFA+ 直接导出完整原始 CSV，不需要手动列名映射或单位换算。通道顺序和单位以 [`32_capture/vofa_schema.json`](32_capture/vofa_schema.json) 为准；[操作说明与两套采集动作](../docs/vofa-telemetry.md#csv-采集与交付)列出简短步骤。
 
-`VOFA_OBSERVATION_PROFILE=0` 保留旧 schema 2/3；传输模式 `0/1` 忽略用途选项，继续使用旧 19 路 JustFloat/64 或 72 路 FireWater。烧录脚本和手动 Make/CMake 共用 `vofa_config.h` 的默认档位。显式 `VOFA_OBSERVATION_PROFILE=1/2`、CMake 的 `-DVOFA_OBSERVATION_PROFILE=1/2`，或自定义 `-ConfigFile` 中的旧 `BOARD_FLASH_1_VOFA_OBSERVATION_PROFILE` 会覆盖默认值；日常无需添加这些覆盖。已有 CMake 缓存若设过该选项，须用 `-UVOFA_OBSERVATION_PROFILE` 重新配置才能恢复读取头文件默认值。新旧 schema 的布局和单位不同，不能混用解析表。
+`VOFA_OBSERVATION_PROFILE=0` 保留旧 schema 2/3；传输模式 `0/1` 忽略用途选项，继续使用旧 19 路 JustFloat/64 或 72 路 FireWater。烧录脚本和手动 Make/CMake 共用 `_vofa/vofa_config.h` 的默认档位。显式 `VOFA_OBSERVATION_PROFILE=1/2`、CMake 的 `-DVOFA_OBSERVATION_PROFILE=1/2`，或自定义 `-ConfigFile` 中的旧 `BOARD_FLASH_1_VOFA_OBSERVATION_PROFILE` 会覆盖默认值；日常无需添加这些覆盖。已有 CMake 缓存若设过该选项，须用 `-UVOFA_OBSERVATION_PROFILE` 重新配置才能恢复读取头文件默认值。新旧 schema 的布局和单位不同，不能混用解析表。
 
 主板预设 `CHASSIS_IMU_CAN_RX_ENABLE=1` 接收 CAN2 的 DM-IMU-L1，`CHASSIS_REMOTE_IMU_FUSION_ENABLE=1` 开启只读速度融合，不接管控制。`CHASSIS_VELOCITY_FUSION_CALIBRATED=0` 只表示未启用本地云台标定路径。要记录轮速基线，把 `BOARD_FLASH_1_CHASSIS_REMOTE_IMU_FUSION_ENABLE` 改为 `0` 后重新构建，DM 接收及遥测保留。
 

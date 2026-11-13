@@ -2,7 +2,7 @@
 
 ## 编译固件
 
-日常在 [`config/vofa_config.h`](../config/vofa_config.h) 只修改 `VOFA_OBSERVATION_PROFILE`：`1` 为功率/超级电容，`2` 为卡尔曼（默认）。保持 `config/00_flash/board_flash_config.h` 中的 `BOARD_FLASH_1_VOFA_TELEMETRY_MODE=2`，重新构建并烧录后切换用途。固件和烧录脚本共用该默认档位，显式构建参数或旧自定义预设可覆盖它。两档均通过 UART7 输出 JustFloat，使用 **230400 / 8N1，20 ms 目标周期，96 通道**。用 VOFA+ 自带功能导出原始 CSV，不需要配置字段、改列名、换算单位或转换文件。
+日常在 [`config/_vofa/vofa_config.h`](../config/_vofa/vofa_config.h) 只修改 `VOFA_OBSERVATION_PROFILE`：`1` 为功率/超级电容，`2` 为卡尔曼（默认）。保持 `config/00_flash/board_flash_config.h` 中的 `BOARD_FLASH_1_VOFA_TELEMETRY_MODE=2`，重新构建并烧录后切换用途。固件和烧录脚本共用该默认档位，显式构建参数或旧自定义预设可覆盖它。两档均通过 UART7 输出 JustFloat，使用 **230400 / 8N1，20 ms 目标周期，96 通道**。用 VOFA+ 自带功能导出原始 CSV，不需要配置字段、改列名、换算单位或转换文件。
 
 | 用途选项 | schema | 内容 |
 | --- | --- | --- |
@@ -83,7 +83,7 @@ DM 接主板 CAN2，CAN_H 对 CAN_H、CAN_L 对 CAN_L 并连接参考地，速�
    | `GND` | `GND` |
    | `5V`（从 A 板取电时） | `5V` |
 
-   单向遥测只需要上表中的连线。调试器引脚和供电方式见《塔克无线高速 DAP 调试下载器手册 V3.0.1》第 1.4、2.4.1 节，手册推荐从机使用 5 V 供电。
+   单向遥测只需要上表中的连线。调试器引脚和供电方式见[《塔克无线高速 DAP 调试下载器手册 V3.0.1》](<../reference-data/塔克 l 无线高速DAP调试下载器手册V3.0.1.pdf>)第 1.4、2.4.1 节，手册推荐从机使用 5 V 供电。
 
 3. 上电后在 Windows 设备管理器的「端口（COM 和 LPT）」里确认主机新增的虚拟 COM 号。对应示意见手册第 2.5 节。
 

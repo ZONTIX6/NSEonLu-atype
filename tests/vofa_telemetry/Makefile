@@ -1,7 +1,7 @@
 CC ?= gcc
 CFLAGS := -std=c11 -Wall -Wextra -Werror -pedantic -O0 -g
 SOURCE := test_vofa_telemetry.c ../../application/runtime/vofa_telemetry.c
-HEADERS := stubs/usart.h ../../application/runtime/vofa_telemetry.h ../../Inc/board_config.h ../../config/90_board/board_config.h ../../config/vofa_config.h ../../Inc/imu_capture_config.h ../../config/32_capture/imu_capture_config.h ../../modules/telemetry/usb_telemetry_format.h ../../application/chassis/chassis_velocity_observer.h
+HEADERS := stubs/usart.h ../../application/runtime/vofa_telemetry.h ../../Inc/board_config.h ../../config/90_board/board_config.h ../../config/_vofa/vofa_config.h ../../Inc/imu_capture_config.h ../../config/32_capture/imu_capture_config.h ../../modules/telemetry/usb_telemetry_format.h ../../application/chassis/chassis_velocity_observer.h
 INCLUDES := -DVOFA_OBSERVATION_PROFILE=0 -Istubs -I../../Inc -I../../application/runtime -I../../modules/telemetry -I../../modules/algorithm
 MEASUREMENT_SOURCE := test_vofa_measurement.c ../../application/runtime/vofa_telemetry.c ../../modules/telemetry/usb_telemetry_format.c
 MEASUREMENT_INCLUDES := -I../../modules/chassis_power -I../../modules/power_meter -I../../modules/referee -I../../modules/super_cap -I../../application/chassis

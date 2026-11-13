@@ -75,7 +75,9 @@ class BoardFlashTests(unittest.TestCase):
         board = project / "config/00_flash/board_flash_config.h"
         board.write_text(re.sub(r"^#define BOARD_FLASH_1_VOFA_OBSERVATION_PROFILE.*$", "",
                                board.read_text(encoding="utf-8-sig"), flags=re.M), encoding="utf-8")
-        (project / "config/vofa_config.h").write_text(
+        vofa_config = project / "config/_vofa/vofa_config.h"
+        vofa_config.parent.mkdir(parents=True, exist_ok=True)
+        vofa_config.write_text(
             "#ifndef VOFA_OBSERVATION_PROFILE\n" + definition + "\n#endif\n", encoding="utf-8")
         return project
 
