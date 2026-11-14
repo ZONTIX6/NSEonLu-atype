@@ -41,6 +41,9 @@ typedef struct
 /**
  * @brief Register a module to CAN service,remember to call this before using a CAN device
  *        注册(初始化)一个can实例,需要传入初始化配置的指针.
+ * @note Call after BSPInit/DWT_Init. The first device starts only its bus;
+ *       startup uses a 10 ms cycle-clock timeout even with IRQs masked.
+ *       Startup/notification failure invokes Error_Handler, not a usable instance.
  * @param config init config
  * @return CANInstance* can instance owned by module
  */

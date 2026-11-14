@@ -55,29 +55,52 @@ static void CANAddFilter(CANInstance *_instance)
 }
 
 /**
- * @brief 在第一个CAN实例初始化的时候会自动调用此函数,启动CAN服务
+ * @brief 每条总线首次注册实例时启动对应CAN，保留注册后立即发送的能力。
  *
- * @note 此函数会启动CAN1和CAN2,开启CAN1和CAN2的FIFO0 & FIFO1溢出通知
+ * @note RobotInit期间全局中断关闭，必须使用已初始化的DWT计时，不能等待HAL tick。
  *
  */
-static void CANServiceInit()
+static HAL_StatusTypeDef CANServiceInit(CAN_HandleTypeDef *handle)
 {
-    HAL_CAN_Start(&hcan1);
-    HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
-    HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO1_MSG_PENDING);
-    HAL_CAN_Start(&hcan2);
-    HAL_CAN_ActivateNotification(&hcan2, CAN_IT_RX_FIFO0_MSG_PENDING);
-    HAL_CAN_ActivateNotification(&hcan2, CAN_IT_RX_FIFO1_MSG_PENDING);
+    static uint8_t started[DEVICE_CAN_CNT];
+    const int bus=CANBusIndex(handle);
+    if(bus<0) return HAL_ERROR;
+    if(started[bus]) return HAL_OK;
+
+    const uint32_t frequency=DWT_GetFrequencyHz();
+    if(frequency==0 || handle->State!=HAL_CAN_STATE_READY) {
+        handle->ErrorCode|=HAL_CAN_ERROR_NOT_READY;
+        return HAL_ERROR;
+    }
+    /* Match HAL_CAN_Start's state/error contract, but bound its INAK wait
+     * with the raw cycle clock. Unsigned subtraction also handles wrap. */
+    handle->State=HAL_CAN_STATE_LISTENING;
+    CLEAR_BIT(handle->Instance->MCR,CAN_MCR_INRQ);
+    const uint32_t start=DWT_GetCycleCount();
+    const uint32_t budget=frequency/100U; /* 10 ms; DWT_Init takes whole MHz. */
+    while((handle->Instance->MSR & CAN_MSR_INAK)!=0U) {
+        if((uint32_t)(DWT_GetCycleCount()-start)>=budget) {
+            handle->ErrorCode|=HAL_CAN_ERROR_TIMEOUT;
+            handle->State=HAL_CAN_STATE_ERROR;
+            return HAL_ERROR;
+        }
+    }
+    handle->ErrorCode=HAL_CAN_ERROR_NONE;
+    if(HAL_CAN_ActivateNotification(handle,
+        CAN_IT_RX_FIFO0_MSG_PENDING|CAN_IT_RX_FIFO1_MSG_PENDING)!=HAL_OK) return HAL_ERROR;
+    started[bus]=1;
+    LOGINFO("[bsp_can] CAN Service Init");
+    return HAL_OK;
 }
 
 /* ----------------------- two extern callable function -----------------------*/
 
 CANInstance *CANRegister(CAN_Init_Config_s *config)
 {
-    if (!idx)
-    {
-        CANServiceInit(); // 第一次注册,先进行硬件初始化
-        LOGINFO("[bsp_can] CAN Service Init");
+    if (config==NULL || CANServiceInit(config->can_handle)!=HAL_OK) {
+        LOGERROR("[bsp_can] CAN startup failed");
+        Error_Handler();
+        return NULL;
     }
     if (idx >= CAN_MX_REGISTER_CNT) // 超过最大实例数
     {

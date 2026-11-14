@@ -92,14 +92,18 @@ static can_instance *instance[MX_REGISTER_DEVICE_CNT]={NULL};
 这是bsp层管理所有CAN实例的入口。
 
 ```c
-static void CANServiceInit()
+static HAL_StatusTypeDef CANServiceInit(CAN_HandleTypeDef *handle)
 static void CANAddFilter(can_instance *_instance)
 static void CANFIFOxCallback(CAN_HandleTypeDef *_hcan, uint32_t fifox)
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan)
 ```
 
-- `CANServiceInit()`会被`CANRegister()`调用，对CAN外设进行硬件初始化并开启接收中断和消息提醒。
+- `CANServiceInit()`在每条总线首次注册设备时启动对应 CAN，并开启 FIFO0/FIFO1 消息通知。同一总线后续注册不会重复启动；仅使用 CAN1 的 IMU 采集板不会启动 CAN2。注册成功后可立即发送，保留电机初始化时发送模式命令的行为。
+
+- `CANRegister()`须在 `BSPInit()` / `DWT_Init()` 之后调用。启动等待采用 DWT 原始周期计数，10 ms 内未退出初始化则设置 `HAL_CAN_ERROR_TIMEOUT` 和 `HAL_CAN_STATE_ERROR`，进入现有 `Error_Handler()`，停止启动而非继续运行。这在 `RobotInit()` 关闭全局中断、HAL 毫秒时钟停止时仍有效；DWT 未初始化、CAN 状态不允许启动或消息通知启用失败也进入错误处理。该处理不会自动重试或恢复总线。
+
+- 主机回归运行 `make -C tests/bsp_can test`，覆盖冻结 HAL 时钟、DWT 回绕、按总线启动、错误处理及注册后立即发送；真实总线连通性仍需双板验证。
 
 - `CANAddFilter()`在每次使用`CANRegister()`的时候被调用，用于给当前注册的实例添加过滤器规则并设定处理对应`rx_id`的接收FIFO。过滤器的作用是减小CAN收发器的压力，只接收符合过滤器规则的报文（否则不会产生接收中断）。
 
