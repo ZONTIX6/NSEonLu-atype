@@ -15,7 +15,7 @@ void TestEnterCritical(void) { ++critical; }
 void TestExitCritical(void) { assert(critical); --critical; }
 CANInstance *CANRegister(CAN_Init_Config_s *config)
 {
-    assert(config->can_handle==&hcan1 && config->tx_id==0x520 && config->rx_id==0x520);
+    assert(config->can_handle==&hcan2 && config->tx_id==0x520 && config->rx_id==0x520);
     registered=(CANInstance){.can_handle=config->can_handle,.tx_id=config->tx_id,
         .rx_id=config->rx_id,.can_module_callback=config->can_module_callback,.dlc=8};
     ++registrations;
@@ -34,7 +34,7 @@ static bool abort_stuck;
 bool INSGetMotionSnapshot(INSMotionSnapshot_s *out) { *out=imu;return imu.valid; }
 uint8_t CANTransmit(CANInstance *instance,float timeout)
 {
-    assert(instance==&registered && instance->can_handle==&hcan1 && instance->tx_id==0x520);
+    assert(instance==&registered && instance->can_handle==&hcan2 && instance->tx_id==0x520);
     assert(instance->dlc==8 && timeout>0 && timeout<=1.0f);
     ++calls;
     /* Four high-priority motor feedback frames can occupy the bus for 0.5 ms. */
@@ -49,10 +49,10 @@ uint8_t CANTransmit(CANInstance *instance,float timeout)
     return 1;
 }
 uint32_t HAL_CAN_IsTxMessagePending(CAN_HandleTypeDef *can,uint32_t mask)
-{ assert(can==&hcan1);return (pending&mask)!=0; }
+{ assert(can==&hcan2);return (pending&mask)!=0; }
 HAL_StatusTypeDef HAL_CAN_AbortTxRequest(CAN_HandleTypeDef *can,uint32_t mask)
 {
-    assert(can==&hcan1 && mask && (mask&~7U)==0);
+    assert(can==&hcan2 && mask && (mask&~7U)==0);
     ++aborts;abort_mask=mask;
     if(!abort_stuck) pending&=~mask;
     return HAL_OK;

@@ -10,7 +10,7 @@
 
 双 A 板构建与烧录使用 [`config/00_flash/board_flash_config.h`](config/00_flash/board_flash_config.h)：目标 `1` 是整车主板，目标 `2` 是下方 IMU 采集板，各用独立输出目录。用 `-Board 1/2` 选择实际连接的板卡。
 
-主板预设开启 `CHASSIS_REMOTE_IMU_FUSION_ENABLE=1`：下方 A 板通过 **CAN1、ID `0x520`、50 Hz** 提供 IMU 数据，主板完成卡尔曼速度观测并经 UART7 输出。远端融合直接采用 **A 板原生 IMU 轴向**，以底盘中心为原点；照片中 USB 朝上、XT30 朝下时，A 板 +X 向照片左、+Y 向照片下、+Z 离开板面。底盘中心到芯片的补偿为 **`(0,+0.116,0) m`**，安装四元数为 `[1,0,0,0]`。现有轮速、控制与 VOFA 速度接口仍为前/右，融合入口、出口完成坐标换算。`CHASSIS_REMOTE_IMU_CONFIG_VERIFIED=0` 保留未实测标识。DM 模块路径已移除；接线、构建和轴向检查见 [双 A 板 IMU 说明](docs/dual-a-imu-integration.md)。融合仍仅供观测。
+主板预设开启 `CHASSIS_REMOTE_IMU_FUSION_ENABLE=1`：下方 A 板通过 **CAN2、ID `0x520`、50 Hz** 提供 IMU 数据，主板完成卡尔曼速度观测并经 UART7 输出。远端融合直接采用 **A 板原生 IMU 轴向**，以底盘中心为原点；照片中 USB 朝上、XT30 朝下时，A 板 +X 向照片左、+Y 向照片下、+Z 离开板面。底盘中心到芯片的补偿为 **`(0,+0.116,0) m`**，安装四元数为 `[1,0,0,0]`。现有轮速、控制与 VOFA 速度接口仍为前/右，融合入口、出口完成坐标换算。`CHASSIS_REMOTE_IMU_CONFIG_VERIFIED=0` 保留未实测标识。DM 模块路径已移除；接线、构建和轴向检查见 [双 A 板 IMU 说明](docs/dual-a-imu-integration.md)。融合仍仅供观测。
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Show
@@ -75,7 +75,7 @@ node tools/usb-telemetry/serve.cjs
 - [宏迁移对照与输入基线](docs/atype-macro-migration.md)
 - [接线、CAN、单位、模块与安全条件](docs/atype-integration.md)
 - [验证结果和硬件验收清单](docs/atype-validation.md)
-- [双 A 板 IMU：CAN1 接线、116 mm 补偿与轴向核对](docs/dual-a-imu-integration.md)
+- [双 A 板 IMU：CAN2 接线、116 mm 补偿与轴向核对](docs/dual-a-imu-integration.md)
 - [整车平移速度融合观测、标定和验证](docs/chassis-velocity-fusion.md)
 - [卡尔曼底盘实车测试顺序与验收手册](docs/kalman-chassis-test-and-acceptance.md)
 - [底盘功率控制总览：模型、计算、分配与超级电容](docs/chassis-power-control.md)

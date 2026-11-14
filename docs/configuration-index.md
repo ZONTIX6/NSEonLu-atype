@@ -578,7 +578,7 @@
 | [13](../application/runtime/chassis_imu_can.c#L13) | 预处理 | `#endif` |
 | [17](../application/runtime/chassis_imu_can.c#L17) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
 | [37](../application/runtime/chassis_imu_can.c#L37) | 预处理 | `#endif` |
-| [42](../application/runtime/chassis_imu_can.c#L42) | 配置初值 | `CAN_Init_Config_s config={.can_handle=&hcan1,.tx_id=CHASSIS_IMU_CAN_DATA_ID,` |
+| [42](../application/runtime/chassis_imu_can.c#L42) | 配置初值 | `CAN_Init_Config_s config={.can_handle=&hcan2,.tx_id=CHASSIS_IMU_CAN_DATA_ID,` |
 | [43](../application/runtime/chassis_imu_can.c#L43) | 配置初值 | `.rx_id=CHASSIS_IMU_CAN_DATA_ID};` |
 | [44](../application/runtime/chassis_imu_can.c#L44) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
 | [47](../application/runtime/chassis_imu_can.c#L47) | 预处理 | `#endif` |
@@ -1170,7 +1170,7 @@
 | [40](../config/00_flash/board_flash_config.h#L40) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_FORCE_CALIBRATION_ENABLE 0 /* 0=关闭力控标定工具。 */` |
 | [41](../config/00_flash/board_flash_config.h#L41) | 预处理 | `#define BOARD_FLASH_2_ATYPE_BENCH_MODE 0 /* 0=不使用整车台架任务。 */` |
 | [42](../config/00_flash/board_flash_config.h#L42) | 预处理 | `#define BOARD_FLASH_2_IMU_CAPTURE_ONLY 1 /* 1=仅IMU采集固件。 */` |
-| [43](../config/00_flash/board_flash_config.h#L43) | 预处理 | `#define BOARD_FLASH_2_IMU_CAPTURE_CAN_TX_ENABLE 1 /* 1=经CAN1发送IMU，主板对应开启接收。 */` |
+| [43](../config/00_flash/board_flash_config.h#L43) | 预处理 | `#define BOARD_FLASH_2_IMU_CAPTURE_CAN_TX_ENABLE 1 /* 1=经CAN2发送IMU，主板对应开启接收。 */` |
 | [44](../config/00_flash/board_flash_config.h#L44) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_IMU_CAN_RX_ENABLE 0 /* 0=不作为整车接收端。 */` |
 | [45](../config/00_flash/board_flash_config.h#L45) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_VELOCITY_FUSION_ENABLE 0 /* 0=不运行整车速度融合。 */` |
 | [46](../config/00_flash/board_flash_config.h#L46) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_VELOCITY_FUSION_CALIBRATED 0 /* 0=不加载整车融合标定。 */` |

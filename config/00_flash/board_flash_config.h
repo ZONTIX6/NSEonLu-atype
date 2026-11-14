@@ -12,7 +12,7 @@
 #define BOARD_FLASH_PROGRAMMER 1 /* 下载器：1=DAPLink/OpenOCD，2=J-Link/J-Flash；仅Flash动作使用。 */
 #define BOARD_FLASH_PROFILE "atype-vehicle" /* 两板共用编译profile，任务由各板采集开关区分。 */
 
-/* 第一块：整车主板。CAN1接收下方A板IMU，UART7统一记录；
+/* 第一块：整车主板。CAN2接收下方A板IMU，UART7统一记录；
  * 远端IMU参与只读速度融合观测，不进入控制；安装/噪声参数另见远端IMU配置。它不是CHASSIS_BOARD/GIMBAL_BOARD分板模式。 */
 #define BOARD_FLASH_1_NAME "第一块：整车主板" /* 命令执行前显示的板卡名称。 */
 #define BOARD_FLASH_1_BUILD_DIR "build/board-1-main" /* 主板输出目录；build下使用英文字母/数字/下划线/连字符和斜杠。 */
@@ -31,7 +31,7 @@
 /* 功率/卡尔曼切换统一修改 ../_vofa/vofa_config.h 中的 VOFA_OBSERVATION_PROFILE。 */
 #define BOARD_FLASH_1_USB_TELEMETRY_ENABLE 1 /* 1=保留USB网页遥测；视觉应使用UART，不能同时选USB视觉。 */
 
-/* 第二块：刚性固定在底盘的下方 A 板。仅采样、温控和CAN1发送，不初始化整车电机/遥控任务。
+/* 第二块：刚性固定在底盘的下方 A 板。仅采样、温控和CAN2发送，不初始化整车电机/遥控任务。
  * 位置补偿在主板完成，参数位于 30_velocity_observation/chassis_remote_imu_config.h。 */
 #define BOARD_FLASH_2_NAME "第二块：底盘IMU采集板" /* 命令执行前显示的板卡名称。 */
 #define BOARD_FLASH_2_BUILD_DIR "build/board-2-imu" /* 独立输出目录，不能与第一块相同。 */
@@ -40,7 +40,7 @@
 #define BOARD_FLASH_2_CHASSIS_FORCE_CALIBRATION_ENABLE 0 /* 0=关闭力控标定工具。 */
 #define BOARD_FLASH_2_ATYPE_BENCH_MODE 0 /* 0=不使用整车台架任务。 */
 #define BOARD_FLASH_2_IMU_CAPTURE_ONLY 1 /* 1=仅IMU采集固件。 */
-#define BOARD_FLASH_2_IMU_CAPTURE_CAN_TX_ENABLE 1 /* 1=经CAN1发送IMU，主板对应开启接收。 */
+#define BOARD_FLASH_2_IMU_CAPTURE_CAN_TX_ENABLE 1 /* 1=经CAN2发送IMU，主板对应开启接收。 */
 #define BOARD_FLASH_2_CHASSIS_IMU_CAN_RX_ENABLE 0 /* 0=不作为整车接收端。 */
 #define BOARD_FLASH_2_CHASSIS_VELOCITY_FUSION_ENABLE 0 /* 0=不运行整车速度融合。 */
 #define BOARD_FLASH_2_CHASSIS_VELOCITY_FUSION_CALIBRATED 0 /* 0=不加载整车融合标定。 */

@@ -99,7 +99,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan)
 ```
 
-- `CANServiceInit()`在每条总线首次注册设备时启动对应 CAN，并开启 FIFO0/FIFO1 消息通知。同一总线后续注册不会重复启动；仅使用 CAN1 的 IMU 采集板不会启动 CAN2。注册成功后可立即发送，保留电机初始化时发送模式命令的行为。
+- `CANServiceInit()`在每条总线首次注册设备时启动对应 CAN，并开启 FIFO0/FIFO1 消息通知。同一总线后续注册不会重复启动；仅使用 CAN2 的 IMU 采集板不会启动 CAN1。注册成功后可立即发送，保留电机初始化时发送模式命令的行为。
 
 - `CANRegister()`须在 `BSPInit()` / `DWT_Init()` 之后调用。启动等待采用 DWT 原始周期计数，10 ms 内未退出初始化则设置 `HAL_CAN_ERROR_TIMEOUT` 和 `HAL_CAN_STATE_ERROR`，进入现有 `Error_Handler()`，停止启动而非继续运行。这在 `RobotInit()` 关闭全局中断、HAL 毫秒时钟停止时仍有效；DWT 未初始化、CAN 状态不允许启动或消息通知启用失败也进入错误处理。该处理不会自动重试或恢复总线。
 
