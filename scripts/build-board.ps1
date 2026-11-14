@@ -2,7 +2,8 @@ param(
     [ValidateSet('Show','Build','Flash')][string]$Action='Build',
     [ValidateRange(0,2)][int]$Board=0,
     [string]$ConfigFile=(Join-Path $PSScriptRoot '../config/00_flash/board_flash_config.h'),
-    [ValidateRange(1,64)][int]$Jobs=8
+    [ValidateRange(1,64)][int]$Jobs=8,
+    [ValidateSet('DAP','JLink')][string]$Programmer
 )
 $ErrorActionPreference='Stop'
 $OutputEncoding=[Text.UTF8Encoding]::new($false)
@@ -31,6 +32,7 @@ if($selected -notin @('1','2')) { throw 'BOARD_FLASH_TARGET must be 1 or 2.' }
 if($Board -ne 0) { $selected=[string]$Board }
 $programmerId=Setting 'BOARD_FLASH_PROGRAMMER'
 if($programmerId -notin @('1','2')) { throw 'BOARD_FLASH_PROGRAMMER must be 1 (DAP) or 2 (JLink).' }
+if($Programmer) { $programmerId=if($Programmer -eq 'DAP') { '1' } else { '2' } }
 $profile=Setting 'BOARD_FLASH_PROFILE'
 if($profile -notin @('atype-vehicle','atype-bench','atype-direct')) { throw 'Invalid BOARD_FLASH_PROFILE.' }
 $board1Dir=Setting 'BOARD_FLASH_1_BUILD_DIR'

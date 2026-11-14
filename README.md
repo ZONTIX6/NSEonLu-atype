@@ -19,7 +19,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Act
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Flash
 ```
 
-VS Code 也提供 `show selected board`、`build selected board`、`flash selected board` 三个任务。[主板构建说明](config/README.md#主板怎样构建与烧录)列出下载器选择方法。下面的手动 Make/CMake、原有任务与 F5 调试入口继续使用各自参数，不读取此切换文件。
+VS Code 默认 `build task` 和 `build selected board` 按 `BOARD_FLASH_TARGET` 构建；`download dap` / `download jlink` 先构建所选板卡，再使用任务指定的下载器烧录。`show selected board` 显示配置，`flash selected board` 使用配置指定的板卡和下载器。F5 的 ST-Link / DAPlink / Jlink 固定通过 `build main board` 构建 Board 1，并加载 `build/board-1-main/basic_framework.elf`；attach 使用同一主板 ELF。修改 `BOARD_FLASH_1_BUILD_DIR` 时，同步更新 `.vscode/launch.json` 中的 ELF 路径。[主板构建说明](config/README.md#主板怎样构建与烧录)列出下载器选择方法。下面的手动 Make/CMake 仍需显式传入双板参数。
 
 ```powershell
 make -j8 PROFILE=atype-vehicle

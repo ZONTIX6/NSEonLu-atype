@@ -42,7 +42,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Act
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Flash -Board 1
 ```
 
-VS Code 的 `show selected board`、`build selected board`、`flash selected board` 任务仍可使用。`Flash` 先构建，失败时停止；脚本不会识别实际插入的硬件。手动 Make/CMake 和 F5 不读取此预设，需显式传接收/融合等参数。两板接线与构建见 [集成说明](../docs/dual-a-imu-integration.md)。对第二板使用同样的 Show/Build/Flash 命令并改为 `-Board 2`。
+VS Code 默认 `build task` 委托 `build selected board` 读取所选板卡预设；`download dap` / `download jlink` 通过脚本的 `-Programmer DAP/JLink` 指定下载器，并按 `BOARD_FLASH_TARGET` 选择板卡。`show selected board`、`build selected board`、`flash selected board` 继续使用配置文件中的选择。`Flash` 先构建，失败时停止；脚本不会识别实际插入的硬件。F5 的 ST-Link / DAPlink / Jlink 固定构建 Board 1，调试与 attach 的 ELF 为 `build/board-1-main/basic_framework.elf`；修改 `BOARD_FLASH_1_BUILD_DIR` 时同步更新 `.vscode/launch.json`。手动 Make/CMake 需显式传接收/融合等参数。两板接线与构建见 [集成说明](../docs/dual-a-imu-integration.md)。对第二板使用同样的 Show/Build/Flash 命令并改为 `-Board 2`。
 
 `IMU_CAPTURE_ONLY=1` 仅保留本板 IMU 采样与温控；搭配 `IMU_CAPTURE_CAN_TX_ENABLE=1` 通过 CAN1 发送，搭配 UART 遥测则可做本地诊断。采集板不得同时启用整车 CAN 接收或远端融合。
 

@@ -231,6 +231,25 @@ class BoardFlashTests(unittest.TestCase):
         self.assertIn("download_jlink", jlink["flashArguments"])
         self.assertEqual(dap["buildArguments"], jlink["buildArguments"])
 
+    def test_named_download_overrides_programmer_and_preserves_selected_board(self):
+        for configured, requested, target in ((2, "DAP", "download_dap"),
+                                              (1, "JLink", "download_jlink")):
+            with self.subTest(programmer=requested):
+                path = self.config_with(BOARD_FLASH_TARGET=2, BOARD_FLASH_PROGRAMMER=configured)
+                baseline = self.show("-ConfigFile", path)
+                selected = self.show("-ConfigFile", path, "-Programmer", requested)
+                self.assertEqual(selected["board"], 2)
+                self.assertEqual(selected["programmer"], requested)
+                self.assertEqual(selected["flashArguments"][0], target)
+                self.assertEqual(selected["buildArguments"], baseline["buildArguments"])
+                self.assertEqual(selected["flashArguments"][1:], baseline["flashArguments"][1:])
+        self.assertEqual(self.commands(), [])
+
+    def test_invalid_programmer_override_stops_before_tools(self):
+        result = self.invoke("-Action", "Flash", "-Programmer", "unknown")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.commands(), [])
+
     def test_show_for_flash_configuration_never_invokes_a_tool(self):
         self.show("-Board", 2, "-Jobs", 3)
         self.assertEqual(self.commands(), [])

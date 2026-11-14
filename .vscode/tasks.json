@@ -3,33 +3,63 @@
   "tasks": [
     {
       "label": "build task",
-      "type": "shell",
-      "command": "mingw32-make -j24",
+      "dependsOn": "build selected board",
       "problemMatcher": [],
       "group": {
         "kind": "build",
         "isDefault": true
-      }
+      },
+      "detail": "默认构建入口；读取 config/00_flash/board_flash_config.h 当前选择的板卡预设。"
     },
     {
       "label": "download dap",
-      "type": "shell",
-      "command": "mingw32-make download_dap",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/build-board.ps1",
+        "-Action",
+        "Flash",
+        "-Programmer",
+        "DAP"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
       "group": {
         "kind": "build",
         "isDefault": false
       },
-      "dependsOn": "build task"
+      "detail": "先构建当前选择的板卡预设，再通过 DAP 烧录；BOARD_FLASH_TARGET 选择板卡。"
     },
     {
       "label": "download jlink",
-      "type": "shell",
-      "command": "mingw32-make download_jlink",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/build-board.ps1",
+        "-Action",
+        "Flash",
+        "-Programmer",
+        "JLink"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
       "group": {
         "kind": "build",
         "isDefault": false
       },
-      "dependsOn": "build task"
+      "detail": "先构建当前选择的板卡预设，再通过 J-Link 烧录；BOARD_FLASH_TARGET 选择板卡。"
     },
     {
       "label": "log",
@@ -71,6 +101,27 @@
         "isDefault": false
       },
       "detail": "调试器生成的任务。"
+    },
+    {
+      "label": "build main board",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/build-board.ps1",
+        "-Action",
+        "Build",
+        "-Board",
+        "1"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "F5 主板调试构建；固定读取 BOARD_FLASH_1_ 预设，输出目录须与 launch.json 的 executable 对应。"
     },
     {
       "label": "build selected board",
