@@ -1,5 +1,5 @@
 {
-    // F5/attach 跟随 BOARD_FLASH_TARGET；预任务准备所选板卡的 ELF。
+    // F5/Jlink-attach 跟随 BOARD_FLASH_TARGET；DAP-attach 固定使用第一块主板 ELF。
     "version": "0.2.0",
     "configurations": [
          {
@@ -79,8 +79,7 @@
         {
             "name": "DAP-attach",
             "cwd": "${workspaceRoot}",
-            "executable": "${workspaceRoot}\\build\\selected-board.elf",
-            "preLaunchTask": "prepare selected board symbols",
+            "executable": "${workspaceRoot}\\build\\board-1-main\\basic_framework.elf",
             "request": "attach",
             "type": "cortex-debug",
             "device": "STM32F427II",

@@ -302,17 +302,24 @@ class BoardFlashTests(unittest.TestCase):
         return Path(launch["executable"].replace("${workspaceRoot}", str(project))
                     .replace("${workspaceFolder}", str(project)))
 
-    def test_debug_entries_load_the_configured_board_when_switching_back_and_forth(self):
+    def test_debug_entries_follow_selection_except_dap_attach_stays_on_main_board(self):
         project, tasks, launches = self.debug_fixture()
         for board in (2, 1):
             self.select_debug_board(project, board)
             for launch in launches:
                 with self.subTest(board=board, launch=launch["name"]):
                     before = len(self.commands())
-                    result = self.run_debug_task(project, tasks, launch)
-                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    if launch["name"] == "DAP-attach":
+                        self.assertEqual(launch["request"], "attach")
+                        self.assertNotIn("preLaunchTask", launch)
+                        expected_board = 1
+                    else:
+                        result = self.run_debug_task(project, tasks, launch)
+                        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                        self.assertNotIn("programmer:", result.stdout)
+                        expected_board = board
                     self.assertEqual(self.debug_executable(project, launch).read_bytes(),
-                                     f"board-{board}-elf".encode())
+                                     f"board-{expected_board}-elf".encode())
                     commands = self.commands()[before:]
                     if launch["request"] == "launch":
                         self.assertEqual(len(commands), 1, commands)
@@ -320,7 +327,6 @@ class BoardFlashTests(unittest.TestCase):
                         self.assertNotIn("download_", commands[0])
                     else:
                         self.assertEqual(commands, [])
-                    self.assertNotIn("programmer:", result.stdout)
 
     def test_failed_debug_preparation_cannot_reuse_the_previous_board_elf(self):
         for failure in ("build", "config", "missing-elf"):
