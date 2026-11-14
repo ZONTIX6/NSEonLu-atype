@@ -19,7 +19,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Act
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Flash
 ```
 
-VS Code 默认 `build task` 和 `build selected board` 按 `BOARD_FLASH_TARGET` 构建；`download dap` / `download jlink` 先构建所选板卡，再使用任务指定的下载器烧录。`show selected board` 显示配置，`flash selected board` 使用配置指定的板卡和下载器。F5 的 ST-Link / DAPlink / Jlink 固定通过 `build main board` 构建 Board 1，并加载 `build/board-1-main/basic_framework.elf`；attach 使用同一主板 ELF。修改 `BOARD_FLASH_1_BUILD_DIR` 时，同步更新 `.vscode/launch.json` 中的 ELF 路径。[主板构建说明](config/README.md#主板怎样构建与烧录)列出下载器选择方法。下面的手动 Make/CMake 仍需显式传入双板参数。
+VS Code 默认 `build task` 和 `build selected board` 按 `BOARD_FLASH_TARGET` 构建；`download dap` / `download jlink` 先构建所选板卡，再使用任务指定的下载器烧录。`show selected board` 显示配置，`flash selected board` 使用配置指定的板卡和下载器。F5 的 ST-Link / DAPlink / Jlink 也跟随 `BOARD_FLASH_TARGET`：`build selected board for debug` 构建所选板卡，成功后把该板 ELF 复制为 `build/selected-board.elf` 供调试器加载；修改两板构建目录无需改 launch.json。下载器由调试菜单选择，不由 `BOARD_FLASH_PROGRAMMER` 决定。attach 准备所选板卡已有 ELF，不重编译或烧录，已有 ELF 须与板上固件一致。调试入口共用副本，切换板卡前结束当前调试会话。[主板构建说明](config/README.md#主板怎样构建与烧录)列出下载器选择方法。下面的手动 Make/CMake 仍需显式传入双板参数。
 
 ```powershell
 make -j8 PROFILE=atype-vehicle

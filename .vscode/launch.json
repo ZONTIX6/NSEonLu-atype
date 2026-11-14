@@ -1,11 +1,11 @@
 {
-    // F5 使用 Board 1 主板预设；修改主板输出目录时同步更新 executable。
+    // F5/attach 跟随 BOARD_FLASH_TARGET；预任务准备所选板卡的 ELF。
     "version": "0.2.0",
     "configurations": [
          {
         "name": "ST-Link",
          "cwd": "${workspaceRoot}",
-        "executable": "${workspaceRoot}\\build\\board-1-main\\basic_framework.elf",
+        "executable": "${workspaceRoot}\\build\\selected-board.elf",
         "request": "launch",
         "type": "cortex-debug",
 
@@ -19,7 +19,7 @@
 
         "runToEntryPoint": "main",
         "rtos": "FreeRTOS",
-        "preLaunchTask": "build main board",
+        "preLaunchTask": "build selected board for debug",
 
         "liveWatch": {
           "enabled": true,
@@ -31,7 +31,7 @@
         {
             "name": "DAPlink",
             "cwd": "${workspaceRoot}",
-            "executable": "${workspaceRoot}\\build\\board-1-main\\basic_framework.elf", // Board 1 主板 ELF，与 build main board 的产物对应。
+            "executable": "${workspaceRoot}\\build\\selected-board.elf",
             "request": "launch",
             "type": "cortex-debug",
             //使用J-link GDB Server时必须;其他GBD Server时可选（有可能帮助自动选择SVD文件）
@@ -46,7 +46,7 @@
             ],
             "runToEntryPoint": "main", // 调试时在main函数入口停下
             "rtos": "FreeRTOS",
-            "preLaunchTask": "build main board",//先构建 Board 1 双板主板预设。
+            "preLaunchTask": "build selected board for debug",
             "liveWatch": {
                 "enabled": true,
                 "samplesPerSecond": 4
@@ -58,7 +58,7 @@
         {
             "name": "Jlink",
             "cwd": "${workspaceFolder}",
-            "executable": "${workspaceRoot}\\build\\board-1-main\\basic_framework.elf",
+            "executable": "${workspaceRoot}\\build\\selected-board.elf",
             "request": "launch",
             "type": "cortex-debug",
             "device": "STM32F427II",
@@ -68,7 +68,7 @@
             "interface": "swd",
             "svdFile": "STM32F427.svd",
             "rtos": "FreeRTOS",
-            "preLaunchTask": "build main board",//先构建 Board 1 双板主板预设。
+            "preLaunchTask": "build selected board for debug",
             "liveWatch": {
                 "enabled": true,
                 "samplesPerSecond": 4
@@ -79,7 +79,8 @@
         {
             "name": "DAP-attach",
             "cwd": "${workspaceRoot}",
-            "executable": "${workspaceRoot}\\build\\board-1-main\\basic_framework.elf", // Board 1 主板 ELF，与 build main board 的产物对应。
+            "executable": "${workspaceRoot}\\build\\selected-board.elf",
+            "preLaunchTask": "prepare selected board symbols",
             "request": "attach",
             "type": "cortex-debug",
             "device": "STM32F427II",
@@ -92,7 +93,8 @@
         {
             "name": "Jlink-attach",
             "cwd": "${workspaceFolder}",
-            "executable": "${workspaceRoot}\\build\\board-1-main\\basic_framework.elf",
+            "executable": "${workspaceRoot}\\build\\selected-board.elf",
+            "preLaunchTask": "prepare selected board symbols",
             "request": "attach",
             "type": "cortex-debug",
             "device": "STM32F427II",

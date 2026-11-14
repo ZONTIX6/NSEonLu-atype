@@ -103,7 +103,7 @@
       "detail": "调试器生成的任务。"
     },
     {
-      "label": "build main board",
+      "label": "build selected board for debug",
       "type": "process",
       "command": "powershell.exe",
       "args": [
@@ -113,15 +113,32 @@
         "-File",
         "${workspaceFolder}/scripts/build-board.ps1",
         "-Action",
-        "Build",
-        "-Board",
-        "1"
+        "Debug"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
       },
       "problemMatcher": [],
-      "detail": "F5 主板调试构建；固定读取 BOARD_FLASH_1_ 预设，输出目录须与 launch.json 的 executable 对应。"
+      "detail": "F5 按 BOARD_FLASH_TARGET 构建，成功后准备所选板卡的调试 ELF；下载器由调试配置选择。"
+    },
+    {
+      "label": "prepare selected board symbols",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/build-board.ps1",
+        "-Action",
+        "Symbols"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "Attach 按 BOARD_FLASH_TARGET 准备所选板卡已有 ELF，不构建或烧录；已有 ELF 须与板上固件一致。"
     },
     {
       "label": "build selected board",

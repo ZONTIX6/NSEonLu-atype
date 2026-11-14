@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('Show','Build','Flash')][string]$Action='Build',
+    [ValidateSet('Show','Build','Flash','Debug','Symbols')][string]$Action='Build',
     [ValidateRange(0,2)][int]$Board=0,
     [string]$ConfigFile=(Join-Path $PSScriptRoot '../config/00_flash/board_flash_config.h'),
     [ValidateRange(1,64)][int]$Jobs=8,
@@ -9,6 +9,12 @@ $ErrorActionPreference='Stop'
 $OutputEncoding=[Text.UTF8Encoding]::new($false)
 [Console]::OutputEncoding=$OutputEncoding
 $boardProjectRoot=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+# VS Code reads this ELF after preLaunchTask. Invalidate it even if config/build fails,
+# so choosing "Debug Anyway" cannot load a previous board's firmware or symbols.
+$debugElf=Join-Path $boardProjectRoot 'build/selected-board.elf'
+if($Action -in @('Debug','Symbols')) {
+    if(Test-Path -LiteralPath $debugElf) { Remove-Item -LiteralPath $debugElf -Force }
+}
 
 # Read only the documented flat constant format, never execute configuration text.
 $source=Get-Content -LiteralPath $ConfigFile -Raw -Encoding UTF8
@@ -96,11 +102,21 @@ if($Action -eq 'Show') {
 }
 
 Write-Host "Board $selected : $name"
-Write-Host "Output: $buildDirectory ; programmer: $programmer"
+Write-Host "Output: $buildDirectory"
+if($Action -eq 'Flash') { Write-Host "Flash programmer: $programmer" }
 Push-Location $boardProjectRoot
 try {
-    & make @buildArguments
-    if($LASTEXITCODE -ne 0) { throw "Board $selected build failed ($LASTEXITCODE); download was not started." }
+    # Attach uses the existing firmware's symbols without rebuilding or downloading.
+    if($Action -ne 'Symbols') {
+        & make @buildArguments
+        if($LASTEXITCODE -ne 0) { throw "Board $selected build failed ($LASTEXITCODE); download was not started." }
+    }
+    if($Action -in @('Debug','Symbols')) {
+        $firmware=Join-Path $boardProjectRoot "$buildDirectory/basic_framework.elf"
+        if(-not (Test-Path -LiteralPath $firmware -PathType Leaf)) { throw "Built firmware is missing: $firmware" }
+        Copy-Item -LiteralPath $firmware -Destination $debugElf -Force
+        Write-Host "Debug ELF: build/selected-board.elf <- $buildDirectory/basic_framework.elf"
+    }
     if($Action -eq 'Flash') {
         $extension=if($programmerId -eq '1') { 'bin' } else { 'hex' }
         $firmware=Join-Path $boardProjectRoot "$buildDirectory/basic_framework.$extension"

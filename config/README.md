@@ -42,7 +42,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Act
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Flash -Board 1
 ```
 
-VS Code 默认 `build task` 委托 `build selected board` 读取所选板卡预设；`download dap` / `download jlink` 通过脚本的 `-Programmer DAP/JLink` 指定下载器，并按 `BOARD_FLASH_TARGET` 选择板卡。`show selected board`、`build selected board`、`flash selected board` 继续使用配置文件中的选择。`Flash` 先构建，失败时停止；脚本不会识别实际插入的硬件。F5 的 ST-Link / DAPlink / Jlink 固定构建 Board 1，调试与 attach 的 ELF 为 `build/board-1-main/basic_framework.elf`；修改 `BOARD_FLASH_1_BUILD_DIR` 时同步更新 `.vscode/launch.json`。手动 Make/CMake 需显式传接收/融合等参数。两板接线与构建见 [集成说明](../docs/dual-a-imu-integration.md)。对第二板使用同样的 Show/Build/Flash 命令并改为 `-Board 2`。
+VS Code 默认 `build task` 委托 `build selected board` 读取所选板卡预设；`download dap` / `download jlink` 通过脚本的 `-Programmer DAP/JLink` 指定下载器，并按 `BOARD_FLASH_TARGET` 选择板卡。`show selected board`、`build selected board`、`flash selected board` 继续使用配置文件中的选择。`Flash` 先构建，失败时停止；脚本不会识别实际插入的硬件。
+
+F5 的 ST-Link / DAPlink / Jlink 跟随 `BOARD_FLASH_TARGET`：设为 `2` 并保存后，选择 Jlink 按 F5 就会构建、加载第二块 IMU 板固件；设回 `1` 则使用整车主板固件。`build selected board for debug` 调用 `-Action Debug`，成功构建后将所选 ELF 复制为 `build/selected-board.elf`；准备失败会清除旧副本，避免沿用上一块板的固件。下载器由调试菜单决定，`BOARD_FLASH_PROGRAMMER` 只选择脚本 Flash 的下载器。修改两板输出目录无需同步改 launch.json。
+
+attach 通过 `-Action Symbols` 准备所选板卡已有 ELF，不构建、不烧录；找不到 ELF 时停止，已有 ELF 须与板上固件一致。所有调试入口共用副本，切换板卡前结束当前调试会话。手动 Make/CMake 需显式传接收/融合等参数。两板接线与构建见 [集成说明](../docs/dual-a-imu-integration.md)。对第二板使用同样的 Show/Build/Flash 命令并改为 `-Board 2`。
 
 `IMU_CAPTURE_ONLY=1` 仅保留本板 IMU 采样与温控；搭配 `IMU_CAPTURE_CAN_TX_ENABLE=1` 通过 CAN1 发送，搭配 UART 遥测则可做本地诊断。采集板不得同时启用整车 CAN 接收或远端融合。
 

@@ -267,6 +267,110 @@ class BoardFlashTests(unittest.TestCase):
                 self.assertIn(f"IMU_CAPTURE_ONLY={capture}", commands[0])
                 self.assertIn(f"BUILD_DIR=build/{directory}", commands[0])
 
+    def debug_fixture(self):
+        project = self.shared_config_fixture("#define VOFA_OBSERVATION_PROFILE 2")
+        for board, directory in ((1, "board-1-main"), (2, "board-2-imu")):
+            elf = project / "build" / directory / "basic_framework.elf"
+            elf.parent.mkdir(parents=True, exist_ok=True)
+            elf.write_bytes(f"board-{board}-elf".encode())
+        for name in ("make", "mingw32-make"):
+            stub = self.directory / f"{name}.cmd"
+            stub.write_bytes(stub.read_bytes().replace(b"exit /b 7", b"exit /b 0"))
+        tasks = json.loads((ROOT / ".vscode/tasks.json").read_text(encoding="utf-8-sig"))["tasks"]
+        # Preserve strings (including URLs) while removing JSONC comments.
+        launch = (ROOT / ".vscode/launch.json").read_text(encoding="utf-8-sig")
+        launch = re.sub(r'("(?:\\.|[^"\\])*")|//[^\n]*|/\*[\s\S]*?\*/',
+                        lambda match: match.group(1) or "", launch)
+        launch = re.sub(r",\s*([}\]])", r"\1", launch)
+        return project, {task["label"]: task for task in tasks}, json.loads(launch)["configurations"]
+
+    def select_debug_board(self, project, board):
+        config = project / "config/00_flash/board_flash_config.h"
+        source = config.read_text(encoding="utf-8-sig")
+        config.write_text(re.sub(r"(^#define BOARD_FLASH_TARGET\s+)\d+",
+                                lambda match: match.group(1) + str(board), source, flags=re.M),
+                          encoding="utf-8")
+
+    def run_debug_task(self, project, tasks, launch):
+        self.assertIn("preLaunchTask", launch, launch["name"])
+        task = tasks[launch["preLaunchTask"]]
+        arguments = task["args"]
+        script = arguments[arguments.index("-File") + 1].replace("${workspaceFolder}", str(project))
+        return self.invoke(*arguments[arguments.index("-File") + 2:], script=Path(script))
+
+    def debug_executable(self, project, launch):
+        return Path(launch["executable"].replace("${workspaceRoot}", str(project))
+                    .replace("${workspaceFolder}", str(project)))
+
+    def test_debug_entries_load_the_configured_board_when_switching_back_and_forth(self):
+        project, tasks, launches = self.debug_fixture()
+        for board in (2, 1):
+            self.select_debug_board(project, board)
+            for launch in launches:
+                with self.subTest(board=board, launch=launch["name"]):
+                    before = len(self.commands())
+                    result = self.run_debug_task(project, tasks, launch)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertEqual(self.debug_executable(project, launch).read_bytes(),
+                                     f"board-{board}-elf".encode())
+                    commands = self.commands()[before:]
+                    if launch["request"] == "launch":
+                        self.assertEqual(len(commands), 1, commands)
+                        self.assertIn(f"IMU_CAPTURE_ONLY={int(board == 2)}", commands[0])
+                        self.assertNotIn("download_", commands[0])
+                    else:
+                        self.assertEqual(commands, [])
+                    self.assertNotIn("programmer:", result.stdout)
+
+    def test_failed_debug_preparation_cannot_reuse_the_previous_board_elf(self):
+        for failure in ("build", "config", "missing-elf"):
+            with self.subTest(failure=failure):
+                project, tasks, launches = self.debug_fixture()
+                launch = next(entry for entry in launches if entry["name"] == "Jlink")
+                executable = self.debug_executable(project, launch)
+                executable.parent.mkdir(parents=True, exist_ok=True)
+                executable.write_bytes(b"previous-board-elf")
+                self.select_debug_board(project, 2)
+                if failure == "build":
+                    for name in ("make", "mingw32-make"):
+                        stub = self.directory / f"{name}.cmd"
+                        stub.write_bytes(stub.read_bytes().replace(b"exit /b 0", b"exit /b 7"))
+                elif failure == "config":
+                    self.select_debug_board(project, 3)
+                else:
+                    (project / "build/board-2-imu/basic_framework.elf").unlink()
+                result = self.run_debug_task(project, tasks, launch)
+                self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertFalse(executable.exists(), "stale ELF must not remain loadable")
+
+    def test_attach_reports_missing_selected_board_elf_without_building_or_using_stale_symbols(self):
+        project, tasks, launches = self.debug_fixture()
+        self.select_debug_board(project, 2)
+        (project / "build/board-2-imu/basic_framework.elf").unlink()
+        launch = next(entry for entry in launches if entry["name"] == "Jlink-attach")
+        executable = self.debug_executable(project, launch)
+        executable.parent.mkdir(parents=True, exist_ok=True)
+        executable.write_bytes(b"previous-board-symbols")
+        result = self.run_debug_task(project, tasks, launch)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(executable.exists())
+        self.assertEqual(self.commands(), [])
+
+    def test_debug_uses_custom_selected_board_directory(self):
+        project, tasks, launches = self.debug_fixture()
+        self.select_debug_board(project, 2)
+        config = project / "config/00_flash/board_flash_config.h"
+        config.write_text(config.read_text(encoding="utf-8").replace(
+            '"build/board-2-imu"', '"build/custom/imu"'), encoding="utf-8")
+        elf = project / "build/custom/imu/basic_framework.elf"
+        elf.parent.mkdir(parents=True)
+        elf.write_bytes(b"custom-imu-elf")
+        launch = next(entry for entry in launches if entry["name"] == "Jlink")
+        result = self.run_debug_task(project, tasks, launch)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.debug_executable(project, launch).read_bytes(), b"custom-imu-elf")
+        self.assertIn("BUILD_DIR=build/custom/imu", self.commands()[0])
+
 
 if __name__ == "__main__":
     unittest.main()
