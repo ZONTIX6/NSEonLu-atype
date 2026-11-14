@@ -7,7 +7,7 @@ MEASUREMENT_SOURCE := test_vofa_measurement.c ../../application/runtime/vofa_tel
 MEASUREMENT_INCLUDES := -I../../modules/chassis_power -I../../modules/power_meter -I../../modules/referee -I../../modules/super_cap -I../../application/chassis
 
 .PHONY: test
-test: test_observation_power.exe test_observation_kalman.exe test_observation_dm.exe
+test: test_observation_power.exe test_observation_kalman.exe test_observation_remote.exe
 
 OBSERVATION_SOURCE := test_observation.c ../../application/runtime/vofa_observation.c
 OBSERVATION_HEADERS := ../../application/runtime/vofa_schema.h ../../application/runtime/vofa_observation.h ../../modules/algorithm/chassis_remote_fusion.h ../../modules/chassis_power/chassis_power_types.h ../../modules/super_cap/super_cap_types.h ../../modules/referee/referee_power.h
@@ -17,7 +17,7 @@ test_observation_power.exe: $(OBSERVATION_SOURCE) $(OBSERVATION_HEADERS) $(HEADE
 test_observation_kalman.exe: $(OBSERVATION_SOURCE) $(OBSERVATION_HEADERS) $(HEADERS)
 	$(CC) $(CFLAGS) -fno-fast-math $(filter-out -DVOFA_OBSERVATION_PROFILE=0,$(INCLUDES)) $(MEASUREMENT_INCLUDES) -DVOFA_TELEMETRY_ENABLE=1 -DVOFA_TELEMETRY_MODE=2 -DVOFA_OBSERVATION_PROFILE=2 $(OBSERVATION_SOURCE) -o $@
 
-test_observation_dm.exe: $(OBSERVATION_SOURCE) $(OBSERVATION_HEADERS) $(HEADERS)
+test_observation_remote.exe: $(OBSERVATION_SOURCE) $(OBSERVATION_HEADERS) $(HEADERS)
 	$(CC) $(CFLAGS) -fno-fast-math $(filter-out -DVOFA_OBSERVATION_PROFILE=0,$(INCLUDES)) $(MEASUREMENT_INCLUDES) -I../../modules/imu -DONE_BOARD -DCHASSIS_VELOCITY_FUSION_ENABLE=1 -DCHASSIS_IMU_CAN_RX_ENABLE=1 -DVOFA_TELEMETRY_ENABLE=1 -DVOFA_TELEMETRY_MODE=2 -DVOFA_OBSERVATION_PROFILE=2 $(OBSERVATION_SOURCE) -o $@
 
 test: test_vofa_telemetry.exe test_vofa_measurement.exe test_imu_capture.exe test_vofa_remote.exe test_vofa_remote_fusion.exe test_vofa_remote_verified.exe test_measurement_justfloat.exe test_imu_justfloat.exe test_remote_justfloat.exe test_remote_fusion_justfloat.exe test_remote_verified_justfloat.exe test_measurement_transport.exe
@@ -35,7 +35,7 @@ test: test_vofa_telemetry.exe test_vofa_measurement.exe test_imu_capture.exe tes
 	./test_measurement_transport.exe
 	./test_observation_power.exe
 	./test_observation_kalman.exe
-	./test_observation_dm.exe
+	./test_observation_remote.exe
 
 test_vofa_telemetry.exe: $(SOURCE) $(HEADERS)
 	$(CC) $(CFLAGS) $(INCLUDES) -DVOFA_TELEMETRY_ENABLE=1 -DVOFA_TELEMETRY_MODE=0 $(SOURCE) -o $@

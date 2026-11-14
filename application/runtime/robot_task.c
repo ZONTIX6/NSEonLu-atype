@@ -11,8 +11,8 @@
 #include "usb_telemetry_config.h"
 #include "chassis_control_config.h"
 
-#if USB_TELEMETRY_ENABLE || !VOFA_TELEMETRY_ENABLE || (VOFA_TELEMETRY_ENABLE && VOFA_TELEMETRY_MODE != 1 && VOFA_TELEMETRY_MODE != 2)
-#error IMU_CAPTURE_ONLY requires measurement telemetry (VOFA mode 1 or 2), and USB_TELEMETRY_ENABLE=0.
+#if USB_TELEMETRY_ENABLE || (!IMU_CAPTURE_CAN_TX_ENABLE && !VOFA_TELEMETRY_ENABLE) || (VOFA_TELEMETRY_ENABLE && VOFA_TELEMETRY_MODE != 1 && VOFA_TELEMETRY_MODE != 2)
+#error IMU_CAPTURE_ONLY requires CAN TX or measurement telemetry (VOFA mode 1 or 2), and USB_TELEMETRY_ENABLE=0.
 #endif
 #if CHASSIS_CONTROL_MODE != CHASSIS_CONTROL_SPEED || CHASSIS_VELOCITY_FUSION_ENABLE
 #error IMU_CAPTURE_ONLY requires speed control selection and CHASSIS_VELOCITY_FUSION_ENABLE=0.

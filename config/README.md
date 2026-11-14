@@ -19,21 +19,21 @@
 | `22_chassis_force` | 速度/力控选择、力控通用值、车辆标定和标定工具 | [chassis_control_config.h](22_chassis_force/chassis_control_config.h)、[chassis_force_config.c](22_chassis_force/chassis_force_config.c)、[chassis_force_config.h](22_chassis_force/chassis_force_config.h)、[chassis_force_vehicle_config.c](22_chassis_force/chassis_force_vehicle_config.c)、[chassis_force_vehicle_config.h](22_chassis_force/chassis_force_vehicle_config.h)、[force_calibration_config.h](22_chassis_force/force_calibration_config.h) |
 | `30_velocity_observation` | 速度时效、远端 IMU 安装/融合、预测功率和轮速影子滤波 | [chassis_velocity_config.h](30_velocity_observation/chassis_velocity_config.h)、[chassis_remote_imu_config.h](30_velocity_observation/chassis_remote_imu_config.h)、[predictive_power_config.h](30_velocity_observation/predictive_power_config.h)、[speed_observation_config.h](30_velocity_observation/speed_observation_config.h) |
 | `31_telemetry` | USB/RTT 遥测、标定 CSV 字段与缓冲、网页源码覆盖值 | [usb_telemetry_config.h](31_telemetry/usb_telemetry_config.h)、[rtt_telemetry_config.h](31_telemetry/rtt_telemetry_config.h)、[tuning_overrides.h](31_telemetry/tuning_overrides.h) |
-| `32_capture` | VOFA 新档通道定义、本地 IMU 诊断、DM CAN 接收与 J-Scope 影子观测 | [vofa_schema.json](32_capture/vofa_schema.json)、[imu_capture_config.h](32_capture/imu_capture_config.h)、[shadow_scope_config.h](32_capture/shadow_scope_config.h) |
+| `32_capture` | VOFA 新档通道定义、本地 IMU 诊断、双板 CAN 采集与 J-Scope 影子观测 | [vofa_schema.json](32_capture/vofa_schema.json)、[imu_capture_config.h](32_capture/imu_capture_config.h)、[shadow_scope_config.h](32_capture/shadow_scope_config.h) |
 | `90_board` | 板级绑定/可选设备、裁判旧协议与超时、日志启停 | [board_config.h](90_board/board_config.h)、[referee_config.h](90_board/referee_config.h)、[log_config.h](90_board/log_config.h) |
 | `91_motor` | DJI 电机数量、反馈滤波与驱动参数 | [dji_motor_config.h](91_motor/dji_motor_config.h) |
-| `92_imu` | 本地 IMU 参数；DM 模块 CAN 总线、接收 ID 与重力常量 | [imu_config.h](92_imu/imu_config.h)、[dm_imu_config.h](92_imu/dm_imu_config.h) |
+| `92_imu` | A 板本地 IMU 采样、温控与姿态参数 | [imu_config.h](92_imu/imu_config.h) |
 | `99_build` | 较少修改：构建配置、允许覆盖的宏、强制链接符号 | [atype.mk](99_build/atype.mk)、[atype-options.txt](99_build/atype-options.txt)、[atype-link-symbols.txt](99_build/atype-link-symbols.txt) |
 
 ## 主板怎样构建与烧录
 
-打开 [`00_flash/board_flash_config.h`](00_flash/board_flash_config.h)，主板配置沿用 `BOARD_FLASH_1_` 前缀。当前只支持主板 `1`，`-Board 2` 会报错，旧第二板预设和采集 CAN 发送已移除。`BOARD_FLASH_PROGRAMMER` 选 `1` 使用 DAP/OpenOCD，选 `2` 使用 J-Link/J-Flash；profile、输出目录也在同一文件。
+打开 [`00_flash/board_flash_config.h`](00_flash/board_flash_config.h)，`BOARD_FLASH_1_` 为整车主板，`BOARD_FLASH_2_` 为下方 IMU 采集板。`BOARD_FLASH_TARGET` 或 `-Board 1/2` 选择目标，两板使用独立构建目录。`BOARD_FLASH_PROGRAMMER` 选 `1` 使用 DAP/OpenOCD，选 `2` 使用 J-Link/J-Flash；脚本不会识别实际连接的物理板。
 
 日常只修改 [`_vofa/vofa_config.h`](_vofa/vofa_config.h) 中的 `VOFA_OBSERVATION_PROFILE`：**`1`=功率/超电，`2`=卡尔曼（默认）**，保持 `00_flash/board_flash_config.h` 中的 `BOARD_FLASH_1_VOFA_TELEMETRY_MODE=2`。两档分别输出新 schema 4/5，各 96 路，UART7 JustFloat、230400 / 8N1、20 ms 目标周期。切换后重新构建和烧录，VOFA+ 直接导出完整原始 CSV，不需要手动列名映射或单位换算。通道顺序和单位以 [`32_capture/vofa_schema.json`](32_capture/vofa_schema.json) 为准；[操作说明与两套采集动作](../docs/vofa-telemetry.md#csv-采集与交付)列出简短步骤。
 
 `VOFA_OBSERVATION_PROFILE=0` 保留旧 schema 2/3；传输模式 `0/1` 忽略用途选项，继续使用旧 19 路 JustFloat/64 或 72 路 FireWater。烧录脚本和手动 Make/CMake 共用 `_vofa/vofa_config.h` 的默认档位。显式 `VOFA_OBSERVATION_PROFILE=1/2`、CMake 的 `-DVOFA_OBSERVATION_PROFILE=1/2`，或自定义 `-ConfigFile` 中的旧 `BOARD_FLASH_1_VOFA_OBSERVATION_PROFILE` 会覆盖默认值；日常无需添加这些覆盖。已有 CMake 缓存若设过该选项，须用 `-UVOFA_OBSERVATION_PROFILE` 重新配置才能恢复读取头文件默认值。新旧 schema 的布局和单位不同，不能混用解析表。
 
-主板预设 `CHASSIS_IMU_CAN_RX_ENABLE=1` 接收 CAN2 的 DM-IMU-L1，`CHASSIS_REMOTE_IMU_FUSION_ENABLE=1` 开启只读速度融合，不接管控制。`CHASSIS_VELOCITY_FUSION_CALIBRATED=0` 只表示未启用本地云台标定路径。要记录轮速基线，把 `BOARD_FLASH_1_CHASSIS_REMOTE_IMU_FUSION_ENABLE` 改为 `0` 后重新构建，DM 接收及遥测保留。
+主板预设 `CHASSIS_IMU_CAN_RX_ENABLE=1` 接收第二块 A 板的 CAN1 数据，`CHASSIS_REMOTE_IMU_FUSION_ENABLE=1` 开启只读速度融合，不接管控制。第二板使用 `IMU_CAPTURE_ONLY=1 IMU_CAPTURE_CAN_TX_ENABLE=1`，仅采样、温控和发送，不运行整车任务。`CHASSIS_VELOCITY_FUSION_CALIBRATED=0` 表示未启用本地云台标定路径。需要轮速基线时只关闭主板远端融合，保留第二板发送和主板接收。
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Show -Board 1
@@ -42,9 +42,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Act
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Flash -Board 1
 ```
 
-VS Code 的 `show selected board`、`build selected board`、`flash selected board` 任务仍可使用。`Flash` 先构建，失败时停止；脚本不会识别实际插入的硬件。手动 Make/CMake 和 F5 不读取此预设，需显式传接收/融合等参数。DM 接线与模块设置见 [集成说明](../docs/dm-imu-integration.md)。
+VS Code 的 `show selected board`、`build selected board`、`flash selected board` 任务仍可使用。`Flash` 先构建，失败时停止；脚本不会识别实际插入的硬件。手动 Make/CMake 和 F5 不读取此预设，需显式传接收/融合等参数。两板接线与构建见 [集成说明](../docs/dual-a-imu-integration.md)。对第二板使用同样的 Show/Build/Flash 命令并改为 `-Board 2`。
 
-`IMU_CAPTURE_ONLY=1` 仅保留本板 IMU 采样、温控和 UART 诊断，不是第二板 CAN 发送模式；不得与整车 DM 接收/融合同时开启。
+`IMU_CAPTURE_ONLY=1` 仅保留本板 IMU 采样与温控；搭配 `IMU_CAPTURE_CAN_TX_ENABLE=1` 通过 CAN1 发送，搭配 UART 遥测则可做本地诊断。采集板不得同时启用整车 CAN 接收或远端融合。
 
 ## 常用调参步骤
 
@@ -52,9 +52,9 @@ VS Code 的 `show selected board`、`build selected board`、`flash selected boa
 2. 调运动与手感：底盘尺寸/跟随模式在 `02_chassis`，云台限位在 `03_gimbal`，摇杆和键鼠增益在 `05_remote`。
 3. 调发射：摩擦轮目标转速和拨弹参数在 `04_shoot/shoot_config.h`，单发热量、预留弹数和射频规划在同目录 `heat_control_config.h`。
 4. 调功率/自旋：功率外环独立 PI 的 `kp`、`ki` 在 `20_chassis_power/chassis_power_config.c` 的 `chassis_outer_loop_config`；小陀螺参数在 `21_chassis_spin`。这些不是电机 PID 参数。
-5. 调底盘 IMU 融合：在 `30_velocity_observation/chassis_remote_imu_config.h` 配置传感器到底盘的单位四元数、底盘中心到芯片的固定三维偏移、滤波噪声与时间门槛。坐标为前/左/上，偏移单位 m；默认单位旋转、零偏移和噪声仅供试运行。完成实测、独立验证并冻结参数后，才把 `CHASSIS_REMOTE_IMU_CONFIG_VERIFIED` 改为 `1`；此标识只记录审核声明，不控制算法是否运行，也不代替验收。参见 [融合说明](../docs/chassis-velocity-fusion.md) 与 [实测手册](../docs/kalman-chassis-test-and-acceptance.md)。
+5. 调底盘 IMU 融合：在 `30_velocity_observation/chassis_remote_imu_config.h` 配置传感器到底盘的单位四元数、底盘中心到芯片的固定三维偏移、滤波噪声与时间门槛。程序坐标为前/左/上，偏移单位 m；用户图示 +Y 为右，116 mm 对应这里的 `(0,-0.116,0)`。按官方板图、芯片轴定义及安装照片推导，安装四元数为 `[0,0,0,1]`（绕 Z 轴 180°）；推导过程见 [双板安装说明](../docs/dual-a-imu-integration.md#安装坐标)，实物轴向仍须核对，噪声仍是试运行初值。完成实测、独立验证并冻结参数后，才把 `CHASSIS_REMOTE_IMU_CONFIG_VERIFIED` 改为 `1`；此标识只记录审核声明，不控制算法是否运行，也不代替验收。参见 [融合说明](../docs/chassis-velocity-fusion.md) 与 [实测手册](../docs/kalman-chassis-test-and-acceptance.md)。
 
-DM 模块通信配置在 `92_imu/dm_imu_config.h`：默认 `DM_IMU_CAN_BUS=2`、`DM_IMU_CAN_RX_ID=0x11`、`DM_IMU_GRAVITY_MPS2=9.80665f`。模块的 `MST_ID` 必须与接收 ID 一致；`0x11` 是项目示例配置，不保证是模块出厂值。主板仅被动接收，模块需在厂商上位机设为 CAN 1 Mbps、主动上报 100 Hz，并启用加速度、角速度和四元数。
+板间通信为 CAN1、1 Mbps、标准 ID `0x520`，采集任务名义每 20 ms 尝试发送一组。主板使用源板 INS 已去重力的导航系加速度，只做安装与中心偏移补偿，不再使用 DM 模块的重力常量或协议换算。
 
 MPU6500 与旧 BMI088 温控 PID 在 `01_pid/pid_config.c` 中分别命名，当前 A 板使用 MPU6500；温度目标和 IMU 安装参数在 `92_imu/imu_config.h`。
 

@@ -58,6 +58,7 @@ int main(void)
     source_imu.first_rx_tick_ms = start - 5U;
     source_imu.last_rx_tick_ms = start - 3U;
     source_imu.sample.sequence = 27;
+    source_imu.sample.source_age_ms = 2;
     source_imu.sample.quaternion[0] = 1.0f;
     source_imu.sample.accel_n_mps2[0] = 2.5f;
 #endif
@@ -103,10 +104,11 @@ int main(void)
     assert(fabsf(field(VOFA_KALMAN_TARGET_WZ_RADPS) - 1.5707963f) < 1e-6f);
     assert(field(VOFA_KALMAN_ATTEMPT_FLAGS) == 7);
 #if CHASSIS_IMU_CAN_RX_ENABLE
-    assert(field(VOFA_KALMAN_IMU_SOURCE) == 2);
+    assert(field(VOFA_KALMAN_IMU_SOURCE) == 1);
     assert(field(VOFA_KALMAN_IMU_AX_MPS2) == 2.5f);
-    assert(field(VOFA_KALMAN_IMU_AGE_MS) == 5);
+    assert(field(VOFA_KALMAN_IMU_AGE_MS) == 7);
     assert(field(VOFA_KALMAN_IMU_RECEIVE_AGE_MS) == 3);
+    assert(field(VOFA_KALMAN_IMU_SOURCE_AGE_MS) == 2);
 #endif
 #endif
     uint8_t saved[388]; memcpy(saved, active, sizeof saved);

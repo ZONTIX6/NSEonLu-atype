@@ -45,7 +45,10 @@ static ChassisFusedVelocitySnapshot_s Step(bool new_remote)
         ++remote.sample.sequence;
         remote.sample.tick_ms=900000+tick;
         remote.sample.source_age_ms=2;
-        remote.sample.quaternion[0]=1;
+        /* Photographed A-board mounting is yaw(pi) relative to the chassis;
+         * this fixture keeps the chassis forward axis aligned with nav +X. */
+        remote.sample.quaternion[0]=0;
+        remote.sample.quaternion[3]=1;
         remote.sample.accel_n_mps2[0]=1;
         remote.first_rx_tick_ms=tick-1;
         remote.last_rx_tick_ms=tick;

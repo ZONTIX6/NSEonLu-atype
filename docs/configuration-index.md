@@ -1,8 +1,8 @@
 # 完整宏与初始化参数索引
 
-更新日期：2026-11-13。当前目标为 STM32F427 A 板。配套说明：[配置指南](configuration-guide.md)、[宏迁移表](atype-macro-migration.md)。
+更新日期：2026-11-14。当前目标为 STM32F427 A 板。配套说明：[配置指南](configuration-guide.md)、[宏迁移表](atype-macro-migration.md)。
 
-由 `scripts/generate-configuration-index.py` 扫描 393 个项目 C/H 文件，记录 4418 条预处理、配置初始化和 HAL/NVIC 项。预处理条目包含互斥分支与保护宏，不能将所有条目同时理解为有效配置。可从构建命令覆盖的选项见 `config/99_build/atype-options.txt`；普通源码 PID/功率模型初值也列在所属文件下。
+由 `scripts/generate-configuration-index.py` 扫描 397 个项目 C/H 文件，记录 4491 条预处理、配置初始化和 HAL/NVIC 项。预处理条目包含互斥分支与保护宏，不能将所有条目同时理解为有效配置。可从构建命令覆盖的选项见 `config/99_build/atype-options.txt`；普通源码 PID/功率模型初值也列在所属文件下。
 
 `modules/imu/ins_task.c`、`BMI088driver.c`、`BMI088Middleware.c` 是未链接的旧 C 板实现；当前 INS 只链接 MPU6500 和公共数学接口。便携副本有独立 API，未加入固件链接。
 
@@ -134,46 +134,46 @@
 | [173](../application/chassis/chassis.c#L173) | 配置初值 | `.direction={OMNI_X_LF_DIRECTION,OMNI_X_RF_DIRECTION,OMNI_X_LB_DIRECTION,OMNI_X_RB_DIRECTION}};` |
 | [175](../application/chassis/chassis.c#L175) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |
 | [214](../application/chassis/chassis.c#L214) | 预处理 | `#endif` |
-| [254](../application/chassis/chassis.c#L254) | 预处理 | `#if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP` |
-| [256](../application/chassis/chassis.c#L256) | 预处理 | `#endif` |
-| [257](../application/chassis/chassis.c#L257) | 预处理 | `#if POWER_METER_ENABLE` |
-| [259](../application/chassis/chassis.c#L259) | 预处理 | `#endif` |
-| [262](../application/chassis/chassis.c#L262) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |
-| [276](../application/chassis/chassis.c#L276) | 预处理 | `#endif` |
-| [287](../application/chassis/chassis.c#L287) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED && POWER_METER_ENABLE` |
-| [292](../application/chassis/chassis.c#L292) | 预处理 | `#if CHASSIS_POWER_CONTROL_STAGE >= 1` |
-| [297](../application/chassis/chassis.c#L297) | 预处理 | `#endif` |
-| [299](../application/chassis/chassis.c#L299) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
-| [310](../application/chassis/chassis.c#L310) | 预处理 | `#if CHASSIS_POWER_CONTROL_STAGE >= 2` |
-| [313](../application/chassis/chassis.c#L313) | 预处理 | `#endif` |
-| [339](../application/chassis/chassis.c#L339) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |
-| [352](../application/chassis/chassis.c#L352) | 预处理 | `#endif` |
-| [353](../application/chassis/chassis.c#L353) | 预处理 | `#endif` |
-| [354](../application/chassis/chassis.c#L354) | 预处理 | `#endif` |
-| [355](../application/chassis/chassis.c#L355) | 预处理 | `#ifdef CHASSIS_BOARD` |
-| [359](../application/chassis/chassis.c#L359) | 预处理 | `#else` |
-| [370](../application/chassis/chassis.c#L370) | 预处理 | `#endif` |
-| [371](../application/chassis/chassis.c#L371) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
-| [375](../application/chassis/chassis.c#L375) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |
-| [379](../application/chassis/chassis.c#L379) | 预处理 | `#endif` |
-| [380](../application/chassis/chassis.c#L380) | 预处理 | `#endif` |
-| [402](../application/chassis/chassis.c#L402) | 预处理 | `#ifdef ONE_BOARD` |
-| [404](../application/chassis/chassis.c#L404) | 预处理 | `#endif` |
-| [405](../application/chassis/chassis.c#L405) | 预处理 | `#ifdef CHASSIS_BOARD` |
-| [419](../application/chassis/chassis.c#L419) | 预处理 | `#endif // CHASSIS_BOARD` |
-| [425](../application/chassis/chassis.c#L425) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
-| [429](../application/chassis/chassis.c#L429) | 预处理 | `#else` |
-| [431](../application/chassis/chassis.c#L431) | 预处理 | `#endif` |
-| [444](../application/chassis/chassis.c#L444) | 预处理 | `#if CHASSIS_VELOCITY_FUSION_ENABLE` |
-| [446](../application/chassis/chassis.c#L446) | 预处理 | `#endif` |
-| [476](../application/chassis/chassis.c#L476) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
-| [478](../application/chassis/chassis.c#L478) | 预处理 | `#endif` |
-| [498](../application/chassis/chassis.c#L498) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
-| [508](../application/chassis/chassis.c#L508) | 预处理 | `#endif` |
-| [515](../application/chassis/chassis.c#L515) | 预处理 | `#ifdef ONE_BOARD` |
-| [517](../application/chassis/chassis.c#L517) | 预处理 | `#endif` |
-| [518](../application/chassis/chassis.c#L518) | 预处理 | `#ifdef CHASSIS_BOARD` |
-| [523](../application/chassis/chassis.c#L523) | 预处理 | `#endif // CHASSIS_BOARD` |
+| [258](../application/chassis/chassis.c#L258) | 预处理 | `#if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP` |
+| [260](../application/chassis/chassis.c#L260) | 预处理 | `#endif` |
+| [261](../application/chassis/chassis.c#L261) | 预处理 | `#if POWER_METER_ENABLE` |
+| [263](../application/chassis/chassis.c#L263) | 预处理 | `#endif` |
+| [266](../application/chassis/chassis.c#L266) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |
+| [280](../application/chassis/chassis.c#L280) | 预处理 | `#endif` |
+| [290](../application/chassis/chassis.c#L290) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED && POWER_METER_ENABLE` |
+| [296](../application/chassis/chassis.c#L296) | 预处理 | `#if CHASSIS_POWER_CONTROL_STAGE >= 1` |
+| [301](../application/chassis/chassis.c#L301) | 预处理 | `#endif` |
+| [303](../application/chassis/chassis.c#L303) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
+| [314](../application/chassis/chassis.c#L314) | 预处理 | `#if CHASSIS_POWER_CONTROL_STAGE >= 2` |
+| [317](../application/chassis/chassis.c#L317) | 预处理 | `#endif` |
+| [343](../application/chassis/chassis.c#L343) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |
+| [356](../application/chassis/chassis.c#L356) | 预处理 | `#endif` |
+| [357](../application/chassis/chassis.c#L357) | 预处理 | `#endif` |
+| [358](../application/chassis/chassis.c#L358) | 预处理 | `#endif` |
+| [359](../application/chassis/chassis.c#L359) | 预处理 | `#ifdef CHASSIS_BOARD` |
+| [363](../application/chassis/chassis.c#L363) | 预处理 | `#else` |
+| [374](../application/chassis/chassis.c#L374) | 预处理 | `#endif` |
+| [375](../application/chassis/chassis.c#L375) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
+| [379](../application/chassis/chassis.c#L379) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |
+| [383](../application/chassis/chassis.c#L383) | 预处理 | `#endif` |
+| [384](../application/chassis/chassis.c#L384) | 预处理 | `#endif` |
+| [406](../application/chassis/chassis.c#L406) | 预处理 | `#ifdef ONE_BOARD` |
+| [408](../application/chassis/chassis.c#L408) | 预处理 | `#endif` |
+| [409](../application/chassis/chassis.c#L409) | 预处理 | `#ifdef CHASSIS_BOARD` |
+| [423](../application/chassis/chassis.c#L423) | 预处理 | `#endif // CHASSIS_BOARD` |
+| [429](../application/chassis/chassis.c#L429) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
+| [433](../application/chassis/chassis.c#L433) | 预处理 | `#else` |
+| [435](../application/chassis/chassis.c#L435) | 预处理 | `#endif` |
+| [448](../application/chassis/chassis.c#L448) | 预处理 | `#if CHASSIS_VELOCITY_FUSION_ENABLE` |
+| [450](../application/chassis/chassis.c#L450) | 预处理 | `#endif` |
+| [480](../application/chassis/chassis.c#L480) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
+| [482](../application/chassis/chassis.c#L482) | 预处理 | `#endif` |
+| [502](../application/chassis/chassis.c#L502) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
+| [512](../application/chassis/chassis.c#L512) | 预处理 | `#endif` |
+| [519](../application/chassis/chassis.c#L519) | 预处理 | `#ifdef ONE_BOARD` |
+| [521](../application/chassis/chassis.c#L521) | 预处理 | `#endif` |
+| [522](../application/chassis/chassis.c#L522) | 预处理 | `#ifdef CHASSIS_BOARD` |
+| [527](../application/chassis/chassis.c#L527) | 预处理 | `#endif // CHASSIS_BOARD` |
 
 ## application/chassis/chassis.h
 
@@ -244,65 +244,53 @@
 | [22](../application/chassis/chassis_init.c#L22) | 预处理 | `#endif` |
 | [23](../application/chassis/chassis_init.c#L23) | 预处理 | `#ifdef ONE_BOARD` |
 | [26](../application/chassis/chassis_init.c#L26) | 预处理 | `#endif` |
-| [43](../application/chassis/chassis_init.c#L43) | 配置初值 | `Motor_Init_Config_s chassis_motor_config = {` |
-| [44](../application/chassis/chassis_init.c#L44) | 配置初值 | `.can_init_config.can_handle = &hcan1,` |
-| [45](../application/chassis/chassis_init.c#L45) | 配置初值 | `.controller_param_init_config = {` |
-| [46](../application/chassis/chassis_init.c#L46) | 配置初值 | `.speed_PID = pid_chassis_speed_config,` |
-| [47](../application/chassis/chassis_init.c#L47) | 配置初值 | `},` |
-| [48](../application/chassis/chassis_init.c#L48) | 配置初值 | `.controller_setting_init_config = {` |
-| [49](../application/chassis/chassis_init.c#L49) | 配置初值 | `.angle_feedback_source = MOTOR_FEED,` |
-| [50](../application/chassis/chassis_init.c#L50) | 配置初值 | `.speed_feedback_source = MOTOR_FEED,` |
-| [51](../application/chassis/chassis_init.c#L51) | 配置初值 | `.outer_loop_type = SPEED_LOOP,` |
-| [52](../application/chassis/chassis_init.c#L52) | 配置初值 | `.close_loop_type = SPEED_LOOP,` |
-| [53](../application/chassis/chassis_init.c#L53) | 配置初值 | `},` |
-| [54](../application/chassis/chassis_init.c#L54) | 配置初值 | `.motor_type = M3508,` |
-| [73](../application/chassis/chassis_init.c#L73) | 配置初值 | `ChassisPower_Init_Config_s power_config = {` |
-| [74](../application/chassis/chassis_init.c#L74) | 配置初值 | `.budget=chassis_budget_config,.outer=chassis_outer_loop_config,` |
-| [75](../application/chassis/chassis_init.c#L75) | 配置初值 | `.transient=ChassisPowerTransientDefaultConfig(),.stage=CHASSIS_POWER_CONTROL_STAGE,` |
-| [76](../application/chassis/chassis_init.c#L76) | 配置初值 | `.use_supercap=CHASSIS_POWER_SOURCE_MODE==CHASSIS_POWER_SOURCE_SUPERCAP,` |
-| [77](../application/chassis/chassis_init.c#L77) | 配置初值 | `.meter_enabled=POWER_METER_ENABLE!=0,.buffer_enabled=CHASSIS_BUFFER_POWER_ENABLE!=0,` |
-| [78](../application/chassis/chassis_init.c#L78) | 配置初值 | `.algorithm = {` |
-| [79](../application/chassis/chassis_init.c#L79) | 配置初值 | `.safety_factor = CHASSIS_POWER_SAFETY_FACTOR,` |
-| [80](../application/chassis/chassis_init.c#L80) | 配置初值 | `.small_error_threshold_rpm = CHASSIS_POWER_SMALL_ERROR_RPM,` |
-| [81](../application/chassis/chassis_init.c#L81) | 配置初值 | `.reserved_power_threshold_w = CHASSIS_POWER_RESERVED_THRESHOLD_W,` |
-| [82](../application/chassis/chassis_init.c#L82) | 配置初值 | `.per_motor_reserved_power_w = CHASSIS_POWER_PER_MOTOR_RESERVED_W,` |
-| [83](../application/chassis/chassis_init.c#L83) | 配置初值 | `.max_current_command = CHASSIS_POWER_MAX_CURRENT_COMMAND,` |
-| [84](../application/chassis/chassis_init.c#L84) | 配置初值 | `},` |
-| [90](../application/chassis/chassis_init.c#L90) | 配置初值 | `const DJIPowerAdapterConfig_s adapter_config={.motors={motor_lf,motor_rf,motor_lb,motor_rb},` |
-| [91](../application/chassis/chassis_init.c#L91) | 配置初值 | `.count=4,.max_current_command=power_config.algorithm.max_current_command};` |
-| [102](../application/chassis/chassis_init.c#L102) | 预处理 | `#if REFEREE_ENABLE` |
-| [104](../application/chassis/chassis_init.c#L104) | 预处理 | `#endif` |
-| [106](../application/chassis/chassis_init.c#L106) | 预处理 | `#if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP` |
-| [107](../application/chassis/chassis_init.c#L107) | 配置初值 | `SuperCap_Init_Config_s cap_conf = {` |
-| [108](../application/chassis/chassis_init.c#L108) | 配置初值 | `.can_config = {` |
-| [109](../application/chassis/chassis_init.c#L109) | 配置初值 | `.can_handle = BOARD_SUPERCAP_CAN,` |
-| [110](../application/chassis/chassis_init.c#L110) | 配置初值 | `.tx_id = SUPERCAP_COMMAND_CAN_ID,` |
-| [111](../application/chassis/chassis_init.c#L111) | 配置初值 | `.rx_id = SUPERCAP_STATUS_CAN_ID,` |
-| [112](../application/chassis/chassis_init.c#L112) | 配置初值 | `},` |
-| [113](../application/chassis/chassis_init.c#L113) | 配置初值 | `.offline_reload_count = 20U,` |
-| [114](../application/chassis/chassis_init.c#L114) | 配置初值 | `.input_power_feedback_enabled = CHASSIS_BUFFER_POWER_ENABLE != 0,` |
-| [117](../application/chassis/chassis_init.c#L117) | 预处理 | `#endif` |
-| [118](../application/chassis/chassis_init.c#L118) | 预处理 | `#if POWER_METER_ENABLE` |
-| [119](../application/chassis/chassis_init.c#L119) | 配置初值 | `const PowerMeter_Init_Config_s power_meter_config = {` |
+| [40](../application/chassis/chassis_init.c#L40) | 配置初值 | `Motor_Init_Config_s chassis_motor_config = {` |
+| [41](../application/chassis/chassis_init.c#L41) | 配置初值 | `.can_init_config.can_handle = &hcan1,` |
+| [42](../application/chassis/chassis_init.c#L42) | 配置初值 | `.controller_param_init_config = {` |
+| [43](../application/chassis/chassis_init.c#L43) | 配置初值 | `.speed_PID = pid_chassis_speed_config,` |
+| [44](../application/chassis/chassis_init.c#L44) | 配置初值 | `},` |
+| [45](../application/chassis/chassis_init.c#L45) | 配置初值 | `.controller_setting_init_config = {` |
+| [46](../application/chassis/chassis_init.c#L46) | 配置初值 | `.angle_feedback_source = MOTOR_FEED,` |
+| [47](../application/chassis/chassis_init.c#L47) | 配置初值 | `.speed_feedback_source = MOTOR_FEED,` |
+| [48](../application/chassis/chassis_init.c#L48) | 配置初值 | `.outer_loop_type = SPEED_LOOP,` |
+| [49](../application/chassis/chassis_init.c#L49) | 配置初值 | `.close_loop_type = SPEED_LOOP,` |
+| [50](../application/chassis/chassis_init.c#L50) | 配置初值 | `},` |
+| [51](../application/chassis/chassis_init.c#L51) | 配置初值 | `.motor_type = M3508,` |
+| [74](../application/chassis/chassis_init.c#L74) | 配置初值 | `const DJIPowerAdapterConfig_s adapter_config={.motors={motor_lf,motor_rf,motor_lb,motor_rb},` |
+| [75](../application/chassis/chassis_init.c#L75) | 配置初值 | `.count=4,.max_current_command=power_config.algorithm.max_current_command};` |
+| [86](../application/chassis/chassis_init.c#L86) | 预处理 | `#if REFEREE_ENABLE` |
+| [88](../application/chassis/chassis_init.c#L88) | 预处理 | `#endif` |
+| [90](../application/chassis/chassis_init.c#L90) | 预处理 | `#if CHASSIS_POWER_SOURCE_MODE == CHASSIS_POWER_SOURCE_SUPERCAP` |
+| [91](../application/chassis/chassis_init.c#L91) | 配置初值 | `SuperCap_Init_Config_s cap_conf = {` |
+| [92](../application/chassis/chassis_init.c#L92) | 配置初值 | `.can_config = {` |
+| [93](../application/chassis/chassis_init.c#L93) | 配置初值 | `.can_handle = BOARD_SUPERCAP_CAN,` |
+| [94](../application/chassis/chassis_init.c#L94) | 配置初值 | `.tx_id = SUPERCAP_COMMAND_CAN_ID,` |
+| [95](../application/chassis/chassis_init.c#L95) | 配置初值 | `.rx_id = SUPERCAP_STATUS_CAN_ID,` |
+| [96](../application/chassis/chassis_init.c#L96) | 配置初值 | `},` |
+| [97](../application/chassis/chassis_init.c#L97) | 配置初值 | `.offline_reload_count = 20U,` |
+| [98](../application/chassis/chassis_init.c#L98) | 配置初值 | `.input_power_feedback_enabled = CHASSIS_BUFFER_POWER_ENABLE != 0,` |
+| [101](../application/chassis/chassis_init.c#L101) | 预处理 | `#endif` |
+| [102](../application/chassis/chassis_init.c#L102) | 预处理 | `#if POWER_METER_ENABLE` |
+| [103](../application/chassis/chassis_init.c#L103) | 配置初值 | `const PowerMeter_Init_Config_s power_meter_config = {` |
+| [104](../application/chassis/chassis_init.c#L104) | 配置初值 | `.can_config = {` |
+| [105](../application/chassis/chassis_init.c#L105) | 配置初值 | `.can_handle = BOARD_POWER_METER_CAN,` |
+| [106](../application/chassis/chassis_init.c#L106) | 配置初值 | `.tx_id = POWER_METER_STATUS_CAN_ID,` |
+| [107](../application/chassis/chassis_init.c#L107) | 配置初值 | `.rx_id = POWER_METER_STATUS_CAN_ID,` |
+| [108](../application/chassis/chassis_init.c#L108) | 配置初值 | `},` |
+| [109](../application/chassis/chassis_init.c#L109) | 配置初值 | `.offline_reload_count = 10U,` |
+| [112](../application/chassis/chassis_init.c#L112) | 预处理 | `#endif` |
+| [116](../application/chassis/chassis_init.c#L116) | 预处理 | `#ifdef CHASSIS_BOARD` |
+| [119](../application/chassis/chassis_init.c#L119) | 配置初值 | `CANComm_Init_Config_s comm_conf = {` |
 | [120](../application/chassis/chassis_init.c#L120) | 配置初值 | `.can_config = {` |
-| [121](../application/chassis/chassis_init.c#L121) | 配置初值 | `.can_handle = BOARD_POWER_METER_CAN,` |
-| [122](../application/chassis/chassis_init.c#L122) | 配置初值 | `.tx_id = POWER_METER_STATUS_CAN_ID,` |
-| [123](../application/chassis/chassis_init.c#L123) | 配置初值 | `.rx_id = POWER_METER_STATUS_CAN_ID,` |
+| [121](../application/chassis/chassis_init.c#L121) | 配置初值 | `.can_handle = &hcan2,` |
+| [122](../application/chassis/chassis_init.c#L122) | 配置初值 | `.tx_id = 0x311,` |
+| [123](../application/chassis/chassis_init.c#L123) | 配置初值 | `.rx_id = 0x312,` |
 | [124](../application/chassis/chassis_init.c#L124) | 配置初值 | `},` |
-| [125](../application/chassis/chassis_init.c#L125) | 配置初值 | `.offline_reload_count = 10U,` |
-| [128](../application/chassis/chassis_init.c#L128) | 预处理 | `#endif` |
-| [132](../application/chassis/chassis_init.c#L132) | 预处理 | `#ifdef CHASSIS_BOARD` |
-| [135](../application/chassis/chassis_init.c#L135) | 配置初值 | `CANComm_Init_Config_s comm_conf = {` |
-| [136](../application/chassis/chassis_init.c#L136) | 配置初值 | `.can_config = {` |
-| [137](../application/chassis/chassis_init.c#L137) | 配置初值 | `.can_handle = &hcan2,` |
-| [138](../application/chassis/chassis_init.c#L138) | 配置初值 | `.tx_id = 0x311,` |
-| [139](../application/chassis/chassis_init.c#L139) | 配置初值 | `.rx_id = 0x312,` |
-| [140](../application/chassis/chassis_init.c#L140) | 配置初值 | `},` |
-| [141](../application/chassis/chassis_init.c#L141) | 配置初值 | `.recv_data_len = sizeof(Chassis_Ctrl_Cmd_s),` |
-| [142](../application/chassis/chassis_init.c#L142) | 配置初值 | `.send_data_len = sizeof(Chassis_Upload_Data_s),` |
-| [146](../application/chassis/chassis_init.c#L146) | 预处理 | `#endif                                          // CHASSIS_BOARD` |
-| [148](../application/chassis/chassis_init.c#L148) | 预处理 | `#ifdef ONE_BOARD // 单板控制整车,则通过pubsub来传递消息` |
-| [151](../application/chassis/chassis_init.c#L151) | 预处理 | `#endif // ONE_BOARD` |
+| [125](../application/chassis/chassis_init.c#L125) | 配置初值 | `.recv_data_len = sizeof(Chassis_Ctrl_Cmd_s),` |
+| [126](../application/chassis/chassis_init.c#L126) | 配置初值 | `.send_data_len = sizeof(Chassis_Upload_Data_s),` |
+| [130](../application/chassis/chassis_init.c#L130) | 预处理 | `#endif                                          // CHASSIS_BOARD` |
+| [132](../application/chassis/chassis_init.c#L132) | 预处理 | `#ifdef ONE_BOARD // 单板控制整车,则通过pubsub来传递消息` |
+| [135](../application/chassis/chassis_init.c#L135) | 预处理 | `#endif // ONE_BOARD` |
 
 ## application/chassis/chassis_internal.h
 
@@ -341,15 +329,15 @@
 | [38](../application/chassis/chassis_tuning.c#L38) | 配置初值 | `.max_positive_correction_w=v[5], .positive_slew_rate_w_per_s=v[6],` |
 | [39](../application/chassis/chassis_tuning.c#L39) | 配置初值 | `.budget_drop_reset_w=v[7], .antiwindup_gain_per_s=v[8],` |
 | [40](../application/chassis/chassis_tuning.c#L40) | 配置初值 | `.low_demand_delay_s=v[9], .low_demand_decay_w_per_s=v[10]};` |
-| [66](../application/chassis/chassis_tuning.c#L66) | 配置初值 | `ChassisSpinConfig_s spin = {` |
-| [67](../application/chassis/chassis_tuning.c#L67) | 配置初值 | `.fixed_wz=v[0], .min_wz=v[1], .max_wz=v[2], .gain_wz_per_w_s=v[3],` |
-| [68](../application/chassis/chassis_tuning.c#L68) | 配置初值 | `.rise_wz_per_s=v[4], .fall_wz_per_s=v[5], .power_lpf_tau_s=v[6],` |
-| [69](../application/chassis/chassis_tuning.c#L69) | 配置初值 | `.power_deadband_w=v[7], .settle_time_s=v[8], .budget_drop_reset_w=v[9],` |
-| [70](../application/chassis/chassis_tuning.c#L70) | 配置初值 | `.sine_amplitude_wz=v[10], .sine_period_s=v[11], .sine_ramp_s=v[12],` |
-| [71](../application/chassis/chassis_tuning.c#L71) | 配置初值 | `.sine_rise_wz_per_s=v[13], .sine_fall_wz_per_s=v[14],` |
-| [72](../application/chassis/chassis_tuning.c#L72) | 配置初值 | `.sine_direction=(int8_t)v[15]};` |
-| [81](../application/chassis/chassis_tuning.c#L81) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
-| [86](../application/chassis/chassis_tuning.c#L86) | 预处理 | `#endif` |
+| [67](../application/chassis/chassis_tuning.c#L67) | 配置初值 | `ChassisSpinConfig_s spin = {` |
+| [68](../application/chassis/chassis_tuning.c#L68) | 配置初值 | `.fixed_wz=v[0], .min_wz=v[1], .max_wz=v[2], .gain_wz_per_w_s=v[3],` |
+| [69](../application/chassis/chassis_tuning.c#L69) | 配置初值 | `.rise_wz_per_s=v[4], .fall_wz_per_s=v[5], .power_lpf_tau_s=v[6],` |
+| [70](../application/chassis/chassis_tuning.c#L70) | 配置初值 | `.power_deadband_w=v[7], .settle_time_s=v[8], .budget_drop_reset_w=v[9],` |
+| [71](../application/chassis/chassis_tuning.c#L71) | 配置初值 | `.sine_amplitude_wz=v[10], .sine_period_s=v[11], .sine_ramp_s=v[12],` |
+| [72](../application/chassis/chassis_tuning.c#L72) | 配置初值 | `.sine_rise_wz_per_s=v[13], .sine_fall_wz_per_s=v[14],` |
+| [73](../application/chassis/chassis_tuning.c#L73) | 配置初值 | `.sine_direction=(int8_t)v[15]};` |
+| [82](../application/chassis/chassis_tuning.c#L82) | 预处理 | `#if CHASSIS_SPIN_DYNAMIC_ENABLED` |
+| [87](../application/chassis/chassis_tuning.c#L87) | 预处理 | `#endif` |
 
 ## application/chassis/chassis_velocity_observer.c
 
@@ -539,7 +527,7 @@
 | --- | --- | --- |
 | [6](../application/robot.c#L6) | 预处理 | `#if !IMU_CAPTURE_ONLY` |
 | [10](../application/robot.c#L10) | 预处理 | `#endif` |
-| [12](../application/robot.c#L12) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
+| [12](../application/robot.c#L12) | 预处理 | `#if IMU_CAPTURE_CAN_TX_ENABLE &#124;&#124; CHASSIS_IMU_CAN_RX_ENABLE` |
 | [14](../application/robot.c#L14) | 预处理 | `#endif` |
 | [17](../application/robot.c#L17) | 预处理 | `#ifndef ROBOT_DEF_PARAM_WARNING` |
 | [18](../application/robot.c#L18) | 预处理 | `#define ROBOT_DEF_PARAM_WARNING` |
@@ -548,7 +536,7 @@
 | [24](../application/robot.c#L24) | 预处理 | `#endif` |
 | [26](../application/robot.c#L26) | 预处理 | `#if !IMU_CAPTURE_ONLY && (defined(ONE_BOARD) &#124;&#124; defined(GIMBAL_BOARD))` |
 | [30](../application/robot.c#L30) | 预处理 | `#endif` |
-| [42](../application/robot.c#L42) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
+| [42](../application/robot.c#L42) | 预处理 | `#if IMU_CAPTURE_CAN_TX_ENABLE &#124;&#124; CHASSIS_IMU_CAN_RX_ENABLE` |
 | [44](../application/robot.c#L44) | 预处理 | `#endif` |
 | [45](../application/robot.c#L45) | 预处理 | `#if !IMU_CAPTURE_ONLY` |
 | [50](../application/robot.c#L50) | 预处理 | `#if defined(ONE_BOARD) &#124;&#124; defined(GIMBAL_BOARD)` |
@@ -585,12 +573,18 @@
 
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
-| [3](../application/runtime/chassis_imu_can.c#L3) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
-| [14](../application/runtime/chassis_imu_can.c#L14) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE && (!defined(ONE_BOARD) &#124;&#124; CHASSIS_CONTROL_MODE != CHASSIS_CONTROL_SPEED &#124;&#124; !CHASSIS_VELOCITY_FUSION_ENABLE &#124;&#124; CHASSIS_VELOCITY_FUSION_CALIBRATED &#124;&#124; !VOFA_TELEMETRY_ENABLE &#124;&#124; (VOFA_TELEMETRY_MODE != 1 && VOFA_TELEMETRY_MODE != 2))` |
-| [16](../application/runtime/chassis_imu_can.c#L16) | 预处理 | `#endif` |
-| [41](../application/runtime/chassis_imu_can.c#L41) | 配置初值 | `CAN_Init_Config_s config={.can_handle=DM_IMU_CAN_BUS==2 ? &hcan2 : &hcan1,` |
-| [42](../application/runtime/chassis_imu_can.c#L42) | 配置初值 | `.tx_id=DM_IMU_CAN_RX_ID,.rx_id=DM_IMU_CAN_RX_ID,.can_module_callback=ReceiveIMU};` |
+| [3](../application/runtime/chassis_imu_can.c#L3) | 预处理 | `#if IMU_CAPTURE_CAN_TX_ENABLE &#124;&#124; CHASSIS_IMU_CAN_RX_ENABLE` |
+| [11](../application/runtime/chassis_imu_can.c#L11) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE && (!defined(ONE_BOARD) &#124;&#124; CHASSIS_CONTROL_MODE != CHASSIS_CONTROL_SPEED &#124;&#124; !CHASSIS_VELOCITY_FUSION_ENABLE &#124;&#124; CHASSIS_VELOCITY_FUSION_CALIBRATED &#124;&#124; !VOFA_TELEMETRY_ENABLE &#124;&#124; (VOFA_TELEMETRY_MODE != 1 && VOFA_TELEMETRY_MODE != 2))` |
+| [13](../application/runtime/chassis_imu_can.c#L13) | 预处理 | `#endif` |
+| [17](../application/runtime/chassis_imu_can.c#L17) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
+| [37](../application/runtime/chassis_imu_can.c#L37) | 预处理 | `#endif` |
+| [42](../application/runtime/chassis_imu_can.c#L42) | 配置初值 | `CAN_Init_Config_s config={.can_handle=&hcan1,.tx_id=CHASSIS_IMU_CAN_DATA_ID,` |
+| [43](../application/runtime/chassis_imu_can.c#L43) | 配置初值 | `.rx_id=CHASSIS_IMU_CAN_DATA_ID};` |
+| [44](../application/runtime/chassis_imu_can.c#L44) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
 | [47](../application/runtime/chassis_imu_can.c#L47) | 预处理 | `#endif` |
+| [53](../application/runtime/chassis_imu_can.c#L53) | 预处理 | `#if IMU_CAPTURE_CAN_TX_ENABLE` |
+| [119](../application/runtime/chassis_imu_can.c#L119) | 预处理 | `#endif` |
+| [120](../application/runtime/chassis_imu_can.c#L120) | 预处理 | `#endif` |
 
 ## application/runtime/chassis_imu_can.h
 
@@ -598,9 +592,13 @@
 | --- | --- | --- |
 | [1](../application/runtime/chassis_imu_can.h#L1) | 预处理 | `#ifndef CHASSIS_IMU_CAN_H` |
 | [2](../application/runtime/chassis_imu_can.h#L2) | 预处理 | `#define CHASSIS_IMU_CAN_H` |
-| [7](../application/runtime/chassis_imu_can.h#L7) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
-| [14](../application/runtime/chassis_imu_can.h#L14) | 预处理 | `#endif` |
-| [15](../application/runtime/chassis_imu_can.h#L15) | 预处理 | `#endif` |
+| [7](../application/runtime/chassis_imu_can.h#L7) | 预处理 | `#if IMU_CAPTURE_CAN_TX_ENABLE &#124;&#124; CHASSIS_IMU_CAN_RX_ENABLE` |
+| [10](../application/runtime/chassis_imu_can.h#L10) | 预处理 | `#endif` |
+| [11](../application/runtime/chassis_imu_can.h#L11) | 预处理 | `#if IMU_CAPTURE_CAN_TX_ENABLE` |
+| [16](../application/runtime/chassis_imu_can.h#L16) | 预处理 | `#endif` |
+| [17](../application/runtime/chassis_imu_can.h#L17) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
+| [22](../application/runtime/chassis_imu_can.h#L22) | 预处理 | `#endif` |
+| [24](../application/runtime/chassis_imu_can.h#L24) | 预处理 | `#endif` |
 
 ## application/runtime/chassis_speed_observation.c
 
@@ -667,7 +665,7 @@
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
 | [4](../application/runtime/robot_task.c#L4) | 预处理 | `#if IMU_CAPTURE_ONLY` |
-| [14](../application/runtime/robot_task.c#L14) | 预处理 | `#if USB_TELEMETRY_ENABLE &#124;&#124; !VOFA_TELEMETRY_ENABLE &#124;&#124; (VOFA_TELEMETRY_ENABLE && VOFA_TELEMETRY_MODE != 1 && VOFA_TELEMETRY_MODE != 2)` |
+| [14](../application/runtime/robot_task.c#L14) | 预处理 | `#if USB_TELEMETRY_ENABLE &#124;&#124; (!IMU_CAPTURE_CAN_TX_ENABLE && !VOFA_TELEMETRY_ENABLE) &#124;&#124; (VOFA_TELEMETRY_ENABLE && VOFA_TELEMETRY_MODE != 1 && VOFA_TELEMETRY_MODE != 2)` |
 | [16](../application/runtime/robot_task.c#L16) | 预处理 | `#endif` |
 | [17](../application/runtime/robot_task.c#L17) | 预处理 | `#if CHASSIS_CONTROL_MODE != CHASSIS_CONTROL_SPEED &#124;&#124; CHASSIS_VELOCITY_FUSION_ENABLE` |
 | [19](../application/runtime/robot_task.c#L19) | 预处理 | `#endif` |
@@ -724,34 +722,47 @@
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
 | [4](../application/runtime/robot_telemetry.c#L4) | 预处理 | `#if IMU_CAPTURE_ONLY` |
-| [31](../application/runtime/robot_telemetry.c#L31) | 预处理 | `#else` |
-| [38](../application/runtime/robot_telemetry.c#L38) | 预处理 | `#if VOFA_TELEMETRY_ENABLE` |
-| [40](../application/runtime/robot_telemetry.c#L40) | 预处理 | `#if CHASSIS_CONTROL_MODE != CHASSIS_CONTROL_SPEED` |
-| [42](../application/runtime/robot_telemetry.c#L42) | 预处理 | `#endif` |
+| [5](../application/runtime/robot_telemetry.c#L5) | 预处理 | `#if IMU_CAPTURE_CAN_TX_ENABLE` |
+| [12](../application/runtime/robot_telemetry.c#L12) | 预处理 | `#else` |
+| [14](../application/runtime/robot_telemetry.c#L14) | 预处理 | `#if VOFA_TELEMETRY_MODE == 2 && VOFA_OBSERVATION_PROFILE != 0` |
+| [16](../application/runtime/robot_telemetry.c#L16) | 预处理 | `#endif` |
+| [39](../application/runtime/robot_telemetry.c#L39) | 预处理 | `#if VOFA_TELEMETRY_MODE == 2 && VOFA_OBSERVATION_PROFILE != 0` |
+| [41](../application/runtime/robot_telemetry.c#L41) | 预处理 | `#else` |
 | [43](../application/runtime/robot_telemetry.c#L43) | 预处理 | `#endif` |
-| [45](../application/runtime/robot_telemetry.c#L45) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
-| [47](../application/runtime/robot_telemetry.c#L47) | 预处理 | `#endif` |
-| [49](../application/runtime/robot_telemetry.c#L49) | 预处理 | `#if USB_TELEMETRY_ENABLE &#124;&#124; VOFA_TELEMETRY_ENABLE` |
-| [64](../application/runtime/robot_telemetry.c#L64) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_SPEED` |
-| [231](../application/runtime/robot_telemetry.c#L231) | 预处理 | `#endif` |
-| [232](../application/runtime/robot_telemetry.c#L232) | 预处理 | `#endif` |
-| [236](../application/runtime/robot_telemetry.c#L236) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
-| [238](../application/runtime/robot_telemetry.c#L238) | 预处理 | `#endif` |
-| [243](../application/runtime/robot_telemetry.c#L243) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
-| [246](../application/runtime/robot_telemetry.c#L246) | 预处理 | `#endif` |
-| [247](../application/runtime/robot_telemetry.c#L247) | 预处理 | `#if (USB_TELEMETRY_ENABLE &#124;&#124; VOFA_TELEMETRY_ENABLE) && CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_SPEED` |
-| [249](../application/runtime/robot_telemetry.c#L249) | 预处理 | `#endif` |
-| [250](../application/runtime/robot_telemetry.c#L250) | 预处理 | `#if VOFA_TELEMETRY_ENABLE` |
-| [251](../application/runtime/robot_telemetry.c#L251) | 预处理 | `#if VOFA_TELEMETRY_MODE == 1 &#124;&#124; VOFA_TELEMETRY_MODE == 2` |
-| [252](../application/runtime/robot_telemetry.c#L252) | 预处理 | `#if CHASSIS_VELOCITY_FUSION_ENABLE` |
-| [257](../application/runtime/robot_telemetry.c#L257) | 预处理 | `#else` |
+| [45](../application/runtime/robot_telemetry.c#L45) | 预处理 | `#endif /* IMU_CAPTURE_CAN_TX_ENABLE */` |
+| [47](../application/runtime/robot_telemetry.c#L47) | 预处理 | `#else` |
+| [54](../application/runtime/robot_telemetry.c#L54) | 预处理 | `#if VOFA_TELEMETRY_ENABLE` |
+| [56](../application/runtime/robot_telemetry.c#L56) | 预处理 | `#if VOFA_TELEMETRY_MODE == 2 && VOFA_OBSERVATION_PROFILE != 0` |
+| [58](../application/runtime/robot_telemetry.c#L58) | 预处理 | `#endif` |
+| [59](../application/runtime/robot_telemetry.c#L59) | 预处理 | `#if CHASSIS_CONTROL_MODE != CHASSIS_CONTROL_SPEED` |
+| [61](../application/runtime/robot_telemetry.c#L61) | 预处理 | `#endif` |
+| [62](../application/runtime/robot_telemetry.c#L62) | 预处理 | `#endif` |
+| [64](../application/runtime/robot_telemetry.c#L64) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
+| [66](../application/runtime/robot_telemetry.c#L66) | 预处理 | `#endif` |
+| [68](../application/runtime/robot_telemetry.c#L68) | 预处理 | `#if USB_TELEMETRY_ENABLE &#124;&#124; VOFA_TELEMETRY_ENABLE` |
+| [83](../application/runtime/robot_telemetry.c#L83) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_SPEED` |
+| [252](../application/runtime/robot_telemetry.c#L252) | 预处理 | `#endif` |
+| [253](../application/runtime/robot_telemetry.c#L253) | 预处理 | `#endif` |
+| [257](../application/runtime/robot_telemetry.c#L257) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
 | [259](../application/runtime/robot_telemetry.c#L259) | 预处理 | `#endif` |
-| [262](../application/runtime/robot_telemetry.c#L262) | 预处理 | `#else` |
-| [264](../application/runtime/robot_telemetry.c#L264) | 预处理 | `#endif` |
-| [265](../application/runtime/robot_telemetry.c#L265) | 预处理 | `#endif` |
-| [266](../application/runtime/robot_telemetry.c#L266) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
-| [268](../application/runtime/robot_telemetry.c#L268) | 预处理 | `#endif` |
-| [270](../application/runtime/robot_telemetry.c#L270) | 预处理 | `#endif /* IMU_CAPTURE_ONLY */` |
+| [264](../application/runtime/robot_telemetry.c#L264) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
+| [267](../application/runtime/robot_telemetry.c#L267) | 预处理 | `#endif` |
+| [268](../application/runtime/robot_telemetry.c#L268) | 预处理 | `#if (USB_TELEMETRY_ENABLE &#124;&#124; VOFA_TELEMETRY_ENABLE) && CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_SPEED` |
+| [270](../application/runtime/robot_telemetry.c#L270) | 预处理 | `#endif` |
+| [271](../application/runtime/robot_telemetry.c#L271) | 预处理 | `#if VOFA_TELEMETRY_ENABLE` |
+| [272](../application/runtime/robot_telemetry.c#L272) | 预处理 | `#if VOFA_TELEMETRY_MODE == 1 &#124;&#124; VOFA_TELEMETRY_MODE == 2` |
+| [273](../application/runtime/robot_telemetry.c#L273) | 预处理 | `#if CHASSIS_VELOCITY_FUSION_ENABLE` |
+| [278](../application/runtime/robot_telemetry.c#L278) | 预处理 | `#else` |
+| [280](../application/runtime/robot_telemetry.c#L280) | 预处理 | `#endif` |
+| [281](../application/runtime/robot_telemetry.c#L281) | 预处理 | `#if VOFA_TELEMETRY_MODE == 2 && VOFA_OBSERVATION_PROFILE != 0` |
+| [284](../application/runtime/robot_telemetry.c#L284) | 预处理 | `#else` |
+| [287](../application/runtime/robot_telemetry.c#L287) | 预处理 | `#endif` |
+| [288](../application/runtime/robot_telemetry.c#L288) | 预处理 | `#else` |
+| [290](../application/runtime/robot_telemetry.c#L290) | 预处理 | `#endif` |
+| [291](../application/runtime/robot_telemetry.c#L291) | 预处理 | `#endif` |
+| [292](../application/runtime/robot_telemetry.c#L292) | 预处理 | `#if USB_TELEMETRY_ENABLE` |
+| [294](../application/runtime/robot_telemetry.c#L294) | 预处理 | `#endif` |
+| [296](../application/runtime/robot_telemetry.c#L296) | 预处理 | `#endif /* IMU_CAPTURE_ONLY */` |
 
 ## application/runtime/robot_telemetry.h
 
@@ -802,6 +813,43 @@
 | [2](../application/runtime/tuning_policy.h#L2) | 预处理 | `#define TUNING_POLICY_H` |
 | [4](../application/runtime/tuning_policy.h#L4) | 预处理 | `#endif` |
 
+## application/runtime/vofa_observation.c
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [5](../application/runtime/vofa_observation.c#L5) | 预处理 | `#if VOFA_TELEMETRY_ENABLE && VOFA_TELEMETRY_MODE == 2 && VOFA_OBSERVATION_PROFILE != 0` |
+| [11](../application/runtime/vofa_observation.c#L11) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
+| [13](../application/runtime/vofa_observation.c#L13) | 预处理 | `#endif` |
+| [41](../application/runtime/vofa_observation.c#L41) | 预处理 | `#if VOFA_OBSERVATION_PROFILE == 1` |
+| [42](../application/runtime/vofa_observation.c#L42) | 预处理 | `#define P(name) f[VOFA_POWER_##name]` |
+| [172](../application/runtime/vofa_observation.c#L172) | 预处理 | `#else` |
+| [173](../application/runtime/vofa_observation.c#L173) | 预处理 | `#define K(name) f[VOFA_KALMAN_##name]` |
+| [219](../application/runtime/vofa_observation.c#L219) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
+| [229](../application/runtime/vofa_observation.c#L229) | 预处理 | `#endif` |
+| [295](../application/runtime/vofa_observation.c#L295) | 预处理 | `#endif` |
+| [313](../application/runtime/vofa_observation.c#L313) | 预处理 | `#if VOFA_OBSERVATION_PROFILE == 1` |
+| [316](../application/runtime/vofa_observation.c#L316) | 预处理 | `#else` |
+| [319](../application/runtime/vofa_observation.c#L319) | 预处理 | `#endif` |
+| [330](../application/runtime/vofa_observation.c#L330) | 预处理 | `#endif` |
+
+## application/runtime/vofa_observation.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../application/runtime/vofa_observation.h#L1) | 预处理 | `#ifndef VOFA_OBSERVATION_H` |
+| [2](../application/runtime/vofa_observation.h#L2) | 预处理 | `#define VOFA_OBSERVATION_H` |
+| [15](../application/runtime/vofa_observation.h#L15) | 预处理 | `#endif` |
+
+## application/runtime/vofa_schema.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [2](../application/runtime/vofa_schema.h#L2) | 预处理 | `#ifndef VOFA_SCHEMA_H` |
+| [3](../application/runtime/vofa_schema.h#L3) | 预处理 | `#define VOFA_SCHEMA_H` |
+| [5](../application/runtime/vofa_schema.h#L5) | 预处理 | `#define VOFA_POWER_SCHEMA_ID 4U` |
+| [106](../application/runtime/vofa_schema.h#L106) | 预处理 | `#define VOFA_KALMAN_SCHEMA_ID 5U` |
+| [207](../application/runtime/vofa_schema.h#L207) | 预处理 | `#endif` |
+
 ## application/runtime/vofa_telemetry.c
 
 | 行 | 类型 | 源码 |
@@ -830,24 +878,24 @@
 | [211](../application/runtime/vofa_telemetry.c#L211) | 预处理 | `#if IMU_CAPTURE_ONLY` |
 | [213](../application/runtime/vofa_telemetry.c#L213) | 预处理 | `#endif` |
 | [214](../application/runtime/vofa_telemetry.c#L214) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
-| [217](../application/runtime/vofa_telemetry.c#L217) | 预处理 | `#endif` |
-| [218](../application/runtime/vofa_telemetry.c#L218) | 预处理 | `#if CHASSIS_REMOTE_IMU_FUSION_ENABLE` |
-| [221](../application/runtime/vofa_telemetry.c#L221) | 预处理 | `#if CHASSIS_REMOTE_IMU_CONFIG_VERIFIED` |
+| [216](../application/runtime/vofa_telemetry.c#L216) | 预处理 | `#endif` |
+| [217](../application/runtime/vofa_telemetry.c#L217) | 预处理 | `#if CHASSIS_REMOTE_IMU_FUSION_ENABLE` |
+| [220](../application/runtime/vofa_telemetry.c#L220) | 预处理 | `#if CHASSIS_REMOTE_IMU_CONFIG_VERIFIED` |
+| [222](../application/runtime/vofa_telemetry.c#L222) | 预处理 | `#endif` |
 | [223](../application/runtime/vofa_telemetry.c#L223) | 预处理 | `#endif` |
-| [224](../application/runtime/vofa_telemetry.c#L224) | 预处理 | `#endif` |
-| [232](../application/runtime/vofa_telemetry.c#L232) | 预处理 | `#if IMU_CAPTURE_ONLY` |
-| [234](../application/runtime/vofa_telemetry.c#L234) | 预处理 | `#else` |
-| [236](../application/runtime/vofa_telemetry.c#L236) | 预处理 | `#endif` |
-| [285](../application/runtime/vofa_telemetry.c#L285) | 预处理 | `#if IMU_CAPTURE_ONLY` |
-| [287](../application/runtime/vofa_telemetry.c#L287) | 预处理 | `#else` |
-| [289](../application/runtime/vofa_telemetry.c#L289) | 预处理 | `#endif` |
-| [290](../application/runtime/vofa_telemetry.c#L290) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
-| [297](../application/runtime/vofa_telemetry.c#L297) | 预处理 | `#endif` |
-| [302](../application/runtime/vofa_telemetry.c#L302) | 预处理 | `#if VOFA_TELEMETRY_MODE == 1` |
-| [311](../application/runtime/vofa_telemetry.c#L311) | 预处理 | `#else` |
-| [325](../application/runtime/vofa_telemetry.c#L325) | 预处理 | `#endif` |
+| [231](../application/runtime/vofa_telemetry.c#L231) | 预处理 | `#if IMU_CAPTURE_ONLY` |
+| [233](../application/runtime/vofa_telemetry.c#L233) | 预处理 | `#else` |
+| [235](../application/runtime/vofa_telemetry.c#L235) | 预处理 | `#endif` |
+| [284](../application/runtime/vofa_telemetry.c#L284) | 预处理 | `#if IMU_CAPTURE_ONLY` |
+| [286](../application/runtime/vofa_telemetry.c#L286) | 预处理 | `#else` |
+| [288](../application/runtime/vofa_telemetry.c#L288) | 预处理 | `#endif` |
+| [289](../application/runtime/vofa_telemetry.c#L289) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
+| [296](../application/runtime/vofa_telemetry.c#L296) | 预处理 | `#endif` |
+| [301](../application/runtime/vofa_telemetry.c#L301) | 预处理 | `#if VOFA_TELEMETRY_MODE == 1` |
+| [310](../application/runtime/vofa_telemetry.c#L310) | 预处理 | `#else` |
+| [324](../application/runtime/vofa_telemetry.c#L324) | 预处理 | `#endif` |
+| [326](../application/runtime/vofa_telemetry.c#L326) | 预处理 | `#endif` |
 | [327](../application/runtime/vofa_telemetry.c#L327) | 预处理 | `#endif` |
-| [328](../application/runtime/vofa_telemetry.c#L328) | 预处理 | `#endif` |
 
 ## application/runtime/vofa_telemetry.h
 
@@ -1097,24 +1145,40 @@
 | --- | --- | --- |
 | [1](../config/00_flash/board_flash_config.h#L1) | 预处理 | `#ifndef BOARD_FLASH_CONFIG_H` |
 | [2](../config/00_flash/board_flash_config.h#L2) | 预处理 | `#define BOARD_FLASH_CONFIG_H` |
-| [11](../config/00_flash/board_flash_config.h#L11) | 预处理 | `#define BOARD_FLASH_TARGET 1 /* 烧录目标：仅1=DM-IMU整车主板；其他数值报错。 */` |
+| [11](../config/00_flash/board_flash_config.h#L11) | 预处理 | `#define BOARD_FLASH_TARGET 1 /* 烧录目标：1=整车主板，2=下方独立底盘IMU采集板。 */` |
 | [12](../config/00_flash/board_flash_config.h#L12) | 预处理 | `#define BOARD_FLASH_PROGRAMMER 1 /* 下载器：1=DAPLink/OpenOCD，2=J-Link/J-Flash；仅Flash动作使用。 */` |
-| [13](../config/00_flash/board_flash_config.h#L13) | 预处理 | `#define BOARD_FLASH_PROFILE "atype-vehicle" /* 主板使用整车构建profile。 */` |
-| [17](../config/00_flash/board_flash_config.h#L17) | 预处理 | `#define BOARD_FLASH_1_NAME "整车主板：DM-IMU" /* 命令执行前显示的板卡名称。 */` |
+| [13](../config/00_flash/board_flash_config.h#L13) | 预处理 | `#define BOARD_FLASH_PROFILE "atype-vehicle" /* 两板共用编译profile，任务由各板采集开关区分。 */` |
+| [17](../config/00_flash/board_flash_config.h#L17) | 预处理 | `#define BOARD_FLASH_1_NAME "第一块：整车主板" /* 命令执行前显示的板卡名称。 */` |
 | [18](../config/00_flash/board_flash_config.h#L18) | 预处理 | `#define BOARD_FLASH_1_BUILD_DIR "build/board-1-main" /* 主板输出目录；build下使用英文字母/数字/下划线/连字符和斜杠。 */` |
 | [19](../config/00_flash/board_flash_config.h#L19) | 预处理 | `#define BOARD_FLASH_1_ONE_BOARD 1 /* 单板整车角色：必须为1，不与CHASSIS_BOARD或GIMBAL_BOARD同时定义。 */` |
-| [20](../config/00_flash/board_flash_config.h#L20) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_CONTROL_MODE 0 /* 控制后端：0=速度控制；当前DM-IMU观测路径要求0。 */` |
+| [20](../config/00_flash/board_flash_config.h#L20) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_CONTROL_MODE 0 /* 控制后端：0=速度控制；当前远端IMU观测路径要求0。 */` |
 | [21](../config/00_flash/board_flash_config.h#L21) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_FORCE_CALIBRATION_ENABLE 0 /* 力控标定工具：0=关闭；本方案不编译标定固件。 */` |
 | [22](../config/00_flash/board_flash_config.h#L22) | 预处理 | `#define BOARD_FLASH_1_ATYPE_BENCH_MODE 0 /* 台架门控：0=正常整车应用；此项不代替遥控器的启停。 */` |
 | [23](../config/00_flash/board_flash_config.h#L23) | 预处理 | `#define BOARD_FLASH_1_IMU_CAPTURE_ONLY 0 /* 0=完整整车任务；本入口不启用独立本地IMU诊断任务。 */` |
-| [24](../config/00_flash/board_flash_config.h#L24) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_IMU_CAN_RX_ENABLE 1 /* 1=接收所选底盘IMU；0=关闭外部接收。 */` |
-| [25](../config/00_flash/board_flash_config.h#L25) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_VELOCITY_FUSION_ENABLE 1 /* 1=启用速度观测接口；当前远端接收路径要求1。 */` |
-| [26](../config/00_flash/board_flash_config.h#L26) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_VELOCITY_FUSION_CALIBRATED 0 /* 0=不启用本地云台标定；远端固定底盘IMU使用独立的安装与噪声配置。 */` |
-| [27](../config/00_flash/board_flash_config.h#L27) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_REMOTE_IMU_FUSION_ENABLE 1 /* 1=用固定底盘IMU做只读卡尔曼观测；不表示安装与噪声参数已实测审核，也不接管控制。 */` |
-| [28](../config/00_flash/board_flash_config.h#L28) | 预处理 | `#define BOARD_FLASH_1_VOFA_TELEMETRY_ENABLE 1 /* 1=开启UART7统一遥测，需保持UART7未被裁判/辅助设备占用。 */` |
-| [29](../config/00_flash/board_flash_config.h#L29) | 预处理 | `#define BOARD_FLASH_1_VOFA_TELEMETRY_MODE 2 /* 2=全量JustFloat二进制测量；1可回退FireWater文本，均保留远端IMU观测字段。 */` |
-| [30](../config/00_flash/board_flash_config.h#L30) | 预处理 | `#define BOARD_FLASH_1_USB_TELEMETRY_ENABLE 1 /* 1=保留USB网页遥测；视觉应使用UART，不能同时选USB视觉。 */` |
-| [32](../config/00_flash/board_flash_config.h#L32) | 预处理 | `#endif` |
+| [24](../config/00_flash/board_flash_config.h#L24) | 预处理 | `#define BOARD_FLASH_1_IMU_CAPTURE_CAN_TX_ENABLE 0 /* 0=主板不发送采集帧，避免与第二块重复发送。 */` |
+| [25](../config/00_flash/board_flash_config.h#L25) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_IMU_CAN_RX_ENABLE 1 /* 1=接收所选底盘IMU；0=关闭外部接收。 */` |
+| [26](../config/00_flash/board_flash_config.h#L26) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_VELOCITY_FUSION_ENABLE 1 /* 1=启用速度观测接口；当前远端接收路径要求1。 */` |
+| [27](../config/00_flash/board_flash_config.h#L27) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_VELOCITY_FUSION_CALIBRATED 0 /* 0=不启用本地云台标定；远端固定底盘IMU使用独立的安装与噪声配置。 */` |
+| [28](../config/00_flash/board_flash_config.h#L28) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_REMOTE_IMU_FUSION_ENABLE 1 /* 1=用固定底盘IMU做只读卡尔曼观测；不表示安装与噪声参数已实测审核，也不接管控制。 */` |
+| [29](../config/00_flash/board_flash_config.h#L29) | 预处理 | `#define BOARD_FLASH_1_VOFA_TELEMETRY_ENABLE 1 /* 1=开启UART7统一遥测，需保持UART7未被裁判/辅助设备占用。 */` |
+| [30](../config/00_flash/board_flash_config.h#L30) | 预处理 | `#define BOARD_FLASH_1_VOFA_TELEMETRY_MODE 2 /* 2=JustFloat二进制观测；0/1保留旧格式，不使用用途选择。 */` |
+| [32](../config/00_flash/board_flash_config.h#L32) | 预处理 | `#define BOARD_FLASH_1_USB_TELEMETRY_ENABLE 1 /* 1=保留USB网页遥测；视觉应使用UART，不能同时选USB视觉。 */` |
+| [36](../config/00_flash/board_flash_config.h#L36) | 预处理 | `#define BOARD_FLASH_2_NAME "第二块：底盘IMU采集板" /* 命令执行前显示的板卡名称。 */` |
+| [37](../config/00_flash/board_flash_config.h#L37) | 预处理 | `#define BOARD_FLASH_2_BUILD_DIR "build/board-2-imu" /* 独立输出目录，不能与第一块相同。 */` |
+| [38](../config/00_flash/board_flash_config.h#L38) | 预处理 | `#define BOARD_FLASH_2_ONE_BOARD 1 /* 同工程默认角色；IMU_CAPTURE_ONLY选择独立采集任务。 */` |
+| [39](../config/00_flash/board_flash_config.h#L39) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_CONTROL_MODE 0 /* 0=速度后端编译配置；采集模式不会启动底盘控制。 */` |
+| [40](../config/00_flash/board_flash_config.h#L40) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_FORCE_CALIBRATION_ENABLE 0 /* 0=关闭力控标定工具。 */` |
+| [41](../config/00_flash/board_flash_config.h#L41) | 预处理 | `#define BOARD_FLASH_2_ATYPE_BENCH_MODE 0 /* 0=不使用整车台架任务。 */` |
+| [42](../config/00_flash/board_flash_config.h#L42) | 预处理 | `#define BOARD_FLASH_2_IMU_CAPTURE_ONLY 1 /* 1=仅IMU采集固件。 */` |
+| [43](../config/00_flash/board_flash_config.h#L43) | 预处理 | `#define BOARD_FLASH_2_IMU_CAPTURE_CAN_TX_ENABLE 1 /* 1=经CAN1发送IMU，主板对应开启接收。 */` |
+| [44](../config/00_flash/board_flash_config.h#L44) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_IMU_CAN_RX_ENABLE 0 /* 0=不作为整车接收端。 */` |
+| [45](../config/00_flash/board_flash_config.h#L45) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_VELOCITY_FUSION_ENABLE 0 /* 0=不运行整车速度融合。 */` |
+| [46](../config/00_flash/board_flash_config.h#L46) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_VELOCITY_FUSION_CALIBRATED 0 /* 0=不加载整车融合标定。 */` |
+| [47](../config/00_flash/board_flash_config.h#L47) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_REMOTE_IMU_FUSION_ENABLE 0 /* 0=采集板只发送IMU。 */` |
+| [48](../config/00_flash/board_flash_config.h#L48) | 预处理 | `#define BOARD_FLASH_2_VOFA_TELEMETRY_ENABLE 0 /* 0=关闭本板UART7遥测，由主板统一输出。 */` |
+| [49](../config/00_flash/board_flash_config.h#L49) | 预处理 | `#define BOARD_FLASH_2_VOFA_TELEMETRY_MODE 1 /* 预留格式；遥测关闭时不产生串口输出。 */` |
+| [50](../config/00_flash/board_flash_config.h#L50) | 预处理 | `#define BOARD_FLASH_2_USB_TELEMETRY_ENABLE 0 /* 0=关闭USB网页遥测，独立采集固件要求关闭。 */` |
+| [52](../config/00_flash/board_flash_config.h#L52) | 预处理 | `#endif` |
 
 ## config/01_pid/pid_config.c
 
@@ -1545,6 +1609,24 @@
 | [42](../config/20_chassis_power/chassis_power_config.h#L42) | 预处理 | `#endif` |
 | [43](../config/20_chassis_power/chassis_power_config.h#L43) | 预处理 | `#endif` |
 | [44](../config/20_chassis_power/chassis_power_config.h#L44) | 预处理 | `#endif` |
+
+## config/20_chassis_power/chassis_power_defaults.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../config/20_chassis_power/chassis_power_defaults.h#L1) | 预处理 | `#ifndef CHASSIS_POWER_DEFAULTS_H` |
+| [2](../config/20_chassis_power/chassis_power_defaults.h#L2) | 预处理 | `#define CHASSIS_POWER_DEFAULTS_H` |
+| [12](../config/20_chassis_power/chassis_power_defaults.h#L12) | 配置初值 | `ChassisPower_Init_Config_s config={` |
+| [13](../config/20_chassis_power/chassis_power_defaults.h#L13) | 配置初值 | `.budget=chassis_budget_config,.outer=chassis_outer_loop_config,` |
+| [14](../config/20_chassis_power/chassis_power_defaults.h#L14) | 配置初值 | `.transient=ChassisPowerTransientDefaultConfig(),.stage=CHASSIS_POWER_CONTROL_STAGE,` |
+| [15](../config/20_chassis_power/chassis_power_defaults.h#L15) | 配置初值 | `.use_supercap=CHASSIS_POWER_SOURCE_MODE==CHASSIS_POWER_SOURCE_SUPERCAP,` |
+| [16](../config/20_chassis_power/chassis_power_defaults.h#L16) | 配置初值 | `.meter_enabled=POWER_METER_ENABLE!=0,.buffer_enabled=CHASSIS_BUFFER_POWER_ENABLE!=0,` |
+| [17](../config/20_chassis_power/chassis_power_defaults.h#L17) | 配置初值 | `.algorithm={.safety_factor=CHASSIS_POWER_SAFETY_FACTOR,` |
+| [18](../config/20_chassis_power/chassis_power_defaults.h#L18) | 配置初值 | `.small_error_threshold_rpm=CHASSIS_POWER_SMALL_ERROR_RPM,` |
+| [19](../config/20_chassis_power/chassis_power_defaults.h#L19) | 配置初值 | `.reserved_power_threshold_w=CHASSIS_POWER_RESERVED_THRESHOLD_W,` |
+| [20](../config/20_chassis_power/chassis_power_defaults.h#L20) | 配置初值 | `.per_motor_reserved_power_w=CHASSIS_POWER_PER_MOTOR_RESERVED_W,` |
+| [21](../config/20_chassis_power/chassis_power_defaults.h#L21) | 配置初值 | `.max_current_command=CHASSIS_POWER_MAX_CURRENT_COMMAND}};` |
+| [26](../config/20_chassis_power/chassis_power_defaults.h#L26) | 预处理 | `#endif` |
 
 ## config/20_chassis_power/chassis_power_model_config.h
 
@@ -1980,22 +2062,22 @@
 | --- | --- | --- |
 | [1](../config/30_velocity_observation/chassis_remote_imu_config.h#L1) | 预处理 | `#ifndef CHASSIS_REMOTE_IMU_CONFIG_H` |
 | [2](../config/30_velocity_observation/chassis_remote_imu_config.h#L2) | 预处理 | `#define CHASSIS_REMOTE_IMU_CONFIG_H` |
-| [10](../config/30_velocity_observation/chassis_remote_imu_config.h#L10) | 预处理 | `#ifndef CHASSIS_REMOTE_IMU_CONFIG_VERIFIED` |
-| [11](../config/30_velocity_observation/chassis_remote_imu_config.h#L11) | 预处理 | `#define CHASSIS_REMOTE_IMU_CONFIG_VERIFIED 0 /* 0=未实测初值；完成安装/参数审核后才设1；只作记录标识，不放行控制。 */` |
-| [12](../config/30_velocity_observation/chassis_remote_imu_config.h#L12) | 预处理 | `#endif` |
-| [13](../config/30_velocity_observation/chassis_remote_imu_config.h#L13) | 预处理 | `#if CHASSIS_REMOTE_IMU_CONFIG_VERIFIED != 0 && CHASSIS_REMOTE_IMU_CONFIG_VERIFIED != 1` |
-| [15](../config/30_velocity_observation/chassis_remote_imu_config.h#L15) | 预处理 | `#endif` |
-| [18](../config/30_velocity_observation/chassis_remote_imu_config.h#L18) | 预处理 | `#define CHASSIS_REMOTE_IMU_SENSOR_TO_BODY {1.0f, 0.0f, 0.0f, 0.0f}` |
-| [20](../config/30_velocity_observation/chassis_remote_imu_config.h#L20) | 预处理 | `#define CHASSIS_REMOTE_IMU_OFFSET_BODY_M {0.0f, 0.0f, 0.0f}` |
-| [24](../config/30_velocity_observation/chassis_remote_imu_config.h#L24) | 预处理 | `#define CHASSIS_REMOTE_IMU_WHEEL_VARIANCE 0.01f` |
-| [25](../config/30_velocity_observation/chassis_remote_imu_config.h#L25) | 预处理 | `#define CHASSIS_REMOTE_IMU_ACCEL_VARIANCE 0.25f` |
-| [26](../config/30_velocity_observation/chassis_remote_imu_config.h#L26) | 预处理 | `#define CHASSIS_REMOTE_IMU_JERK_DENSITY 1.0f` |
-| [27](../config/30_velocity_observation/chassis_remote_imu_config.h#L27) | 预处理 | `#define CHASSIS_REMOTE_IMU_MAX_RESIDUAL_MPS 1.5f` |
-| [32](../config/30_velocity_observation/chassis_remote_imu_config.h#L32) | 预处理 | `#define CHASSIS_REMOTE_IMU_MAX_PAIR_SPAN_MS 15U` |
-| [33](../config/30_velocity_observation/chassis_remote_imu_config.h#L33) | 预处理 | `#define CHASSIS_REMOTE_IMU_MAX_WHEEL_SKEW_MS 3U` |
-| [34](../config/30_velocity_observation/chassis_remote_imu_config.h#L34) | 预处理 | `#define CHASSIS_REMOTE_IMU_MAX_TIMING_JITTER_MS 10U` |
-| [37](../config/30_velocity_observation/chassis_remote_imu_config.h#L37) | 预处理 | `#define CHASSIS_REMOTE_IMU_CONFIG_INITIALIZER { \` |
-| [49](../config/30_velocity_observation/chassis_remote_imu_config.h#L49) | 预处理 | `#endif` |
+| [11](../config/30_velocity_observation/chassis_remote_imu_config.h#L11) | 预处理 | `#ifndef CHASSIS_REMOTE_IMU_CONFIG_VERIFIED` |
+| [12](../config/30_velocity_observation/chassis_remote_imu_config.h#L12) | 预处理 | `#define CHASSIS_REMOTE_IMU_CONFIG_VERIFIED 0 /* 0=未实测初值；完成安装/参数审核后才设1；只作记录标识，不放行控制。 */` |
+| [13](../config/30_velocity_observation/chassis_remote_imu_config.h#L13) | 预处理 | `#endif` |
+| [14](../config/30_velocity_observation/chassis_remote_imu_config.h#L14) | 预处理 | `#if CHASSIS_REMOTE_IMU_CONFIG_VERIFIED != 0 && CHASSIS_REMOTE_IMU_CONFIG_VERIFIED != 1` |
+| [16](../config/30_velocity_observation/chassis_remote_imu_config.h#L16) | 预处理 | `#endif` |
+| [21](../config/30_velocity_observation/chassis_remote_imu_config.h#L21) | 预处理 | `#define CHASSIS_REMOTE_IMU_SENSOR_TO_BODY {0.0f, 0.0f, 0.0f, 1.0f}` |
+| [25](../config/30_velocity_observation/chassis_remote_imu_config.h#L25) | 预处理 | `#define CHASSIS_REMOTE_IMU_OFFSET_BODY_M {0.0f, -0.116f, 0.0f}` |
+| [29](../config/30_velocity_observation/chassis_remote_imu_config.h#L29) | 预处理 | `#define CHASSIS_REMOTE_IMU_WHEEL_VARIANCE 0.01f` |
+| [30](../config/30_velocity_observation/chassis_remote_imu_config.h#L30) | 预处理 | `#define CHASSIS_REMOTE_IMU_ACCEL_VARIANCE 0.25f` |
+| [31](../config/30_velocity_observation/chassis_remote_imu_config.h#L31) | 预处理 | `#define CHASSIS_REMOTE_IMU_JERK_DENSITY 1.0f` |
+| [32](../config/30_velocity_observation/chassis_remote_imu_config.h#L32) | 预处理 | `#define CHASSIS_REMOTE_IMU_MAX_RESIDUAL_MPS 1.5f` |
+| [38](../config/30_velocity_observation/chassis_remote_imu_config.h#L38) | 预处理 | `#define CHASSIS_REMOTE_IMU_MAX_PAIR_SPAN_MS 15U` |
+| [39](../config/30_velocity_observation/chassis_remote_imu_config.h#L39) | 预处理 | `#define CHASSIS_REMOTE_IMU_MAX_WHEEL_SKEW_MS 3U` |
+| [40](../config/30_velocity_observation/chassis_remote_imu_config.h#L40) | 预处理 | `#define CHASSIS_REMOTE_IMU_MAX_TIMING_JITTER_MS 10U` |
+| [43](../config/30_velocity_observation/chassis_remote_imu_config.h#L43) | 预处理 | `#define CHASSIS_REMOTE_IMU_CONFIG_INITIALIZER { \` |
+| [55](../config/30_velocity_observation/chassis_remote_imu_config.h#L55) | 预处理 | `#endif` |
 
 ## config/30_velocity_observation/chassis_velocity_config.h
 
@@ -2118,21 +2200,28 @@
 | [11](../config/32_capture/imu_capture_config.h#L11) | 预处理 | `#endif` |
 | [12](../config/32_capture/imu_capture_config.h#L12) | 预处理 | `#if IMU_CAPTURE_ONLY != 0 && IMU_CAPTURE_ONLY != 1` |
 | [14](../config/32_capture/imu_capture_config.h#L14) | 预处理 | `#endif` |
-| [15](../config/32_capture/imu_capture_config.h#L15) | 预处理 | `#ifndef CHASSIS_IMU_CAN_RX_ENABLE` |
-| [16](../config/32_capture/imu_capture_config.h#L16) | 预处理 | `#define CHASSIS_IMU_CAN_RX_ENABLE 0 /* 默认 0：不接收外部 IMU CAN 帧；1：启用整车端接收，须满足下方接收约束。 */` |
+| [15](../config/32_capture/imu_capture_config.h#L15) | 预处理 | `#ifndef IMU_CAPTURE_CAN_TX_ENABLE` |
+| [16](../config/32_capture/imu_capture_config.h#L16) | 预处理 | `#define IMU_CAPTURE_CAN_TX_ENABLE 0 /* 默认 0：不发送 IMU CAN 帧；1：启用采集板发送，必须同时 IMU_CAPTURE_ONLY=1。 */` |
 | [17](../config/32_capture/imu_capture_config.h#L17) | 预处理 | `#endif` |
-| [18](../config/32_capture/imu_capture_config.h#L18) | 预处理 | `#ifndef CHASSIS_REMOTE_IMU_FUSION_ENABLE` |
-| [19](../config/32_capture/imu_capture_config.h#L19) | 预处理 | `#define CHASSIS_REMOTE_IMU_FUSION_ENABLE 0 /* 0=仅记录远端IMU；1=固定底盘IMU融合观测，仍不进入控制。须同时传给构建系统。 */` |
+| [18](../config/32_capture/imu_capture_config.h#L18) | 预处理 | `#ifndef CHASSIS_IMU_CAN_RX_ENABLE` |
+| [19](../config/32_capture/imu_capture_config.h#L19) | 预处理 | `#define CHASSIS_IMU_CAN_RX_ENABLE 0 /* 默认 0：不接收外部 IMU CAN 帧；1：启用整车端接收，须满足下方接收约束。 */` |
 | [20](../config/32_capture/imu_capture_config.h#L20) | 预处理 | `#endif` |
-| [21](../config/32_capture/imu_capture_config.h#L21) | 预处理 | `#if CHASSIS_REMOTE_IMU_FUSION_ENABLE != 0 && CHASSIS_REMOTE_IMU_FUSION_ENABLE != 1` |
+| [21](../config/32_capture/imu_capture_config.h#L21) | 预处理 | `#ifndef CHASSIS_REMOTE_IMU_FUSION_ENABLE` |
+| [22](../config/32_capture/imu_capture_config.h#L22) | 预处理 | `#define CHASSIS_REMOTE_IMU_FUSION_ENABLE 0 /* 0=仅记录远端IMU；1=固定底盘IMU融合观测，仍不进入控制。须同时传给构建系统。 */` |
 | [23](../config/32_capture/imu_capture_config.h#L23) | 预处理 | `#endif` |
-| [25](../config/32_capture/imu_capture_config.h#L25) | 预处理 | `#if CHASSIS_REMOTE_IMU_FUSION_ENABLE && (!CHASSIS_IMU_CAN_RX_ENABLE &#124;&#124; !CHASSIS_VELOCITY_FUSION_ENABLE &#124;&#124; CHASSIS_VELOCITY_FUSION_CALIBRATED &#124;&#124; IMU_CAPTURE_ONLY)` |
-| [27](../config/32_capture/imu_capture_config.h#L27) | 预处理 | `#endif` |
-| [28](../config/32_capture/imu_capture_config.h#L28) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE != 0 && CHASSIS_IMU_CAN_RX_ENABLE != 1` |
+| [24](../config/32_capture/imu_capture_config.h#L24) | 预处理 | `#if CHASSIS_REMOTE_IMU_FUSION_ENABLE != 0 && CHASSIS_REMOTE_IMU_FUSION_ENABLE != 1` |
+| [26](../config/32_capture/imu_capture_config.h#L26) | 预处理 | `#endif` |
+| [28](../config/32_capture/imu_capture_config.h#L28) | 预处理 | `#if CHASSIS_REMOTE_IMU_FUSION_ENABLE && (!CHASSIS_IMU_CAN_RX_ENABLE &#124;&#124; !CHASSIS_VELOCITY_FUSION_ENABLE &#124;&#124; CHASSIS_VELOCITY_FUSION_CALIBRATED &#124;&#124; IMU_CAPTURE_ONLY)` |
 | [30](../config/32_capture/imu_capture_config.h#L30) | 预处理 | `#endif` |
-| [34](../config/32_capture/imu_capture_config.h#L34) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE && IMU_CAPTURE_ONLY` |
+| [31](../config/32_capture/imu_capture_config.h#L31) | 预处理 | `#if IMU_CAPTURE_CAN_TX_ENABLE != 0 && IMU_CAPTURE_CAN_TX_ENABLE != 1` |
+| [33](../config/32_capture/imu_capture_config.h#L33) | 预处理 | `#endif` |
+| [34](../config/32_capture/imu_capture_config.h#L34) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE != 0 && CHASSIS_IMU_CAN_RX_ENABLE != 1` |
 | [36](../config/32_capture/imu_capture_config.h#L36) | 预处理 | `#endif` |
-| [38](../config/32_capture/imu_capture_config.h#L38) | 预处理 | `#endif` |
+| [37](../config/32_capture/imu_capture_config.h#L37) | 预处理 | `#if IMU_CAPTURE_CAN_TX_ENABLE && !IMU_CAPTURE_ONLY` |
+| [39](../config/32_capture/imu_capture_config.h#L39) | 预处理 | `#endif` |
+| [43](../config/32_capture/imu_capture_config.h#L43) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE && IMU_CAPTURE_ONLY` |
+| [45](../config/32_capture/imu_capture_config.h#L45) | 预处理 | `#endif` |
+| [47](../config/32_capture/imu_capture_config.h#L47) | 预处理 | `#endif` |
 
 ## config/32_capture/shadow_scope_config.h
 
@@ -2175,80 +2264,82 @@
 | [18](../config/90_board/board_config.h#L18) | 预处理 | `#define LOG_OUTPUT 1 /* 日志输出：0=关闭，1=RTT，2=USART2，3=RTT与USART2同时输出。 */` |
 | [19](../config/90_board/board_config.h#L19) | 预处理 | `#endif` |
 | [20](../config/90_board/board_config.h#L20) | 预处理 | `#ifndef VOFA_TELEMETRY_MODE` |
-| [21](../config/90_board/board_config.h#L21) | 预处理 | `#define VOFA_TELEMETRY_MODE 2 /* VOFA格式：0=19路JustFloat，1=FireWater文本测量，2=全量JustFloat测量；与上位机解析方式配套。 */` |
+| [21](../config/90_board/board_config.h#L21) | 预处理 | `#define VOFA_TELEMETRY_MODE 2 /* VOFA传输：0=旧19路JustFloat，1=旧FireWater，2=JustFloat用途观测。 */` |
 | [22](../config/90_board/board_config.h#L22) | 预处理 | `#endif` |
-| [23](../config/90_board/board_config.h#L23) | 预处理 | `#ifndef ATYPE_BENCH_MODE` |
-| [24](../config/90_board/board_config.h#L24) | 预处理 | `#define ATYPE_BENCH_MODE 0 /* 台架模式：0=整车正常控制，1=台架门控（云台/发射锁停）；atype-bench构建默认设1。 */` |
-| [25](../config/90_board/board_config.h#L25) | 预处理 | `#endif` |
-| [26](../config/90_board/board_config.h#L26) | 预处理 | `#if REFEREE_ENABLE != 0 && REFEREE_ENABLE != 1` |
-| [28](../config/90_board/board_config.h#L28) | 预处理 | `#endif` |
-| [29](../config/90_board/board_config.h#L29) | 预处理 | `#if REFEREE_UART_PORT != 6 && REFEREE_UART_PORT != 7` |
-| [31](../config/90_board/board_config.h#L31) | 预处理 | `#endif` |
-| [32](../config/90_board/board_config.h#L32) | 预处理 | `#if LOG_OUTPUT < 0 &#124;&#124; LOG_OUTPUT > 3` |
-| [34](../config/90_board/board_config.h#L34) | 预处理 | `#endif` |
-| [35](../config/90_board/board_config.h#L35) | 预处理 | `#if VOFA_TELEMETRY_MODE != 0 && VOFA_TELEMETRY_MODE != 1 && VOFA_TELEMETRY_MODE != 2` |
-| [37](../config/90_board/board_config.h#L37) | 预处理 | `#endif` |
-| [38](../config/90_board/board_config.h#L38) | 预处理 | `#if ATYPE_BENCH_MODE != 0 && ATYPE_BENCH_MODE != 1` |
-| [40](../config/90_board/board_config.h#L40) | 预处理 | `#endif` |
-| [41](../config/90_board/board_config.h#L41) | 预处理 | `#define BOARD_LOG_UART_ENABLED (LOG_OUTPUT == 2 &#124;&#124; LOG_OUTPUT == 3) /* 按LOG_OUTPUT自动判断是否启用串口日志，不单独修改。 */` |
-| [42](../config/90_board/board_config.h#L42) | 预处理 | `#define BOARD_LOG_RTT_ENABLED (LOG_OUTPUT == 1 &#124;&#124; LOG_OUTPUT == 3) /* 按LOG_OUTPUT自动判断是否启用RTT日志，不单独修改。 */` |
-| [44](../config/90_board/board_config.h#L44) | 预处理 | `#define BOARD_REMOTE_UART (&huart1) /* DBUS遥控器固定连接USART1；更改句柄前须同步硬件与串口初始化。 */` |
-| [45](../config/90_board/board_config.h#L45) | 预处理 | `#define BOARD_VISION_UART (&huart3) /* 视觉通信绑定USART3；启用方式见robot_config.h。 */` |
-| [46](../config/90_board/board_config.h#L46) | 预处理 | `#define BOARD_VTX_UART (&huart8) /* 图传键鼠输入绑定UART8。 */` |
-| [47](../config/90_board/board_config.h#L47) | 预处理 | `#if REFEREE_UART_PORT == 7` |
-| [48](../config/90_board/board_config.h#L48) | 预处理 | `#define BOARD_REFEREE_UART (&huart7) /* 裁判串口句柄，由REFEREE_UART_PORT自动选择，不单独修改。 */` |
-| [49](../config/90_board/board_config.h#L49) | 预处理 | `#else` |
-| [50](../config/90_board/board_config.h#L50) | 预处理 | `#define BOARD_REFEREE_UART (&huart6) /* 裁判串口句柄，由REFEREE_UART_PORT自动选择，不单独修改。 */` |
-| [51](../config/90_board/board_config.h#L51) | 预处理 | `#endif` |
-| [52](../config/90_board/board_config.h#L52) | 预处理 | `#define BOARD_LOG_UART (&huart2) /* 串口日志绑定USART2；由LOG_OUTPUT决定是否启用。 */` |
-| [53](../config/90_board/board_config.h#L53) | 预处理 | `#define BOARD_VOFA_UART (&huart7) /* VOFA遥测绑定UART7，不能与裁判或UART7辅助设备同时占用。 */` |
-| [54](../config/90_board/board_config.h#L54) | 预处理 | `#define BOARD_SUPERCAP_CAN (&hcan1) /* 超级电容通信绑定CAN1；协议CAN ID仍由协议模块定义。 */` |
-| [55](../config/90_board/board_config.h#L55) | 预处理 | `#define BOARD_POWER_METER_CAN (&hcan1) /* 功率计通信绑定CAN1；启用开关POWER_METER_ENABLE见chassis_power_config.h。 */` |
-| [57](../config/90_board/board_config.h#L57) | 预处理 | `#ifndef OLED_USE_I2C` |
-| [58](../config/90_board/board_config.h#L58) | 预处理 | `#define OLED_USE_I2C 0 /* OLED后端：0=SPI1（默认），1=I2C2；还需BOARD_OLED_ENABLE=1注册显示屏。 */` |
-| [59](../config/90_board/board_config.h#L59) | 预处理 | `#endif` |
-| [60](../config/90_board/board_config.h#L60) | 预处理 | `#if OLED_USE_I2C != 0 && OLED_USE_I2C != 1` |
-| [62](../config/90_board/board_config.h#L62) | 预处理 | `#endif` |
-| [66](../config/90_board/board_config.h#L66) | 预处理 | `#ifndef BOARD_AUX_UART2_DEVICE` |
-| [67](../config/90_board/board_config.h#L67) | 预处理 | `#define BOARD_AUX_UART2_DEVICE 0 /* USART2辅助设备：0=无，1=TFmini，2=HC05，3=总线舵机；非0时LOG_OUTPUT不能为2或3。 */` |
-| [68](../config/90_board/board_config.h#L68) | 预处理 | `#endif` |
-| [69](../config/90_board/board_config.h#L69) | 预处理 | `#ifndef BOARD_AUX_UART7_DEVICE` |
-| [70](../config/90_board/board_config.h#L70) | 预处理 | `#define BOARD_AUX_UART7_DEVICE 0 /* UART7辅助设备：0=无，1=TFmini，2=HC05，3=总线舵机；非0时不能同时接UART7裁判或启用VOFA。 */` |
-| [71](../config/90_board/board_config.h#L71) | 预处理 | `#endif` |
-| [72](../config/90_board/board_config.h#L72) | 预处理 | `#ifndef BOARD_OLED_ENABLE` |
-| [73](../config/90_board/board_config.h#L73) | 预处理 | `#define BOARD_OLED_ENABLE 0 /* OLED开关：0=不注册（默认），1=注册并初始化；后端由OLED_USE_I2C选择。 */` |
-| [74](../config/90_board/board_config.h#L74) | 预处理 | `#endif` |
-| [75](../config/90_board/board_config.h#L75) | 预处理 | `#ifndef BOARD_KEY_ENABLE` |
-| [76](../config/90_board/board_config.h#L76) | 预处理 | `#define BOARD_KEY_ENABLE 0 /* 板载按键开关：0=不注册（默认），1=注册按键模块。 */` |
-| [77](../config/90_board/board_config.h#L77) | 预处理 | `#endif` |
-| [78](../config/90_board/board_config.h#L78) | 预处理 | `#if BOARD_AUX_UART2_DEVICE < 0 &#124;&#124; BOARD_AUX_UART2_DEVICE > 3 &#124;&#124; BOARD_AUX_UART7_DEVICE < 0 &#124;&#124; BOARD_AUX_UART7_DEVICE > 3` |
-| [80](../config/90_board/board_config.h#L80) | 预处理 | `#endif` |
-| [81](../config/90_board/board_config.h#L81) | 预处理 | `#if BOARD_AUX_UART2_DEVICE && BOARD_LOG_UART_ENABLED` |
-| [83](../config/90_board/board_config.h#L83) | 预处理 | `#endif` |
-| [84](../config/90_board/board_config.h#L84) | 预处理 | `#if REFEREE_ENABLE && REFEREE_UART_PORT == 7 && BOARD_AUX_UART7_DEVICE` |
-| [86](../config/90_board/board_config.h#L86) | 预处理 | `#endif` |
-| [87](../config/90_board/board_config.h#L87) | 预处理 | `#define BOARD_UART7_RESERVED_FOR_DEVICE ((REFEREE_ENABLE && REFEREE_UART_PORT == 7) &#124;&#124; BOARD_AUX_UART7_DEVICE) /* 按裁判和辅助设备选择自动判断UART7是否被占用，不单独修改。 */` |
-| [90](../config/90_board/board_config.h#L90) | 预处理 | `#ifndef VOFA_TELEMETRY_ENABLE` |
-| [91](../config/90_board/board_config.h#L91) | 预处理 | `#if (!defined(CHASSIS_CONTROL_MODE) &#124;&#124; CHASSIS_CONTROL_MODE == 0) && !BOARD_UART7_RESERVED_FOR_DEVICE` |
-| [92](../config/90_board/board_config.h#L92) | 预处理 | `#define VOFA_TELEMETRY_ENABLE 1 /* VOFA发送开关：1=发送，0=关闭；默认速度后端且UART7空闲时为1，其余情况为0。 */` |
-| [93](../config/90_board/board_config.h#L93) | 预处理 | `#else` |
-| [94](../config/90_board/board_config.h#L94) | 预处理 | `#define VOFA_TELEMETRY_ENABLE 0 /* VOFA发送开关：1=发送，0=关闭；默认速度后端且UART7空闲时为1，其余情况为0。 */` |
-| [95](../config/90_board/board_config.h#L95) | 预处理 | `#endif` |
-| [96](../config/90_board/board_config.h#L96) | 预处理 | `#endif` |
-| [97](../config/90_board/board_config.h#L97) | 预处理 | `#if VOFA_TELEMETRY_ENABLE != 0 && VOFA_TELEMETRY_ENABLE != 1` |
+| [24](../config/90_board/board_config.h#L24) | 预处理 | `#ifndef ATYPE_BENCH_MODE` |
+| [25](../config/90_board/board_config.h#L25) | 预处理 | `#define ATYPE_BENCH_MODE 0 /* 台架模式：0=整车正常控制，1=台架门控（云台/发射锁停）；atype-bench构建默认设1。 */` |
+| [26](../config/90_board/board_config.h#L26) | 预处理 | `#endif` |
+| [27](../config/90_board/board_config.h#L27) | 预处理 | `#if REFEREE_ENABLE != 0 && REFEREE_ENABLE != 1` |
+| [29](../config/90_board/board_config.h#L29) | 预处理 | `#endif` |
+| [30](../config/90_board/board_config.h#L30) | 预处理 | `#if REFEREE_UART_PORT != 6 && REFEREE_UART_PORT != 7` |
+| [32](../config/90_board/board_config.h#L32) | 预处理 | `#endif` |
+| [33](../config/90_board/board_config.h#L33) | 预处理 | `#if LOG_OUTPUT < 0 &#124;&#124; LOG_OUTPUT > 3` |
+| [35](../config/90_board/board_config.h#L35) | 预处理 | `#endif` |
+| [36](../config/90_board/board_config.h#L36) | 预处理 | `#if VOFA_TELEMETRY_MODE != 0 && VOFA_TELEMETRY_MODE != 1 && VOFA_TELEMETRY_MODE != 2` |
+| [38](../config/90_board/board_config.h#L38) | 预处理 | `#endif` |
+| [39](../config/90_board/board_config.h#L39) | 预处理 | `#if VOFA_OBSERVATION_PROFILE != 0 && VOFA_OBSERVATION_PROFILE != 1 && VOFA_OBSERVATION_PROFILE != 2` |
+| [41](../config/90_board/board_config.h#L41) | 预处理 | `#endif` |
+| [42](../config/90_board/board_config.h#L42) | 预处理 | `#if ATYPE_BENCH_MODE != 0 && ATYPE_BENCH_MODE != 1` |
+| [44](../config/90_board/board_config.h#L44) | 预处理 | `#endif` |
+| [45](../config/90_board/board_config.h#L45) | 预处理 | `#define BOARD_LOG_UART_ENABLED (LOG_OUTPUT == 2 &#124;&#124; LOG_OUTPUT == 3) /* 按LOG_OUTPUT自动判断是否启用串口日志，不单独修改。 */` |
+| [46](../config/90_board/board_config.h#L46) | 预处理 | `#define BOARD_LOG_RTT_ENABLED (LOG_OUTPUT == 1 &#124;&#124; LOG_OUTPUT == 3) /* 按LOG_OUTPUT自动判断是否启用RTT日志，不单独修改。 */` |
+| [48](../config/90_board/board_config.h#L48) | 预处理 | `#define BOARD_REMOTE_UART (&huart1) /* DBUS遥控器固定连接USART1；更改句柄前须同步硬件与串口初始化。 */` |
+| [49](../config/90_board/board_config.h#L49) | 预处理 | `#define BOARD_VISION_UART (&huart3) /* 视觉通信绑定USART3；启用方式见robot_config.h。 */` |
+| [50](../config/90_board/board_config.h#L50) | 预处理 | `#define BOARD_VTX_UART (&huart8) /* 图传键鼠输入绑定UART8。 */` |
+| [51](../config/90_board/board_config.h#L51) | 预处理 | `#if REFEREE_UART_PORT == 7` |
+| [52](../config/90_board/board_config.h#L52) | 预处理 | `#define BOARD_REFEREE_UART (&huart7) /* 裁判串口句柄，由REFEREE_UART_PORT自动选择，不单独修改。 */` |
+| [53](../config/90_board/board_config.h#L53) | 预处理 | `#else` |
+| [54](../config/90_board/board_config.h#L54) | 预处理 | `#define BOARD_REFEREE_UART (&huart6) /* 裁判串口句柄，由REFEREE_UART_PORT自动选择，不单独修改。 */` |
+| [55](../config/90_board/board_config.h#L55) | 预处理 | `#endif` |
+| [56](../config/90_board/board_config.h#L56) | 预处理 | `#define BOARD_LOG_UART (&huart2) /* 串口日志绑定USART2；由LOG_OUTPUT决定是否启用。 */` |
+| [57](../config/90_board/board_config.h#L57) | 预处理 | `#define BOARD_VOFA_UART (&huart7) /* VOFA遥测绑定UART7，不能与裁判或UART7辅助设备同时占用。 */` |
+| [58](../config/90_board/board_config.h#L58) | 预处理 | `#define BOARD_SUPERCAP_CAN (&hcan1) /* 超级电容通信绑定CAN1；协议CAN ID仍由协议模块定义。 */` |
+| [59](../config/90_board/board_config.h#L59) | 预处理 | `#define BOARD_POWER_METER_CAN (&hcan1) /* 功率计通信绑定CAN1；启用开关POWER_METER_ENABLE见chassis_power_config.h。 */` |
+| [61](../config/90_board/board_config.h#L61) | 预处理 | `#ifndef OLED_USE_I2C` |
+| [62](../config/90_board/board_config.h#L62) | 预处理 | `#define OLED_USE_I2C 0 /* OLED后端：0=SPI1（默认），1=I2C2；还需BOARD_OLED_ENABLE=1注册显示屏。 */` |
+| [63](../config/90_board/board_config.h#L63) | 预处理 | `#endif` |
+| [64](../config/90_board/board_config.h#L64) | 预处理 | `#if OLED_USE_I2C != 0 && OLED_USE_I2C != 1` |
+| [66](../config/90_board/board_config.h#L66) | 预处理 | `#endif` |
+| [70](../config/90_board/board_config.h#L70) | 预处理 | `#ifndef BOARD_AUX_UART2_DEVICE` |
+| [71](../config/90_board/board_config.h#L71) | 预处理 | `#define BOARD_AUX_UART2_DEVICE 0 /* USART2辅助设备：0=无，1=TFmini，2=HC05，3=总线舵机；非0时LOG_OUTPUT不能为2或3。 */` |
+| [72](../config/90_board/board_config.h#L72) | 预处理 | `#endif` |
+| [73](../config/90_board/board_config.h#L73) | 预处理 | `#ifndef BOARD_AUX_UART7_DEVICE` |
+| [74](../config/90_board/board_config.h#L74) | 预处理 | `#define BOARD_AUX_UART7_DEVICE 0 /* UART7辅助设备：0=无，1=TFmini，2=HC05，3=总线舵机；非0时不能同时接UART7裁判或启用VOFA。 */` |
+| [75](../config/90_board/board_config.h#L75) | 预处理 | `#endif` |
+| [76](../config/90_board/board_config.h#L76) | 预处理 | `#ifndef BOARD_OLED_ENABLE` |
+| [77](../config/90_board/board_config.h#L77) | 预处理 | `#define BOARD_OLED_ENABLE 0 /* OLED开关：0=不注册（默认），1=注册并初始化；后端由OLED_USE_I2C选择。 */` |
+| [78](../config/90_board/board_config.h#L78) | 预处理 | `#endif` |
+| [79](../config/90_board/board_config.h#L79) | 预处理 | `#ifndef BOARD_KEY_ENABLE` |
+| [80](../config/90_board/board_config.h#L80) | 预处理 | `#define BOARD_KEY_ENABLE 0 /* 板载按键开关：0=不注册（默认），1=注册按键模块。 */` |
+| [81](../config/90_board/board_config.h#L81) | 预处理 | `#endif` |
+| [82](../config/90_board/board_config.h#L82) | 预处理 | `#if BOARD_AUX_UART2_DEVICE < 0 &#124;&#124; BOARD_AUX_UART2_DEVICE > 3 &#124;&#124; BOARD_AUX_UART7_DEVICE < 0 &#124;&#124; BOARD_AUX_UART7_DEVICE > 3` |
+| [84](../config/90_board/board_config.h#L84) | 预处理 | `#endif` |
+| [85](../config/90_board/board_config.h#L85) | 预处理 | `#if BOARD_AUX_UART2_DEVICE && BOARD_LOG_UART_ENABLED` |
+| [87](../config/90_board/board_config.h#L87) | 预处理 | `#endif` |
+| [88](../config/90_board/board_config.h#L88) | 预处理 | `#if REFEREE_ENABLE && REFEREE_UART_PORT == 7 && BOARD_AUX_UART7_DEVICE` |
+| [90](../config/90_board/board_config.h#L90) | 预处理 | `#endif` |
+| [91](../config/90_board/board_config.h#L91) | 预处理 | `#define BOARD_UART7_RESERVED_FOR_DEVICE ((REFEREE_ENABLE && REFEREE_UART_PORT == 7) &#124;&#124; BOARD_AUX_UART7_DEVICE) /* 按裁判和辅助设备选择自动判断UART7是否被占用，不单独修改。 */` |
+| [94](../config/90_board/board_config.h#L94) | 预处理 | `#ifndef VOFA_TELEMETRY_ENABLE` |
+| [95](../config/90_board/board_config.h#L95) | 预处理 | `#if (!defined(CHASSIS_CONTROL_MODE) &#124;&#124; CHASSIS_CONTROL_MODE == 0) && !BOARD_UART7_RESERVED_FOR_DEVICE` |
+| [96](../config/90_board/board_config.h#L96) | 预处理 | `#define VOFA_TELEMETRY_ENABLE 1 /* VOFA发送开关：1=发送，0=关闭；默认速度后端且UART7空闲时为1，其余情况为0。 */` |
+| [97](../config/90_board/board_config.h#L97) | 预处理 | `#else` |
+| [98](../config/90_board/board_config.h#L98) | 预处理 | `#define VOFA_TELEMETRY_ENABLE 0 /* VOFA发送开关：1=发送，0=关闭；默认速度后端且UART7空闲时为1，其余情况为0。 */` |
 | [99](../config/90_board/board_config.h#L99) | 预处理 | `#endif` |
-| [100](../config/90_board/board_config.h#L100) | 预处理 | `#if VOFA_TELEMETRY_ENABLE && BOARD_UART7_RESERVED_FOR_DEVICE` |
-| [102](../config/90_board/board_config.h#L102) | 预处理 | `#endif` |
-| [104](../config/90_board/board_config.h#L104) | 预处理 | `#if VOFA_TELEMETRY_ENABLE && VOFA_TELEMETRY_MODE == 2` |
-| [105](../config/90_board/board_config.h#L105) | 预处理 | `#define BOARD_UART7_BAUDRATE 230400U /* 模式2配合20ms输出；VOFA和串口接收设备须使用相同波特率。 */` |
-| [106](../config/90_board/board_config.h#L106) | 预处理 | `#else` |
-| [107](../config/90_board/board_config.h#L107) | 预处理 | `#define BOARD_UART7_BAUDRATE 115200U /* 模式0/1、VOFA关闭、裁判或辅助设备使用UART7时保留原值。 */` |
-| [108](../config/90_board/board_config.h#L108) | 预处理 | `#endif` |
-| [109](../config/90_board/board_config.h#L109) | 预处理 | `#if BOARD_AUX_UART2_DEVICE && BOARD_AUX_UART7_DEVICE && BOARD_AUX_UART2_DEVICE == BOARD_AUX_UART7_DEVICE` |
-| [111](../config/90_board/board_config.h#L111) | 预处理 | `#endif` |
-| [112](../config/90_board/board_config.h#L112) | 预处理 | `#if BOARD_OLED_ENABLE < 0 &#124;&#124; BOARD_OLED_ENABLE > 1 &#124;&#124; BOARD_KEY_ENABLE < 0 &#124;&#124; BOARD_KEY_ENABLE > 1` |
-| [114](../config/90_board/board_config.h#L114) | 预处理 | `#endif` |
-| [116](../config/90_board/board_config.h#L116) | 预处理 | `#endif` |
+| [100](../config/90_board/board_config.h#L100) | 预处理 | `#endif` |
+| [101](../config/90_board/board_config.h#L101) | 预处理 | `#if VOFA_TELEMETRY_ENABLE != 0 && VOFA_TELEMETRY_ENABLE != 1` |
+| [103](../config/90_board/board_config.h#L103) | 预处理 | `#endif` |
+| [104](../config/90_board/board_config.h#L104) | 预处理 | `#if VOFA_TELEMETRY_ENABLE && BOARD_UART7_RESERVED_FOR_DEVICE` |
+| [106](../config/90_board/board_config.h#L106) | 预处理 | `#endif` |
+| [108](../config/90_board/board_config.h#L108) | 预处理 | `#if VOFA_TELEMETRY_ENABLE && VOFA_TELEMETRY_MODE == 2` |
+| [109](../config/90_board/board_config.h#L109) | 预处理 | `#define BOARD_UART7_BAUDRATE 230400U /* 模式2配合20ms输出；VOFA和串口接收设备须使用相同波特率。 */` |
+| [110](../config/90_board/board_config.h#L110) | 预处理 | `#else` |
+| [111](../config/90_board/board_config.h#L111) | 预处理 | `#define BOARD_UART7_BAUDRATE 115200U /* 模式0/1、VOFA关闭、裁判或辅助设备使用UART7时保留原值。 */` |
+| [112](../config/90_board/board_config.h#L112) | 预处理 | `#endif` |
+| [113](../config/90_board/board_config.h#L113) | 预处理 | `#if BOARD_AUX_UART2_DEVICE && BOARD_AUX_UART7_DEVICE && BOARD_AUX_UART2_DEVICE == BOARD_AUX_UART7_DEVICE` |
+| [115](../config/90_board/board_config.h#L115) | 预处理 | `#endif` |
+| [116](../config/90_board/board_config.h#L116) | 预处理 | `#if BOARD_OLED_ENABLE < 0 &#124;&#124; BOARD_OLED_ENABLE > 1 &#124;&#124; BOARD_KEY_ENABLE < 0 &#124;&#124; BOARD_KEY_ENABLE > 1` |
+| [118](../config/90_board/board_config.h#L118) | 预处理 | `#endif` |
+| [120](../config/90_board/board_config.h#L120) | 预处理 | `#endif` |
 
 ## config/90_board/log_config.h
 
@@ -2286,21 +2377,6 @@
 | [10](../config/91_motor/dji_motor_config.h#L10) | 预处理 | `#define CURRENT_SMOOTH_COEF 0.9f /* 电流新样本权重，无量纲；默认 0.9，旧值权重为 1−本值，改为 1 关闭电流平滑。 */` |
 | [12](../config/91_motor/dji_motor_config.h#L12) | 预处理 | `#endif` |
 
-## config/92_imu/dm_imu_config.h
-
-| 行 | 类型 | 源码 |
-| --- | --- | --- |
-| [1](../config/92_imu/dm_imu_config.h#L1) | 预处理 | `#ifndef DM_IMU_CONFIG_H` |
-| [2](../config/92_imu/dm_imu_config.h#L2) | 预处理 | `#define DM_IMU_CONFIG_H` |
-| [7](../config/92_imu/dm_imu_config.h#L7) | 预处理 | `#define DM_IMU_CAN_BUS 2 /* 用户接线：CAN2；1=CAN1，2=CAN2。 */` |
-| [8](../config/92_imu/dm_imu_config.h#L8) | 预处理 | `#define DM_IMU_CAN_RX_ID 0x11U /* 模块数据回报 MST_ID，标准帧；不得与同总线设备重叠。 */` |
-| [9](../config/92_imu/dm_imu_config.h#L9) | 预处理 | `#define DM_IMU_GRAVITY_MPS2 9.80665f /* 导航系 +Z 重力扣除量；实车检查静止/倾斜残差。 */` |
-| [11](../config/92_imu/dm_imu_config.h#L11) | 预处理 | `#if DM_IMU_CAN_BUS != 1 && DM_IMU_CAN_BUS != 2` |
-| [13](../config/92_imu/dm_imu_config.h#L13) | 预处理 | `#endif` |
-| [14](../config/92_imu/dm_imu_config.h#L14) | 预处理 | `#if DM_IMU_CAN_RX_ID > 0x7FFU` |
-| [16](../config/92_imu/dm_imu_config.h#L16) | 预处理 | `#endif` |
-| [17](../config/92_imu/dm_imu_config.h#L17) | 预处理 | `#endif` |
-
 ## config/92_imu/imu_config.h
 
 | 行 | 类型 | 源码 |
@@ -2331,6 +2407,17 @@
 | [35](../config/92_imu/imu_config.h#L35) | 预处理 | `#define IMU_BMI088_EKF_ACCEL_LPF 0 /* EKF 输入加速度低通时间常数，单位秒；默认 0 直通，改为正时间常数启用低通。 */` |
 | [36](../config/92_imu/imu_config.h#L36) | 预处理 | `#define IMU_BMI088_MOTION_ACCEL_LPF_S 0.0085 /* 去重力后的运动加速度低通时间常数，单位秒；改值后影响平滑程度与响应滞后。 */` |
 | [38](../config/92_imu/imu_config.h#L38) | 预处理 | `#endif` |
+
+## config/_vofa/vofa_config.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../config/_vofa/vofa_config.h#L1) | 预处理 | `#ifndef VOFA_CONFIG_H` |
+| [2](../config/_vofa/vofa_config.h#L2) | 预处理 | `#define VOFA_CONFIG_H` |
+| [9](../config/_vofa/vofa_config.h#L9) | 预处理 | `#ifndef VOFA_OBSERVATION_PROFILE` |
+| [10](../config/_vofa/vofa_config.h#L10) | 预处理 | `#define VOFA_OBSERVATION_PROFILE 2` |
+| [11](../config/_vofa/vofa_config.h#L11) | 预处理 | `#endif` |
+| [13](../config/_vofa/vofa_config.h#L13) | 预处理 | `#endif` |
 
 ## Inc/adc.h
 
@@ -3129,7 +3216,7 @@
 | [1](../modules/algorithm/chassis_remote_fusion.h#L1) | 预处理 | `#ifndef CHASSIS_REMOTE_FUSION_H` |
 | [2](../modules/algorithm/chassis_remote_fusion.h#L2) | 预处理 | `#define CHASSIS_REMOTE_FUSION_H` |
 | [9](../modules/algorithm/chassis_remote_fusion.h#L9) | 预处理 | `#define CHASSIS_REMOTE_WHEEL_HISTORY_CAPACITY 32U` |
-| [67](../modules/algorithm/chassis_remote_fusion.h#L67) | 预处理 | `#endif` |
+| [85](../modules/algorithm/chassis_remote_fusion.h#L85) | 预处理 | `#endif` |
 
 ## modules/algorithm/chassis_spin.c
 
@@ -3652,21 +3739,28 @@
 | [2](../modules/chassis_force_calibration/force_calibration_capture.h#L2) | 预处理 | `#define FORCE_CALIBRATION_CAPTURE_H` |
 | [29](../modules/chassis_force_calibration/force_calibration_capture.h#L29) | 预处理 | `#endif` |
 
+## modules/chassis_power/chassis_power.c
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [32](../modules/chassis_power/chassis_power.c#L32) | 预处理 | `#define VOFA_POWER_FLOAT(member) hash=HashFloat(hash,c->member);` |
+| [33](../modules/chassis_power/chassis_power.c#L33) | 预处理 | `#define VOFA_POWER_U32(member) hash=HashU32(hash,(uint32_t)c->member);` |
+
 ## modules/chassis_power/chassis_power.h
 
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
 | [1](../modules/chassis_power/chassis_power.h#L1) | 预处理 | `#ifndef CHASSIS_POWER_H` |
 | [2](../modules/chassis_power/chassis_power.h#L2) | 预处理 | `#define CHASSIS_POWER_H` |
-| [19](../modules/chassis_power/chassis_power.h#L19) | 预处理 | `#define CHASSIS_POWER_RTT_DIVIDER 20U /* 40 ms at a 2 ms motor period. */` |
-| [21](../modules/chassis_power/chassis_power.h#L21) | 预处理 | `#endif` |
+| [21](../modules/chassis_power/chassis_power.h#L21) | 预处理 | `#define CHASSIS_POWER_RTT_DIVIDER 20U /* 40 ms at a 2 ms motor period. */` |
+| [23](../modules/chassis_power/chassis_power.h#L23) | 预处理 | `#endif` |
 
 ## modules/chassis_power/chassis_power_force.c
 
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
 | [2](../modules/chassis_power/chassis_power_force.c#L2) | 预处理 | `#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE` |
-| [104](../modules/chassis_power/chassis_power_force.c#L104) | 预处理 | `#endif` |
+| [107](../modules/chassis_power/chassis_power_force.c#L107) | 预处理 | `#endif` |
 
 ## modules/chassis_power/chassis_power_force.h
 
@@ -3689,24 +3783,24 @@
 | [13](../modules/chassis_power/chassis_power_internal.h#L13) | 预处理 | `#define POWER_LOCK() ((void)0)` |
 | [14](../modules/chassis_power/chassis_power_internal.h#L14) | 预处理 | `#define POWER_UNLOCK() ((void)0)` |
 | [15](../modules/chassis_power/chassis_power_internal.h#L15) | 预处理 | `#endif` |
-| [38](../modules/chassis_power/chassis_power_internal.h#L38) | 预处理 | `#define chassis_power (ChassisPowerPrivate())` |
-| [42](../modules/chassis_power/chassis_power_internal.h#L42) | 预处理 | `#endif` |
+| [39](../modules/chassis_power/chassis_power_internal.h#L39) | 预处理 | `#define chassis_power (ChassisPowerPrivate())` |
+| [43](../modules/chassis_power/chassis_power_internal.h#L43) | 预处理 | `#endif` |
 
 ## modules/chassis_power/chassis_power_limiter.c
 
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
-| [86](../modules/chassis_power/chassis_power_limiter.c#L86) | 预处理 | `#if CHASSIS_PREDICTIVE_POWER_MODE == CHASSIS_PREDICTIVE_SHADOW` |
-| [88](../modules/chassis_power/chassis_power_limiter.c#L88) | 预处理 | `#endif` |
-| [119](../modules/chassis_power/chassis_power_limiter.c#L119) | 预处理 | `#if CHASSIS_PREDICTIVE_POWER_MODE == CHASSIS_PREDICTIVE_SHADOW` |
-| [121](../modules/chassis_power/chassis_power_limiter.c#L121) | 预处理 | `#endif` |
+| [89](../modules/chassis_power/chassis_power_limiter.c#L89) | 预处理 | `#if CHASSIS_PREDICTIVE_POWER_MODE == CHASSIS_PREDICTIVE_SHADOW` |
+| [91](../modules/chassis_power/chassis_power_limiter.c#L91) | 预处理 | `#endif` |
+| [123](../modules/chassis_power/chassis_power_limiter.c#L123) | 预处理 | `#if CHASSIS_PREDICTIVE_POWER_MODE == CHASSIS_PREDICTIVE_SHADOW` |
+| [125](../modules/chassis_power/chassis_power_limiter.c#L125) | 预处理 | `#endif` |
 
 ## modules/chassis_power/chassis_power_policy.c
 
 | 行 | 类型 | 源码 |
 | --- | --- | --- |
-| [191](../modules/chassis_power/chassis_power_policy.c#L191) | 预处理 | `#if CHASSIS_PREDICTIVE_POWER_MODE == CHASSIS_PREDICTIVE_SHADOW` |
-| [193](../modules/chassis_power/chassis_power_policy.c#L193) | 预处理 | `#endif` |
+| [193](../modules/chassis_power/chassis_power_policy.c#L193) | 预处理 | `#if CHASSIS_PREDICTIVE_POWER_MODE == CHASSIS_PREDICTIVE_SHADOW` |
+| [195](../modules/chassis_power/chassis_power_policy.c#L195) | 预处理 | `#endif` |
 
 ## modules/chassis_power/chassis_power_policy.h
 
@@ -3798,7 +3892,7 @@
 | --- | --- | --- |
 | [1](../modules/chassis_power/chassis_power_types.h#L1) | 预处理 | `#ifndef CHASSIS_POWER_TYPES_H` |
 | [2](../modules/chassis_power/chassis_power_types.h#L2) | 预处理 | `#define CHASSIS_POWER_TYPES_H` |
-| [116](../modules/chassis_power/chassis_power_types.h#L116) | 预处理 | `#endif` |
+| [129](../modules/chassis_power/chassis_power_types.h#L129) | 预处理 | `#endif` |
 
 ## modules/daemon/daemon.h
 
@@ -4073,6 +4167,18 @@
 | [178](../modules/imu/BMI088reg.h#L178) | 预处理 | `#define BMI088_GYRO_TRIG_BIST (0x1 << BMI088_GYRO_TRIG_BIST_SHFITS)` |
 | [180](../modules/imu/BMI088reg.h#L180) | 预处理 | `#endif` |
 
+## modules/imu/chassis_imu_can_protocol.h
+
+| 行 | 类型 | 源码 |
+| --- | --- | --- |
+| [1](../modules/imu/chassis_imu_can_protocol.h#L1) | 预处理 | `#ifndef CHASSIS_IMU_CAN_PROTOCOL_H` |
+| [2](../modules/imu/chassis_imu_can_protocol.h#L2) | 预处理 | `#define CHASSIS_IMU_CAN_PROTOCOL_H` |
+| [6](../modules/imu/chassis_imu_can_protocol.h#L6) | 预处理 | `#define CHASSIS_IMU_CAN_DATA_ID 0x520U` |
+| [7](../modules/imu/chassis_imu_can_protocol.h#L7) | 预处理 | `#define CHASSIS_IMU_CAN_FRAME_COUNT 9U` |
+| [8](../modules/imu/chassis_imu_can_protocol.h#L8) | 预处理 | `#define CHASSIS_IMU_CAN_FRAME_BYTES 8U` |
+| [9](../modules/imu/chassis_imu_can_protocol.h#L9) | 预处理 | `#define CHASSIS_IMU_CAN_PAYLOAD_BYTES 54U` |
+| [38](../modules/imu/chassis_imu_can_protocol.h#L38) | 预处理 | `#endif` |
+
 ## modules/imu/chassis_imu_sample.h
 
 | 行 | 类型 | 源码 |
@@ -4081,14 +4187,6 @@
 | [2](../modules/imu/chassis_imu_sample.h#L2) | 预处理 | `#define CHASSIS_IMU_SAMPLE_H` |
 | [8](../modules/imu/chassis_imu_sample.h#L8) | 预处理 | `#define CHASSIS_IMU_CAN_ASSEMBLY_MAX_MS 10U` |
 | [27](../modules/imu/chassis_imu_sample.h#L27) | 预处理 | `#endif` |
-
-## modules/imu/dm_imu_can_protocol.h
-
-| 行 | 类型 | 源码 |
-| --- | --- | --- |
-| [1](../modules/imu/dm_imu_can_protocol.h#L1) | 预处理 | `#ifndef DM_IMU_CAN_PROTOCOL_H` |
-| [2](../modules/imu/dm_imu_can_protocol.h#L2) | 预处理 | `#define DM_IMU_CAN_PROTOCOL_H` |
-| [27](../modules/imu/dm_imu_can_protocol.h#L27) | 预处理 | `#endif` |
 
 ## modules/imu/imu_sample.h
 
@@ -4892,7 +4990,7 @@
 | [10](../modules/referee/referee_power.h#L10) | 预处理 | `#define REFEREE_ROBOT_STATE_EXTENDED_PAYLOAD_LENGTH 17U` |
 | [11](../modules/referee/referee_power.h#L11) | 预处理 | `#define REFEREE_POWER_HEAT_PAYLOAD_LENGTH 14U` |
 | [12](../modules/referee/referee_power.h#L12) | 预处理 | `#define REFEREE_POWER_HEAT_LEGACY_PAYLOAD_LENGTH 16U` |
-| [60](../modules/referee/referee_power.h#L60) | 预处理 | `#endif` |
+| [62](../modules/referee/referee_power.h#L62) | 预处理 | `#endif` |
 
 ## modules/referee/referee_protocol.h
 
@@ -5056,7 +5154,7 @@
 | --- | --- | --- |
 | [1](../modules/super_cap/super_cap_types.h#L1) | 预处理 | `#ifndef SUPER_CAP_TYPES_H` |
 | [2](../modules/super_cap/super_cap_types.h#L2) | 预处理 | `#define SUPER_CAP_TYPES_H` |
-| [19](../modules/super_cap/super_cap_types.h#L19) | 预处理 | `#endif` |
+| [22](../modules/super_cap/super_cap_types.h#L22) | 预处理 | `#endif` |
 
 ## modules/telemetry/autotune_protocol.h
 

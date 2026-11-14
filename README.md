@@ -8,9 +8,9 @@
 
 将 Arm GNU Toolchain、MinGW Make 加入 PATH；CMake 构建另需 CMake 3.16 或更新版本。
 
-主板构建与烧录使用 [`config/00_flash/board_flash_config.h`](config/00_flash/board_flash_config.h)：目标为主板 `1`，下载器、profile 和输出目录集中在该文件。第二板采集固件及预设已移除。
+双 A 板构建与烧录使用 [`config/00_flash/board_flash_config.h`](config/00_flash/board_flash_config.h)：目标 `1` 是整车主板，目标 `2` 是下方 IMU 采集板，各用独立输出目录。用 `-Board 1/2` 选择实际连接的板卡。
 
-主板预设开启 `CHASSIS_REMOTE_IMU_FUSION_ENABLE=1`：刚性固定在底盘的 **DM-IMU-L1 经 CAN2** 参与在线卡尔曼**速度观测**，结果和轮速一同由 UART7 输出；电机控制、PID、功控和安全门控仍使用原输入。安装旋转、芯片偏移与噪声参数见 [远端 IMU 配置](config/30_velocity_observation/chassis_remote_imu_config.h)，默认单位旋转、零偏移是名义安装，`CHASSIS_REMOTE_IMU_CONFIG_VERIFIED=0` 表示尚未实测审核。DM 时间与序号由主板接收端估计和生成，不是模块采样时钟；融合运行不等于精度已验收。模块配置、接线与首次核对见 [DM-IMU-L1 集成说明](docs/dm-imu-integration.md)。
+主板预设开启 `CHASSIS_REMOTE_IMU_FUSION_ENABLE=1`：下方 A 板通过 **CAN1、ID `0x520`、50 Hz** 提供 IMU 数据，主板完成卡尔曼速度观测并经 UART7 输出。用户图示为 +X 前、+Y 右，A 板位于图示 +Y 116 mm；程序内部为前/左/上，因此位置补偿为 **`(0, -0.116, 0) m`**。根据 A 板官方位号图、MPU6500 轴定义和照片安装方向，传感器到底盘旋转设为绕 Z 轴 180°，四元数 `[0,0,0,1]`；仍待实物核对，`CHASSIS_REMOTE_IMU_CONFIG_VERIFIED=0`。DM 模块接收与换算路径已移除；双板源时间戳和主板时间不能直接相减。接线、两板构建和轴向检查见 [双 A 板 IMU 说明](docs/dual-a-imu-integration.md)。融合仍仅供观测，电机控制、PID 和功控保持原输入。
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Show
@@ -75,7 +75,7 @@ node tools/usb-telemetry/serve.cjs
 - [宏迁移对照与输入基线](docs/atype-macro-migration.md)
 - [接线、CAN、单位、模块与安全条件](docs/atype-integration.md)
 - [验证结果和硬件验收清单](docs/atype-validation.md)
-- [DM-IMU-L1 接 CAN2：接线、模块设置与来源核对](docs/dm-imu-integration.md)
+- [双 A 板 IMU：CAN1 接线、116 mm 补偿与轴向核对](docs/dual-a-imu-integration.md)
 - [整车平移速度融合观测、标定和验证](docs/chassis-velocity-fusion.md)
 - [卡尔曼底盘实车测试顺序与验收手册](docs/kalman-chassis-test-and-acceptance.md)
 - [底盘功率控制总览：模型、计算、分配与超级电容](docs/chassis-power-control.md)

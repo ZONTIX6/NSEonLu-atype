@@ -47,8 +47,9 @@ HAL_StatusTypeDef HAL_UART_Transmit_IT(UART_HandleTypeDef *uart, const uint8_t *
     }
     assert(next == row + length);
 #endif
-    /* Device provenance survives unavailable/stale samples and either transport. */
-    assert(fields[5] & 524288);
+    /* A-board provenance survives unavailable/stale samples and either transport. */
+    assert(fields[5] & 32768);
+    assert(!(fields[5] & 524288)); /* Reserved legacy DM source bit. */
     /* Configuration/estimated-time provenance is independent of sample validity. */
 #if CHASSIS_REMOTE_IMU_FUSION_ENABLE
     assert((fields[5] & 196608) == 196608);

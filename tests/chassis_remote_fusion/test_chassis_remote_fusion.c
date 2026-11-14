@@ -1,4 +1,5 @@
 #include "chassis_remote_fusion.h"
+#include "../../config/30_velocity_observation/chassis_remote_imu_config.h"
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -169,6 +170,56 @@ static void FixedMountAndOffsetUseSourceIntervals(void)
     Near(out.center_accel_n_mps2[0],0,.001f);
     Near(out.center_accel_n_mps2[1],0,.001f);
     Near(out.vx_mps,0,.001f); Near(out.vy_mps,0,.001f);
+}
+
+static void RightMountedABoardUsesProductionOffset(void)
+{
+    /* User +Y is RIGHT; fusion +Y is LEFT. A sensor 116 mm right of a
+     * stationary center has a_B = (+.116*alpha, +.116*omega^2, 0).
+     * These analytic inputs do not reuse the production position derivative.
+     * Catch a missing, reversed, millimetre-valued or double-applied offset. */
+    const float cases[][4] = {
+        {0, 0, .35f, -.2f},
+        {1.7f, 0, 0, 0}, {-1.7f, 0, 0, 0},
+        {1.7f, 2, 0, 0}, {-1.7f, -2, 0, 0},
+        {1.7f, -2, .35f, -.2f},
+    };
+    for(unsigned k=0;k<sizeof cases/sizeof cases[0];++k) {
+        ChassisRemoteFusion_s state={0};
+        const ChassisRemoteFusionConfig_s config=CHASSIS_REMOTE_IMU_CONFIG_INITIALIZER;
+        ChassisImuCanSnapshot_s packet={0};
+        ChassisRemoteFusionOutput_s out={0};
+        const float omega0=cases[k][0], alpha=cases[k][1];
+        const float ax=cases[k][2], ay=cases[k][3];
+        for(uint32_t t=100;t<=225;t+=5) {
+            const float seconds=((float)t-125.0f)*.001f;
+            const float theta=omega0*seconds+.5f*alpha*seconds*seconds;
+            const float c=cosf(theta), s=sinf(theta);
+            if(t>=125 && (t-125)%20==0) {
+                const uint32_t jitter=((t-125)/20)%2 ? 2 : 0;
+                packet=Packet(700000+t-3,t-1-jitter,t);
+                /* Official A-board placement plus the photographed mounting:
+                 * sensor +X backward, +Y right, +Z up => R_BS = yaw(pi).
+                 * q_NS = q_NB * [0,0,0,1]. */
+                packet.sample.quaternion[0]=-sinf(theta*.5f);
+                packet.sample.quaternion[3]=cosf(theta*.5f);
+                const float omega=omega0+alpha*seconds;
+                packet.sample.accel_n_mps2[0]=ax+.116f*(alpha*c-omega*omega*s);
+                packet.sample.accel_n_mps2[1]=ay+.116f*(alpha*s+omega*omega*c);
+                packet.sample.gyro_sensor_radps[2]=omega;
+            }
+            const float vx=seconds*(c*ax+s*ay);
+            const float vy=seconds*(s*ax-c*ay); /* Public right-positive velocity. */
+            out=Run(&state,&config,packet.available?&packet:NULL,t,vx,vy);
+        }
+        assert(out.status==CHASSIS_REMOTE_FUSED && out.updates==4);
+        Near(out.center_accel_n_mps2[0],ax,.001f);
+        Near(out.center_accel_n_mps2[1],ay,.001f);
+        if(ax==0 && ay==0) {
+            Near(out.vx_mps,0,.001f);
+            Near(out.vy_mps,0,.001f);
+        }
+    }
 }
 
 static void LossAndSamePacketRecoveryDoNotReuseMeasurement(void)
@@ -400,6 +451,7 @@ int main(void)
     EveryNewPacketMayWaitForItsLaterWheelBracket();
     PendingWheelBracketHasABoundedWait();
     FixedMountAndOffsetUseSourceIntervals();
+    RightMountedABoardUsesProductionOffset();
     LossAndSamePacketRecoveryDoNotReuseMeasurement();
     StaleOutputAndRemoteBecomeWheelFallback();
     GapsRebootsAndJitterRejectThenReacquire();

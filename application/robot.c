@@ -9,7 +9,7 @@
 #include "jscope.h"
 #endif
 #include "board/board_devices.h"
-#if CHASSIS_IMU_CAN_RX_ENABLE
+#if IMU_CAPTURE_CAN_TX_ENABLE || CHASSIS_IMU_CAN_RX_ENABLE
 #include "runtime/chassis_imu_can.h"
 #endif
 
@@ -39,7 +39,7 @@ void RobotInit()
     
     BSPInit();
     (void)BoardDevicesInit();
-#if CHASSIS_IMU_CAN_RX_ENABLE
+#if IMU_CAPTURE_CAN_TX_ENABLE || CHASSIS_IMU_CAN_RX_ENABLE
     ChassisImuCanInit();
 #endif
 #if !IMU_CAPTURE_ONLY

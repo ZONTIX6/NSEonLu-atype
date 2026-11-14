@@ -1,6 +1,6 @@
 # 结构体与成员索引
 
-扫描 **830** 个 C/H 文件，收录 **961** 个结构体、**76** 个联合体、**7947** 条直接成员声明（含匿名成员与未命名位域）。
+扫描 **837** 个 C/H 文件，收录 **963** 个结构体、**76** 个联合体、**7986** 条直接成员声明（含匿名成员与未命名位域）。
 
 要查常用实例指针、访问表达式与宏，请先看[常用指针与宏速查](../.Doc/指针查找索引.md)；本文件用于查字段类型、注释和定义。
 
@@ -23,7 +23,7 @@
 | 机器人 跨模块 控制指令 上传反馈 底盘 云台 发射 | [application](#r-application-robot_def-h-97-9)（项目源码） | 7 |
 | 底盘 运动 控制 轮速 | [application/chassis](#r-application-chassis-chassis-h-15-9)（项目源码） | 4 |
 | 云台 俯仰 偏航 控制 | [application/gimbal](#r-application-gimbal-gimbal-h-8-9)（项目源码） | 1 |
-| 项目数据 | [application/runtime](#r-application-runtime-chassis_speed_observation-h-5-9)（项目源码） | 6 |
+| 项目数据 | [application/runtime](#r-application-runtime-chassis_speed_observation-h-5-9)（项目源码） | 7 |
 | 项目数据 | [bsp](#r-bsp-bsp_tools-c-9-9)（项目源码） | 1 |
 | CAN 总线 接收 发送 | [bsp/can](#r-bsp-can-bsp_can-h-15-9)（项目源码） | 2 |
 | 计时 时钟 时间间隔 | [bsp/dwt](#r-bsp-dwt-bsp_dwt-h-21-9)（项目源码） | 1 |
@@ -38,12 +38,12 @@
 | 惯性测量 姿态 陀螺仪 加速度 | [modules/BMI088](#r-modules-BMI088-bmi088-h-26-9)（项目源码） | 4 |
 | 测距 激光 距离 | [modules/TFminiPlus](#r-modules-TFminiPlus-tfminiplus-h-10-9)（项目源码） | 1 |
 | 蜂鸣器 告警 提示音 | [modules/alarm](#r-modules-alarm-buzzer-h-40-9)（项目源码） | 2 |
-| 四元数 姿态 扩展卡尔曼 算法 运动学 滤波 控制 计算 | [modules/algorithm](#r-modules-algorithm-QuaternionEKF-h-26-9)（项目源码） | 47 |
+| 四元数 姿态 扩展卡尔曼 算法 运动学 滤波 控制 计算 | [modules/algorithm](#r-modules-algorithm-QuaternionEKF-h-26-9)（项目源码） | 48 |
 | 蓝牙 无线通信 | [modules/bluetooth](#r-modules-bluetooth-HC05-h-11-9)（项目源码） | 1 |
 | 双板通信 CAN 收发 总线 接收 发送 | [modules/can_comm](#r-modules-can_comm-can_comm-h-26-9)（项目源码） | 2 |
 | 项目数据 | [modules/chassis_force](#r-modules-chassis_force-chassis_force_allocator-h-4-9)（项目源码） | 13 |
 | 项目数据 | [modules/chassis_force_calibration](#r-modules-chassis_force_calibration-force_calibration-h-11-9)（项目源码） | 11 |
-| 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power](#r-modules-chassis_power-chassis_power_internal-h-17-9)（项目源码） | 14 |
+| 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power](#r-modules-chassis_power-chassis_power_internal-h-17-9)（项目源码） | 15 |
 | 守护 离线检测 看门狗 | [modules/daemon](#r-modules-daemon-daemon-h-13-9)（项目源码） | 2 |
 | 热量 射击 冷却 发射限制 | [modules/heat_control](#r-modules-heat_control-heat_control-h-18-9)（项目源码） | 3 |
 | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu](#r-modules-imu-BMI088driver-h-63-9)（项目源码） | 12 |
@@ -92,13 +92,12 @@
 | 串口 UART DMA 接收 发送 | [tests/bsp_usart/stubs](#r-tests-bsp_usart-stubs-main-h-7-9)（测试与测试桩） | 3 |
 | 双板通信 CAN 收发 总线 接收 发送 | [tests/can_comm/stubs](#r-tests-can_comm-stubs-bsp_can-h-6-9)（测试与测试桩） | 4 |
 | 惯性测量 姿态 陀螺仪 加速度 | [tests/chassis_gimbal_imu](#r-tests-chassis_gimbal_imu-test_chassis_gimbal_imu-c-22-11)（测试与测试桩） | 1 |
+| 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/chassis_imu_can_runtime/stubs](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-4-9)（测试与测试桩） | 3 |
 | 底盘 平移 旋转 运动 | [tests/chassis_motion](#r-tests-chassis_motion-test_chassis_motion-c-21-11)（测试与测试桩） | 2 |
 | 底盘 平移 旋转 运动 | [tests/chassis_motion/stubs](#r-tests-chassis_motion-stubs-arm_math-h-6-9)（测试与测试桩） | 1 |
 | 底盘 速度 轮速 闭环 控制 | [tests/chassis_velocity_observer/stubs](#r-tests-chassis_velocity_observer-stubs-platform-h-8-9)（测试与测试桩） | 2 |
 | 底盘功率 功控 预算 限幅 缓冲能量 | [tests/dji_chassis_power_rtt](#r-tests-dji_chassis_power_rtt-test_dji_chassis_power_rtt-c-860-18)（测试与测试桩） | 1 |
 | 底盘功率 功控 预算 限幅 缓冲能量 CAN 总线 接收 发送 | [tests/dji_chassis_power_rtt/stubs](#r-tests-dji_chassis_power_rtt-stubs-bsp_can-h-6-9)（测试与测试桩） | 8 |
-| 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/dm_imu_can_protocol](#r-tests-dm_imu_can_protocol-test_dm_imu_can_protocol-c-156-11)（测试与测试桩） | 1 |
-| 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/dm_imu_runtime/stubs](#r-tests-dm_imu_runtime-stubs-bsp_can-h-4-9)（测试与测试桩） | 3 |
 | 惯性测量 姿态 陀螺仪 加速度 实时操作系统 任务 队列 信号量 定时器 链表 | [tests/imu_capture/stubs](#r-tests-imu_capture-stubs-FreeRTOS-h-7-9)（测试与测试桩） | 2 |
 | GPIO 引脚 中断 电平 显示屏 OLED 图像 | [tests/oled/stubs](#r-tests-oled-stubs-bsp_gpio-h-5-9)（测试与测试桩） | 10 |
 | 功率计 电压 电流 实测功率 CAN 总线 接收 发送 | [tests/power_meter/stubs](#r-tests-power_meter-stubs-bsp_can-h-6-9)（测试与测试桩） | 5 |
@@ -117,11 +116,11 @@
 
 | 来源 | C/H 文件 | 结构体 | 联合体 | 直接成员 |
 | --- | --- | --- | --- | --- |
-| 项目源码 | 392 | 281 | 1 | 2650 |
+| 项目源码 | 397 | 284 | 1 | 2691 |
 | 便携副本 | 12 | 28 | 0 | 188 |
 | 芯片驱动与 CMSIS | 108 | 352 | 66 | 3640 |
 | 第三方中间件 | 91 | 214 | 9 | 1163 |
-| 测试与测试桩 | 227 | 86 | 0 | 306 |
+| 测试与测试桩 | 229 | 85 | 0 | 304 |
 
 ## 类型总表
 
@@ -143,6 +142,7 @@
 | [ChassisSpeedObservationDiagnostics](#r-application-runtime-chassis_speed_observation-h-8-9)（struct） | 项目数据 | 源码未注释 | 项目源码 · [application/runtime/chassis_speed_observation.h:8](../application/runtime/chassis_speed_observation.h#L8) |
 | [ShadowPacket](#r-application-runtime-shadow_jscope-c-22-9)（struct） | 项目数据 | RTT-Normal permits twelve variables including the microsecond timestamp. | 项目源码 · [application/runtime/shadow_jscope.c:22](../application/runtime/shadow_jscope.c#L22) |
 | [ShadowJScopeDiagnostics](#r-application-runtime-shadow_jscope-h-5-9)（struct） | 项目数据 | 源码未注释 | 项目源码 · [application/runtime/shadow_jscope.h:5](../application/runtime/shadow_jscope.h#L5) |
+| [frame](#r-application-runtime-vofa_observation-c-15-8)（struct） | 项目数据 | 源码未注释 | 项目源码 · [application/runtime/vofa_observation.c:15](../application/runtime/vofa_observation.c#L15) |
 | [frame](#r-application-runtime-vofa_telemetry-c-16-8)（struct） | 遥测 在线调参 参数保存 数据采样 | STM32F427 stores IEEE 754 floats in JustFloat's little-endian wire order. | 项目源码 · [application/runtime/vofa_telemetry.c:16](../application/runtime/vofa_telemetry.c#L16) |
 | [measurement_frame](#r-application-runtime-vofa_telemetry-c-90-8)（struct） | 遥测 在线调参 参数保存 数据采样 | STM32F427 uses the little-endian IEEE 754 float32 wire representation. | 项目源码 · [application/runtime/vofa_telemetry.c:90](../application/runtime/vofa_telemetry.c#L90) |
 | [CallbackTask_t](#r-bsp-bsp_tools-c-9-9)（struct） | 项目数据 | 不可修改,最大信号量数量 | 项目源码 · [bsp/bsp_tools.c:9](../bsp/bsp_tools.c#L9) |
@@ -192,8 +192,9 @@
 | [ChassisPowerTransientState_s](#r-modules-algorithm-chassis_power_transient-h-33-9)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | 源码未注释 | 项目源码 · [modules/algorithm/chassis_power_transient.h:33](../modules/algorithm/chassis_power_transient.h#L33) |
 | [ChassisPowerTransientOutput_s](#r-modules-algorithm-chassis_power_transient-h-50-9)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | 源码未注释 | 项目源码 · [modules/algorithm/chassis_power_transient.h:50](../modules/algorithm/chassis_power_transient.h#L50) |
 | [ChassisRemoteFusionConfig_s](#r-modules-algorithm-chassis_remote_fusion-h-22-9)（struct） | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | 源码未注释 | 项目源码 · [modules/algorithm/chassis_remote_fusion.h:22](../modules/algorithm/chassis_remote_fusion.h#L22) |
-| [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-29-9)（struct） | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | 源码未注释 | 项目源码 · [modules/algorithm/chassis_remote_fusion.h:29](../modules/algorithm/chassis_remote_fusion.h#L29) |
-| [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-42-9)（struct） | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | Fixed storage, no allocation. Reset on startup or explicit configuration change. | 项目源码 · [modules/algorithm/chassis_remote_fusion.h:42](../modules/algorithm/chassis_remote_fusion.h#L42) |
+| [ChassisRemoteFusionAttempt_s](#r-modules-algorithm-chassis_remote_fusion-h-35-9)（struct） | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | Last actual production-filter call, including rejected calls. The input and effective config are copied BEFORE the filter runs. Pipeline resets and repeated source samples preserve this record; only a new call replaces it. All us times are the filter's wrapping uint32 clock, not receiver uptime. source/receive steps describe the newest source that completed this attempt; middle_receiver_ms and pair_span_ms describe the paired middle sample. | 项目源码 · [modules/algorithm/chassis_remote_fusion.h:35](../modules/algorithm/chassis_remote_fusion.h#L35) |
+| [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-45-9)（struct） | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | 源码未注释 | 项目源码 · [modules/algorithm/chassis_remote_fusion.h:45](../modules/algorithm/chassis_remote_fusion.h#L45) |
+| [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-59-9)（struct） | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | Fixed storage, no allocation. Reset on startup or explicit configuration change. | 项目源码 · [modules/algorithm/chassis_remote_fusion.h:59](../modules/algorithm/chassis_remote_fusion.h#L59) |
 | [ChassisSpinConfig_s](#r-modules-algorithm-chassis_spin-h-8-9)（struct） | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | 源码未注释 | 项目源码 · [modules/algorithm/chassis_spin.h:8](../modules/algorithm/chassis_spin.h#L8) |
 | [ChassisSpinInput_s](#r-modules-algorithm-chassis_spin-h-49-9)（struct） | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | 源码未注释 | 项目源码 · [modules/algorithm/chassis_spin.h:49](../modules/algorithm/chassis_spin.h#L49) |
 | [ChassisSpinState_s](#r-modules-algorithm-chassis_spin-h-66-9)（struct） | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | 源码未注释 | 项目源码 · [modules/algorithm/chassis_spin.h:66](../modules/algorithm/chassis_spin.h#L66) |
@@ -252,22 +253,23 @@
 | [ChassisPowerShadowEnergySnapshot](#r-modules-chassis_power-chassis_power_shadow-h-17-9)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 | 源码未注释 | 项目源码 · [modules/chassis_power/chassis_power_shadow.h:17](../modules/chassis_power/chassis_power_shadow.h#L17) |
 | [ChassisPowerShadowSnapshot](#r-modules-chassis_power-chassis_power_shadow-h-23-9)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 | 源码未注释 | 项目源码 · [modules/chassis_power/chassis_power_shadow.h:23](../modules/chassis_power/chassis_power_shadow.h#L23) |
 | [ChassisPower_Init_Config_s](#r-modules-chassis_power-chassis_power_types-h-15-9)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 | 源码未注释 | 项目源码 · [modules/chassis_power/chassis_power_types.h:15](../modules/chassis_power/chassis_power_types.h#L15) |
-| [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-27-9)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 | 源码未注释 | 项目源码 · [modules/chassis_power/chassis_power_types.h:27](../modules/chassis_power/chassis_power_types.h#L27) |
-| [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-37-9)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 | 源码未注释 | 项目源码 · [modules/chassis_power/chassis_power_types.h:37](../modules/chassis_power/chassis_power_types.h#L37) |
-| [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 | 源码未注释 | 项目源码 · [modules/chassis_power/chassis_power_types.h:49](../modules/chassis_power/chassis_power_types.h#L49) |
-| [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-70-9)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 | 源码未注释 | 项目源码 · [modules/chassis_power/chassis_power_types.h:70](../modules/chassis_power/chassis_power_types.h#L70) |
-| [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-85-9)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 | 源码未注释 | 项目源码 · [modules/chassis_power/chassis_power_types.h:85](../modules/chassis_power/chassis_power_types.h#L85) |
-| [ChassisPowerCycleOutput_s](#r-modules-chassis_power-chassis_power_types-h-99-9)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 | 源码未注释 | 项目源码 · [modules/chassis_power/chassis_power_types.h:99](../modules/chassis_power/chassis_power_types.h#L99) |
-| [ChassisPowerFinalInput_s](#r-modules-chassis_power-chassis_power_types-h-108-9)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 | 源码未注释 | 项目源码 · [modules/chassis_power/chassis_power_types.h:108](../modules/chassis_power/chassis_power_types.h#L108) |
+| [ChassisPowerConfigObservation_s](#r-modules-chassis_power-chassis_power_types-h-28-9)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 | 源码未注释 | 项目源码 · [modules/chassis_power/chassis_power_types.h:28](../modules/chassis_power/chassis_power_types.h#L28) |
+| [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-36-9)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 | 源码未注释 | 项目源码 · [modules/chassis_power/chassis_power_types.h:36](../modules/chassis_power/chassis_power_types.h#L36) |
+| [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-46-9)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 | 源码未注释 | 项目源码 · [modules/chassis_power/chassis_power_types.h:46](../modules/chassis_power/chassis_power_types.h#L46) |
+| [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 | 源码未注释 | 项目源码 · [modules/chassis_power/chassis_power_types.h:59](../modules/chassis_power/chassis_power_types.h#L59) |
+| [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-83-9)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 | 源码未注释 | 项目源码 · [modules/chassis_power/chassis_power_types.h:83](../modules/chassis_power/chassis_power_types.h#L83) |
+| [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-98-9)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 | 源码未注释 | 项目源码 · [modules/chassis_power/chassis_power_types.h:98](../modules/chassis_power/chassis_power_types.h#L98) |
+| [ChassisPowerCycleOutput_s](#r-modules-chassis_power-chassis_power_types-h-112-9)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 | 源码未注释 | 项目源码 · [modules/chassis_power/chassis_power_types.h:112](../modules/chassis_power/chassis_power_types.h#L112) |
+| [ChassisPowerFinalInput_s](#r-modules-chassis_power-chassis_power_types-h-121-9)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 | 源码未注释 | 项目源码 · [modules/chassis_power/chassis_power_types.h:121](../modules/chassis_power/chassis_power_types.h#L121) |
 | [DaemonInstance](#r-modules-daemon-daemon-h-13-9)（struct） | 守护 离线检测 看门狗 | daemon结构体定义 | 项目源码 · [modules/daemon/daemon.h:13](../modules/daemon/daemon.h#L13) |
 | [Daemon_Init_Config_s](#r-modules-daemon-daemon-h-23-9)（struct） | 守护 离线检测 看门狗 | daemon初始化配置 | 项目源码 · [modules/daemon/daemon.h:23](../modules/daemon/daemon.h#L23) |
 | [HeatControlData_s](#r-modules-heat_control-heat_control-h-18-9)（struct） | 热量 射击 冷却 发射限制 | 裁判系统热量数据主题，由底盘应用发布，热量控制模块订阅。 从裁判系统转发的热量数据 current_heat 对应 0x0202 的 shooter_17mm_1_barrel_heat； heat_limit 和 cooling_rate 对应 0x0201 的热量上限、每秒冷却值。 | 项目源码 · [modules/heat_control/heat_control.h:18](../modules/heat_control/heat_control.h#L18) |
 | [HeatControl_Init_Config_s](#r-modules-heat_control-heat_control-h-28-9)（struct） | 热量 射击 冷却 发射限制 | 热量控制初始化配置。 | 项目源码 · [modules/heat_control/heat_control.h:28](../modules/heat_control/heat_control.h#L28) |
 | [HeatControlInstance](#r-modules-heat_control-heat_control-h-35-9)（struct） | 热量 射击 冷却 发射限制 | 热量控制实例。 | 项目源码 · [modules/heat_control/heat_control.h:35](../modules/heat_control/heat_control.h#L35) |
 | [IMU_Data_t](#r-modules-imu-BMI088driver-h-63-9)（struct） | 惯性测量 姿态 陀螺仪 加速度 | 閿熸枻鎷烽敓琛楄鎷烽敓鐫潻鎷� IMU閺佺増宓佺紒鎾寸€担锟� | 项目源码 · [modules/imu/BMI088driver.h:63](../modules/imu/BMI088driver.h#L63) |
-| [ChassisImuCanSample_s](#r-modules-imu-chassis_imu_sample-h-12-9)（struct） | 惯性测量 姿态 陀螺仪 加速度 | Names retained for the existing fusion and telemetry interfaces. The dedicated IMU supplies no source timestamp: timing is estimated locally. | 项目源码 · [modules/imu/chassis_imu_sample.h:12](../modules/imu/chassis_imu_sample.h#L12) |
+| [ChassisImuCanDecoder_s](#r-modules-imu-chassis_imu_can_protocol-h-13-9)（struct） | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | Caller-owned storage. Only the receive context mutates it; synchronize copies from another context. Rejections preserve the last complete sample's times. | 项目源码 · [modules/imu/chassis_imu_can_protocol.h:13](../modules/imu/chassis_imu_can_protocol.h#L13) |
+| [ChassisImuCanSample_s](#r-modules-imu-chassis_imu_sample-h-12-9)（struct） | 惯性测量 姿态 陀螺仪 加速度 | The dedicated A board supplies its own sample identity and source-local age. Source and receiver clocks have independent epochs. | 项目源码 · [modules/imu/chassis_imu_sample.h:12](../modules/imu/chassis_imu_sample.h#L12) |
 | [ChassisImuCanSnapshot_s](#r-modules-imu-chassis_imu_sample-h-20-9)（struct） | 惯性测量 姿态 陀螺仪 加速度 | 源码未注释 | 项目源码 · [modules/imu/chassis_imu_sample.h:20](../modules/imu/chassis_imu_sample.h#L20) |
-| [DmImuCanDecoder_s](#r-modules-imu-dm_imu_can_protocol-h-9-9)（struct） | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | Caller-owned; receive context owns mutations. Synchronize snapshot copies. DM supplies neither source timestamps nor group tags: local receive time is only an estimate, and the ordered assembly window cannot prove simultaneity. | 项目源码 · [modules/imu/dm_imu_can_protocol.h:9](../modules/imu/dm_imu_can_protocol.h#L9) |
 | [IMUSample_s](#r-modules-imu-imu_sample-h-5-9)（struct） | 惯性测量 姿态 陀螺仪 加速度 | 源码未注释 | 项目源码 · [modules/imu/imu_sample.h:5](../modules/imu/imu_sample.h#L5) |
 | [mpu_data_t](#r-modules-imu-ins_service-c-41-9)（struct） | 惯性测量 姿态 陀螺仪 加速度 | 源码未注释 | 项目源码 · [modules/imu/ins_service.c:41](../modules/imu/ins_service.c#L41) |
 | [attitude_t](#r-modules-imu-ins_task-h-28-9)（struct） | 惯性测量 姿态 陀螺仪 加速度 | 源码未注释 | 项目源码 · [modules/imu/ins_task.h:28](../modules/imu/ins_task.h#L28) |
@@ -345,7 +347,7 @@
 | [UI_CharReFresh_t](#r-modules-referee-referee_UI-h-30-9)（struct） | 裁判系统 比赛状态 血量 功率 热量 图形交互 | 源码未注释 | 项目源码 · [modules/referee/referee_UI.h:30](../modules/referee/referee_UI.h#L30) |
 | [RefereePowerState_s](#r-modules-referee-referee_power-h-15-9)（struct） | 裁判系统 比赛状态 血量 功率 热量 图形交互 | 源码未注释 | 项目源码 · [modules/referee/referee_power.h:15](../modules/referee/referee_power.h#L15) |
 | [RefereePowerSnapshot_s](#r-modules-referee-referee_power-h-29-9)（struct） | 裁判系统 比赛状态 血量 功率 热量 图形交互 | 源码未注释 | 项目源码 · [modules/referee/referee_power.h:29](../modules/referee/referee_power.h#L29) |
-| [RefereeHeatSnapshot_s](#r-modules-referee-referee_power-h-41-9)（struct） | 裁判系统 比赛状态 血量 功率 热量 图形交互 | 源码未注释 | 项目源码 · [modules/referee/referee_power.h:41](../modules/referee/referee_power.h#L41) |
+| [RefereeHeatSnapshot_s](#r-modules-referee-referee_power-h-43-9)（struct） | 裁判系统 比赛状态 血量 功率 热量 图形交互 | 源码未注释 | 项目源码 · [modules/referee/referee_power.h:43](../modules/referee/referee_power.h#L43) |
 | [xFrameHeader](#r-modules-referee-referee_protocol-h-58-9)（struct） | 裁判系统 比赛状态 血量 功率 热量 图形交互 | 帧头定义 | 项目源码 · [modules/referee/referee_protocol.h:58](../modules/referee/referee_protocol.h#L58) |
 | [ext_game_state_t](#r-modules-referee-referee_protocol-h-111-10)（struct） | 裁判系统 比赛状态 血量 功率 热量 图形交互 | 接收数据的详细说明*************************** 接收数据的详细说明*************************** ID: 0x0001  Byte:  11    比赛状态数据 | 项目源码 · [modules/referee/referee_protocol.h:111](../modules/referee/referee_protocol.h#L111) |
 | [ext_game_result_t](#r-modules-referee-referee_protocol-h-120-9)（struct） | 裁判系统 比赛状态 血量 功率 热量 图形交互 | ID: 0x0002  Byte:  1    比赛结果数据 | 项目源码 · [modules/referee/referee_protocol.h:120](../modules/referee/referee_protocol.h#L120) |
@@ -1100,6 +1102,9 @@
 | [CANInstance](#r-tests-can_comm-stubs-bsp_can-h-23-1)（struct） | 双板通信 CAN 收发 总线 接收 发送 | 源码未注释 | 测试与测试桩 · [tests/can_comm/stubs/bsp_can.h:23](../tests/can_comm/stubs/bsp_can.h#L23) |
 | [CAN_Init_Config_s](#r-tests-can_comm-stubs-bsp_can-h-35-9)（struct） | 双板通信 CAN 收发 总线 接收 发送 | 源码未注释 | 测试与测试桩 · [tests/can_comm/stubs/bsp_can.h:35](../tests/can_comm/stubs/bsp_can.h#L35) |
 | [cases](#r-tests-chassis_gimbal_imu-test_chassis_gimbal_imu-c-22-11)（struct） | 惯性测量 姿态 陀螺仪 加速度 | 源码未注释 | 测试与测试桩 · [tests/chassis_gimbal_imu/test_chassis_gimbal_imu.c:22](../tests/chassis_gimbal_imu/test_chassis_gimbal_imu.c#L22) |
+| [CAN_HandleTypeDef](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-4-9)（struct） | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | 源码未注释 | 测试与测试桩 · [tests/chassis_imu_can_runtime/stubs/bsp_can.h:4](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L4) |
+| [CANInstance](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-7-1)（struct） | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | 源码未注释 | 测试与测试桩 · [tests/chassis_imu_can_runtime/stubs/bsp_can.h:7](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L7) |
+| [CAN_Init_Config_s](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-14-9)（struct） | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | 源码未注释 | 测试与测试桩 · [tests/chassis_imu_can_runtime/stubs/bsp_can.h:14](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L14) |
 | [arm_matrix_instance_f32](#r-tests-chassis_motion-stubs-arm_math-h-6-9)（struct） | 底盘 平移 旋转 运动 | Substitute only CMSIS math primitives; motion and angle wrapping are real. | 测试与测试桩 · [tests/chassis_motion/stubs/arm_math.h:6](../tests/chassis_motion/stubs/arm_math.h#L6) |
 | [cases](#r-tests-chassis_motion-test_chassis_motion-c-21-11)（struct） | 底盘 平移 旋转 运动 | 源码未注释 | 测试与测试桩 · [tests/chassis_motion/test_chassis_motion.c:21](../tests/chassis_motion/test_chassis_motion.c#L21) |
 | [cases](#r-tests-chassis_motion-test_chassis_motion-c-51-11)（struct） | 底盘 平移 旋转 运动 | 源码未注释 | 测试与测试桩 · [tests/chassis_motion/test_chassis_motion.c:51](../tests/chassis_motion/test_chassis_motion.c#L51) |
@@ -1114,10 +1119,6 @@
 | [DaemonInstance](#r-tests-dji_chassis_power_rtt-stubs-daemon-h-8-9)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 守护 离线检测 看门狗 | 源码未注释 | 测试与测试桩 · [tests/dji_chassis_power_rtt/stubs/daemon.h:8](../tests/dji_chassis_power_rtt/stubs/daemon.h#L8) |
 | [Daemon_Init_Config_s](#r-tests-dji_chassis_power_rtt-stubs-daemon-h-13-9)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 守护 离线检测 看门狗 | 源码未注释 | 测试与测试桩 · [tests/dji_chassis_power_rtt/stubs/daemon.h:13](../tests/dji_chassis_power_rtt/stubs/daemon.h#L13) |
 | [cases](#r-tests-dji_chassis_power_rtt-test_dji_chassis_power_rtt-c-860-18)（struct） | 底盘功率 功控 预算 限幅 缓冲能量 | The same sequence is replayed after moving policy and limiting ownership. | 测试与测试桩 · [tests/dji_chassis_power_rtt/test_dji_chassis_power_rtt.c:860](../tests/dji_chassis_power_rtt/test_dji_chassis_power_rtt.c#L860) |
-| [cases](#r-tests-dm_imu_can_protocol-test_dm_imu_can_protocol-c-156-11)（struct） | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | 源码未注释 | 测试与测试桩 · [tests/dm_imu_can_protocol/test_dm_imu_can_protocol.c:156](../tests/dm_imu_can_protocol/test_dm_imu_can_protocol.c#L156) |
-| [CAN_HandleTypeDef](#r-tests-dm_imu_runtime-stubs-bsp_can-h-4-9)（struct） | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | 源码未注释 | 测试与测试桩 · [tests/dm_imu_runtime/stubs/bsp_can.h:4](../tests/dm_imu_runtime/stubs/bsp_can.h#L4) |
-| [CANInstance](#r-tests-dm_imu_runtime-stubs-bsp_can-h-7-1)（struct） | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | 源码未注释 | 测试与测试桩 · [tests/dm_imu_runtime/stubs/bsp_can.h:7](../tests/dm_imu_runtime/stubs/bsp_can.h#L7) |
-| [CAN_Init_Config_s](#r-tests-dm_imu_runtime-stubs-bsp_can-h-14-9)（struct） | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | 源码未注释 | 测试与测试桩 · [tests/dm_imu_runtime/stubs/bsp_can.h:14](../tests/dm_imu_runtime/stubs/bsp_can.h#L14) |
 | [StaticTask_t](#r-tests-imu_capture-stubs-FreeRTOS-h-7-9)（struct） | 惯性测量 姿态 陀螺仪 加速度 实时操作系统 任务 队列 信号量 定时器 链表 | 源码未注释 | 测试与测试桩 · [tests/imu_capture/stubs/FreeRTOS.h:7](../tests/imu_capture/stubs/FreeRTOS.h#L7) |
 | [osThreadDef_t](#r-tests-imu_capture-stubs-cmsis_os-h-5-9)（struct） | 惯性测量 姿态 陀螺仪 加速度 ARM 内核 寄存器 DSP 数学 矩阵 | 源码未注释 | 测试与测试桩 · [tests/imu_capture/stubs/cmsis_os.h:5](../tests/imu_capture/stubs/cmsis_os.h#L5) |
 | [GPIOInstance](#r-tests-oled-stubs-bsp_gpio-h-5-9)（struct） | GPIO 引脚 中断 电平 显示屏 OLED 图像 | 源码未注释 | 测试与测试桩 · [tests/oled/stubs/bsp_gpio.h:5](../tests/oled/stubs/bsp_gpio.h#L5) |
@@ -1296,7 +1297,6 @@
 | `accel_n_mps2` | [ChassisVelocityFusionInput_s](#r-modules-algorithm-chassis_velocity_fusion-h-19-9) | 源码未注释 | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity_fusion.h:21](../modules/algorithm/chassis_velocity_fusion.h#L21) |
 | `accel_n_mps2` | [ChassisImuCanSample_s](#r-modules-imu-chassis_imu_sample-h-12-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/chassis_imu_sample.h:14](../modules/imu/chassis_imu_sample.h#L14) |
 | `accel_n_mps2` | [INSMotionSnapshot_s](#r-modules-imu-ins_task-h-50-9) | Gravity removed at the sensor, before any lever correction. | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/ins_task.h:53](../modules/imu/ins_task.h#L53) |
-| `accel_sensor_mps2` | [DmImuCanDecoder_s](#r-modules-imu-dm_imu_can_protocol-h-9-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [modules/imu/dm_imu_can_protocol.h:10](../modules/imu/dm_imu_can_protocol.h#L10) |
 | `accel_variance` | [ChassisVelocityFusionConfig_s](#r-modules-algorithm-chassis_velocity_fusion-h-7-9) | (m/s^2)^2 | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity_fusion.h:9](../modules/algorithm/chassis_velocity_fusion.h#L9) |
 | `acceleration_bound` | [PPModel](#r-modules-predictive_power-power_prediction-h-8-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_prediction.h:13](../modules/predictive_power/power_prediction.h#L13) |
 | `acceleration_rpm_s` | [ChassisPowerTransientState_s](#r-modules-algorithm-chassis_power_transient-h-33-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:39](../modules/algorithm/chassis_power_transient.h#L39) |
@@ -1342,10 +1342,10 @@
 | `actual_rpm` | [ChassisSpinInput_s](#r-modules-algorithm-chassis_spin-h-49-9) | 源码未注释 | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | [modules/algorithm/chassis_spin.h:56](../modules/algorithm/chassis_spin.h#L56) |
 | `actual_rpm` | [ChassisForceCycleInput_s](#r-modules-chassis_force-chassis_force_control-h-19-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:22](../modules/chassis_force/chassis_force_control.h#L22) |
 | `actual_rpm` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:42](../modules/chassis_force/chassis_force_control.h#L42) |
-| `actual_rpm` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-85-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:91](../modules/chassis_power/chassis_power_types.h#L91) |
+| `actual_rpm` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-98-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:104](../modules/chassis_power/chassis_power_types.h#L104) |
 | `actual_rpm` | [ChassisPowerCaptureSample_s](#r-modules-telemetry-chassis_power_capture-h-20-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/chassis_power_capture.h:23](../modules/telemetry/chassis_power_capture.h#L23) |
 | `actual_speed_rpm` | [ChassisPowerTelemetry_s](#r-modules-algorithm-power_model-h-65-9) | 源码未注释 | 功率模型 损耗 预测 功控 算法 运动学 滤波 控制 计算 | [modules/algorithm/power_model.h:68](../modules/algorithm/power_model.h#L68) |
-| `adaptive_spin` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-70-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:79](../modules/chassis_power/chassis_power_types.h#L79) |
+| `adaptive_spin` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-83-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:92](../modules/chassis_power/chassis_power_types.h#L92) |
 | `AdaptiveGainScale` | [QEKF_INS_t](#r-modules-algorithm-QuaternionEKF-h-26-9) | 源码未注释 | 四元数 姿态 扩展卡尔曼 算法 运动学 滤波 控制 计算 | [modules/algorithm/QuaternionEKF.h:46](../modules/algorithm/QuaternionEKF.h#L46) |
 | `add` | [USBD_EPTypeDef](#r-Middlewares-ST-STM32_USB_Device_Library-Core-Inc-usbd_def-h-336-9) | 源码未注释 | USB 虚拟串口 遥测 调参 数据传输 STM32 外设 寄存器 HAL 配置 句柄 | [Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h:338](../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h#L338) |
 | `AddrCallback` | [I2C_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_i2c-h-185-9) | I2C Slave Address Match callback | I2C 外设 总线 通信 STM32 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_i2c.h:237](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_i2c.h#L237) |
@@ -1500,10 +1500,13 @@
 | `ARR` | [TIM_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f407xx-h-728-9) | TIM auto-reload register,            Address offset: 0x2C | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h:741](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h#L741) |
 | `ARR` | [TIM_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f427xx-h-798-9) | TIM auto-reload register,            Address offset: 0x2C | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h:811](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h#L811) |
 | `ARR` | [TIM_TypeDef](#r-tests-bsp_pwm-stubs-tim-h-4-9) | 源码未注释 | PWM 定时器 占空比 输出 | [tests/bsp_pwm/stubs/tim.h:4](../tests/bsp_pwm/stubs/tim.h#L4) |
+| `assembling` | [ChassisImuCanDecoder_s](#r-modules-imu-chassis_imu_can_protocol-h-13-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [modules/imu/chassis_imu_can_protocol.h:18](../modules/imu/chassis_imu_can_protocol.h#L18) |
 | `AsynchPrediv` | [RTC_InitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_rtc-h-60-9) | Specifies the RTC Asynchronous Predivider value. This parameter must be a number between Min_Data = 0x00 and Max_Data = 0x7F | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rtc.h:65](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rtc.h#L65) |
 | `AsynchPrescaler` | [LL_RTC_InitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_ll_rtc-h-85-9) | Specifies the RTC Asynchronous Predivider value. This parameter must be a number between Min_Data = 0x00 and Max_Data = 0x7F This feature can be modified afterwards using unitary function @ref LL_RTC_SetAsynchPrescaler(). | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_rtc.h:93](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_rtc.h#L93) |
 | `attack_buff` | [ext_buff_musk_t](#r-modules-referee-referee_protocol-h-202-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_protocol.h:208](../modules/referee/referee_protocol.h#L208) |
 | `attack_buff` | [RefereeBuff](#r-portable_modules-modules-referee-referee_protocol-h-121-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee_protocol.h:127](../portable_modules/modules/referee/referee_protocol.h#L127) |
+| `attempt` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-45-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:55](../modules/algorithm/chassis_remote_fusion.h#L55) |
+| `attempt` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-59-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:70](../modules/algorithm/chassis_remote_fusion.h#L70) |
 | `attempted` | [FcRecord](#r-modules-chassis_force_calibration-force_calibration_capture-h-6-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration_capture.h:11](../modules/chassis_force_calibration/force_calibration_capture.h#L11) |
 | `attenuation` | [ChassisPowerInput_s](#r-modules-algorithm-power_model-h-38-9) | 源码未注释 | 功率模型 损耗 预测 功控 算法 运动学 滤波 控制 计算 | [modules/algorithm/power_model.h:44](../modules/algorithm/power_model.h#L44) |
 | `attitude` | [INSSnapshot_s](#r-modules-imu-ins_task-h-45-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/ins_task.h:45](../modules/imu/ins_task.h#L45) |
@@ -1515,7 +1518,7 @@
 | `Autoreload` | [LL_TIM_InitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_ll_tim-h-182-9) | Specifies the auto reload value to be loaded into the active Auto-Reload Register at the next update event. This parameter must be a number between Min_Data=0x0000 and Max_Data=0xFFFF. Some timer instances may support 32 bits counters. In that case this parameter must be a number between 0x0000 and 0xFFFFFFFF. This feature can be modified afterwards using unitary function @ref LL_TIM_SetAutoReload(). | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_tim.h:196](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_tim.h#L196) |
 | `AutoReloadPreload` | [TIM_Base_InitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_tim-h-46-9) | Specifies the auto-reload preload. This parameter can be a value of @ref TIM_AutoReloadPreload | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h:72](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h#L72) |
 | `AutoRetransmission` | [CAN_InitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_can-h-60-9) | Enable or disable the non-automatic retransmission mode. This parameter can be set to ENABLE or DISABLE. | CAN 总线 接收 发送 STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h:87](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h#L87) |
-| `autotune_permitted` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-27-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:33](../modules/chassis_power/chassis_power_types.h#L33) |
+| `autotune_permitted` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-36-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:42](../modules/chassis_power/chassis_power_types.h#L42) |
 | `autotune_permitted` | [DJIMotorGroupControl_s](#r-modules-motor-DJImotor-dji_motor-h-89-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_motor.h:93](../modules/motor/DJImotor/dji_motor.h#L93) |
 | `AutoWakeUp` | [CAN_InitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_can-h-60-9) | Enable or disable the automatic wake-up mode. This parameter can be set to ENABLE or DISABLE. | CAN 总线 接收 发送 STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h:84](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h#L84) |
 | `aux_age_ms` | [ChassisForceIntent_s](#r-modules-chassis_force-chassis_force_types-h-7-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_types.h:10](../modules/chassis_force/chassis_force_types.h#L10) |
@@ -1526,7 +1529,9 @@
 | `aux_stopped` | [FcPermit](#r-modules-motor-DJImotor-dji_force_calibration-h-6-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_force_calibration.h:9](../modules/motor/DJImotor/dji_force_calibration.h#L9) |
 | `aux_stopped` | [VehicleSafetyInput_s](#r-modules-vehicle_safety-vehicle_safety-h-6-9) | Fresh remote actuator stop proof in a dual-board vehicle. | 整车 安全 启停 遥控失联 | [modules/vehicle_safety/vehicle_safety.h:11](../modules/vehicle_safety/vehicle_safety.h#L11) |
 | `available` | [ChassisVelocityDiagnostics_s](#r-application-chassis-chassis_velocity_observer-h-24-9) | 源码未注释 | 底盘 运动 控制 轮速 速度 闭环 | [application/chassis/chassis_velocity_observer.h:37](../application/chassis/chassis_velocity_observer.h#L37) |
-| `available` | [ChassisImuCanSnapshot_s](#r-modules-imu-chassis_imu_sample-h-20-9) | A complete sample exists; freshness is checked by its consumer. | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/chassis_imu_sample.h:24](../modules/imu/chassis_imu_sample.h#L24) |
+| `available` | [ChassisRemoteFusionAttempt_s](#r-modules-algorithm-chassis_remote_fusion-h-35-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:42](../modules/algorithm/chassis_remote_fusion.h#L42) |
+| `available` | [ChassisPowerConfigObservation_s](#r-modules-chassis_power-chassis_power_types-h-28-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:32](../modules/chassis_power/chassis_power_types.h#L32) |
+| `available` | [ChassisImuCanSnapshot_s](#r-modules-imu-chassis_imu_sample-h-20-9) | A complete packet exists, even if sample.valid is false. | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/chassis_imu_sample.h:24](../modules/imu/chassis_imu_sample.h#L24) |
 | `available_power_limit_w` | [SuperCapStatus_s](#r-modules-super_cap-super_cap_protocol-h-42-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [modules/super_cap/super_cap_protocol.h:48](../modules/super_cap/super_cap_protocol.h#L48) |
 | `available_power_limit_w` | [SuperCapStatus](#r-portable_modules-modules-super_cap-super_cap-h-48-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [portable_modules/modules/super_cap/super_cap.h:54](../portable_modules/modules/super_cap/super_cap.h#L54) |
 | `axis` | [ChassisVelocityFusion_s](#r-modules-algorithm-chassis_velocity_fusion-h-37-9) | 源码未注释 | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity_fusion.h:38](../modules/algorithm/chassis_velocity_fusion.h#L38) |
@@ -1591,7 +1596,7 @@
 | `Banks` | [FLASH_OBProgramInitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_flash_ex-h-67-9) | Select banks for WRP activation/deactivation of all sectors. This parameter must be a value of @ref FLASHEx_Banks | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash_ex.h:78](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash_ex.h#L78) |
 | `Banks` | [FLASH_AdvOBProgramInitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_flash_ex-h-99-9) | Select banks for PCROP activation/deactivation of all sectors. This parameter must be a value of @ref FLASHEx_Banks | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash_ex.h:115](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash_ex.h#L115) |
 | `base_limited` | [ChassisPowerOuterLoopInput_s](#r-modules-algorithm-chassis_power_outer_loop-h-41-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_outer_loop.h:53](../modules/algorithm/chassis_power_outer_loop.h#L53) |
-| `base_limited` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:58](../modules/chassis_power/chassis_power_types.h#L58) |
+| `base_limited` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:70](../modules/chassis_power/chassis_power_types.h#L70) |
 | `Base_MspDeInitCallback` | [TIM_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_tim-h-335-9) | TIM Base Msp DeInit Callback | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h:353](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h#L353) |
 | `Base_MspDeInitCallback` | [TIM_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_tim-h-337-9) | TIM Base Msp DeInit Callback | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h:353](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h#L353) |
 | `Base_MspInitCallback` | [TIM_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_tim-h-335-9) | TIM Base Msp Init Callback | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h:352](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h#L352) |
@@ -1628,9 +1633,9 @@
 | `below_valid` | [ChassisPowerTransientState_s](#r-modules-algorithm-chassis_power_transient-h-33-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:37](../modules/algorithm/chassis_power_transient.h#L37) |
 | `bench` | [VehicleSafetyInput_s](#r-modules-vehicle_safety-vehicle_safety-h-6-9) | Dedicated bench firmware and neutral controls. | 整车 安全 启停 遥控失联 | [modules/vehicle_safety/vehicle_safety.h:10](../modules/vehicle_safety/vehicle_safety.h#L10) |
 | `bench_enabled` | [ChassisPowerCommandInput_s](#r-modules-chassis_power-chassis_power_policy-h-7-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_policy.h:10](../modules/chassis_power/chassis_power_policy.h#L10) |
-| `bench_enabled` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-70-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:78](../modules/chassis_power/chassis_power_types.h#L78) |
+| `bench_enabled` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-83-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:91](../modules/chassis_power/chassis_power_types.h#L91) |
 | `bench_limit_w` | [ChassisPowerCommandInput_s](#r-modules-chassis_power-chassis_power_policy-h-7-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_policy.h:11](../modules/chassis_power/chassis_power_policy.h#L11) |
-| `bench_limit_w` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-70-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:80](../modules/chassis_power/chassis_power_types.h#L80) |
+| `bench_limit_w` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-83-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:93](../modules/chassis_power/chassis_power_types.h#L93) |
 | `bench_permitted` | [Chassis_Ctrl_Cmd_s](#r-application-robot_def-h-108-9) | 源码未注释 | 机器人 跨模块 控制指令 上传反馈 底盘 云台 发射 | [application/robot_def.h:119](../application/robot_def.h#L119) |
 | `bench_permitted` | [ChassisForceIntent_s](#r-modules-chassis_force-chassis_force_types-h-7-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_types.h:11](../modules/chassis_force/chassis_force_types.h#L11) |
 | `bench_permitted` | [FcInput](#r-modules-chassis_force_calibration-force_calibration-h-17-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration.h:22](../modules/chassis_force_calibration/force_calibration.h#L22) |
@@ -1812,11 +1817,11 @@
 | `BTR` | [CAN_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f407xx-h-249-9) | CAN bit timing register,             Address offset: 0x1C | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h:258](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h#L258) |
 | `BTR` | [CAN_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f427xx-h-254-9) | CAN bit timing register,             Address offset: 0x1C | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h:263](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h#L263) |
 | `budget` | [ChassisPower_Init_Config_s](#r-modules-chassis_power-chassis_power_types-h-15-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:19](../modules/chassis_power/chassis_power_types.h#L19) |
-| `budget` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-37-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:39](../modules/chassis_power/chassis_power_types.h#L39) |
+| `budget` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-46-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:48](../modules/chassis_power/chassis_power_types.h#L48) |
 | `budget` | [cases](#r-tests-power_model-test_power_model-c-368-18) | 源码未注释 | 功率模型 损耗 预测 功控 | [tests/power_model/test_power_model.c:369](../tests/power_model/test_power_model.c#L369) |
 | `budget_drop_reset_w` | [ChassisPowerOuterLoopConfig_s](#r-modules-algorithm-chassis_power_outer_loop-h-14-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_outer_loop.h:23](../modules/algorithm/chassis_power_outer_loop.h#L23) |
 | `budget_drop_reset_w` | [ChassisSpinConfig_s](#r-modules-algorithm-chassis_spin-h-8-9) | Adaptive mode only; sine never rescales on budget changes. | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | [modules/algorithm/chassis_spin.h:13](../modules/algorithm/chassis_spin.h#L13) |
-| `budget_state` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:26](../modules/chassis_power/chassis_power_internal.h#L26) |
+| `budget_state` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:27](../modules/chassis_power/chassis_power_internal.h#L27) |
 | `budget_valid` | [FcInput](#r-modules-chassis_force_calibration-force_calibration-h-17-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration.h:22](../modules/chassis_force_calibration/force_calibration.h#L22) |
 | `budget_w` | [ChassisPowerTransientInput_s](#r-modules-algorithm-chassis_power_transient-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:24](../modules/algorithm/chassis_power_transient.h#L24) |
 | `budget_w` | [ChassisForceAllocationInput_s](#r-modules-chassis_force-chassis_force_allocator-h-4-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_allocator.h:7](../modules/chassis_force/chassis_force_allocator.h#L7) |
@@ -1846,7 +1851,7 @@
 | `buffer_energy_j` | [RefereePowerHeat](#r-portable_modules-modules-referee-referee_protocol-h-103-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee_protocol.h:108](../portable_modules/modules/referee/referee_protocol.h#L108) |
 | `buffer_estimate_valid` | [ChassisTelemetrySnapshot_s](#r-application-chassis-chassis-h-15-9) | 源码未注释 | 底盘 运动 控制 轮速 | [application/chassis/chassis.h:23](../application/chassis/chassis.h#L23) |
 | `buffer_estimate_valid` | [ChassisPowerBudgetState_s](#r-modules-algorithm-chassis_power_budget-h-93-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_budget.h:105](../modules/algorithm/chassis_power_budget.h#L105) |
-| `buffer_estimate_valid` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-37-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:43](../modules/chassis_power/chassis_power_types.h#L43) |
+| `buffer_estimate_valid` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-46-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:53](../modules/chassis_power/chassis_power_types.h#L53) |
 | `buffer_estimate_valid` | [USBTelemetrySample_s](#r-modules-telemetry-usb_telemetry_format-h-50-9) | 字段宏 USB_TELEMETRY_FIELDS（定义第 9 行） → USB_FIELD_U（定义第 51 行） | USB 虚拟串口 遥测 调参 数据传输 在线调参 参数保存 数据采样 | [modules/telemetry/usb_telemetry_format.h:53](../modules/telemetry/usb_telemetry_format.h#L53) |
 | `buffer_floor_j` | [PPEnergyConfig](#r-modules-predictive_power-energy_scheduler-h-7-9) | 源码未注释 | 项目数据 | [modules/predictive_power/energy_scheduler.h:8](../modules/predictive_power/energy_scheduler.h#L8) |
 | `buffer_high_j` | [PPEnergyInput](#r-modules-predictive_power-energy_scheduler-h-13-9) | 源码未注释 | 项目数据 | [modules/predictive_power/energy_scheduler.h:15](../modules/predictive_power/energy_scheduler.h#L15) |
@@ -1883,7 +1888,7 @@
 | `bullet_speed_mps` | [RefereeShootData](#r-portable_modules-modules-referee-referee_protocol-h-142-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee_protocol.h:147](../portable_modules/modules/referee/referee_protocol.h#L147) |
 | `bullet_type` | [ext_shoot_data_t](#r-modules-referee-referee_protocol-h-226-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_protocol.h:228](../modules/referee/referee_protocol.h#L228) |
 | `bullet_type` | [RefereeShootData](#r-portable_modules-modules-referee-referee_protocol-h-142-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee_protocol.h:144](../portable_modules/modules/referee/referee_protocol.h#L144) |
-| `bus` | [CAN_HandleTypeDef](#r-tests-dm_imu_runtime-stubs-bsp_can-h-4-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/dm_imu_runtime/stubs/bsp_can.h:4](../tests/dm_imu_runtime/stubs/bsp_can.h#L4) |
+| `bus` | [CAN_HandleTypeDef](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-4-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:4](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L4) |
 | `bus_voltage_v` | [PowerMeterMeasurement_s](#r-modules-power_meter-power_meter_protocol-h-10-9) | 源码未注释 | 功率计 电压 电流 实测功率 | [modules/power_meter/power_meter_protocol.h:13](../modules/power_meter/power_meter_protocol.h#L13) |
 | `bus_voltage_v` | [PowerMeterStatus_s](#r-modules-power_meter-power_meter_types-h-7-9) | 源码未注释 | 功率计 电压 电流 实测功率 | [modules/power_meter/power_meter_types.h:11](../modules/power_meter/power_meter_types.h#L11) |
 | `button_context` | [OLED_Init_Config_s](#r-modules-oled-oled_transport-h-9-9) | 源码未注释 | 显示屏 OLED 图像 | [modules/oled/oled_transport.h:16](../modules/oled/oled_transport.h#L16) |
@@ -1967,10 +1972,10 @@
 | `can_handle` | [CAN_Init_Config_s](#r-bsp-can-bsp_can-h-32-9) | can句柄 | CAN 总线 接收 发送 | [bsp/can/bsp_can.h:34](../bsp/can/bsp_can.h#L34) |
 | `can_handle` | [CANInstance](#r-tests-can_comm-stubs-bsp_can-h-23-1) | 源码未注释 | 双板通信 CAN 收发 总线 接收 发送 | [tests/can_comm/stubs/bsp_can.h:25](../tests/can_comm/stubs/bsp_can.h#L25) |
 | `can_handle` | [CAN_Init_Config_s](#r-tests-can_comm-stubs-bsp_can-h-35-9) | 源码未注释 | 双板通信 CAN 收发 总线 接收 发送 | [tests/can_comm/stubs/bsp_can.h:37](../tests/can_comm/stubs/bsp_can.h#L37) |
+| `can_handle` | [CANInstance](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-7-1) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:8](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L8) |
+| `can_handle` | [CAN_Init_Config_s](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-14-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:15](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L15) |
 | `can_handle` | [CANInstance](#r-tests-dji_chassis_power_rtt-stubs-bsp_can-h-23-1) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 CAN 总线 接收 发送 | [tests/dji_chassis_power_rtt/stubs/bsp_can.h:25](../tests/dji_chassis_power_rtt/stubs/bsp_can.h#L25) |
 | `can_handle` | [CAN_Init_Config_s](#r-tests-dji_chassis_power_rtt-stubs-bsp_can-h-35-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 CAN 总线 接收 发送 | [tests/dji_chassis_power_rtt/stubs/bsp_can.h:37](../tests/dji_chassis_power_rtt/stubs/bsp_can.h#L37) |
-| `can_handle` | [CANInstance](#r-tests-dm_imu_runtime-stubs-bsp_can-h-7-1) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/dm_imu_runtime/stubs/bsp_can.h:8](../tests/dm_imu_runtime/stubs/bsp_can.h#L8) |
-| `can_handle` | [CAN_Init_Config_s](#r-tests-dm_imu_runtime-stubs-bsp_can-h-14-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/dm_imu_runtime/stubs/bsp_can.h:15](../tests/dm_imu_runtime/stubs/bsp_can.h#L15) |
 | `can_handle` | [CANInstance](#r-tests-power_meter-stubs-bsp_can-h-12-1) | 源码未注释 | 功率计 电压 电流 实测功率 CAN 总线 接收 发送 | [tests/power_meter/stubs/bsp_can.h:14](../tests/power_meter/stubs/bsp_can.h#L14) |
 | `can_handle` | [CAN_Init_Config_s](#r-tests-power_meter-stubs-bsp_can-h-24-9) | 源码未注释 | 功率计 电压 电流 实测功率 CAN 总线 接收 发送 | [tests/power_meter/stubs/bsp_can.h:26](../tests/power_meter/stubs/bsp_can.h#L26) |
 | `can_handle` | [CANInstance](#r-tests-super_cap-stubs-bsp_can-h-12-1) | 源码未注释 | 超级电容 电容 电压 储能 功率 CAN 总线 接收 发送 | [tests/super_cap/stubs/bsp_can.h:14](../tests/super_cap/stubs/bsp_can.h#L14) |
@@ -1983,10 +1988,10 @@
 | `can_module_callback` | [CAN_Init_Config_s](#r-bsp-can-bsp_can-h-32-9) | 处理接收数据的回调函数 | CAN 总线 接收 发送 | [bsp/can/bsp_can.h:37](../bsp/can/bsp_can.h#L37) |
 | `can_module_callback` | [CANInstance](#r-tests-can_comm-stubs-bsp_can-h-23-1) | 源码未注释 | 双板通信 CAN 收发 总线 接收 发送 | [tests/can_comm/stubs/bsp_can.h:31](../tests/can_comm/stubs/bsp_can.h#L31) |
 | `can_module_callback` | [CAN_Init_Config_s](#r-tests-can_comm-stubs-bsp_can-h-35-9) | 源码未注释 | 双板通信 CAN 收发 总线 接收 发送 | [tests/can_comm/stubs/bsp_can.h:40](../tests/can_comm/stubs/bsp_can.h#L40) |
+| `can_module_callback` | [CANInstance](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-7-1) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:11](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L11) |
+| `can_module_callback` | [CAN_Init_Config_s](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-14-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:17](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L17) |
 | `can_module_callback` | [CANInstance](#r-tests-dji_chassis_power_rtt-stubs-bsp_can-h-23-1) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 CAN 总线 接收 发送 | [tests/dji_chassis_power_rtt/stubs/bsp_can.h:31](../tests/dji_chassis_power_rtt/stubs/bsp_can.h#L31) |
 | `can_module_callback` | [CAN_Init_Config_s](#r-tests-dji_chassis_power_rtt-stubs-bsp_can-h-35-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 CAN 总线 接收 发送 | [tests/dji_chassis_power_rtt/stubs/bsp_can.h:40](../tests/dji_chassis_power_rtt/stubs/bsp_can.h#L40) |
-| `can_module_callback` | [CANInstance](#r-tests-dm_imu_runtime-stubs-bsp_can-h-7-1) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/dm_imu_runtime/stubs/bsp_can.h:11](../tests/dm_imu_runtime/stubs/bsp_can.h#L11) |
-| `can_module_callback` | [CAN_Init_Config_s](#r-tests-dm_imu_runtime-stubs-bsp_can-h-14-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/dm_imu_runtime/stubs/bsp_can.h:17](../tests/dm_imu_runtime/stubs/bsp_can.h#L17) |
 | `can_module_callback` | [CANInstance](#r-tests-power_meter-stubs-bsp_can-h-12-1) | 源码未注释 | 功率计 电压 电流 实测功率 CAN 总线 接收 发送 | [tests/power_meter/stubs/bsp_can.h:20](../tests/power_meter/stubs/bsp_can.h#L20) |
 | `can_module_callback` | [CAN_Init_Config_s](#r-tests-power_meter-stubs-bsp_can-h-24-9) | 源码未注释 | 功率计 电压 电流 实测功率 CAN 总线 接收 发送 | [tests/power_meter/stubs/bsp_can.h:29](../tests/power_meter/stubs/bsp_can.h#L29) |
 | `can_module_callback` | [CANInstance](#r-tests-super_cap-stubs-bsp_can-h-12-1) | 源码未注释 | 超级电容 电容 电压 储能 功率 CAN 总线 接收 发送 | [tests/super_cap/stubs/bsp_can.h:20](../tests/super_cap/stubs/bsp_can.h#L20) |
@@ -1994,23 +1999,23 @@
 | `can_ok` | [PIDAutotuneFeedback](#r-modules-telemetry-pid_autotune-h-11-9) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 PID 自动整定 闭环反馈 | [modules/telemetry/pid_autotune.h:12](../modules/telemetry/pid_autotune.h#L12) |
 | `can_send` | [SuperCapConfig](#r-portable_modules-modules-super_cap-super_cap-h-29-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [portable_modules/modules/super_cap/super_cap.h:31](../portable_modules/modules/super_cap/super_cap.h#L31) |
 | `can_submitted` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:46](../modules/chassis_force/chassis_force_control.h#L46) |
-| `can_submitted` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:63](../modules/chassis_power/chassis_power_types.h#L63) |
-| `can_submitted` | [ChassisPowerFinalInput_s](#r-modules-chassis_power-chassis_power_types-h-108-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:112](../modules/chassis_power/chassis_power_types.h#L112) |
+| `can_submitted` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:75](../modules/chassis_power/chassis_power_types.h#L75) |
+| `can_submitted` | [ChassisPowerFinalInput_s](#r-modules-chassis_power-chassis_power_types-h-121-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:125](../modules/chassis_power/chassis_power_types.h#L125) |
 | `can_us` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:49](../modules/chassis_force/chassis_force_control.h#L49) |
 | `cancel` | [DJIMotorControlPolicy_s](#r-modules-motor-DJImotor-dji_motor-h-126-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_motor.h:133](../modules/motor/DJImotor/dji_motor.h#L133) |
 | `cancel` | [mailbox](#r-modules-telemetry-autotune_protocol-c-17-8) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/autotune_protocol.c:18](../modules/telemetry/autotune_protocol.c#L18) |
 | `candidate_guard_w` | [ChassisPowerTransientOutput_s](#r-modules-algorithm-chassis_power_transient-h-50-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:57](../modules/algorithm/chassis_power_transient.h#L57) |
-| `cap` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-70-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:75](../modules/chassis_power/chassis_power_types.h#L75) |
+| `cap` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-83-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:88](../modules/chassis_power/chassis_power_types.h#L88) |
 | `cap_age_ms` | [USBTelemetrySample_s](#r-modules-telemetry-usb_telemetry_format-h-50-9) | 字段宏 USB_TELEMETRY_FIELDS（定义第 9 行） → USB_FIELD_U（定义第 51 行） | USB 虚拟串口 遥测 调参 数据传输 在线调参 参数保存 数据采样 | [modules/telemetry/usb_telemetry_format.h:53](../modules/telemetry/usb_telemetry_format.h#L53) |
-| `cap_anchor_frames` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:32](../modules/chassis_power/chassis_power_internal.h#L32) |
+| `cap_anchor_frames` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:33](../modules/chassis_power/chassis_power_internal.h#L33) |
 | `cap_chassis_cw` | [USBTelemetrySample_s](#r-modules-telemetry-usb_telemetry_format-h-50-9) | 字段宏 USB_TELEMETRY_FIELDS（定义第 9 行） → USB_FIELD_I（定义第 52 行） | USB 虚拟串口 遥测 调参 数据传输 在线调参 参数保存 数据采样 | [modules/telemetry/usb_telemetry_format.h:53](../modules/telemetry/usb_telemetry_format.h#L53) |
-| `cap_command` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-37-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:42](../modules/chassis_power/chassis_power_types.h#L42) |
-| `cap_command_ok` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:34](../modules/chassis_power/chassis_power_internal.h#L34) |
-| `cap_command_valid` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-37-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:43](../modules/chassis_power/chassis_power_types.h#L43) |
-| `cap_confirmation_timeouts` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:33](../modules/chassis_power/chassis_power_internal.h#L33) |
-| `cap_confirmation_timeouts` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-37-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:46](../modules/chassis_power/chassis_power_types.h#L46) |
-| `cap_confirmed` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:34](../modules/chassis_power/chassis_power_internal.h#L34) |
-| `cap_confirmed_tick_ms` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:32](../modules/chassis_power/chassis_power_internal.h#L32) |
+| `cap_command` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-46-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:52](../modules/chassis_power/chassis_power_types.h#L52) |
+| `cap_command_ok` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:35](../modules/chassis_power/chassis_power_internal.h#L35) |
+| `cap_command_valid` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-46-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:53](../modules/chassis_power/chassis_power_types.h#L53) |
+| `cap_confirmation_timeouts` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:34](../modules/chassis_power/chassis_power_internal.h#L34) |
+| `cap_confirmation_timeouts` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-46-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:56](../modules/chassis_power/chassis_power_types.h#L56) |
+| `cap_confirmed` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:35](../modules/chassis_power/chassis_power_internal.h#L35) |
+| `cap_confirmed_tick_ms` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:33](../modules/chassis_power/chassis_power_internal.h#L33) |
 | `cap_energy_pm` | [USBTelemetrySample_s](#r-modules-telemetry-usb_telemetry_format-h-50-9) | 字段宏 USB_TELEMETRY_FIELDS（定义第 9 行） → USB_FIELD_I（定义第 52 行） | USB 虚拟串口 遥测 调参 数据传输 在线调参 参数保存 数据采样 | [modules/telemetry/usb_telemetry_format.h:53](../modules/telemetry/usb_telemetry_format.h#L53) |
 | `cap_energy_ratio` | [ChassisPowerBudgetInput_s](#r-modules-algorithm-chassis_power_budget-h-56-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_budget.h:62](../modules/algorithm/chassis_power_budget.h#L62) |
 | `cap_error` | [USBTelemetrySample_s](#r-modules-telemetry-usb_telemetry_format-h-50-9) | 字段宏 USB_TELEMETRY_FIELDS（定义第 9 行） → USB_FIELD_U（定义第 51 行） | USB 虚拟串口 遥测 调参 数据传输 在线调参 参数保存 数据采样 | [modules/telemetry/usb_telemetry_format.h:53](../modules/telemetry/usb_telemetry_format.h#L53) |
@@ -2031,12 +2036,12 @@
 | `cap_output_enabled` | [ChassisPowerBudgetInput_s](#r-modules-algorithm-chassis_power_budget-h-56-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_budget.h:60](../modules/algorithm/chassis_power_budget.h#L60) |
 | `cap_output_enabled` | [USBTelemetrySample_s](#r-modules-telemetry-usb_telemetry_format-h-50-9) | 字段宏 USB_TELEMETRY_FIELDS（定义第 9 行） → USB_FIELD_U（定义第 51 行） | USB 虚拟串口 遥测 调参 数据传输 在线调参 参数保存 数据采样 | [modules/telemetry/usb_telemetry_format.h:53](../modules/telemetry/usb_telemetry_format.h#L53) |
 | `cap_reported_limit_w` | [ChassisPowerBudgetInput_s](#r-modules-algorithm-chassis_power_budget-h-56-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_budget.h:63](../modules/algorithm/chassis_power_budget.h#L63) |
-| `cap_send_failures` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:33](../modules/chassis_power/chassis_power_internal.h#L33) |
-| `cap_send_failures` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-37-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:46](../modules/chassis_power/chassis_power_types.h#L46) |
-| `cap_sent_command` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:31](../modules/chassis_power/chassis_power_internal.h#L31) |
-| `cap_sent_ms` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:32](../modules/chassis_power/chassis_power_internal.h#L32) |
+| `cap_send_failures` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:34](../modules/chassis_power/chassis_power_internal.h#L34) |
+| `cap_send_failures` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-46-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:56](../modules/chassis_power/chassis_power_types.h#L56) |
+| `cap_sent_command` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:32](../modules/chassis_power/chassis_power_internal.h#L32) |
+| `cap_sent_ms` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:33](../modules/chassis_power/chassis_power_internal.h#L33) |
 | `cap_terminal_j` | [PPEnergyConfig](#r-modules-predictive_power-energy_scheduler-h-7-9) | 源码未注释 | 项目数据 | [modules/predictive_power/energy_scheduler.h:9](../modules/predictive_power/energy_scheduler.h#L9) |
-| `cap_timeout_reported` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:34](../modules/chassis_power/chassis_power_internal.h#L34) |
+| `cap_timeout_reported` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:35](../modules/chassis_power/chassis_power_internal.h#L35) |
 | `cap_valid` | [PPEnergyInput](#r-modules-predictive_power-energy_scheduler-h-13-9) | 源码未注释 | 项目数据 | [modules/predictive_power/energy_scheduler.h:17](../modules/predictive_power/energy_scheduler.h#L17) |
 | `capability_version` | [PPEnergyInput](#r-modules-predictive_power-energy_scheduler-h-13-9) | 源码未注释 | 项目数据 | [modules/predictive_power/energy_scheduler.h:14](../modules/predictive_power/energy_scheduler.h#L14) |
 | `capability_version` | [PPEnergyPlan](#r-modules-predictive_power-energy_scheduler-h-19-9) | 源码未注释 | 项目数据 | [modules/predictive_power/energy_scheduler.h:21](../modules/predictive_power/energy_scheduler.h#L21) |
@@ -2090,11 +2095,11 @@
 | `CDR` | [ADC_Common_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f407xx-h-202-9) | ADC common regular data register for dual AND triple modes,                            Address offset: ADC1 base address + 0x308 | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h:206](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h#L206) |
 | `CDR` | [ADC_Common_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f427xx-h-207-9) | ADC common regular data register for dual AND triple modes,                            Address offset: ADC1 base address + 0x308 | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h:211](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h#L211) |
 | `CecClockSelection` | [RCC_PeriphCLKInitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_rcc_ex-h-121-9) | Specifies CEC Clock Source Selection. This parameter can be a value of @ref RCCEx_CEC_Clock_Source | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc_ex.h:158](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc_ex.h#L158) |
-| `center` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-42-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:45](../modules/algorithm/chassis_remote_fusion.h#L45) |
+| `center` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-59-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:62](../modules/algorithm/chassis_remote_fusion.h#L62) |
 | `center_accel_n_mps2` | [ChassisFusedVelocitySnapshot_s](#r-application-chassis-chassis_velocity_observer-h-40-9) | Valid when status == FUSED. | 底盘 运动 控制 轮速 速度 闭环 | [application/chassis/chassis_velocity_observer.h:44](../application/chassis/chassis_velocity_observer.h#L44) |
-| `center_accel_n_mps2` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-29-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:33](../modules/algorithm/chassis_remote_fusion.h#L33) |
-| `center_local_ms` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-42-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:47](../modules/algorithm/chassis_remote_fusion.h#L47) |
-| `center_pair_span_ms` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-42-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:47](../modules/algorithm/chassis_remote_fusion.h#L47) |
+| `center_accel_n_mps2` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-45-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:49](../modules/algorithm/chassis_remote_fusion.h#L49) |
+| `center_local_ms` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-59-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:64](../modules/algorithm/chassis_remote_fusion.h#L64) |
+| `center_pair_span_ms` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-59-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:64](../modules/algorithm/chassis_remote_fusion.h#L64) |
 | `cfft` | [arm_mfcc_instance_f32](#r-Middlewares-ST-ARM-DSP-Include-dsp-transform_functions-h-589-9) | Internal CFFT instance | 第三方中间件 | [Middlewares/ST/ARM/DSP/Include/dsp/transform_functions.h:601](../Middlewares/ST/ARM/DSP/Include/dsp/transform_functions.h#L601) |
 | `cfft` | [arm_mfcc_instance_q31](#r-Middlewares-ST-ARM-DSP-Include-dsp-transform_functions-h-636-9) | Internal CFFT instance | 第三方中间件 | [Middlewares/ST/ARM/DSP/Include/dsp/transform_functions.h:648](../Middlewares/ST/ARM/DSP/Include/dsp/transform_functions.h#L648) |
 | `cfft` | [arm_mfcc_instance_q15](#r-Middlewares-ST-ARM-DSP-Include-dsp-transform_functions-h-683-9) | Internal CFFT instance | 第三方中间件 | [Middlewares/ST/ARM/DSP/Include/dsp/transform_functions.h:695](../Middlewares/ST/ARM/DSP/Include/dsp/transform_functions.h#L695) |
@@ -2125,6 +2130,7 @@
 | `Channel` | [TIM_HandleTypeDef](#r-tests-bsp_pwm-stubs-tim-h-6-9) | 源码未注释 | PWM 定时器 占空比 输出 | [tests/bsp_pwm/stubs/tim.h:6](../tests/bsp_pwm/stubs/tim.h#L6) |
 | `ChannelNState` | [TIM_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_tim-h-335-9) | TIM complementary channel operation state | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h:348](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h#L348) |
 | `ChannelNState` | [TIM_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_tim-h-337-9) | TIM complementary channel operation state | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h:348](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h#L348) |
+| `channels` | [frame](#r-application-runtime-vofa_observation-c-15-8) | 源码未注释 | 项目数据 | [application/runtime/vofa_observation.c:16](../application/runtime/vofa_observation.c#L16) |
 | `channels` | [frame](#r-application-runtime-vofa_telemetry-c-16-8) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 | [application/runtime/vofa_telemetry.c:17](../application/runtime/vofa_telemetry.c#L17) |
 | `channels` | [measurement_frame](#r-application-runtime-vofa_telemetry-c-90-8) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 | [application/runtime/vofa_telemetry.c:91](../application/runtime/vofa_telemetry.c#L91) |
 | `ChannelState` | [TIM_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_tim-h-335-9) | TIM channel operation state | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h:347](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h#L347) |
@@ -2149,9 +2155,9 @@
 | `chassis_power_limit_w` | [RefereePower](#r-portable_modules-modules-referee-referee-h-42-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee.h:46](../portable_modules/modules/referee/referee.h#L46) |
 | `chassis_power_limit_w` | [RefereeRobotState](#r-portable_modules-modules-referee-referee_protocol-h-89-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee_protocol.h:97](../portable_modules/modules/referee/referee_protocol.h#L97) |
 | `chassis_power_mx` | [Chassis_Power_Data_s](#r-application-robot_def-h-97-9) | 源码未注释 | 机器人 跨模块 控制指令 上传反馈 底盘 云台 发射 | [application/robot_def.h:99](../application/robot_def.h#L99) |
-| `chassis_power_valid` | [RefereePowerSnapshot_s](#r-modules-referee-referee_power-h-29-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:38](../modules/referee/referee_power.h#L38) |
+| `chassis_power_valid` | [RefereePowerSnapshot_s](#r-modules-referee-referee_power-h-29-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:40](../modules/referee/referee_power.h#L40) |
 | `chassis_power_w` | [RefereePowerState_s](#r-modules-referee-referee_power-h-15-9) | Available only with explicitly enabled legacy power fields. | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:20](../modules/referee/referee_power.h#L20) |
-| `chassis_power_w` | [RefereePowerSnapshot_s](#r-modules-referee-referee_power-h-29-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:37](../modules/referee/referee_power.h#L37) |
+| `chassis_power_w` | [RefereePowerSnapshot_s](#r-modules-referee-referee_power-h-29-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:39](../modules/referee/referee_power.h#L39) |
 | `chassis_power_w` | [SuperCapStatus_s](#r-modules-super_cap-super_cap_protocol-h-42-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [modules/super_cap/super_cap_protocol.h:47](../modules/super_cap/super_cap_protocol.h#L47) |
 | `chassis_power_w` | [SuperCapStatus](#r-portable_modules-modules-super_cap-super_cap-h-48-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [portable_modules/modules/super_cap/super_cap.h:53](../portable_modules/modules/super_cap/super_cap.h#L53) |
 | `chassis_rotate_wz` | [Gimbal_Ctrl_Cmd_s](#r-application-robot_def-h-128-9) | 源码未注释 | 机器人 跨模块 控制指令 上传反馈 底盘 云台 发射 | [application/robot_def.h:132](../application/robot_def.h#L132) |
@@ -2293,6 +2299,9 @@
 | `command` | [PPFinalActuation](#r-modules-predictive_power-power_observer-h-5-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_observer.h:7](../modules/predictive_power/power_observer.h#L7) |
 | `command` | [PPSupervisorOutput](#r-modules-predictive_power-power_supervisor-h-14-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_supervisor.h:15](../modules/predictive_power/power_supervisor.h#L15) |
 | `command_age_ms` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:44](../modules/chassis_force/chassis_force_control.h#L44) |
+| `command_attempt_sequence` | [SuperCapSnapshot_s](#r-modules-super_cap-super_cap_types-h-6-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [modules/super_cap/super_cap_types.h:18](../modules/super_cap/super_cap_types.h#L18) |
+| `command_attempt_tick_ms` | [SuperCapSnapshot_s](#r-modules-super_cap-super_cap_types-h-6-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [modules/super_cap/super_cap_types.h:18](../modules/super_cap/super_cap_types.h#L18) |
+| `command_attempted` | [SuperCapSnapshot_s](#r-modules-super_cap-super_cap_types-h-6-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [modules/super_cap/super_cap_types.h:19](../modules/super_cap/super_cap_types.h#L19) |
 | `command_delay_ms` | [PPModel](#r-modules-predictive_power-power_prediction-h-8-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_prediction.h:14](../modules/predictive_power/power_prediction.h#L14) |
 | `command_fail_count` | [SuperCapSnapshot_s](#r-modules-super_cap-super_cap_types-h-6-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [modules/super_cap/super_cap_types.h:14](../modules/super_cap/super_cap_types.h#L14) |
 | `command_faults` | [ChassisForceActuationSnapshot_s](#r-modules-motor-DJImotor-dji_force_adapter-h-5-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_force_adapter.h:9](../modules/motor/DJImotor/dji_force_adapter.h#L9) |
@@ -2305,6 +2314,7 @@
 | `command_scale` | [PPModel](#r-modules-predictive_power-power_prediction-h-8-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_prediction.h:10](../modules/predictive_power/power_prediction.h#L10) |
 | `command_seq` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:34](../modules/chassis_force/chassis_force_control.h#L34) |
 | `command_seq` | [ChassisForceIntent_s](#r-modules-chassis_force-chassis_force_types-h-7-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_types.h:8](../modules/chassis_force/chassis_force_types.h#L8) |
+| `command_submitted` | [SuperCapSnapshot_s](#r-modules-super_cap-super_cap_types-h-6-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [modules/super_cap/super_cap_types.h:19](../modules/super_cap/super_cap_types.h#L19) |
 | `command_us` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:49](../modules/chassis_force/chassis_force_control.h#L49) |
 | `commands` | [MotorEnqueueGuard_s](#r-modules-motor-DJImotor-dji_motor-c-431-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_motor.c:433](../modules/motor/DJImotor/dji_motor.c#L433) |
 | `CommonClock` | [LL_ADC_CommonInitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_ll_adc-h-320-9) | Set parameter common to several ADC: Clock source and prescaler. This parameter can be a value of @ref ADC_LL_EC_COMMON_CLOCK_SOURCE This feature can be modified afterwards using unitary function @ref LL_ADC_SetCommonClock(). | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_adc.h:322](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_adc.h#L322) |
@@ -2399,28 +2409,31 @@
 | `complete` | [FcCapture](#r-modules-chassis_force_calibration-force_calibration_capture-h-17-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration_capture.h:21](../modules/chassis_force_calibration/force_calibration_capture.h#L21) |
 | `complete_slow_control` | [ChassisPowerOuterLoopInput_s](#r-modules-algorithm-chassis_power_outer_loop-h-41-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_outer_loop.h:53](../modules/algorithm/chassis_power_outer_loop.h#L53) |
 | `ConfIdx` | [USBD_HandleTypeDef](#r-Middlewares-ST-STM32_USB_Device_Library-Core-Inc-usbd_def-h-360-9) | 源码未注释 | USB 虚拟串口 遥测 调参 数据传输 STM32 外设 寄存器 HAL 配置 句柄 | [Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h:377](../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h#L377) |
+| `config` | [ChassisRemoteFusionAttempt_s](#r-modules-algorithm-chassis_remote_fusion-h-35-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:41](../modules/algorithm/chassis_remote_fusion.h#L41) |
 | `config` | [ChassisForceController_s](#r-modules-chassis_force-chassis_force_control-h-51-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:52](../modules/chassis_force/chassis_force_control.h#L52) |
 | `config` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:19](../modules/chassis_power/chassis_power_internal.h#L19) |
+| `config` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-46-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:51](../modules/chassis_power/chassis_power_types.h#L51) |
 | `config` | [Referee](#r-portable_modules-modules-referee-referee-h-56-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee.h:58](../portable_modules/modules/referee/referee.h#L58) |
 | `config` | [SuperCap](#r-portable_modules-modules-super_cap-super_cap-h-66-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [portable_modules/modules/super_cap/super_cap.h:68](../portable_modules/modules/super_cap/super_cap.h#L68) |
-| `config_pending` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:21](../modules/chassis_power/chassis_power_internal.h#L21) |
+| `config_observation` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:20](../modules/chassis_power/chassis_power_internal.h#L20) |
+| `config_pending` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:22](../modules/chassis_power/chassis_power_internal.h#L22) |
 | `config_result` | [ChassisSpeedObservationDiagnostics](#r-application-runtime-chassis_speed_observation-h-8-9) | 源码未注释 | 项目数据 | [application/runtime/chassis_speed_observation.h:12](../application/runtime/chassis_speed_observation.h#L12) |
 | `config_version` | [ChassisForceCycleInput_s](#r-modules-chassis_force-chassis_force_control-h-19-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:21](../modules/chassis_force/chassis_force_control.h#L21) |
 | `config_version` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:34](../modules/chassis_force/chassis_force_control.h#L34) |
 | `config_version` | [ChassisForceController_s](#r-modules-chassis_force-chassis_force_control-h-51-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:60](../modules/chassis_force/chassis_force_control.h#L60) |
-| `config_version` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:20](../modules/chassis_power/chassis_power_internal.h#L20) |
+| `config_version` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:21](../modules/chassis_power/chassis_power_internal.h#L21) |
 | `config_version` | [ChassisPowerShadowEnergySnapshot](#r-modules-chassis_power-chassis_power_shadow-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_shadow.h:20](../modules/chassis_power/chassis_power_shadow.h#L20) |
 | `config_version` | [ChassisPowerShadowSnapshot](#r-modules-chassis_power-chassis_power_shadow-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_shadow.h:24](../modules/chassis_power/chassis_power_shadow.h#L24) |
-| `config_version` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-27-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:29](../modules/chassis_power/chassis_power_types.h#L29) |
-| `config_version` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:54](../modules/chassis_power/chassis_power_types.h#L54) |
+| `config_version` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-36-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:38](../modules/chassis_power/chassis_power_types.h#L38) |
+| `config_version` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:64](../modules/chassis_power/chassis_power_types.h#L64) |
 | `config_version` | [ChassisForceActuationSnapshot_s](#r-modules-motor-DJImotor-dji_force_adapter-h-5-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_force_adapter.h:8](../modules/motor/DJImotor/dji_force_adapter.h#L8) |
 | `config_version` | [PPFinalActuation](#r-modules-predictive_power-power_observer-h-5-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_observer.h:6](../modules/predictive_power/power_observer.h#L6) |
 | `config_version` | [PPSupervisorInput](#r-modules-predictive_power-power_supervisor-h-7-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_supervisor.h:9](../modules/predictive_power/power_supervisor.h#L9) |
 | `config_version` | [PPWheelEstimate](#r-modules-predictive_power-wheel_speed_kf-h-21-9) | 源码未注释 | 项目数据 | [modules/predictive_power/wheel_speed_kf.h:24](../modules/predictive_power/wheel_speed_kf.h#L24) |
 | `configured` | [ChassisWheelKFDiagnostics](#r-modules-chassis_power-chassis_power_shadow-h-8-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_shadow.h:14](../modules/chassis_power/chassis_power_shadow.h#L14) |
-| `confirmed_age_ms` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-37-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:46](../modules/chassis_power/chassis_power_types.h#L46) |
+| `confirmed_age_ms` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-46-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:56](../modules/chassis_power/chassis_power_types.h#L56) |
 | `confirmed_input_target_w` | [ChassisPowerBudgetInput_s](#r-modules-algorithm-chassis_power_budget-h-56-9) | Fresh 0x052 target, physical watts. | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_budget.h:77](../modules/algorithm/chassis_power_budget.h#L77) |
-| `confirmed_input_target_w` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-37-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:44](../modules/chassis_power/chassis_power_types.h#L44) |
+| `confirmed_input_target_w` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-46-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:54](../modules/chassis_power/chassis_power_types.h#L54) |
 | `ConnectCallback` | [PCD_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_pcd-h-93-9) | USB OTG PCD Connect callback | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h:125](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h#L125) |
 | `ConnectCallback` | [PCD_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_pcd-h-95-9) | USB OTG PCD Connect callback | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h:125](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h#L125) |
 | `consecutive_overruns` | [ChassisWheelKFDiagnostics](#r-modules-chassis_power-chassis_power_shadow-h-8-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_shadow.h:12](../modules/chassis_power/chassis_power_shadow.h#L12) |
@@ -2433,9 +2446,9 @@
 | `context` | [SuperCapConfig](#r-portable_modules-modules-super_cap-super_cap-h-29-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [portable_modules/modules/super_cap/super_cap.h:35](../portable_modules/modules/super_cap/super_cap.h#L35) |
 | `ContinuousConvMode` | [ADC_InitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_adc-h-59-9) | Specifies whether the conversion is performed in single mode (one conversion) or continuous mode for regular group, after the selected trigger occurred (software start or external trigger). This parameter can be set to ENABLE or DISABLE. | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc.h:83](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc.h#L83) |
 | `ContinuousMode` | [LL_ADC_REG_InitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_ll_adc-h-404-9) | Set ADC continuous conversion mode on ADC group regular, whether ADC conversions are performed in single mode (one conversion per trigger) or in continuous mode (after the first trigger, following conversions launched successively automatically). This parameter can be a value of @ref ADC_LL_EC_REG_CONTINUOUS_MODE Note: It is not possible to enable both ADC group regular continuous mode and discontinuous mode. This feature can be modified afterwards using unitary function @ref LL_ADC_REG_SetContinuousMode(). | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_adc.h:426](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_adc.h#L426) |
-| `control` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:24](../modules/chassis_power/chassis_power_internal.h#L24) |
-| `control` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-37-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:41](../modules/chassis_power/chassis_power_types.h#L41) |
-| `control` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-85-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:87](../modules/chassis_power/chassis_power_types.h#L87) |
+| `control` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:25](../modules/chassis_power/chassis_power_internal.h#L25) |
+| `control` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-46-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:50](../modules/chassis_power/chassis_power_types.h#L50) |
+| `control` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-98-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:100](../modules/chassis_power/chassis_power_types.h#L100) |
 | `control` | [DJIMotorOutputGroup_s](#r-modules-motor-DJImotor-dji_motor-h-96-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_motor.h:102](../modules/motor/DJImotor/dji_motor.h#L102) |
 | `control` | [RemoteControlSnapshot_s](#r-modules-remote-remote_control-h-133-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 | [modules/remote/remote_control.h:134](../modules/remote/remote_control.h#L134) |
 | `Control` | [USBD_CDC_ItfTypeDef](#r-Middlewares-ST-STM32_USB_Device_Library-Class-CDC-Inc-usbd_cdc-h-107-9) | 源码未注释 | USB 虚拟串口 遥测 调参 数据传输 STM32 外设 寄存器 HAL 配置 句柄 | [Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h:111](../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h#L111) |
@@ -2444,16 +2457,16 @@
 | `control_enabled` | [ChassisPowerTransientInput_s](#r-modules-algorithm-chassis_power_transient-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:30](../modules/algorithm/chassis_power_transient.h#L30) |
 | `control_enabled` | [ChassisSpinInput_s](#r-modules-algorithm-chassis_spin-h-49-9) | 源码未注释 | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | [modules/algorithm/chassis_spin.h:51](../modules/algorithm/chassis_spin.h#L51) |
 | `control_enabled` | [ChassisForceCycleInput_s](#r-modules-chassis_force-chassis_force_control-h-19-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:25](../modules/chassis_force/chassis_force_control.h#L25) |
-| `control_enabled` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-27-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:33](../modules/chassis_power/chassis_power_types.h#L33) |
+| `control_enabled` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-36-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:42](../modules/chassis_power/chassis_power_types.h#L42) |
 | `control_enabled` | [DJIMotorGroupControl_s](#r-modules-motor-DJImotor-dji_motor-h-89-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_motor.h:93](../modules/motor/DJImotor/dji_motor.h#L93) |
 | `control_frame_count` | [Vt02_Debug_t](#r-modules-vtx-vt02_control-c-26-9) | 源码未注释 | 图传 键鼠 键盘 鼠标 | [modules/vtx/vt02_control.c:31](../modules/vtx/vt02_control.c#L31) |
 | `control_max_us` | [FcCapture](#r-modules-chassis_force_calibration-force_calibration_capture-h-17-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration_capture.h:19](../modules/chassis_force_calibration/force_calibration_capture.h#L19) |
 | `control_min_us` | [FcCapture](#r-modules-chassis_force_calibration-force_calibration_capture-h-17-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration_capture.h:19](../modules/chassis_force_calibration/force_calibration_capture.h#L19) |
-| `control_tick_ms` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:54](../modules/chassis_power/chassis_power_types.h#L54) |
+| `control_tick_ms` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:64](../modules/chassis_power/chassis_power_types.h#L64) |
 | `control_version` | [ChassisPowerShadowSnapshot](#r-modules-chassis_power-chassis_power_shadow-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_shadow.h:24](../modules/chassis_power/chassis_power_shadow.h#L24) |
-| `control_version` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:54](../modules/chassis_power/chassis_power_types.h#L54) |
-| `control_version` | [ChassisPowerCycleOutput_s](#r-modules-chassis_power-chassis_power_types-h-99-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:103](../modules/chassis_power/chassis_power_types.h#L103) |
-| `control_version` | [ChassisPowerFinalInput_s](#r-modules-chassis_power-chassis_power_types-h-108-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:110](../modules/chassis_power/chassis_power_types.h#L110) |
+| `control_version` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:64](../modules/chassis_power/chassis_power_types.h#L64) |
+| `control_version` | [ChassisPowerCycleOutput_s](#r-modules-chassis_power-chassis_power_types-h-112-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:116](../modules/chassis_power/chassis_power_types.h#L116) |
+| `control_version` | [ChassisPowerFinalInput_s](#r-modules-chassis_power-chassis_power_types-h-121-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:123](../modules/chassis_power/chassis_power_types.h#L123) |
 | `control_version` | [PPFinalActuation](#r-modules-predictive_power-power_observer-h-5-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_observer.h:6](../modules/predictive_power/power_observer.h#L6) |
 | `controlblock` | [osThreadDef_t](#r-Middlewares-Third_Party-FreeRTOS-Source-CMSIS_RTOS-cmsis_os-h-280-9) | control block to hold thread's data for static allocation; NULL for dynamic allocation | ARM 内核 寄存器 DSP 数学 矩阵 实时操作系统 任务 队列 信号量 定时器 链表 | [Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h:288](../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h#L288) |
 | `controlblock` | [osTimerDef_t](#r-Middlewares-Third_Party-FreeRTOS-Source-CMSIS_RTOS-cmsis_os-h-294-9) | control block to hold timer's data for static allocation; NULL for dynamic allocation | ARM 内核 寄存器 DSP 数学 矩阵 实时操作系统 任务 队列 信号量 定时器 链表 | [Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h:297](../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h#L297) |
@@ -2481,7 +2494,7 @@
 | `cooling_rate` | [HeatControlData_s](#r-modules-heat_control-heat_control-h-18-9) | 源码未注释 | 热量 射击 冷却 发射限制 | [modules/heat_control/heat_control.h:22](../modules/heat_control/heat_control.h#L22) |
 | `cooling_rate` | [HeatControlInstance](#r-modules-heat_control-heat_control-h-35-9) | 热量冷却速度/s | 热量 射击 冷却 发射限制 | [modules/heat_control/heat_control.h:40](../modules/heat_control/heat_control.h#L40) |
 | `cooling_rate` | [RefereePowerState_s](#r-modules-referee-referee_power-h-15-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:19](../modules/referee/referee_power.h#L19) |
-| `cooling_rate` | [RefereeHeatSnapshot_s](#r-modules-referee-referee_power-h-41-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:42](../modules/referee/referee_power.h#L42) |
+| `cooling_rate` | [RefereeHeatSnapshot_s](#r-modules-referee-referee_power-h-43-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:44](../modules/referee/referee_power.h#L44) |
 | `cooling_rate` | [RefereeHeat](#r-portable_modules-modules-referee-referee-h-50-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee.h:52](../portable_modules/modules/referee/referee.h#L52) |
 | `corrected` | [ChassisWheelKFDiagnostics](#r-modules-chassis_power-chassis_power_shadow-h-8-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_shadow.h:9](../modules/chassis_power/chassis_power_shadow.h#L9) |
 | `corrected` | [PPWheelKF](#r-modules-predictive_power-wheel_speed_kf-h-28-9) | 源码未注释 | 项目数据 | [modules/predictive_power/wheel_speed_kf.h:29](../modules/predictive_power/wheel_speed_kf.h#L29) |
@@ -2662,7 +2675,7 @@
 | `current` | [FcPulse](#r-modules-chassis_force_calibration-force_calibration-h-16-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration.h:16](../modules/chassis_force_calibration/force_calibration.h#L16) |
 | `current` | [FcDrive](#r-modules-chassis_force_calibration-force_calibration-h-24-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration.h:24](../modules/chassis_force_calibration/force_calibration.h#L24) |
 | `current` | [ChassisWheelKFDiagnostics](#r-modules-chassis_power-chassis_power_shadow-h-8-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_shadow.h:9](../modules/chassis_power/chassis_power_shadow.h#L9) |
-| `current` | [ChassisPowerCycleOutput_s](#r-modules-chassis_power-chassis_power_types-h-99-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:101](../modules/chassis_power/chassis_power_types.h#L101) |
+| `current` | [ChassisPowerCycleOutput_s](#r-modules-chassis_power-chassis_power_types-h-112-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:114](../modules/chassis_power/chassis_power_types.h#L114) |
 | `current` | [DJIMotorCycle_s](#r-modules-motor-DJImotor-dji_motor-h-112-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_motor.h:117](../modules/motor/DJImotor/dji_motor.h#L117) |
 | `current` | [PPMeasurement](#r-modules-predictive_power-power_observer-h-11-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_observer.h:13](../modules/predictive_power/power_observer.h#L13) |
 | `current` | [PPState](#r-modules-predictive_power-power_prediction-h-17-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_prediction.h:18](../modules/predictive_power/power_prediction.h#L18) |
@@ -2671,7 +2684,7 @@
 | `current_a` | [PowerMeterMeasurement_s](#r-modules-power_meter-power_meter_protocol-h-10-9) | 源码未注释 | 功率计 电压 电流 实测功率 | [modules/power_meter/power_meter_protocol.h:14](../modules/power_meter/power_meter_protocol.h#L14) |
 | `current_a` | [PowerMeterStatus_s](#r-modules-power_meter-power_meter_types-h-7-9) | 源码未注释 | 功率计 电压 电流 实测功率 | [modules/power_meter/power_meter_types.h:12](../modules/power_meter/power_meter_types.h#L12) |
 | `current_command` | [ChassisPowerTelemetry_s](#r-modules-algorithm-power_model-h-65-9) | 源码未注释 | 功率模型 损耗 预测 功控 算法 运动学 滤波 控制 计算 | [modules/algorithm/power_model.h:67](../modules/algorithm/power_model.h#L67) |
-| `current_command` | [ChassisPowerFinalInput_s](#r-modules-chassis_power-chassis_power_types-h-108-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:111](../modules/chassis_power/chassis_power_types.h#L111) |
+| `current_command` | [ChassisPowerFinalInput_s](#r-modules-chassis_power-chassis_power_types-h-121-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:124](../modules/chassis_power/chassis_power_types.h#L124) |
 | `current_conversion` | [MotorPowerModelConfig_s](#r-modules-algorithm-power_model-h-18-9) | 源码未注释 | 功率模型 损耗 预测 功控 算法 运动学 滤波 控制 计算 | [modules/algorithm/power_model.h:26](../modules/algorithm/power_model.h#L26) |
 | `current_error` | [PPModel](#r-modules-predictive_power-power_prediction-h-8-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_prediction.h:13](../modules/predictive_power/power_prediction.h#L13) |
 | `current_feedforward_ptr` | [DMMotorInstance](#r-modules-motor-DMmotor-dmmotor-h-39-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DMmotor/dmmotor.h:49](../modules/motor/DMmotor/dmmotor.h#L49) |
@@ -2683,7 +2696,7 @@
 | `current_heat` | [HeatControlData_s](#r-modules-heat_control-heat_control-h-18-9) | 源码未注释 | 热量 射击 冷却 发射限制 | [modules/heat_control/heat_control.h:20](../modules/heat_control/heat_control.h#L20) |
 | `current_heat` | [HeatControlInstance](#r-modules-heat_control-heat_control-h-35-9) | Q1 | 热量 射击 冷却 发射限制 | [modules/heat_control/heat_control.h:38](../modules/heat_control/heat_control.h#L38) |
 | `current_heat` | [RefereePowerState_s](#r-modules-referee-referee_power-h-15-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:19](../modules/referee/referee_power.h#L19) |
-| `current_heat` | [RefereeHeatSnapshot_s](#r-modules-referee-referee_power-h-41-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:42](../modules/referee/referee_power.h#L42) |
+| `current_heat` | [RefereeHeatSnapshot_s](#r-modules-referee-referee_power-h-43-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:44](../modules/referee/referee_power.h#L44) |
 | `current_heat` | [RefereeHeat](#r-portable_modules-modules-referee-referee-h-50-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee.h:52](../portable_modules/modules/referee/referee.h#L52) |
 | `current_HP` | [ext_game_robot_state_t](#r-modules-referee-referee_protocol-h-162-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_protocol.h:166](../modules/referee/referee_protocol.h#L166) |
 | `current_hp` | [RefereeRobotState](#r-portable_modules-modules-referee-referee_protocol-h-89-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee_protocol.h:93](../portable_modules/modules/referee/referee_protocol.h#L93) |
@@ -2719,11 +2732,13 @@
 | `CYCCNT` | [DWT_Type](#r-Drivers-CMSIS-Include-core_sc300-h-831-9) | Offset: 0x004 (R/W)  Cycle Count Register | ARM 内核 寄存器 DSP 数学 矩阵 | [Drivers/CMSIS/Include/core_sc300.h:834](../Drivers/CMSIS/Include/core_sc300.h#L834) |
 | `cycle` | [MotorEnqueueGuard_s](#r-modules-motor-DJImotor-dji_motor-c-431-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_motor.c:432](../modules/motor/DJImotor/dji_motor.c#L432) |
 | `cycle` | [CSCCapture](#r-modules-telemetry-chassis_speed_capture-h-27-9) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/chassis_speed_capture.h:29](../modules/telemetry/chassis_speed_capture.h#L29) |
+| `cycle_config` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:66](../modules/chassis_power/chassis_power_types.h#L66) |
+| `cycle_control` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:65](../modules/chassis_power/chassis_power_types.h#L65) |
 | `cycle_count` | [CSCCapture](#r-modules-telemetry-chassis_speed_capture-h-27-9) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/chassis_speed_capture.h:35](../modules/telemetry/chassis_speed_capture.h#L35) |
 | `cycle_seq` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:34](../modules/chassis_force/chassis_force_control.h#L34) |
 | `cycle_seq` | [ChassisForceController_s](#r-modules-chassis_force-chassis_force_control-h-51-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:59](../modules/chassis_force/chassis_force_control.h#L59) |
 | `cycle_us` | [FcRecord](#r-modules-chassis_force_calibration-force_calibration_capture-h-6-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration_capture.h:10](../modules/chassis_force_calibration/force_calibration_capture.h#L10) |
-| `cycle_valid` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:63](../modules/chassis_power/chassis_power_types.h#L63) |
+| `cycle_valid` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:75](../modules/chassis_power/chassis_power_types.h#L75) |
 | `cycles` | [GimbalEncoderSample_s](#r-application-gimbal-gimbal-h-8-9) | 源码未注释 | 云台 俯仰 偏航 控制 | [application/gimbal/gimbal.h:9](../application/gimbal/gimbal.h#L9) |
 | `cycles` | [ChassisPowerShadowSnapshot](#r-modules-chassis_power-chassis_power_shadow-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_shadow.h:25](../modules/chassis_power/chassis_power_shadow.h#L25) |
 | `cycles` | [INSMotionSnapshot_s](#r-modules-imu-ins_task-h-50-9) | Paired read completion time, not sensor conversion time. | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/ins_task.h:55](../modules/imu/ins_task.h#L55) |
@@ -2999,8 +3014,8 @@
 | `DLC` | [CAN_TxHeaderTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_can-h-151-9) | Specifies the length of the frame that will be transmitted. This parameter must be a number between Min_Data = 0 and Max_Data = 8. | CAN 总线 接收 发送 STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h:165](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h#L165) |
 | `DLC` | [CAN_RxHeaderTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_can-h-179-9) | Specifies the length of the frame that will be transmitted. This parameter must be a number between Min_Data = 0 and Max_Data = 8. | CAN 总线 接收 发送 STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h:193](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h#L193) |
 | `DLC` | [CAN_TxHeaderTypeDef](#r-tests-can_comm-stubs-bsp_can-h-14-9) | 源码未注释 | 双板通信 CAN 收发 总线 接收 发送 | [tests/can_comm/stubs/bsp_can.h:19](../tests/can_comm/stubs/bsp_can.h#L19) |
+| `dlc` | [CANInstance](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-7-1) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:10](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L10) |
 | `DLC` | [CAN_TxHeaderTypeDef](#r-tests-dji_chassis_power_rtt-stubs-bsp_can-h-14-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 CAN 总线 接收 发送 | [tests/dji_chassis_power_rtt/stubs/bsp_can.h:19](../tests/dji_chassis_power_rtt/stubs/bsp_can.h#L19) |
-| `dlc` | [CANInstance](#r-tests-dm_imu_runtime-stubs-bsp_can-h-7-1) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/dm_imu_runtime/stubs/bsp_can.h:10](../tests/dm_imu_runtime/stubs/bsp_can.h#L10) |
 | `DLEN` | [SDIO_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f407xx-h-682-9) | SDIO data length register,      Address offset: 0x28 | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h:694](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h#L694) |
 | `DLEN` | [SDIO_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f427xx-h-752-9) | SDIO data length register,      Address offset: 0x28 | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h:764](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h#L764) |
 | `dma_addr` | [USB_OTG_EPTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_ll_usb-h-123-9) | 32 bits aligned transfer buffer address | USB 虚拟串口 遥测 调参 数据传输 STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h:154](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h#L154) |
@@ -3114,8 +3129,8 @@
 | `dt_s` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:38](../modules/chassis_force/chassis_force_control.h#L38) |
 | `dt_s` | [ChassisForceSpinPowerInput_s](#r-modules-chassis_force-chassis_force_spin_power-h-4-9) | 源码未注释 | SPI 外设 总线 通信 | [modules/chassis_force/chassis_force_spin_power.h:6](../modules/chassis_force/chassis_force_spin_power.h#L6) |
 | `dt_s` | [ChassisPowerShadowSnapshot](#r-modules-chassis_power-chassis_power_shadow-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_shadow.h:26](../modules/chassis_power/chassis_power_shadow.h#L26) |
-| `dt_s` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-70-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:73](../modules/chassis_power/chassis_power_types.h#L73) |
-| `dt_s` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-85-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:96](../modules/chassis_power/chassis_power_types.h#L96) |
+| `dt_s` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-83-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:86](../modules/chassis_power/chassis_power_types.h#L86) |
+| `dt_s` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-98-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:109](../modules/chassis_power/chassis_power_types.h#L109) |
 | `DTCMCR` | [SCB_Type](#r-Drivers-CMSIS-Include-core_armv8mml-h-497-9) | Offset: 0x294 (R/W)  Data Tightly-Coupled Memory Control Registers | ARM 内核 寄存器 DSP 数学 矩阵 | [Drivers/CMSIS/Include/core_armv8mml.h:543](../Drivers/CMSIS/Include/core_armv8mml.h#L543) |
 | `DTCMCR` | [SCB_Type](#r-Drivers-CMSIS-Include-core_cm33-h-497-9) | Offset: 0x294 (R/W)  Data Tightly-Coupled Memory Control Registers | ARM 内核 寄存器 DSP 数学 矩阵 | [Drivers/CMSIS/Include/core_cm33.h:543](../Drivers/CMSIS/Include/core_cm33.h#L543) |
 | `DTCMCR` | [SCB_Type](#r-Drivers-CMSIS-Include-core_cm7-h-455-9) | Offset: 0x294 (R/W)  Data Tightly-Coupled Memory Control Registers | ARM 内核 寄存器 DSP 数学 矩阵 | [Drivers/CMSIS/Include/core_cm7.h:501](../Drivers/CMSIS/Include/core_cm7.h#L501) |
@@ -3190,8 +3205,8 @@
 | `enabled_mask` | [ChassisPowerTransientInput_s](#r-modules-algorithm-chassis_power_transient-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:29](../modules/algorithm/chassis_power_transient.h#L29) |
 | `enabled_mask` | [ChassisForceCycleInput_s](#r-modules-chassis_force-chassis_force_control-h-19-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:24](../modules/chassis_force/chassis_force_control.h#L24) |
 | `enabled_mask` | [FcRecord](#r-modules-chassis_force_calibration-force_calibration_capture-h-6-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration_capture.h:10](../modules/chassis_force_calibration/force_calibration_capture.h#L10) |
-| `enabled_mask` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-85-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:93](../modules/chassis_power/chassis_power_types.h#L93) |
-| `enabled_mask` | [ChassisPowerFinalInput_s](#r-modules-chassis_power-chassis_power_types-h-108-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:113](../modules/chassis_power/chassis_power_types.h#L113) |
+| `enabled_mask` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-98-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:106](../modules/chassis_power/chassis_power_types.h#L106) |
+| `enabled_mask` | [ChassisPowerFinalInput_s](#r-modules-chassis_power-chassis_power_types-h-121-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:126](../modules/chassis_power/chassis_power_types.h#L126) |
 | `enabled_mask` | [PPFinalActuation](#r-modules-predictive_power-power_observer-h-5-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_observer.h:8](../modules/predictive_power/power_observer.h#L8) |
 | `enabled_mask` | [ChassisPowerCaptureSample_s](#r-modules-telemetry-chassis_power_capture-h-20-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/chassis_power_capture.h:27](../modules/telemetry/chassis_power_capture.h#L27) |
 | `Encoder_MspDeInitCallback` | [TIM_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_tim-h-335-9) | TIM Encoder Msp DeInit Callback | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h:363](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h#L363) |
@@ -3300,7 +3315,7 @@
 | `ESR` | [CAN_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f407xx-h-249-9) | CAN error status register,           Address offset: 0x18 | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h:257](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h#L257) |
 | `ESR` | [CAN_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f427xx-h-254-9) | CAN error status register,           Address offset: 0x18 | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h:262](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h#L262) |
 | `estimate_us` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:49](../modules/chassis_force/chassis_force_control.h#L49) |
-| `estimated_sample_ms` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-29-9) | Latest examined source identity/timing, not necessarily the middle sample. | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:36](../modules/algorithm/chassis_remote_fusion.h#L36) |
+| `estimated_sample_ms` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-45-9) | Latest examined source identity/timing, not necessarily the middle sample. | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:52](../modules/algorithm/chassis_remote_fusion.h#L52) |
 | `ESUR` | [DCMI_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f407xx-h-326-9) | DCMI embedded synchronization unmask register, Address offset: 0x1C | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h:335](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h#L335) |
 | `ESUR` | [DCMI_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f427xx-h-331-9) | DCMI embedded synchronization unmask register, Address offset: 0x1C | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h:340](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h#L340) |
 | `eta` | [ChassisPowerTransientConfig_s](#r-modules-algorithm-chassis_power_transient-h-14-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:15](../modules/algorithm/chassis_power_transient.h#L15) |
@@ -3384,8 +3399,8 @@
 | `feedback_count` | [PIDAutotune](#r-modules-telemetry-pid_autotune-h-15-9) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 PID 自动整定 闭环反馈 | [modules/telemetry/pid_autotune.h:27](../modules/telemetry/pid_autotune.h#L27) |
 | `feedback_current` | [ChassisForceCycleInput_s](#r-modules-chassis_force-chassis_force_control-h-19-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:22](../modules/chassis_force/chassis_force_control.h#L22) |
 | `feedback_current` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:42](../modules/chassis_force/chassis_force_control.h#L42) |
-| `feedback_current` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:55](../modules/chassis_power/chassis_power_types.h#L55) |
-| `feedback_current` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-85-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:91](../modules/chassis_power/chassis_power_types.h#L91) |
+| `feedback_current` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:67](../modules/chassis_power/chassis_power_types.h#L67) |
+| `feedback_current` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-98-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:104](../modules/chassis_power/chassis_power_types.h#L104) |
 | `feedback_current` | [ChassisPowerCaptureSample_s](#r-modules-telemetry-chassis_power_capture-h-20-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/chassis_power_capture.h:22](../modules/telemetry/chassis_power_capture.h#L22) |
 | `feedback_fresh` | [ChassisPowerTransientOutput_s](#r-modules-algorithm-chassis_power_transient-h-50-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:53](../modules/algorithm/chassis_power_transient.h#L53) |
 | `feedback_fresh_ms` | [ChassisPowerTransientConfig_s](#r-modules-algorithm-chassis_power_transient-h-14-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:16](../modules/algorithm/chassis_power_transient.h#L16) |
@@ -3396,15 +3411,15 @@
 | `feedback_sequence` | [ChassisPowerTransientInput_s](#r-modules-algorithm-chassis_power_transient-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:28](../modules/algorithm/chassis_power_transient.h#L28) |
 | `feedback_sequence` | [ChassisPowerTransientState_s](#r-modules-algorithm-chassis_power_transient-h-33-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:40](../modules/algorithm/chassis_power_transient.h#L40) |
 | `feedback_sequence` | [ChassisSpinInput_s](#r-modules-algorithm-chassis_spin-h-49-9) | 源码未注释 | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | [modules/algorithm/chassis_spin.h:55](../modules/algorithm/chassis_spin.h#L55) |
-| `feedback_sequence` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:56](../modules/chassis_power/chassis_power_types.h#L56) |
-| `feedback_sequence` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-85-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:92](../modules/chassis_power/chassis_power_types.h#L92) |
+| `feedback_sequence` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:68](../modules/chassis_power/chassis_power_types.h#L68) |
+| `feedback_sequence` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-98-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:105](../modules/chassis_power/chassis_power_types.h#L105) |
 | `feedback_tick_ms` | [ChassisPowerTransientInput_s](#r-modules-algorithm-chassis_power_transient-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:28](../modules/algorithm/chassis_power_transient.h#L28) |
 | `feedback_tick_ms` | [ChassisPowerTransientState_s](#r-modules-algorithm-chassis_power_transient-h-33-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:40](../modules/algorithm/chassis_power_transient.h#L40) |
 | `feedback_tick_ms` | [ChassisSpinInput_s](#r-modules-algorithm-chassis_spin-h-49-9) | 源码未注释 | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | [modules/algorithm/chassis_spin.h:55](../modules/algorithm/chassis_spin.h#L55) |
 | `feedback_tick_ms` | [ChassisVelocityInput_s](#r-modules-algorithm-chassis_velocity-h-27-9) | 源码未注释 | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity.h:29](../modules/algorithm/chassis_velocity.h#L29) |
 | `feedback_tick_ms` | [ChassisForceCycleInput_s](#r-modules-chassis_force-chassis_force_control-h-19-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:23](../modules/chassis_force/chassis_force_control.h#L23) |
-| `feedback_tick_ms` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:56](../modules/chassis_power/chassis_power_types.h#L56) |
-| `feedback_tick_ms` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-85-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:92](../modules/chassis_power/chassis_power_types.h#L92) |
+| `feedback_tick_ms` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:68](../modules/chassis_power/chassis_power_types.h#L68) |
+| `feedback_tick_ms` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-98-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:105](../modules/chassis_power/chassis_power_types.h#L105) |
 | `feedback_time_us` | [FcRecord](#r-modules-chassis_force_calibration-force_calibration_capture-h-6-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration_capture.h:8](../modules/chassis_force_calibration/force_calibration_capture.h#L8) |
 | `feedback_valid` | [ChassisSpinInput_s](#r-modules-algorithm-chassis_spin-h-49-9) | 源码未注释 | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | [modules/algorithm/chassis_spin.h:51](../modules/algorithm/chassis_spin.h#L51) |
 | `feedback_valid` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:48](../modules/chassis_force/chassis_force_control.h#L48) |
@@ -3491,7 +3506,7 @@
 | `FIFOThreshold` | [LL_DMA_InitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_ll_dma-h-77-9) | Specifies the FIFO threshold level. This parameter can be a value of @ref DMA_LL_EC_FIFOTHRESHOLD This feature can be modified afterwards using unitary function @ref LL_DMA_SetFIFOThreshold(). | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_dma.h:150](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_dma.h#L150) |
 | `filter` | [ChassisVelocityFusionCalibration_s](#r-application-chassis-chassis_velocity_observer-c-55-9) | 源码未注释 | 底盘 运动 控制 轮速 速度 闭环 | [application/chassis/chassis_velocity_observer.c:57](../application/chassis/chassis_velocity_observer.c#L57) |
 | `filter` | [ChassisRemoteFusionConfig_s](#r-modules-algorithm-chassis_remote_fusion-h-22-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:25](../modules/algorithm/chassis_remote_fusion.h#L25) |
-| `filter` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-42-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:46](../modules/algorithm/chassis_remote_fusion.h#L46) |
+| `filter` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-59-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:63](../modules/algorithm/chassis_remote_fusion.h#L63) |
 | `Filter` | [RTC_TamperTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_rtc_ex-h-48-9) | Specifies the RTC Filter Tamper. This parameter can be a value of @ref RTCEx_Tamper_Filter_Definitions | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rtc_ex.h:59](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rtc_ex.h#L59) |
 | `FilterActivation` | [CAN_FilterTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_can-h-101-9) | Enable or disable the filter. This parameter can be a value of @ref CAN_filter_activation | CAN 总线 接收 发送 STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h:136](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h#L136) |
 | `FilterBank` | [CAN_FilterTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_can-h-101-9) | Specifies the filter bank which will be initialized. For single CAN instance(14 dedicated filter banks), this parameter must be a number between Min_Data = 0 and Max_Data = 13. For dual CAN instances(28 filter banks shared), this parameter must be a number between Min_Data = 0 and Max_Data = 27. | CAN 总线 接收 发送 STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h:124](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h#L124) |
@@ -3524,14 +3539,15 @@
 | `final` | [FcStatus](#r-modules-chassis_force_calibration-force_calibration-h-25-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration.h:30](../modules/chassis_force_calibration/force_calibration.h#L30) |
 | `final` | [FcRecord](#r-modules-chassis_force_calibration-force_calibration_capture-h-6-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration_capture.h:9](../modules/chassis_force_calibration/force_calibration_capture.h#L9) |
 | `final` | [ChassisPowerShadowSnapshot](#r-modules-chassis_power-chassis_power_shadow-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_shadow.h:31](../modules/chassis_power/chassis_power_shadow.h#L31) |
-| `final_current` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:65](../modules/chassis_power/chassis_power_types.h#L65) |
+| `final_current` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:77](../modules/chassis_power/chassis_power_types.h#L77) |
 | `final_current` | [ChassisPowerCaptureSample_s](#r-modules-telemetry-chassis_power_capture-h-20-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/chassis_power_capture.h:22](../modules/telemetry/chassis_power_capture.h#L22) |
 | `final_predicted_w` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:40](../modules/chassis_force/chassis_force_control.h#L40) |
-| `final_tick_ms` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:64](../modules/chassis_power/chassis_power_types.h#L64) |
-| `final_valid` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:63](../modules/chassis_power/chassis_power_types.h#L63) |
+| `final_tick_ms` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:76](../modules/chassis_power/chassis_power_types.h#L76) |
+| `final_valid` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:75](../modules/chassis_power/chassis_power_types.h#L75) |
+| `fingerprint` | [ChassisPowerConfigObservation_s](#r-modules-chassis_power-chassis_power_types-h-28-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:30](../modules/chassis_power/chassis_power_types.h#L30) |
 | `fire_mode` | [Vision_Recv_s](#r-modules-master_machine-master_process-h-38-9) | 源码未注释 | 视觉 自瞄 上位机 通信 | [modules/master_machine/master_process.h:40](../modules/master_machine/master_process.h#L40) |
+| `first_rx_tick_ms` | [ChassisImuCanDecoder_s](#r-modules-imu-chassis_imu_can_protocol-h-13-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [modules/imu/chassis_imu_can_protocol.h:17](../modules/imu/chassis_imu_can_protocol.h#L17) |
 | `first_rx_tick_ms` | [ChassisImuCanSnapshot_s](#r-modules-imu-chassis_imu_sample-h-20-9) | Both use the receiver clock. | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/chassis_imu_sample.h:22](../modules/imu/chassis_imu_sample.h#L22) |
-| `first_rx_tick_ms` | [DmImuCanDecoder_s](#r-modules-imu-dm_imu_can_protocol-h-9-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [modules/imu/dm_imu_can_protocol.h:11](../modules/imu/dm_imu_can_protocol.h#L11) |
 | `first_subs` | [Publisher_t](#r-modules-message_center-message_center-h-38-9) | 指向第一个订阅了该话题的订阅者,通过链表访问所有订阅者 | 消息中心 发布订阅 模块通信 | [modules/message_center/message_center.h:44](../modules/message_center/message_center.h#L44) |
 | `FirstBit` | [SPI_InitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_spi-h-46-9) | Specifies whether data transfers start from MSB or LSB bit. This parameter can be a value of @ref SPI_MSB_LSB_transmission | SPI 外设 总线 通信 STM32 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h:73](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h#L73) |
 | `fixed_wz` | [ChassisSpinConfig_s](#r-modules-algorithm-chassis_spin-h-8-9) | 源码未注释 | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | [modules/algorithm/chassis_spin.h:10](../modules/algorithm/chassis_spin.h#L10) |
@@ -3555,19 +3571,19 @@
 | `FOLDCNT` | [DWT_Type](#r-Drivers-CMSIS-Include-core_cm4-h-914-9) | Offset: 0x018 (R/W)  Folded-instruction Count Register | ARM 内核 寄存器 DSP 数学 矩阵 | [Drivers/CMSIS/Include/core_cm4.h:922](../Drivers/CMSIS/Include/core_cm4.h#L922) |
 | `FOLDCNT` | [DWT_Type](#r-Drivers-CMSIS-Include-core_cm7-h-1116-9) | Offset: 0x018 (R/W)  Folded-instruction Count Register | ARM 内核 寄存器 DSP 数学 矩阵 | [Drivers/CMSIS/Include/core_cm7.h:1124](../Drivers/CMSIS/Include/core_cm7.h#L1124) |
 | `FOLDCNT` | [DWT_Type](#r-Drivers-CMSIS-Include-core_sc300-h-831-9) | Offset: 0x018 (R/W)  Folded-instruction Count Register | ARM 内核 寄存器 DSP 数学 矩阵 | [Drivers/CMSIS/Include/core_sc300.h:839](../Drivers/CMSIS/Include/core_sc300.h#L839) |
-| `force_backend` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-70-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:81](../modules/chassis_power/chassis_power_types.h#L81) |
+| `force_backend` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-83-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:94](../modules/chassis_power/chassis_power_types.h#L94) |
 | `force_control` | [ChassisPower_Init_Config_s](#r-modules-chassis_power-chassis_power_types-h-15-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:24](../modules/chassis_power/chassis_power_types.h#L24) |
 | `force_fall_n_s` | [ChassisForceConfig_s](#r-config-22_chassis_force-chassis_force_config-h-20-9) | 平移请求力的上升速率，单位 N/s；须大于 0。 平移请求力的下降速率，单位 N/s；须大于 0。 请求转矩的上升速率，单位 N*m/s；须大于 0。 请求转矩的下降速率，单位 N*m/s；须大于 0。 | 项目数据 | [config/22_chassis_force/chassis_force_config.h:31](../config/22_chassis_force/chassis_force_config.h#L31) |
 | `force_g` | [ChassisForceCommandState_s](#r-modules-chassis_force-chassis_force_command-h-5-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_command.h:6](../modules/chassis_force/chassis_force_command.h#L6) |
 | `force_g` | [ChassisForceCommandOutput_s](#r-modules-chassis_force-chassis_force_command-h-12-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_command.h:12](../modules/chassis_force/chassis_force_command.h#L12) |
 | `force_g` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:38](../modules/chassis_force/chassis_force_control.h#L38) |
-| `force_growth_allowed` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-37-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:45](../modules/chassis_power/chassis_power_types.h#L45) |
+| `force_growth_allowed` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-46-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:55](../modules/chassis_power/chassis_power_types.h#L55) |
 | `force_limit_n` | [ChassisForceWheel_s](#r-config-22_chassis_force-chassis_force_config-h-7-9) | 逐轮电流 CAN 命令幅值上限，单位命令计数；合法值 &gt;0 且 &lt;=16384。 逐轮可传递的轮缘力幅值上限，单位 N；须经受载测量且大于 0。 逐轮电流命令变化率上限，单位 CAN 命令计数/s；须大于 0。 | 项目数据 | [config/22_chassis_force/chassis_force_config.h:16](../config/22_chassis_force/chassis_force_config.h#L16) |
 | `force_max_n` | [ChassisForceConfig_s](#r-config-22_chassis_force-chassis_force_config-h-20-9) | 满幅平移输入对应的请求合力，单位 N；须大于 0。 固定自旋请求转矩，单位 N*m；须大于 0 且不超过自旋上限。 功率自适应的起步请求转矩，单位 N*m；须大于 0 且不超过自旋上限。 自适应自旋请求转矩上限，单位 N*m；须大于 0。 | 项目数据 | [config/22_chassis_force/chassis_force_config.h:26](../config/22_chassis_force/chassis_force_config.h#L26) |
-| `force_offer_valid` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-70-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:81](../modules/chassis_power/chassis_power_types.h#L81) |
-| `force_offered_demand_w` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-70-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:82](../modules/chassis_power/chassis_power_types.h#L82) |
-| `force_operating_demand_w` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-70-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:82](../modules/chassis_power/chassis_power_types.h#L82) |
-| `force_operating_valid` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-70-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:81](../modules/chassis_power/chassis_power_types.h#L81) |
+| `force_offer_valid` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-83-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:94](../modules/chassis_power/chassis_power_types.h#L94) |
+| `force_offered_demand_w` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-83-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:95](../modules/chassis_power/chassis_power_types.h#L95) |
+| `force_operating_demand_w` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-83-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:95](../modules/chassis_power/chassis_power_types.h#L95) |
+| `force_operating_valid` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-83-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:94](../modules/chassis_power/chassis_power_types.h#L94) |
 | `force_rise_n_s` | [ChassisForceConfig_s](#r-config-22_chassis_force-chassis_force_config-h-20-9) | 平移请求力的上升速率，单位 N/s；须大于 0。 平移请求力的下降速率，单位 N/s；须大于 0。 请求转矩的上升速率，单位 N*m/s；须大于 0。 请求转矩的下降速率，单位 N*m/s；须大于 0。 | 项目数据 | [config/22_chassis_force/chassis_force_config.h:30](../config/22_chassis_force/chassis_force_config.h#L30) |
 | `force_scale` | [ChassisForceIntent_s](#r-modules-chassis_force-chassis_force_types-h-7-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_types.h:9](../modules/chassis_force/chassis_force_types.h#L9) |
 | `format` | [USBD_CDC_LineCodingTypeDef](#r-Middlewares-ST-STM32_USB_Device_Library-Class-CDC-Inc-usbd_cdc-h-99-9) | 源码未注释 | USB 虚拟串口 遥测 调参 数据传输 STM32 外设 寄存器 HAL 配置 句柄 | [Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h:102](../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h#L102) |
@@ -3735,7 +3751,6 @@
 | `gamma` | [arm_svm_polynomial_instance_f16](#r-Middlewares-ST-ARM-DSP-Include-dsp-svm_functions_f16-h-80-9) | Gamma factor | 第三方中间件 | [Middlewares/ST/ARM/DSP/Include/dsp/svm_functions_f16.h:90](../Middlewares/ST/ARM/DSP/Include/dsp/svm_functions_f16.h#L90) |
 | `gamma` | [arm_svm_rbf_instance_f16](#r-Middlewares-ST-ARM-DSP-Include-dsp-svm_functions_f16-h-96-9) | Gamma factor | 第三方中间件 | [Middlewares/ST/ARM/DSP/Include/dsp/svm_functions_f16.h:104](../Middlewares/ST/ARM/DSP/Include/dsp/svm_functions_f16.h#L104) |
 | `gamma` | [arm_svm_sigmoid_instance_f16](#r-Middlewares-ST-ARM-DSP-Include-dsp-svm_functions_f16-h-110-9) | Gamma factor | 第三方中间件 | [Middlewares/ST/ARM/DSP/Include/dsp/svm_functions_f16.h:119](../Middlewares/ST/ARM/DSP/Include/dsp/svm_functions_f16.h#L119) |
-| `gap` | [cases](#r-tests-dm_imu_can_protocol-test_dm_imu_can_protocol-c-156-11) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/dm_imu_can_protocol/test_dm_imu_can_protocol.c:156](../tests/dm_imu_can_protocol/test_dm_imu_can_protocol.c#L156) |
 | `gate` | [DJIMotorControlPolicy_s](#r-modules-motor-DJImotor-dji_motor-h-126-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_motor.h:132](../modules/motor/DJImotor/dji_motor.h#L132) |
 | `gate_squared` | [PPWheelKFConfig](#r-modules-predictive_power-wheel_speed_kf-h-10-9) | 源码未注释 | 项目数据 | [modules/predictive_power/wheel_speed_kf.h:12](../modules/predictive_power/wheel_speed_kf.h#L12) |
 | `GCCFG` | [USB_OTG_GlobalTypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f407xx-h-793-9) | General Purpose IO Register                  038h | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h:808](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h#L808) |
@@ -3860,7 +3875,6 @@
 | `gyro_overrun` | [BMI088Instance.update_flag](#r-modules-BMI088-bmi088-h-66-5) | 1:数据溢出,0:无溢出 | 惯性测量 姿态 陀螺仪 加速度 | [modules/BMI088/bmi088.h:71](../modules/BMI088/bmi088.h#L71) |
 | `gyro_rad_s` | [IMUSample_s](#r-modules-imu-imu_sample-h-5-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/imu_sample.h:7](../modules/imu/imu_sample.h#L7) |
 | `gyro_sensor_radps` | [ChassisImuCanSample_s](#r-modules-imu-chassis_imu_sample-h-12-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/chassis_imu_sample.h:14](../modules/imu/chassis_imu_sample.h#L14) |
-| `gyro_sensor_radps` | [DmImuCanDecoder_s](#r-modules-imu-dm_imu_can_protocol-h-9-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [modules/imu/dm_imu_can_protocol.h:10](../modules/imu/dm_imu_can_protocol.h#L10) |
 | `gyro_sensor_radps` | [INSMotionSnapshot_s](#r-modules-imu-ins_task-h-50-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/ins_task.h:54](../modules/imu/ins_task.h#L54) |
 | `GyroBias` | [QEKF_INS_t](#r-modules-algorithm-QuaternionEKF-h-26-9) | 陀螺仪零偏估计值 | 四元数 姿态 扩展卡尔曼 算法 运动学 滤波 控制 计算 | [modules/algorithm/QuaternionEKF.h:36](../modules/algorithm/QuaternionEKF.h#L36) |
 | `GyroOffset` | [IMU_Data_t](#r-modules-imu-BMI088driver-h-63-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/BMI088driver.h:73](../modules/imu/BMI088driver.h#L73) |
@@ -3904,10 +3918,12 @@
 | `has_game_state` | [RefereeData](#r-portable_modules-modules-referee-referee_protocol-h-159-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee_protocol.h:176](../portable_modules/modules/referee/referee_protocol.h#L176) |
 | `has_interaction` | [RefereeData](#r-portable_modules-modules-referee-referee_protocol-h-159-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee_protocol.h:188](../portable_modules/modules/referee/referee_protocol.h#L188) |
 | `has_power_heat` | [RefereePowerState_s](#r-modules-referee-referee_power-h-15-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:25](../modules/referee/referee_power.h#L25) |
+| `has_power_heat` | [RefereePowerSnapshot_s](#r-modules-referee-referee_power-h-29-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:38](../modules/referee/referee_power.h#L38) |
 | `has_power_heat` | [RefereeData](#r-portable_modules-modules-referee-referee_protocol-h-159-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee_protocol.h:182](../portable_modules/modules/referee/referee_protocol.h#L182) |
 | `has_robot_hurt` | [RefereeData](#r-portable_modules-modules-referee-referee_protocol-h-159-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee_protocol.h:186](../portable_modules/modules/referee/referee_protocol.h#L186) |
 | `has_robot_position` | [RefereeData](#r-portable_modules-modules-referee-referee_protocol-h-159-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee_protocol.h:183](../portable_modules/modules/referee/referee_protocol.h#L183) |
 | `has_robot_state` | [RefereePowerState_s](#r-modules-referee-referee_power-h-15-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:24](../modules/referee/referee_power.h#L24) |
+| `has_robot_state` | [RefereePowerSnapshot_s](#r-modules-referee-referee_power-h-29-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:38](../modules/referee/referee_power.h#L38) |
 | `has_robot_state` | [RefereeData](#r-portable_modules-modules-referee-referee_protocol-h-159-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee_protocol.h:181](../portable_modules/modules/referee/referee_protocol.h#L181) |
 | `has_rx` | [FcCapture](#r-modules-chassis_force_calibration-force_calibration_capture-h-17-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration_capture.h:21](../modules/chassis_force_calibration/force_calibration_capture.h#L21) |
 | `has_sample` | [CANCommInstance](#r-modules-can_comm-can_comm-h-26-9) | 源码未注释 | 双板通信 CAN 收发 总线 接收 发送 | [modules/can_comm/can_comm.h:43](../modules/can_comm/can_comm.h#L43) |
@@ -3918,8 +3934,9 @@
 | `has_supply_action` | [RefereeData](#r-portable_modules-modules-referee-referee_protocol-h-159-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee_protocol.h:180](../portable_modules/modules/referee/referee_protocol.h#L180) |
 | `has_valid_frame` | [RefereeDiagnostics](#r-portable_modules-modules-referee-referee-h-28-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee.h:39](../portable_modules/modules/referee/referee.h#L39) |
 | `have_imu_time` | [ChassisVelocityFusion_s](#r-modules-algorithm-chassis_velocity_fusion-h-37-9) | 源码未注释 | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity_fusion.h:40](../modules/algorithm/chassis_velocity_fusion.h#L40) |
-| `have_now` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-42-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:52](../modules/algorithm/chassis_remote_fusion.h#L52) |
-| `have_source` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-42-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:52](../modules/algorithm/chassis_remote_fusion.h#L52) |
+| `have_last` | [ChassisImuCanDecoder_s](#r-modules-imu-chassis_imu_can_protocol-h-13-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [modules/imu/chassis_imu_can_protocol.h:18](../modules/imu/chassis_imu_can_protocol.h#L18) |
+| `have_now` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-59-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:69](../modules/algorithm/chassis_remote_fusion.h#L69) |
+| `have_source` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-59-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:69](../modules/algorithm/chassis_remote_fusion.h#L69) |
 | `have_wheel_time` | [ChassisVelocityFusion_s](#r-modules-algorithm-chassis_velocity_fusion-h-37-9) | 源码未注释 | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity_fusion.h:40](../modules/algorithm/chassis_velocity_fusion.h#L40) |
 | `HCCHAR` | [USB_OTG_HostChannelTypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f407xx-h-888-9) | Host Channel Characteristics Register    500h | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h:890](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h#L890) |
 | `HCCHAR` | [USB_OTG_HostChannelTypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f427xx-h-958-9) | Host Channel Characteristics Register    500h | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h:960](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h#L960) |
@@ -3961,7 +3978,7 @@
 | `heat_limit` | [HeatControlData_s](#r-modules-heat_control-heat_control-h-18-9) | 源码未注释 | 热量 射击 冷却 发射限制 | [modules/heat_control/heat_control.h:21](../modules/heat_control/heat_control.h#L21) |
 | `heat_limit` | [HeatControlInstance](#r-modules-heat_control-heat_control-h-35-9) | Q0 | 热量 射击 冷却 发射限制 | [modules/heat_control/heat_control.h:39](../modules/heat_control/heat_control.h#L39) |
 | `heat_limit` | [RefereePowerState_s](#r-modules-referee-referee_power-h-15-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:19](../modules/referee/referee_power.h#L19) |
-| `heat_limit` | [RefereeHeatSnapshot_s](#r-modules-referee-referee_power-h-41-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:42](../modules/referee/referee_power.h#L42) |
+| `heat_limit` | [RefereeHeatSnapshot_s](#r-modules-referee-referee_power-h-43-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:44](../modules/referee/referee_power.h#L44) |
 | `heat_limit` | [RefereeHeat](#r-portable_modules-modules-referee-referee-h-50-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee.h:52](../portable_modules/modules/referee/referee.h#L52) |
 | `heat_pid` | [BMI088Instance](#r-modules-BMI088-bmi088-h-38-9) | 恒温PID | 惯性测量 姿态 陀螺仪 加速度 | [modules/BMI088/bmi088.h:50](../modules/BMI088/bmi088.h#L50) |
 | `heat_pid_config` | [BMI088_Init_Config_s](#r-modules-BMI088-bmi088-h-80-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 | [modules/BMI088/bmi088.h:88](../modules/BMI088/bmi088.h#L88) |
@@ -3969,7 +3986,7 @@
 | `heat_pwm` | [BMI088Instance](#r-modules-BMI088-bmi088-h-38-9) | 加热PWM | 惯性测量 姿态 陀螺仪 加速度 | [modules/BMI088/bmi088.h:51](../modules/BMI088/bmi088.h#L51) |
 | `heat_pwm_config` | [BMI088_Init_Config_s](#r-modules-BMI088-bmi088-h-80-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 | [modules/BMI088/bmi088.h:89](../modules/BMI088/bmi088.h#L89) |
 | `heat_robot_age_ms` | [Chassis_Upload_Data_s](#r-application-robot_def-h-155-9) | 源码未注释 | 机器人 跨模块 控制指令 上传反馈 底盘 云台 发射 | [application/robot_def.h:159](../application/robot_def.h#L159) |
-| `held` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-42-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:48](../modules/algorithm/chassis_remote_fusion.h#L48) |
+| `held` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-59-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:65](../modules/algorithm/chassis_remote_fusion.h#L65) |
 | `HFIR` | [USB_OTG_HostTypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f407xx-h-874-9) | Host Frame Interval Register         404h | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h:877](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h#L877) |
 | `HFIR` | [USB_OTG_HostTypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f427xx-h-944-9) | Host Frame Interval Register         404h | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h:947](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h#L947) |
 | `HFNUM` | [USB_OTG_HostTypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f407xx-h-874-9) | Host Frame Nbr/Frame Remaining       408h | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h:878](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h#L878) |
@@ -3999,7 +4016,7 @@
 | `hold_ms` | [FcPulse](#r-modules-chassis_force_calibration-force_calibration-h-16-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration.h:16](../modules/chassis_force_calibration/force_calibration.h#L16) |
 | `hold_ms` | [PIDAutotuneTrial](#r-modules-telemetry-pid_autotune-h-10-9) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 PID 自动整定 闭环反馈 | [modules/telemetry/pid_autotune.h:10](../modules/telemetry/pid_autotune.h#L10) |
 | `hold_positive_learning` | [ChassisPowerOuterLoopInput_s](#r-modules-algorithm-chassis_power_outer_loop-h-41-9) | Keep learned correction while a target governor uses spare power. | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_outer_loop.h:52](../modules/algorithm/chassis_power_outer_loop.h#L52) |
-| `hold_positive_learning` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-70-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:78](../modules/chassis_power/chassis_power_types.h#L78) |
+| `hold_positive_learning` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-83-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:91](../modules/chassis_power/chassis_power_types.h#L91) |
 | `hold_valid` | [ChassisPowerCapture_s](#r-modules-telemetry-chassis_power_capture-h-30-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/chassis_power_capture.h:37](../modules/telemetry/chassis_power_capture.h#L37) |
 | `horizon_s` | [PPModel](#r-modules-predictive_power-power_prediction-h-8-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_prediction.h:10](../modules/predictive_power/power_prediction.h#L10) |
 | `Host_channels` | [USB_OTG_CfgTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_ll_usb-h-86-9) | Host Channels number. This parameter Depends on the used USB core. This parameter must be a number between Min_Data = 1 and Max_Data = 15 | USB 虚拟串口 遥测 调参 数据传输 STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h:92](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h#L92) |
@@ -4173,10 +4190,10 @@
 | `id` | [USBD_HandleTypeDef](#r-Middlewares-ST-STM32_USB_Device_Library-Core-Inc-usbd_def-h-360-9) | 源码未注释 | USB 虚拟串口 遥测 调参 数据传输 STM32 外设 寄存器 HAL 配置 句柄 | [Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h:362](../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h#L362) |
 | `id` | [CANInstance](#r-tests-can_comm-stubs-bsp_can-h-23-1) | 源码未注释 | 双板通信 CAN 收发 总线 接收 发送 | [tests/can_comm/stubs/bsp_can.h:32](../tests/can_comm/stubs/bsp_can.h#L32) |
 | `id` | [CAN_Init_Config_s](#r-tests-can_comm-stubs-bsp_can-h-35-9) | 源码未注释 | 双板通信 CAN 收发 总线 接收 发送 | [tests/can_comm/stubs/bsp_can.h:41](../tests/can_comm/stubs/bsp_can.h#L41) |
+| `id` | [CANInstance](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-7-1) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:12](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L12) |
+| `id` | [CAN_Init_Config_s](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-14-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:18](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L18) |
 | `id` | [CANInstance](#r-tests-dji_chassis_power_rtt-stubs-bsp_can-h-23-1) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 CAN 总线 接收 发送 | [tests/dji_chassis_power_rtt/stubs/bsp_can.h:32](../tests/dji_chassis_power_rtt/stubs/bsp_can.h#L32) |
 | `id` | [CAN_Init_Config_s](#r-tests-dji_chassis_power_rtt-stubs-bsp_can-h-35-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 CAN 总线 接收 发送 | [tests/dji_chassis_power_rtt/stubs/bsp_can.h:41](../tests/dji_chassis_power_rtt/stubs/bsp_can.h#L41) |
-| `id` | [CANInstance](#r-tests-dm_imu_runtime-stubs-bsp_can-h-7-1) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/dm_imu_runtime/stubs/bsp_can.h:12](../tests/dm_imu_runtime/stubs/bsp_can.h#L12) |
-| `id` | [CAN_Init_Config_s](#r-tests-dm_imu_runtime-stubs-bsp_can-h-14-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/dm_imu_runtime/stubs/bsp_can.h:18](../tests/dm_imu_runtime/stubs/bsp_can.h#L18) |
 | `id` | [CANInstance](#r-tests-power_meter-stubs-bsp_can-h-12-1) | 源码未注释 | 功率计 电压 电流 实测功率 CAN 总线 接收 发送 | [tests/power_meter/stubs/bsp_can.h:21](../tests/power_meter/stubs/bsp_can.h#L21) |
 | `id` | [CAN_Init_Config_s](#r-tests-power_meter-stubs-bsp_can-h-24-9) | 源码未注释 | 功率计 电压 电流 实测功率 CAN 总线 接收 发送 | [tests/power_meter/stubs/bsp_can.h:30](../tests/power_meter/stubs/bsp_can.h#L30) |
 | `id` | [CANInstance](#r-tests-super_cap-stubs-bsp_can-h-12-1) | 源码未注释 | 超级电容 电容 电压 储能 功率 CAN 总线 接收 发送 | [tests/super_cap/stubs/bsp_can.h:21](../tests/super_cap/stubs/bsp_can.h#L21) |
@@ -4326,6 +4343,7 @@
 | `initialized` | [ChassisPowerCapture_s](#r-modules-telemetry-chassis_power_capture-h-30-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/chassis_power_capture.h:37](../modules/telemetry/chassis_power_capture.h#L37) |
 | `initialized` | [Referee](#r-portable_modules-modules-referee-referee-h-56-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee.h:68](../portable_modules/modules/referee/referee.h#L68) |
 | `initialized` | [SuperCap](#r-portable_modules-modules-super_cap-super_cap-h-66-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [portable_modules/modules/super_cap/super_cap.h:72](../portable_modules/modules/super_cap/super_cap.h#L72) |
+| `initialized_before` | [ChassisRemoteFusionAttempt_s](#r-modules-algorithm-chassis_remote_fusion-h-35-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:42](../modules/algorithm/chassis_remote_fusion.h#L42) |
 | `InjectedChannel` | [ADC_InjectionConfTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_adc_ex-h-55-9) | Selection of ADC channel to configure This parameter can be a value of @ref ADC_channels Note: Depending on devices, some channels may not be available on package pins. Refer to device datasheet for channels availability. | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc_ex.h:57](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc_ex.h#L57) |
 | `InjectedConvCpltCallback` | [ADC_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_adc-h-193-9) | ADC group injected conversion complete callback | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc.h:216](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc.h#L216) |
 | `InjectedConvCpltCallback` | [ADC_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_adc-h-195-9) | ADC group injected conversion complete callback | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc.h:216](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc.h#L216) |
@@ -4336,10 +4354,11 @@
 | `InjectedSamplingTime` | [ADC_InjectionConfTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_adc_ex-h-55-9) | Sampling time value to be set for the selected channel. Unit: ADC clock cycles Conversion time is the addition of sampling time and processing time (12 ADC clock cycles at ADC resolution 12 bits, 11 cycles at 10 bits, 9 cycles at 8 bits, 7 cycles at 6 bits). This parameter can be a value of @ref ADC_sampling_times Caution: This parameter updates the parameter property of the channel, that can be used into regular and/or injected groups. If this same channel has been previously configured in the other group (regular/injected), it will be updated to last setting. Note: In case of usage of internal measurement channels (VrefInt/Vbat/TempSensor), sampling time constraints must be respected (sampling time can be adjusted in function of ADC clock frequency and sampling time setting) Refer to device datasheet for timings values, parameters TS_vrefint, TS_temp (values rough order: 4us min). | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc_ex.h:63](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc_ex.h#L63) |
 | `innovation` | [PPWheelEstimate](#r-modules-predictive_power-wheel_speed_kf-h-21-9) | 源码未注释 | 项目数据 | [modules/predictive_power/wheel_speed_kf.h:22](../modules/predictive_power/wheel_speed_kf.h#L22) |
 | `innovation_variance` | [PPWheelEstimate](#r-modules-predictive_power-wheel_speed_kf-h-21-9) | 源码未注释 | 项目数据 | [modules/predictive_power/wheel_speed_kf.h:22](../modules/predictive_power/wheel_speed_kf.h#L22) |
-| `input` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:22](../modules/chassis_power/chassis_power_internal.h#L22) |
+| `input` | [ChassisRemoteFusionAttempt_s](#r-modules-algorithm-chassis_remote_fusion-h-35-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:39](../modules/algorithm/chassis_remote_fusion.h#L39) |
+| `input` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:23](../modules/chassis_power/chassis_power_internal.h#L23) |
 | `input_budget_w` | [ChassisPowerBudgetState_s](#r-modules-algorithm-chassis_power_budget-h-93-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_budget.h:97](../modules/algorithm/chassis_power_budget.h#L97) |
 | `input_can_ins` | [SuperCapInstance](#r-modules-super_cap-super_cap-c-11-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [modules/super_cap/super_cap.c:13](../modules/super_cap/super_cap.c#L13) |
-| `input_confirmed` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-37-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:45](../modules/chassis_power/chassis_power_types.h#L45) |
+| `input_confirmed` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-46-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:55](../modules/chassis_power/chassis_power_types.h#L55) |
 | `input_control_active` | [SuperCapInputPower_s](#r-modules-super_cap-super_cap_protocol-h-33-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [modules/super_cap/super_cap_protocol.h:37](../modules/super_cap/super_cap_protocol.h#L37) |
 | `input_control_enabled` | [SuperCapCommand_s](#r-modules-super_cap-super_cap_protocol-h-24-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [modules/super_cap/super_cap_protocol.h:29](../modules/super_cap/super_cap_protocol.h#L29) |
 | `input_deadzone` | [ChassisForceConfig_s](#r-config-22_chassis_force-chassis_force_config-h-20-9) | 归一化摇杆径向死区，无单位，须在 [0,1) 内。 归一化输入力曲线的幂指数，无单位；须大于 0。 | 项目数据 | [config/22_chassis_force/chassis_force_config.h:38](../config/22_chassis_force/chassis_force_config.h#L38) |
@@ -4656,8 +4675,10 @@
 | `last_budget_w` | [ChassisForceController_s](#r-modules-chassis_force-chassis_force_control-h-51-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:58](../modules/chassis_force/chassis_force_control.h#L58) |
 | `last_buffer_age_s` | [ChassisPowerBudgetState_s](#r-modules-algorithm-chassis_power_budget-h-93-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_budget.h:100](../modules/algorithm/chassis_power_budget.h#L100) |
 | `last_cmd_id` | [Vt02_Debug_t](#r-modules-vtx-vt02_control-c-26-9) | 源码未注释 | 图传 键鼠 键盘 鼠标 | [modules/vtx/vt02_control.c:34](../modules/vtx/vt02_control.c#L34) |
+| `last_command` | [SuperCapSnapshot_s](#r-modules-super_cap-super_cap_types-h-6-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [modules/super_cap/super_cap_types.h:17](../modules/super_cap/super_cap_types.h#L17) |
 | `last_command_id` | [RefereeData](#r-portable_modules-modules-referee-referee_protocol-h-159-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee_protocol.h:174](../portable_modules/modules/referee/referee_protocol.h#L174) |
 | `last_control_us` | [FcCapture](#r-modules-chassis_force_calibration-force_calibration_capture-h-17-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration_capture.h:20](../modules/chassis_force_calibration/force_calibration_capture.h#L20) |
+| `last_crc` | [ChassisImuCanDecoder_s](#r-modules-imu-chassis_imu_can_protocol-h-13-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [modules/imu/chassis_imu_can_protocol.h:16](../modules/imu/chassis_imu_can_protocol.h#L16) |
 | `last_data_length` | [Vt02_Debug_t](#r-modules-vtx-vt02_control-c-26-9) | 源码未注释 | 图传 键鼠 键盘 鼠标 | [modules/vtx/vt02_control.c:33](../modules/vtx/vt02_control.c#L33) |
 | `last_data_pointer` | [TestContext](#r-portable_modules-modules-referee-tests-test_referee_ui-c-62-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/tests/test_referee_ui.c:72](../portable_modules/modules/referee/tests/test_referee_ui.c#L72) |
 | `Last_Dout` | [PIDInstance](#r-modules-algorithm-controller-h-54-9) | 源码未注释 | PID 控制器 滤波 误差 积分 算法 运动学 控制 计算 | [modules/algorithm/controller.h:87](../modules/algorithm/controller.h#L87) |
@@ -4668,7 +4689,7 @@
 | `Last_Err` | [PIDInstance](#r-modules-algorithm-controller-h-54-9) | 源码未注释 | PID 控制器 滤波 误差 积分 算法 运动学 控制 计算 | [modules/algorithm/controller.h:77](../modules/algorithm/controller.h#L77) |
 | `Last_Err` | [PIDInstance](#r-tests-dji_chassis_power_rtt-stubs-controller-h-4-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 PID 控制器 滤波 误差 积分 | [tests/dji_chassis_power_rtt/stubs/controller.h:9](../tests/dji_chassis_power_rtt/stubs/controller.h#L9) |
 | `last_error_code` | [USARTReceiveStats_s](#r-bsp-usart-bsp_usart-h-24-9) | 源码未注释 | 串口 UART DMA 接收 发送 | [bsp/usart/bsp_usart.h:30](../bsp/usart/bsp_usart.h#L30) |
-| `last_estimated_ms` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-42-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:49](../modules/algorithm/chassis_remote_fusion.h#L49) |
+| `last_estimated_ms` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-59-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:66](../modules/algorithm/chassis_remote_fusion.h#L66) |
 | `last_frame_length` | [Vt02_Debug_t](#r-modules-vtx-vt02_control-c-26-9) | 源码未注释 | 图传 键鼠 键盘 鼠标 | [modules/vtx/vt02_control.c:35](../modules/vtx/vt02_control.c#L35) |
 | `last_imu_us` | [ChassisVelocityFusion_s](#r-modules-algorithm-chassis_velocity_fusion-h-37-9) | 源码未注释 | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity_fusion.h:39](../modules/algorithm/chassis_velocity_fusion.h#L39) |
 | `last_input_power_valid` | [ChassisPowerBudgetState_s](#r-modules-algorithm-chassis_power_budget-h-93-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_budget.h:106](../modules/algorithm/chassis_power_budget.h#L106) |
@@ -4680,12 +4701,12 @@
 | `Last_Measure` | [PIDInstance](#r-modules-algorithm-controller-h-54-9) | 源码未注释 | PID 控制器 滤波 误差 积分 算法 运动学 控制 计算 | [modules/algorithm/controller.h:75](../modules/algorithm/controller.h#L75) |
 | `Last_Measure` | [PIDInstance](#r-tests-dji_chassis_power_rtt-stubs-controller-h-4-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 PID 控制器 滤波 误差 积分 | [tests/dji_chassis_power_rtt/stubs/controller.h:9](../tests/dji_chassis_power_rtt/stubs/controller.h#L9) |
 | `last_meter_tick_ms` | [ChassisPowerOuterLoopState_s](#r-modules-algorithm-chassis_power_outer_loop-h-27-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_outer_loop.h:36](../modules/algorithm/chassis_power_outer_loop.h#L36) |
-| `last_now_ms` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-42-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:51](../modules/algorithm/chassis_remote_fusion.h#L51) |
+| `last_now_ms` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-59-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:68](../modules/algorithm/chassis_remote_fusion.h#L68) |
 | `Last_Output` | [PIDInstance](#r-modules-algorithm-controller-h-54-9) | 源码未注释 | PID 控制器 滤波 误差 积分 算法 运动学 控制 计算 | [modules/algorithm/controller.h:86](../modules/algorithm/controller.h#L86) |
 | `Last_Output` | [PIDInstance](#r-tests-dji_chassis_power_rtt-stubs-controller-h-4-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 PID 控制器 滤波 误差 积分 | [tests/dji_chassis_power_rtt/stubs/controller.h:8](../tests/dji_chassis_power_rtt/stubs/controller.h#L8) |
 | `last_outside` | [PIDAutotune](#r-modules-telemetry-pid_autotune-h-15-9) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 PID 自动整定 闭环反馈 | [modules/telemetry/pid_autotune.h:17](../modules/telemetry/pid_autotune.h#L17) |
 | `last_position` | [DM_Motor_Measure_s](#r-modules-motor-DMmotor-dmmotor-h-18-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DMmotor/dmmotor.h:23](../modules/motor/DMmotor/dmmotor.h#L23) |
-| `last_receive_ms` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-42-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:49](../modules/algorithm/chassis_remote_fusion.h#L49) |
+| `last_receive_ms` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-59-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:66](../modules/algorithm/chassis_remote_fusion.h#L66) |
 | `last_receive_tick_ms` | [SuperCapDiagnostics](#r-portable_modules-modules-super_cap-super_cap-h-58-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [portable_modules/modules/super_cap/super_cap.h:63](../portable_modules/modules/super_cap/super_cap.h#L63) |
 | `last_record_ms` | [PPObserver](#r-modules-predictive_power-power_observer-h-16-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_observer.h:19](../modules/predictive_power/power_observer.h#L19) |
 | `last_referee_limit_w` | [ChassisPowerBudgetState_s](#r-modules-algorithm-chassis_power_budget-h-93-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_budget.h:102](../modules/algorithm/chassis_power_budget.h#L102) |
@@ -4705,20 +4726,21 @@
 | `last_rx_us` | [FcCapture](#r-modules-chassis_force_calibration-force_calibration_capture-h-17-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration_capture.h:20](../modules/chassis_force_calibration/force_calibration_capture.h#L20) |
 | `last_sample_ms` | [ChassisPowerCapture_s](#r-modules-telemetry-chassis_power_capture-h-30-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/chassis_power_capture.h:33](../modules/telemetry/chassis_power_capture.h#L33) |
 | `last_sent_ms` | [ChassisForceController_s](#r-modules-chassis_force-chassis_force_control-h-51-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:59](../modules/chassis_force/chassis_force_control.h#L59) |
-| `last_sequence` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-42-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:49](../modules/algorithm/chassis_remote_fusion.h#L49) |
+| `last_sequence` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-59-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:66](../modules/algorithm/chassis_remote_fusion.h#L66) |
 | `last_sequence` | [RefereeData](#r-portable_modules-modules-referee-referee_protocol-h-159-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee_protocol.h:175](../portable_modules/modules/referee/referee_protocol.h#L175) |
-| `last_source_ms` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-42-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:49](../modules/algorithm/chassis_remote_fusion.h#L49) |
+| `last_source_ms` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-59-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:66](../modules/algorithm/chassis_remote_fusion.h#L66) |
 | `last_start_status` | [USARTReceiveStats_s](#r-bsp-usart-bsp_usart-h-24-9) | HAL_StatusTypeDef value. | 串口 UART DMA 接收 发送 | [bsp/usart/bsp_usart.h:33](../bsp/usart/bsp_usart.h#L33) |
 | `last_startup_ms` | [ChassisPowerTransientState_s](#r-modules-algorithm-chassis_power_transient-h-33-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:42](../modules/algorithm/chassis_power_transient.h#L42) |
 | `last_submission_ok` | [ChassisForceController_s](#r-modules-chassis_force-chassis_force_control-h-51-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:64](../modules/chassis_force/chassis_force_control.h#L64) |
 | `last_submission_ok` | [ChassisForceSpinPowerInput_s](#r-modules-chassis_force-chassis_force_spin_power-h-4-9) | 源码未注释 | SPI 外设 总线 通信 | [modules/chassis_force/chassis_force_spin_power.h:5](../modules/chassis_force/chassis_force_spin_power.h#L5) |
 | `last_tick` | [PIDAutotune](#r-modules-telemetry-pid_autotune-h-15-9) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 PID 自动整定 闭环反馈 | [modules/telemetry/pid_autotune.h:26](../modules/telemetry/pid_autotune.h#L26) |
+| `last_transfer_tag` | [ChassisImuCanDecoder_s](#r-modules-imu-chassis_imu_can_protocol-h-13-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [modules/imu/chassis_imu_can_protocol.h:15](../modules/imu/chassis_imu_can_protocol.h#L15) |
 | `last_trigger_ms` | [ChassisPowerCapture_s](#r-modules-telemetry-chassis_power_capture-h-30-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/chassis_power_capture.h:33](../modules/telemetry/chassis_power_capture.h#L33) |
 | `last_us` | [FcEngine](#r-modules-chassis_force_calibration-force_calibration-h-41-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration.h:43](../modules/chassis_force_calibration/force_calibration.h#L43) |
 | `last_valid_frame_ms` | [RefereeDiagnostics](#r-portable_modules-modules-referee-referee-h-28-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee.h:38](../portable_modules/modules/referee/referee.h#L38) |
 | `last_wheel_us` | [ChassisVelocityFusion_s](#r-modules-algorithm-chassis_velocity_fusion-h-37-9) | 源码未注释 | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity_fusion.h:39](../modules/algorithm/chassis_velocity_fusion.h#L39) |
 | `LastBitClockPulse` | [LL_USART_ClockInitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_ll_usart-h-114-9) | Specifies whether the clock pulse corresponding to the last transmitted data bit (MSB) has to be output on the SCLK pin in synchronous mode. This parameter can be a value of @ref USART_LL_EC_LASTCLKPULSE. USART HW configuration can be modified afterwards using unitary functions @ref LL_USART_SetLastClkPulseOutput(). For more details, refer to description of this function. | 串口 UART DMA 接收 发送 STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usart.h:135](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usart.h#L135) |
-| `latest` | [DmImuCanDecoder_s](#r-modules-imu-dm_imu_can_protocol-h-9-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [modules/imu/dm_imu_can_protocol.h:13](../modules/imu/dm_imu_can_protocol.h#L13) |
+| `latest` | [ChassisImuCanDecoder_s](#r-modules-imu-chassis_imu_can_protocol-h-13-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [modules/imu/chassis_imu_can_protocol.h:19](../modules/imu/chassis_imu_can_protocol.h#L19) |
 | `latest_word` | [TuningStorage](#r-modules-telemetry-tuning_storage-h-19-9) | 源码未注释 | 在线调参 PID 自动整定 参数保存 遥测 数据采样 | [modules/telemetry/tuning_storage.h:23](../modules/telemetry/tuning_storage.h#L23) |
 | `Layer` | [UI_delete_t](#r-modules-referee-referee_UI-h-12-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_UI.h:18](../modules/referee/referee_UI.h#L18) |
 | `layer` | [Graph_Data_t](#r-modules-referee-referee_protocol-h-326-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_protocol.h:331](../modules/referee/referee_protocol.h#L331) |
@@ -4730,7 +4752,7 @@
 | `learning_allowed` | [ChassisPowerTransientOutput_s](#r-modules-algorithm-chassis_power_transient-h-50-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:53](../modules/algorithm/chassis_power_transient.h#L53) |
 | `lease_ms` | [PIDAutotune](#r-modules-telemetry-pid_autotune-h-15-9) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 PID 自动整定 闭环反馈 | [modules/telemetry/pid_autotune.h:17](../modules/telemetry/pid_autotune.h#L17) |
 | `left_button` | [Vt02_Raw_Data_t](#r-modules-vtx-vt02_control-h-21-9) | 鼠标左键状态 | 图传 键鼠 键盘 鼠标 | [modules/vtx/vt02_control.h:26](../modules/vtx/vt02_control.h#L26) |
-| `legacy_budget_w` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-27-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:30](../modules/chassis_power/chassis_power_types.h#L30) |
+| `legacy_budget_w` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-36-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:39](../modules/chassis_power/chassis_power_types.h#L39) |
 | `length` | [RefereeText](#r-portable_modules-modules-referee-referee_ui-h-69-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee_ui.h:73](../portable_modules/modules/referee/referee_ui.h#L73) |
 | `length` | [TestContext](#r-portable_modules-modules-referee-tests-test_referee_ui-c-62-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/tests/test_referee_ui.c:65](../portable_modules/modules/referee/tests/test_referee_ui.c#L65) |
 | `LevelOutOfWindowCallback` | [ADC_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_adc-h-193-9) | ADC analog watchdog 1 callback | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc.h:214](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc.h#L214) |
@@ -5033,7 +5055,7 @@
 | `measured_input_power_w` | [ChassisPowerBudgetInput_s](#r-modules-algorithm-chassis_power_budget-h-56-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_budget.h:71](../modules/algorithm/chassis_power_budget.h#L71) |
 | `measured_power_w` | [ChassisPowerOuterLoopInput_s](#r-modules-algorithm-chassis_power_outer_loop-h-41-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_outer_loop.h:45](../modules/algorithm/chassis_power_outer_loop.h#L45) |
 | `measured_power_w` | [ChassisSpinInput_s](#r-modules-algorithm-chassis_spin-h-49-9) | 源码未注释 | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | [modules/algorithm/chassis_spin.h:52](../modules/algorithm/chassis_spin.h#L52) |
-| `measured_power_w` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:59](../modules/chassis_power/chassis_power_types.h#L59) |
+| `measured_power_w` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:71](../modules/chassis_power/chassis_power_types.h#L71) |
 | `measured_valid` | [ChassisPowerShadowSnapshot](#r-modules-chassis_power-chassis_power_shadow-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_shadow.h:28](../modules/chassis_power/chassis_power_shadow.h#L28) |
 | `measured_w` | [ChassisPowerShadowSnapshot](#r-modules-chassis_power-chassis_power_shadow-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_shadow.h:26](../modules/chassis_power/chassis_power_shadow.h#L26) |
 | `measured_w` | [ChassisPowerCaptureSample_s](#r-modules-telemetry-chassis_power_capture-h-20-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/chassis_power_capture.h:24](../modules/telemetry/chassis_power_capture.h#L24) |
@@ -5066,8 +5088,8 @@
 | `message_num` | [DJIMotorInstance](#r-modules-motor-DJImotor-dji_motor-h-63-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_motor.h:72](../modules/motor/DJImotor/dji_motor.h#L72) |
 | `meta` | [FcCapture](#r-modules-chassis_force_calibration-force_calibration_capture-h-17-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration_capture.h:18](../modules/chassis_force_calibration/force_calibration_capture.h#L18) |
 | `metadata` | [CSCCapture](#r-modules-telemetry-chassis_speed_capture-h-27-9) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/chassis_speed_capture.h:30](../modules/telemetry/chassis_speed_capture.h#L30) |
-| `meter` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-70-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:76](../modules/chassis_power/chassis_power_types.h#L76) |
-| `meter` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-85-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:94](../modules/chassis_power/chassis_power_types.h#L94) |
+| `meter` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-83-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:89](../modules/chassis_power/chassis_power_types.h#L89) |
+| `meter` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-98-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:107](../modules/chassis_power/chassis_power_types.h#L107) |
 | `meter_age_ms` | [ChassisPowerCaptureSample_s](#r-modules-telemetry-chassis_power_capture-h-20-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/chassis_power_capture.h:26](../modules/telemetry/chassis_power_capture.h#L26) |
 | `meter_age_ms` | [USBTelemetrySample_s](#r-modules-telemetry-usb_telemetry_format-h-50-9) | 字段宏 USB_TELEMETRY_FIELDS（定义第 9 行） → USB_FIELD_U（定义第 51 行） | USB 虚拟串口 遥测 调参 数据传输 在线调参 参数保存 数据采样 | [modules/telemetry/usb_telemetry_format.h:53](../modules/telemetry/usb_telemetry_format.h#L53) |
 | `meter_enabled` | [ChassisPowerTransientInput_s](#r-modules-algorithm-chassis_power_transient-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:30](../modules/algorithm/chassis_power_transient.h#L30) |
@@ -5078,10 +5100,10 @@
 | `meter_initialized` | [ChassisPowerTransientState_s](#r-modules-algorithm-chassis_power_transient-h-33-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:37](../modules/algorithm/chassis_power_transient.h#L37) |
 | `meter_online` | [ChassisPowerOuterLoopInput_s](#r-modules-algorithm-chassis_power_outer_loop-h-41-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_outer_loop.h:47](../modules/algorithm/chassis_power_outer_loop.h#L47) |
 | `meter_online` | [ChassisPowerTransientInput_s](#r-modules-algorithm-chassis_power_transient-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:30](../modules/algorithm/chassis_power_transient.h#L30) |
-| `meter_online` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:61](../modules/chassis_power/chassis_power_types.h#L61) |
+| `meter_online` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:73](../modules/chassis_power/chassis_power_types.h#L73) |
 | `meter_online` | [USBTelemetrySample_s](#r-modules-telemetry-usb_telemetry_format-h-50-9) | 字段宏 USB_TELEMETRY_FIELDS（定义第 9 行） → USB_FIELD_U（定义第 51 行） | USB 虚拟串口 遥测 调参 数据传输 在线调参 参数保存 数据采样 | [modules/telemetry/usb_telemetry_format.h:53](../modules/telemetry/usb_telemetry_format.h#L53) |
 | `meter_sequence` | [ChassisPowerShadowSnapshot](#r-modules-chassis_power-chassis_power_shadow-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_shadow.h:24](../modules/chassis_power/chassis_power_shadow.h#L24) |
-| `meter_sequence` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:60](../modules/chassis_power/chassis_power_types.h#L60) |
+| `meter_sequence` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:72](../modules/chassis_power/chassis_power_types.h#L72) |
 | `meter_stale` | [ChassisSpinInput_s](#r-modules-algorithm-chassis_spin-h-49-9) | 源码未注释 | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | [modules/algorithm/chassis_spin.h:54](../modules/algorithm/chassis_spin.h#L54) |
 | `meter_tick_ms` | [ChassisPowerOuterLoopInput_s](#r-modules-algorithm-chassis_power_outer_loop-h-41-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_outer_loop.h:54](../modules/algorithm/chassis_power_outer_loop.h#L54) |
 | `meter_tick_ms` | [ChassisPowerTransientInput_s](#r-modules-algorithm-chassis_power_transient-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:28](../modules/algorithm/chassis_power_transient.h#L28) |
@@ -5089,12 +5111,13 @@
 | `meter_tick_ms` | [ChassisForceCycleInput_s](#r-modules-chassis_force-chassis_force_control-h-19-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:26](../modules/chassis_force/chassis_force_control.h#L26) |
 | `meter_tick_ms` | [ChassisForceSpinPowerInput_s](#r-modules-chassis_force-chassis_force_spin_power-h-4-9) | 源码未注释 | SPI 外设 总线 通信 | [modules/chassis_force/chassis_force_spin_power.h:7](../modules/chassis_force/chassis_force_spin_power.h#L7) |
 | `meter_tick_ms` | [ChassisForceSpinPowerState_s](#r-modules-chassis_force-chassis_force_spin_power-h-9-9) | 源码未注释 | SPI 外设 总线 通信 | [modules/chassis_force/chassis_force_spin_power.h:11](../modules/chassis_force/chassis_force_spin_power.h#L11) |
-| `meter_tick_ms` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:60](../modules/chassis_power/chassis_power_types.h#L60) |
+| `meter_tick_ms` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:72](../modules/chassis_power/chassis_power_types.h#L72) |
 | `meter_tick_ms` | [ChassisPowerCaptureSample_s](#r-modules-telemetry-chassis_power_capture-h-20-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/chassis_power_capture.h:21](../modules/telemetry/chassis_power_capture.h#L21) |
 | `meter_valid` | [ChassisForceCycleInput_s](#r-modules-chassis_force-chassis_force_control-h-19-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:25](../modules/chassis_force/chassis_force_control.h#L25) |
 | `meter_valid` | [ChassisForceSpinPowerInput_s](#r-modules-chassis_force-chassis_force_spin_power-h-4-9) | 源码未注释 | SPI 外设 总线 通信 | [modules/chassis_force/chassis_force_spin_power.h:5](../modules/chassis_force/chassis_force_spin_power.h#L5) |
 | `meter_w` | [ChassisPowerTransientInput_s](#r-modules-algorithm-chassis_power_transient-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:24](../modules/algorithm/chassis_power_transient.h#L24) |
 | `metrics_closed` | [PIDAutotune](#r-modules-telemetry-pid_autotune-h-15-9) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 PID 自动整定 闭环反馈 | [modules/telemetry/pid_autotune.h:24](../modules/telemetry/pid_autotune.h#L24) |
+| `middle_receiver_ms` | [ChassisRemoteFusionAttempt_s](#r-modules-algorithm-chassis_remote_fusion-h-35-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:37](../modules/algorithm/chassis_remote_fusion.h#L37) |
 | `min_angle_error` | [JamDetector_Init_Config_s](#r-modules-jam_detector-jam_detector-h-32-9) | 判定卡弹时要求的最小角度误差（电机轴，度） | 项目数据 | [modules/jam_detector/jam_detector.h:39](../modules/jam_detector/jam_detector.h#L39) |
 | `min_angle_error` | [JamDetectorInstance](#r-modules-jam_detector-jam_detector-h-51-9) | 源码未注释 | 项目数据 | [modules/jam_detector/jam_detector.h:62](../modules/jam_detector/jam_detector.h#L62) |
 | `min_current` | [ChassisForceAllocationInput_s](#r-modules-chassis_force-chassis_force_allocator-h-4-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_allocator.h:5](../modules/chassis_force/chassis_force_allocator.h#L5) |
@@ -5163,7 +5186,7 @@
 | `Mode` | [DMA_InitTypeDef](#r-tests-bsp_usart-stubs-main-h-7-9) | 源码未注释 | 串口 UART DMA 接收 发送 | [tests/bsp_usart/stubs/main.h:8](../tests/bsp_usart/stubs/main.h#L8) |
 | `mode` | [ChassisTelemetrySnapshot_s](#r-tests-tuning_flash-stubs-chassis-h-3-9) | 源码未注释 | 在线调参 PID 自动整定 参数保存 | [tests/tuning_flash/stubs/chassis.h:3](../tests/tuning_flash/stubs/chassis.h#L3) |
 | `Mode` | [UART_InitTypeDef](#r-tests-uart_log-stubs-main-h-12-9) | 源码未注释 | 串口 UART 接收 发送 日志 | [tests/uart_log/stubs/main.h:17](../tests/uart_log/stubs/main.h#L17) |
-| `model` | [ChassisPowerCycleOutput_s](#r-modules-chassis_power-chassis_power_types-h-99-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:105](../modules/chassis_power/chassis_power_types.h#L105) |
+| `model` | [ChassisPowerCycleOutput_s](#r-modules-chassis_power-chassis_power_types-h-112-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:118](../modules/chassis_power/chassis_power_types.h#L118) |
 | `model_budget_w` | [ChassisPowerTransientOutput_s](#r-modules-algorithm-chassis_power_transient-h-50-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:51](../modules/algorithm/chassis_power_transient.h#L51) |
 | `model_budget_w` | [ChassisForceCycleInput_s](#r-modules-chassis_force-chassis_force_control-h-19-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:28](../modules/chassis_force/chassis_force_control.h#L28) |
 | `model_checksum` | [ChassisPowerShadowSnapshot](#r-modules-chassis_power-chassis_power_shadow-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_shadow.h:24](../modules/chassis_power/chassis_power_shadow.h#L24) |
@@ -5366,15 +5389,15 @@
 | `negative_learning_threshold_w` | [ChassisPowerTransientOutput_s](#r-modules-algorithm-chassis_power_transient-h-50-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:55](../modules/algorithm/chassis_power_transient.h#L55) |
 | `next` | [TuningStorage](#r-modules-telemetry-tuning_storage-h-19-9) | 源码未注释 | 在线调参 PID 自动整定 参数保存 遥测 数据采样 | [modules/telemetry/tuning_storage.h:23](../modules/telemetry/tuning_storage.h#L23) |
 | `next_capture` | [FcEngine](#r-modules-chassis_force_calibration-force_calibration-h-41-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration.h:43](../modules/chassis_force_calibration/force_calibration.h#L43) |
+| `next_index` | [ChassisImuCanDecoder_s](#r-modules-imu-chassis_imu_can_protocol-h-13-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [modules/imu/chassis_imu_can_protocol.h:15](../modules/imu/chassis_imu_can_protocol.h#L15) |
 | `next_session` | [FcEngine](#r-modules-chassis_force_calibration-force_calibration-h-41-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration.h:43](../modules/chassis_force_calibration/force_calibration.h#L43) |
 | `next_subs_queue` | [Subscriber_t](#r-modules-message_center-message_center-h-21-9) | 使得发布者可以通过链表访问所有订阅了相同话题的订阅者 | 消息中心 发布订阅 模块通信 | [modules/message_center/message_center.h:31](../modules/message_center/message_center.h#L31) |
 | `next_topic_node` | [Publisher_t](#r-modules-message_center-message_center-h-38-9) | 指向下一个Publisher的指针 | 消息中心 发布订阅 模块通信 | [modules/message_center/message_center.h:46](../modules/message_center/message_center.h#L46) |
-| `next_type` | [DmImuCanDecoder_s](#r-modules-imu-dm_imu_can_protocol-h-9-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [modules/imu/dm_imu_can_protocol.h:12](../modules/imu/dm_imu_can_protocol.h#L12) |
 | `NLR` | [DMA2D_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f427xx-h-372-9) | DMA2D Number of Line Register,                  Address offset: 0x44 | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h:391](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h#L391) |
 | `nominal_budget_cw` | [USBTelemetrySample_s](#r-modules-telemetry-usb_telemetry_format-h-50-9) | 字段宏 USB_TELEMETRY_FIELDS（定义第 9 行） → USB_FIELD_I（定义第 52 行） | USB 虚拟串口 遥测 调参 数据传输 在线调参 参数保存 数据采样 | [modules/telemetry/usb_telemetry_format.h:53](../modules/telemetry/usb_telemetry_format.h#L53) |
 | `nominal_budget_w` | [ChassisTelemetrySnapshot_s](#r-application-chassis-chassis-h-15-9) | 源码未注释 | 底盘 运动 控制 轮速 | [application/chassis/chassis.h:22](../application/chassis/chassis.h#L22) |
 | `nominal_budget_w` | [ChassisPowerOuterLoopInput_s](#r-modules-algorithm-chassis_power_outer_loop-h-41-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_outer_loop.h:43](../modules/algorithm/chassis_power_outer_loop.h#L43) |
-| `nominal_budget_w` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-27-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:30](../modules/chassis_power/chassis_power_types.h#L30) |
+| `nominal_budget_w` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-36-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:39](../modules/chassis_power/chassis_power_types.h#L39) |
 | `nominal_budget_w` | [ChassisPowerControlTelemetry_s](#r-modules-telemetry-rtt_telemetry-h-12-9) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/rtt_telemetry.h:14](../modules/telemetry/rtt_telemetry.h#L14) |
 | `normalize` | [arm_dct4_instance_f32](#r-Middlewares-ST-ARM-DSP-Inc-arm_math-h-2235-11) | normalizing factor. | 第三方中间件 | [Middlewares/ST/ARM/DSP/Inc/arm_math.h:2239](../Middlewares/ST/ARM/DSP/Inc/arm_math.h#L2239) |
 | `normalize` | [arm_dct4_instance_q31](#r-Middlewares-ST-ARM-DSP-Inc-arm_math-h-2281-11) | normalizing factor. | 第三方中间件 | [Middlewares/ST/ARM/DSP/Inc/arm_math.h:2285](../Middlewares/ST/ARM/DSP/Inc/arm_math.h#L2285) |
@@ -5390,9 +5413,9 @@
 | `now_ms` | [ChassisVelocityInput_s](#r-modules-algorithm-chassis_velocity-h-27-9) | 源码未注释 | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity.h:29](../modules/algorithm/chassis_velocity.h#L29) |
 | `now_ms` | [ChassisForceCycleInput_s](#r-modules-chassis_force-chassis_force_control-h-19-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:21](../modules/chassis_force/chassis_force_control.h#L21) |
 | `now_ms` | [ChassisForceSpinPowerInput_s](#r-modules-chassis_force-chassis_force_spin_power-h-4-9) | 源码未注释 | SPI 外设 总线 通信 | [modules/chassis_force/chassis_force_spin_power.h:7](../modules/chassis_force/chassis_force_spin_power.h#L7) |
-| `now_ms` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-70-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:72](../modules/chassis_power/chassis_power_types.h#L72) |
-| `now_ms` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-85-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:95](../modules/chassis_power/chassis_power_types.h#L95) |
-| `now_ms` | [ChassisPowerFinalInput_s](#r-modules-chassis_power-chassis_power_types-h-108-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:110](../modules/chassis_power/chassis_power_types.h#L110) |
+| `now_ms` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-83-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:85](../modules/chassis_power/chassis_power_types.h#L85) |
+| `now_ms` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-98-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:108](../modules/chassis_power/chassis_power_types.h#L108) |
+| `now_ms` | [ChassisPowerFinalInput_s](#r-modules-chassis_power-chassis_power_types-h-121-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:123](../modules/chassis_power/chassis_power_types.h#L123) |
 | `now_ms` | [PPEnergyInput](#r-modules-predictive_power-energy_scheduler-h-13-9) | 源码未注释 | 项目数据 | [modules/predictive_power/energy_scheduler.h:14](../modules/predictive_power/energy_scheduler.h#L14) |
 | `now_ms` | [PPMeasurement](#r-modules-predictive_power-power_observer-h-11-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_observer.h:12](../modules/predictive_power/power_observer.h#L12) |
 | `now_ms` | [PPSupervisorInput](#r-modules-predictive_power-power_supervisor-h-7-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_supervisor.h:8](../modules/predictive_power/power_supervisor.h#L8) |
@@ -5441,7 +5464,7 @@
 | `numCols` | [arm_matrix_instance_f16](#r-Middlewares-ST-ARM-DSP-Include-dsp-matrix_functions_f16-h-49-11) | number of columns of the matrix. | 第三方中间件 | [Middlewares/ST/ARM/DSP/Include/dsp/matrix_functions_f16.h:52](../Middlewares/ST/ARM/DSP/Include/dsp/matrix_functions_f16.h#L52) |
 | `numCols` | [arm_matrix_instance_f32](#r-tests-chassis_motion-stubs-arm_math-h-6-9) | 源码未注释 | 底盘 平移 旋转 运动 | [tests/chassis_motion/stubs/arm_math.h:7](../tests/chassis_motion/stubs/arm_math.h#L7) |
 | `NumEps` | [USBD_CompositeElementTypeDef](#r-Middlewares-ST-STM32_USB_Device_Library-Core-Inc-usbd_def-h-345-9) | 源码未注释 | USB 虚拟串口 遥测 调参 数据传输 STM32 外设 寄存器 HAL 配置 句柄 | [Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h:350](../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h#L350) |
-| `numeric_error` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:58](../modules/chassis_power/chassis_power_types.h#L58) |
+| `numeric_error` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:70](../modules/chassis_power/chassis_power_types.h#L70) |
 | `NumIf` | [USBD_CompositeElementTypeDef](#r-Middlewares-ST-STM32_USB_Device_Library-Core-Inc-usbd_def-h-345-9) | 源码未注释 | USB 虚拟串口 遥测 调参 数据传输 STM32 外设 寄存器 HAL 配置 句柄 | [Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h:353](../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h#L353) |
 | `numRows` | [arm_matrix_instance_f32](#r-Middlewares-ST-ARM-DSP-Inc-arm_math-h-1350-11) | number of rows of the matrix. | 第三方中间件 | [Middlewares/ST/ARM/DSP/Inc/arm_math.h:1352](../Middlewares/ST/ARM/DSP/Inc/arm_math.h#L1352) |
 | `numRows` | [arm_matrix_instance_f64](#r-Middlewares-ST-ARM-DSP-Inc-arm_math-h-1361-11) | number of rows of the matrix. | 第三方中间件 | [Middlewares/ST/ARM/DSP/Inc/arm_math.h:1363](../Middlewares/ST/ARM/DSP/Inc/arm_math.h#L1363) |
@@ -5536,7 +5559,7 @@
 | `OAR2` | [I2C_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f407xx-h-556-9) | I2C Own address register 2, Address offset: 0x0C | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h:561](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h#L561) |
 | `OAR2` | [I2C_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f427xx-h-602-9) | I2C Own address register 2, Address offset: 0x0C | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h:607](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h#L607) |
 | `objective` | [PPAllocationResult](#r-modules-predictive_power-power_allocator-h-10-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_allocator.h:12](../modules/predictive_power/power_allocator.h#L12) |
-| `observation_now_us` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-85-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:89](../modules/chassis_power/chassis_power_types.h#L89) |
+| `observation_now_us` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-98-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:102](../modules/chassis_power/chassis_power_types.h#L102) |
 | `observation_stack_words` | [ChassisSpeedObservationDiagnostics](#r-application-runtime-chassis_speed_observation-h-8-9) | 源码未注释 | 项目数据 | [application/runtime/chassis_speed_observation.h:11](../application/runtime/chassis_speed_observation.h#L11) |
 | `observed` | [PIDAutotune](#r-modules-telemetry-pid_autotune-h-15-9) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 PID 自动整定 闭环反馈 | [modules/telemetry/pid_autotune.h:24](../modules/telemetry/pid_autotune.h#L24) |
 | `observer_max_step_s` | [ChassisBufferBudgetConfig_s](#r-modules-algorithm-chassis_power_budget-h-25-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_budget.h:39](../modules/algorithm/chassis_power_budget.h#L39) |
@@ -5618,8 +5641,8 @@
 | `online_mask` | [ChassisPowerTransientInput_s](#r-modules-algorithm-chassis_power_transient-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:29](../modules/algorithm/chassis_power_transient.h#L29) |
 | `online_mask` | [ChassisVelocityInput_s](#r-modules-algorithm-chassis_velocity-h-27-9) | Bit set only after a received sample and while online. | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity.h:30](../modules/algorithm/chassis_velocity.h#L30) |
 | `online_mask` | [ChassisForceCycleInput_s](#r-modules-chassis_force-chassis_force_control-h-19-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:24](../modules/chassis_force/chassis_force_control.h#L24) |
-| `online_mask` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:57](../modules/chassis_power/chassis_power_types.h#L57) |
-| `online_mask` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-85-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:93](../modules/chassis_power/chassis_power_types.h#L93) |
+| `online_mask` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:69](../modules/chassis_power/chassis_power_types.h#L69) |
+| `online_mask` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-98-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:106](../modules/chassis_power/chassis_power_types.h#L106) |
 | `online_mask` | [PPMeasurement](#r-modules-predictive_power-power_observer-h-11-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_observer.h:14](../modules/predictive_power/power_observer.h#L14) |
 | `OOR` | [DMA2D_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f427xx-h-372-9) | DMA2D Output Offset Register,                   Address offset: 0x40 | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h:390](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h#L390) |
 | `op` | [FcRequest](#r-modules-chassis_force_calibration-force_calibration-h-35-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration.h:36](../modules/chassis_force_calibration/force_calibration.h#L36) |
@@ -5660,10 +5683,12 @@
 | `OUT_ep` | [PCD_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_pcd-h-93-9) | OUT endpoint parameters | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h:102](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h#L102) |
 | `OUT_ep` | [PCD_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_pcd-h-95-9) | OUT endpoint parameters | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h:102](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h#L102) |
 | `outer` | [ChassisPower_Init_Config_s](#r-modules-chassis_power-chassis_power_types-h-15-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:20](../modules/chassis_power/chassis_power_types.h#L20) |
-| `outer` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-37-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:40](../modules/chassis_power/chassis_power_types.h#L40) |
+| `outer` | [ChassisPowerConfigObservation_s](#r-modules-chassis_power-chassis_power_types-h-28-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:33](../modules/chassis_power/chassis_power_types.h#L33) |
+| `outer` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-46-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:49](../modules/chassis_power/chassis_power_types.h#L49) |
 | `outer_loop_type` | [Motor_Control_Setting_s](#r-modules-motor-motor_def-h-73-9) | 最外层的闭环,未设置时默认为最高级的闭环 | 电机 电流 转速 角度 控制器 | [modules/motor/motor_def.h:75](../modules/motor/motor_def.h#L75) |
 | `outer_mode` | [ChassisPowerControlTelemetry_s](#r-modules-telemetry-rtt_telemetry-h-12-9) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/rtt_telemetry.h:20](../modules/telemetry/rtt_telemetry.h#L20) |
-| `outer_state` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:27](../modules/chassis_power/chassis_power_internal.h#L27) |
+| `outer_state` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:28](../modules/chassis_power/chassis_power_internal.h#L28) |
+| `output` | [ChassisRemoteFusionAttempt_s](#r-modules-algorithm-chassis_remote_fusion-h-35-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:40](../modules/algorithm/chassis_remote_fusion.h#L40) |
 | `Output` | [PIDInstance](#r-modules-algorithm-controller-h-54-9) | 源码未注释 | PID 控制器 滤波 误差 积分 算法 运动学 控制 计算 | [modules/algorithm/controller.h:85](../modules/algorithm/controller.h#L85) |
 | `output` | [ChassisForceController_s](#r-modules-chassis_force-chassis_force_control-h-51-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:57](../modules/chassis_force/chassis_force_control.h#L57) |
 | `OutPut` | [RTC_InitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_rtc-h-60-9) | Specifies which signal will be routed to the RTC output. This parameter can be a value of @ref RTC_Output_selection_Definitions | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rtc.h:71](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rtc.h#L71) |
@@ -5721,10 +5746,11 @@
 | `p_unlimited_cw` | [USBTelemetrySample_s](#r-modules-telemetry-usb_telemetry_format-h-50-9) | 字段宏 USB_TELEMETRY_FIELDS（定义第 9 行） → USB_FIELD_I（定义第 52 行） | USB 虚拟串口 遥测 调参 数据传输 在线调参 参数保存 数据采样 | [modules/telemetry/usb_telemetry_format.h:53](../modules/telemetry/usb_telemetry_format.h#L53) |
 | `p_va` | [ChassisVelocityFusionAxis_s](#r-modules-algorithm-chassis_velocity_fusion-h-31-9) | 源码未注释 | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity_fusion.h:33](../modules/algorithm/chassis_velocity_fusion.h#L33) |
 | `p_vv` | [ChassisVelocityFusionAxis_s](#r-modules-algorithm-chassis_velocity_fusion-h-31-9) | 源码未注释 | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity_fusion.h:33](../modules/algorithm/chassis_velocity_fusion.h#L33) |
-| `pair_span_ms` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-29-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:37](../modules/algorithm/chassis_remote_fusion.h#L37) |
-| `pair_span_ms` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-42-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:50](../modules/algorithm/chassis_remote_fusion.h#L50) |
+| `pair_span_ms` | [ChassisRemoteFusionAttempt_s](#r-modules-algorithm-chassis_remote_fusion-h-35-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:38](../modules/algorithm/chassis_remote_fusion.h#L38) |
+| `pair_span_ms` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-45-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:53](../modules/algorithm/chassis_remote_fusion.h#L53) |
+| `pair_span_ms` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-59-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:67](../modules/algorithm/chassis_remote_fusion.h#L67) |
 | `paired_wheel_mps` | [ChassisFusedVelocitySnapshot_s](#r-application-chassis-chassis_velocity_observer-h-40-9) | Forward/right, aligned wheel sample when fused. | 底盘 运动 控制 轮速 速度 闭环 | [application/chassis/chassis_velocity_observer.h:43](../application/chassis/chassis_velocity_observer.h#L43) |
-| `paired_wheel_mps` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-29-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:33](../modules/algorithm/chassis_remote_fusion.h#L33) |
+| `paired_wheel_mps` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-45-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:49](../modules/algorithm/chassis_remote_fusion.h#L49) |
 | `PAR` | [DMA_Stream_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f407xx-h-345-9) | DMA stream x peripheral address register | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h:349](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h#L349) |
 | `PAR` | [DMA_Stream_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f427xx-h-350-9) | DMA stream x peripheral address register | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h:354](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h#L354) |
 | `Parent` | [DMA_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_dma-h-138-9) | Parent object state | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma.h:148](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma.h#L148) |
@@ -5740,6 +5766,7 @@
 | `PATT4` | [FSMC_Bank4_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f407xx-h-513-9) | PC Card  Attribute memory space timing register 4, Address offset: 0xAC | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h:518](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h#L518) |
 | `PATT4` | [FMC_Bank4_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f427xx-h-546-9) | PC Card  Attribute memory space timing register 4, Address offset: 0xAC | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h:551](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h#L551) |
 | `paused` | [ChassisWheelKFDiagnostics](#r-modules-chassis_power-chassis_power_shadow-h-8-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_shadow.h:14](../modules/chassis_power/chassis_power_shadow.h#L14) |
+| `payload` | [ChassisImuCanDecoder_s](#r-modules-imu-chassis_imu_can_protocol-h-13-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [modules/imu/chassis_imu_can_protocol.h:14](../modules/imu/chassis_imu_can_protocol.h#L14) |
 | `payload` | [CapturedFrame_s](#r-tests-referee_stream_parser-test_referee_stream_parser-c-8-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [tests/referee_stream_parser/test_referee_stream_parser.c:13](../tests/referee_stream_parser/test_referee_stream_parser.c#L13) |
 | `payload_length` | [CapturedFrame_s](#r-tests-referee_stream_parser-test_referee_stream_parser-c-8-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [tests/referee_stream_parser/test_referee_stream_parser.c:11](../tests/referee_stream_parser/test_referee_stream_parser.c#L11) |
 | `payload_length_error_count` | [RefereeLinkDiagnostics_s](#r-modules-referee-rm_referee-h-85-9) | CRC-valid supported commands rejected for a non-exact payload length. | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/rm_referee.h:90](../modules/referee/rm_referee.h#L90) |
@@ -5917,8 +5944,9 @@
 | `peak_wheel_rpm` | [ChassisSpinState_s](#r-modules-algorithm-chassis_spin-h-66-9) | 源码未注释 | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | [modules/algorithm/chassis_spin.h:82](../modules/algorithm/chassis_spin.h#L82) |
 | `pending` | [TestSub](#r-tests-vehicle_motion-test_vehicle_motion-c-22-9) | 源码未注释 | 测试与测试桩 | [tests/vehicle_motion/test_vehicle_motion.c:22](../tests/vehicle_motion/test_vehicle_motion.c#L22) |
 | `pending_config` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:19](../modules/chassis_power/chassis_power_internal.h#L19) |
+| `pending_observation` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:20](../modules/chassis_power/chassis_power_internal.h#L20) |
 | `pending_record` | [ChassisForceController_s](#r-modules-chassis_force-chassis_force_control-h-51-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:64](../modules/chassis_force/chassis_force_control.h#L64) |
-| `pending_version` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:20](../modules/chassis_power/chassis_power_internal.h#L20) |
+| `pending_version` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:21](../modules/chassis_power/chassis_power_internal.h#L21) |
 | `PendingCallback` | [EXTI_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_exti-h-52-9) | Exti pending callback | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_exti.h:55](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_exti.h#L55) |
 | `per_motor_reserved_power_w` | [ChassisPowerAlgorithmConfig_s](#r-modules-algorithm-power_model-h-29-9) | 源码未注释 | 功率模型 损耗 预测 功控 算法 运动学 滤波 控制 计算 | [modules/algorithm/power_model.h:34](../modules/algorithm/power_model.h#L34) |
 | `period` | [PWMInstance](#r-bsp-pwm-bsp_pwm-h-22-9) | 周期 | PWM 定时器 占空比 输出 | [bsp/pwm/bsp_pwm.h:27](../bsp/pwm/bsp_pwm.h#L27) |
@@ -5960,7 +5988,7 @@
 | `phaseLength` | [arm_fir_interpolate_instance_q31](#r-Middlewares-ST-ARM-DSP-Include-dsp-filtering_functions-h-978-11) | length of each polyphase filter component. | 第三方中间件 | [Middlewares/ST/ARM/DSP/Include/dsp/filtering_functions.h:981](../Middlewares/ST/ARM/DSP/Include/dsp/filtering_functions.h#L981) |
 | `phaseLength` | [arm_fir_interpolate_instance_f32](#r-Middlewares-ST-ARM-DSP-Include-dsp-filtering_functions-h-989-11) | length of each polyphase filter component. | 第三方中间件 | [Middlewares/ST/ARM/DSP/Include/dsp/filtering_functions.h:992](../Middlewares/ST/ARM/DSP/Include/dsp/filtering_functions.h#L992) |
 | `phy_itface` | [USB_OTG_CfgTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_ll_usb-h-86-9) | Select the used PHY interface. This parameter can be any value of @ref PCD_PHY_Module/HCD_PHY_Module | USB 虚拟串口 遥测 调参 数据传输 STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h:104](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h#L104) |
-| `physical_load_target_w` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-37-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:44](../modules/chassis_power/chassis_power_types.h#L44) |
+| `physical_load_target_w` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-46-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:54](../modules/chassis_power/chassis_power_types.h#L54) |
 | `physical_target_w` | [ChassisForceCycleInput_s](#r-modules-chassis_force-chassis_force_control-h-19-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:28](../modules/chassis_force/chassis_force_control.h#L28) |
 | `physical_target_w` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:41](../modules/chassis_force/chassis_force_control.h#L41) |
 | `PID0` | [ITM_Type](#r-Drivers-CMSIS-Include-core_armv8mml-h-1086-9) | Offset: 0xFE0 (R/ )  ITM Peripheral Identification Register #0 | ARM 内核 寄存器 DSP 数学 矩阵 | [Drivers/CMSIS/Include/core_armv8mml.h:1114](../Drivers/CMSIS/Include/core_armv8mml.h#L1114) |
@@ -6104,14 +6132,14 @@
 | `PMEM4` | [FMC_Bank4_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f427xx-h-546-9) | PC Card  Common memory space timing register 4,    Address offset: 0xA8 | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h:550](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h#L550) |
 | `Pminus` | [KalmanFilter_t](#r-modules-algorithm-kalman_filter-h-44-9) | covariance matrix P(k&#124;k-1) | 卡尔曼滤波 状态估计 矩阵 算法 运动学 滤波 控制 计算 | [modules/algorithm/kalman_filter.h:72](../modules/algorithm/kalman_filter.h#L72) |
 | `Pminus_data` | [KalmanFilter_t](#r-modules-algorithm-kalman_filter-h-44-9) | 源码未注释 | 卡尔曼滤波 状态估计 矩阵 算法 运动学 滤波 控制 计算 | [modules/algorithm/kalman_filter.h:96](../modules/algorithm/kalman_filter.h#L96) |
-| `policy` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:28](../modules/chassis_power/chassis_power_internal.h#L28) |
-| `policy` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:66](../modules/chassis_power/chassis_power_types.h#L66) |
+| `policy` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:29](../modules/chassis_power/chassis_power_internal.h#L29) |
+| `policy` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:79](../modules/chassis_power/chassis_power_types.h#L79) |
 | `policy` | [DJIMotorOutputHooks_s](#r-modules-motor-DJImotor-dji_motor-h-137-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_motor.h:148](../modules/motor/DJImotor/dji_motor.h#L148) |
-| `policy_tick_ms` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:29](../modules/chassis_power/chassis_power_internal.h#L29) |
-| `policy_tick_ms` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:67](../modules/chassis_power/chassis_power_types.h#L67) |
+| `policy_tick_ms` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:30](../modules/chassis_power/chassis_power_internal.h#L30) |
+| `policy_tick_ms` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:80](../modules/chassis_power/chassis_power_types.h#L80) |
 | `policy_version` | [ChassisForceCycleInput_s](#r-modules-chassis_force-chassis_force_control-h-19-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:26](../modules/chassis_force/chassis_force_control.h#L26) |
 | `policy_version` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:34](../modules/chassis_force/chassis_force_control.h#L34) |
-| `policy_version` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:29](../modules/chassis_power/chassis_power_internal.h#L29) |
+| `policy_version` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:30](../modules/chassis_power/chassis_power_internal.h#L30) |
 | `pool` | [os_pool_cb_t](#r-Middlewares-Third_Party-FreeRTOS-Source-CMSIS_RTOS-cmsis_os-c-868-9) | 源码未注释 | ARM 内核 寄存器 DSP 数学 矩阵 实时操作系统 任务 队列 信号量 定时器 链表 | [Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.c:869](../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.c#L869) |
 | `pool` | [os_mailQ_cb_t](#r-Middlewares-Third_Party-FreeRTOS-Source-CMSIS_RTOS-cmsis_os-c-1155-9) | 源码未注释 | ARM 内核 寄存器 DSP 数学 矩阵 实时操作系统 任务 队列 信号量 定时器 链表 | [Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.c:1158](../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.c#L1158) |
 | `pool` | [osPoolDef_t](#r-Middlewares-Third_Party-FreeRTOS-Source-CMSIS_RTOS-cmsis_os-h-321-9) | pointer to memory for pool | ARM 内核 寄存器 DSP 数学 矩阵 实时操作系统 任务 队列 信号量 定时器 链表 | [Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h:324](../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h#L324) |
@@ -6143,7 +6171,7 @@
 | `postShift` | [arm_lms_norm_instance_q31](#r-Middlewares-ST-ARM-DSP-Include-dsp-filtering_functions-h-1716-11) | bit shift applied to coefficients. | 第三方中间件 | [Middlewares/ST/ARM/DSP/Include/dsp/filtering_functions.h:1722](../Middlewares/ST/ARM/DSP/Include/dsp/filtering_functions.h#L1722) |
 | `postShift` | [arm_lms_norm_instance_q15](#r-Middlewares-ST-ARM-DSP-Include-dsp-filtering_functions-h-1770-11) | bit shift applied to coefficients. | 第三方中间件 | [Middlewares/ST/ARM/DSP/Include/dsp/filtering_functions.h:1776](../Middlewares/ST/ARM/DSP/Include/dsp/filtering_functions.h#L1776) |
 | `Pout` | [PIDInstance](#r-modules-algorithm-controller-h-54-9) | 源码未注释 | PID 控制器 滤波 误差 积分 算法 运动学 控制 计算 | [modules/algorithm/controller.h:80](../modules/algorithm/controller.h#L80) |
-| `power` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:52](../modules/chassis_power/chassis_power_types.h#L52) |
+| `power` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:62](../modules/chassis_power/chassis_power_types.h#L62) |
 | `power` | [ChassisForceActuationSnapshot_s](#r-modules-motor-DJImotor-dji_force_adapter-h-5-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_force_adapter.h:7](../modules/motor/DJImotor/dji_force_adapter.h#L7) |
 | `power` | [FcPermit](#r-modules-motor-DJImotor-dji_force_calibration-h-6-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_force_calibration.h:7](../modules/motor/DJImotor/dji_force_calibration.h#L7) |
 | `POWER` | [SDIO_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f407xx-h-682-9) | SDIO power control register,    Address offset: 0x00 | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h:684](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h#L684) |
@@ -6152,12 +6180,12 @@
 | `power_c` | [PPAllocationProblem](#r-modules-predictive_power-power_allocator-h-5-9) | min x'Qx + linear'x; Q positive definite, x=raw command/scale. | 项目数据 | [modules/predictive_power/power_allocator.h:7](../modules/predictive_power/power_allocator.h#L7) |
 | `power_ceiling_w` | [ChassisPowerTransientInput_s](#r-modules-algorithm-chassis_power_transient-h-23-9) | 0: legacy behavior; &gt;0: source/energy hard ceiling. | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:26](../modules/algorithm/chassis_power_transient.h#L26) |
 | `power_ceiling_w` | [ChassisSpinInput_s](#r-modules-algorithm-chassis_spin-h-49-9) | 源码未注释 | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | [modules/algorithm/chassis_spin.h:60](../modules/algorithm/chassis_spin.h#L60) |
-| `power_ceiling_w` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-27-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:31](../modules/chassis_power/chassis_power_types.h#L31) |
+| `power_ceiling_w` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-36-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:40](../modules/chassis_power/chassis_power_types.h#L40) |
 | `power_control` | [Chassis_Upload_Data_s](#r-application-robot_def-h-155-9) | 源码未注释 | 机器人 跨模块 控制指令 上传反馈 底盘 云台 发射 | [application/robot_def.h:157](../application/robot_def.h#L157) |
 | `power_deadband_w` | [ChassisForceConfig_s](#r-config-22_chassis_force-chassis_force_config-h-20-9) | 功率误差到转矩变化率的增益，单位 N*m/(W*s)；须大于 0。 功率跟踪死区，单位 W；须大于 0。 负载功率低通时间常数，单位 s；须大于 0。 | 项目数据 | [config/22_chassis_force/chassis_force_config.h:44](../config/22_chassis_force/chassis_force_config.h#L44) |
 | `power_deadband_w` | [ChassisPowerTransientInput_s](#r-modules-algorithm-chassis_power_transient-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:25](../modules/algorithm/chassis_power_transient.h#L25) |
 | `power_deadband_w` | [ChassisSpinConfig_s](#r-modules-algorithm-chassis_spin-h-8-9) | 源码未注释 | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | [modules/algorithm/chassis_spin.h:12](../modules/algorithm/chassis_spin.h#L12) |
-| `power_deadband_w` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-27-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:31](../modules/chassis_power/chassis_power_types.h#L31) |
+| `power_deadband_w` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-36-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:40](../modules/chassis_power/chassis_power_types.h#L40) |
 | `Power_flag` | [Referee_Interactive_Flag_t](#r-modules-referee-rm_referee-h-51-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/rm_referee.h:58](../modules/referee/rm_referee.h#L58) |
 | `power_g` | [PPAllocationProblem](#r-modules-predictive_power-power_allocator-h-5-9) | min x'Qx + linear'x; Q positive definite, x=raw command/scale. | 项目数据 | [modules/predictive_power/power_allocator.h:7](../modules/predictive_power/power_allocator.h#L7) |
 | `power_gain_nm_per_w_s` | [ChassisForceConfig_s](#r-config-22_chassis_force-chassis_force_config-h-20-9) | 功率误差到转矩变化率的增益，单位 N*m/(W*s)；须大于 0。 功率跟踪死区，单位 W；须大于 0。 负载功率低通时间常数，单位 s；须大于 0。 | 项目数据 | [config/22_chassis_force/chassis_force_config.h:43](../config/22_chassis_force/chassis_force_config.h#L43) |
@@ -6167,7 +6195,7 @@
 | `power_heat_tick_ms` | [HeatControlData_s](#r-modules-heat_control-heat_control-h-18-9) | 源码未注释 | 热量 射击 冷却 发射限制 | [modules/heat_control/heat_control.h:24](../modules/heat_control/heat_control.h#L24) |
 | `power_heat_tick_ms` | [HeatControlInstance](#r-modules-heat_control-heat_control-h-35-9) | 源码未注释 | 热量 射击 冷却 发射限制 | [modules/heat_control/heat_control.h:47](../modules/heat_control/heat_control.h#L47) |
 | `power_heat_tick_ms` | [RefereePowerState_s](#r-modules-referee-referee_power-h-15-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:22](../modules/referee/referee_power.h#L22) |
-| `power_heat_tick_ms` | [RefereeHeatSnapshot_s](#r-modules-referee-referee_power-h-41-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:43](../modules/referee/referee_power.h#L43) |
+| `power_heat_tick_ms` | [RefereeHeatSnapshot_s](#r-modules-referee-referee_power-h-43-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:45](../modules/referee/referee_power.h#L45) |
 | `power_heat_tick_ms` | [RefereeHeat](#r-portable_modules-modules-referee-referee-h-50-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee.h:53](../portable_modules/modules/referee/referee.h#L53) |
 | `power_heat_tick_ms` | [Referee](#r-portable_modules-modules-referee-referee-h-56-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee.h:64](../portable_modules/modules/referee/referee.h#L64) |
 | `power_limited` | [ChassisSpinInput_s](#r-modules-algorithm-chassis_spin-h-49-9) | 源码未注释 | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | [modules/algorithm/chassis_spin.h:53](../modules/algorithm/chassis_spin.h#L53) |
@@ -6224,7 +6252,7 @@
 | `press_r` | [Vt02_Ctrl_t.mouse](#r-modules-vtx-vt02_control-h-35-5) | 源码未注释 | 图传 键鼠 键盘 鼠标 | [modules/vtx/vt02_control.h:41](../modules/vtx/vt02_control.h#L41) |
 | `press_start_time` | [KeyPressMonitor_t](#r-modules-key-key-h-22-9) | 源码未注释 | 按键 输入 状态 | [modules/key/key.h:27](../modules/key/key.h#L27) |
 | `press_time` | [KeyPressMonitor_t](#r-modules-key-key-h-22-9) | 源码未注释 | 按键 输入 状态 | [modules/key/key.h:28](../modules/key/key.h#L28) |
-| `previous` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-70-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:77](../modules/chassis_power/chassis_power_types.h#L77) |
+| `previous` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-83-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:90](../modules/chassis_power/chassis_power_types.h#L90) |
 | `previous_abs_rpm` | [ChassisPowerTransientState_s](#r-modules-algorithm-chassis_power_transient-h-33-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:39](../modules/algorithm/chassis_power_transient.h#L39) |
 | `previous_current` | [PIDAutotune](#r-modules-telemetry-pid_autotune-h-15-9) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 PID 自动整定 闭环反馈 | [modules/telemetry/pid_autotune.h:22](../modules/telemetry/pid_autotune.h#L22) |
 | `previous_error` | [PIDAutotune](#r-modules-telemetry-pid_autotune-h-15-9) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 PID 自动整定 闭环反馈 | [modules/telemetry/pid_autotune.h:28](../modules/telemetry/pid_autotune.h#L28) |
@@ -6238,7 +6266,7 @@
 | `previous_target` | [ChassisPowerTransientState_s](#r-modules-algorithm-chassis_power_transient-h-33-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:39](../modules/algorithm/chassis_power_transient.h#L39) |
 | `previous_target` | [ChassisPowerCapture_s](#r-modules-telemetry-chassis_power_capture-h-30-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/chassis_power_capture.h:32](../modules/telemetry/chassis_power_capture.h#L32) |
 | `previous_target_power_w` | [ChassisSpinState_s](#r-modules-algorithm-chassis_spin-h-66-9) | 源码未注释 | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | [modules/algorithm/chassis_spin.h:68](../modules/algorithm/chassis_spin.h#L68) |
-| `previous_valid` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-70-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:78](../modules/chassis_power/chassis_power_types.h#L78) |
+| `previous_valid` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-83-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:91](../modules/chassis_power/chassis_power_types.h#L91) |
 | `PreviousState` | [I2C_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_i2c-h-185-9) | I2C communication Previous state and mode context for internal usage | I2C 外设 总线 通信 STM32 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_i2c.h:202](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_i2c.h#L202) |
 | `PreviousState` | [I2C_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_i2c-h-187-9) | I2C communication Previous state and mode context for internal usage | I2C 外设 总线 通信 STM32 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_i2c.h:202](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_i2c.h#L202) |
 | `pRfft` | [arm_dct4_instance_f32](#r-Middlewares-ST-ARM-DSP-Inc-arm_math-h-2235-11) | points to the real FFT instance. | 第三方中间件 | [Middlewares/ST/ARM/DSP/Inc/arm_math.h:2242](../Middlewares/ST/ARM/DSP/Inc/arm_math.h#L2242) |
@@ -6254,7 +6282,7 @@
 | `process` | [DJIMotorControlPolicy_s](#r-modules-motor-DJImotor-dji_motor-h-126-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_motor.h:129](../modules/motor/DJImotor/dji_motor.h#L129) |
 | `process_ping` | [USB_OTG_HCTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_ll_usb-h-163-9) | Execute the PING protocol for HS mode. | USB 虚拟串口 遥测 调参 数据传输 STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h:183](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h#L183) |
 | `program` | [TuningStorageIO](#r-modules-telemetry-tuning_storage-h-12-9) | 源码未注释 | 在线调参 PID 自动整定 参数保存 遥测 数据采样 | [modules/telemetry/tuning_storage.h:16](../modules/telemetry/tuning_storage.h#L16) |
-| `proposed_current` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:55](../modules/chassis_power/chassis_power_types.h#L55) |
+| `proposed_current` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:67](../modules/chassis_power/chassis_power_types.h#L67) |
 | `pRxBuffPtr` | [SPI_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_spi-h-104-9) | Pointer to SPI Rx transfer Buffer | SPI 外设 总线 通信 STM32 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h:116](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h#L116) |
 | `pRxBuffPtr` | [UART_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_uart-h-149-9) | Pointer to UART Rx transfer Buffer | 串口 UART 接收 发送 日志 STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h:161](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h#L161) |
 | `PSC` | [TIM_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f407xx-h-728-9) | TIM prescaler,                       Address offset: 0x28 | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h:740](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h#L740) |
@@ -6412,7 +6440,6 @@
 | `pTxBuffPtr` | [UART_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_uart-h-149-9) | Pointer to UART Tx transfer Buffer | 串口 UART 接收 发送 日志 STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h:155](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h#L155) |
 | `pub` | [TestSub](#r-tests-vehicle_motion-test_vehicle_motion-c-22-9) | 源码未注释 | 测试与测试桩 | [tests/vehicle_motion/test_vehicle_motion.c:22](../tests/vehicle_motion/test_vehicle_motion.c#L22) |
 | `pub_registered_flag` | [Publisher_t](#r-modules-message_center-message_center-h-38-9) | 用于标记该发布者是否已经注册 | 消息中心 发布订阅 模块通信 | [modules/message_center/message_center.h:47](../modules/message_center/message_center.h#L47) |
-| `publish` | [cases](#r-tests-dm_imu_can_protocol-test_dm_imu_can_protocol-c-156-11) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/dm_imu_can_protocol/test_dm_imu_can_protocol.c:156](../tests/dm_imu_can_protocol/test_dm_imu_can_protocol.c#L156) |
 | `published_ms` | [ChassisForceIntentMessage_s](#r-modules-chassis_force-chassis_force_intent-h-8-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_intent.h:10](../modules/chassis_force/chassis_force_intent.h#L10) |
 | `pucBuffer` | [StreamBuffer_t](#r-Middlewares-Third_Party-FreeRTOS-Source-stream_buffer-c-141-9) | Points to the buffer itself - that is - the RAM that stores the data passed through the buffer. | 实时操作系统 任务 队列 信号量 定时器 链表 | [Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c:149](../Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c#L149) |
 | `pucStartAddress` | [HeapRegion_t](#r-Middlewares-Third_Party-FreeRTOS-Source-include-portable-h-123-9) | 源码未注释 | 实时操作系统 任务 队列 信号量 定时器 链表 | [Middlewares/Third_Party/FreeRTOS/Source/include/portable.h:125](../Middlewares/Third_Party/FreeRTOS/Source/include/portable.h#L125) |
@@ -6510,7 +6537,7 @@
 | `Q2` | [QEKF_INS_t](#r-modules-algorithm-QuaternionEKF-h-26-9) | 陀螺仪零偏过程噪声 | 四元数 姿态 扩展卡尔曼 算法 运动学 滤波 控制 计算 | [modules/algorithm/QuaternionEKF.h:55](../modules/algorithm/QuaternionEKF.h#L55) |
 | `Q_data` | [KalmanFilter_t](#r-modules-algorithm-kalman_filter-h-44-9) | 源码未注释 | 卡尔曼滤波 状态估计 矩阵 算法 运动学 滤波 控制 计算 | [modules/algorithm/kalman_filter.h:100](../modules/algorithm/kalman_filter.h#L100) |
 | `quality` | [FcCapture](#r-modules-chassis_force_calibration-force_calibration_capture-h-17-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration_capture.h:21](../modules/chassis_force_calibration/force_calibration_capture.h#L21) |
-| `quaternion` | [ChassisImuCanSample_s](#r-modules-imu-chassis_imu_sample-h-12-9) | Unit [w,x,y,z], sensor to navigation frame. | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/chassis_imu_sample.h:13](../modules/imu/chassis_imu_sample.h#L13) |
+| `quaternion` | [ChassisImuCanSample_s](#r-modules-imu-chassis_imu_sample-h-12-9) | Unit [w,x,y,z], sensor to source-board navigation frame. | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/chassis_imu_sample.h:13](../modules/imu/chassis_imu_sample.h#L13) |
 | `quaternion` | [INSMotionSnapshot_s](#r-modules-imu-ins_task-h-50-9) | Unit [w,x,y,z], sensor frame to INS navigation frame. | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/ins_task.h:52](../modules/imu/ins_task.h#L52) |
 | `queue` | [Subscriber_t](#r-modules-message_center-message_center-h-21-9) | 用数组模拟FIFO队列 | 消息中心 发布订阅 模块通信 | [modules/message_center/message_center.h:24](../modules/message_center/message_center.h#L24) |
 | `queue_def` | [os_mailQ_cb_t](#r-Middlewares-Third_Party-FreeRTOS-Source-CMSIS_RTOS-cmsis_os-c-1155-9) | 源码未注释 | ARM 内核 寄存器 DSP 数学 矩阵 实时操作系统 任务 队列 信号量 定时器 链表 | [Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.c:1156](../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.c#L1156) |
@@ -6552,8 +6579,8 @@
 | `raw_current` | [ChassisPowerTransientInput_s](#r-modules-algorithm-chassis_power_transient-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:27](../modules/algorithm/chassis_power_transient.h#L27) |
 | `raw_current` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:39](../modules/chassis_force/chassis_force_control.h#L39) |
 | `raw_current` | [FcRecord](#r-modules-chassis_force_calibration-force_calibration_capture-h-6-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration_capture.h:9](../modules/chassis_force_calibration/force_calibration_capture.h#L9) |
-| `raw_current` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:55](../modules/chassis_power/chassis_power_types.h#L55) |
-| `raw_current` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-85-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:91](../modules/chassis_power/chassis_power_types.h#L91) |
+| `raw_current` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:67](../modules/chassis_power/chassis_power_types.h#L67) |
+| `raw_current` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-98-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:104](../modules/chassis_power/chassis_power_types.h#L104) |
 | `raw_current` | [DJI_Motor_Measure_s](#r-modules-motor-DJImotor-dji_motor-h-33-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_motor.h:47](../modules/motor/DJImotor/dji_motor.h#L47) |
 | `raw_current` | [ChassisPowerCaptureSample_s](#r-modules-telemetry-chassis_power_capture-h-20-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/chassis_power_capture.h:22](../modules/telemetry/chassis_power_capture.h#L22) |
 | `raw_predicted_w` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:40](../modules/chassis_force/chassis_force_control.h#L40) |
@@ -6565,9 +6592,9 @@
 | `raw_rpm` | [DJI_Motor_Measure_s](#r-modules-motor-DJImotor-dji_motor-h-33-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_motor.h:47](../modules/motor/DJImotor/dji_motor.h#L47) |
 | `raw_rpm` | [DJIMotorInstance.measure](#r-tests-chassis_velocity_observer-stubs-platform-h-9-5) | 源码未注释 | 底盘 速度 轮速 闭环 控制 | [tests/chassis_velocity_observer/stubs/platform.h:10](../tests/chassis_velocity_observer/stubs/platform.h#L10) |
 | `raw_sendbuf` | [CANCommInstance](#r-modules-can_comm-can_comm-h-26-9) | 额外4个bytes保存帧头帧尾和校验和 | 双板通信 CAN 收发 总线 接收 发送 | [modules/can_comm/can_comm.h:32](../modules/can_comm/can_comm.h#L32) |
-| `raw_speed` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-85-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:88](../modules/chassis_power/chassis_power_types.h#L88) |
+| `raw_speed` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-98-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:101](../modules/chassis_power/chassis_power_types.h#L101) |
 | `raw_state` | [KeyInstance](#r-modules-key-key-h-31-9) | 源码未注释 | 按键 输入 状态 | [modules/key/key.h:36](../modules/key/key.h#L36) |
-| `raw_time_valid_mask` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-85-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:90](../modules/chassis_power/chassis_power_types.h#L90) |
+| `raw_time_valid_mask` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-98-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:103](../modules/chassis_power/chassis_power_types.h#L103) |
 | `RBAR` | [MPU_Type](#r-Drivers-CMSIS-Include-core_armv8mbl-h-824-9) | Offset: 0x00C (R/W)  MPU Region Base Address Register | ARM 内核 寄存器 DSP 数学 矩阵 | [Drivers/CMSIS/Include/core_armv8mbl.h:829](../Drivers/CMSIS/Include/core_armv8mbl.h#L829) |
 | `RBAR` | [SAU_Type](#r-Drivers-CMSIS-Include-core_armv8mbl-h-931-9) | Offset: 0x00C (R/W)  SAU Region Base Address Register | ARM 内核 寄存器 DSP 数学 矩阵 | [Drivers/CMSIS/Include/core_armv8mbl.h:937](../Drivers/CMSIS/Include/core_armv8mbl.h#L937) |
 | `RBAR` | [MPU_Type](#r-Drivers-CMSIS-Include-core_armv8mml-h-1486-9) | Offset: 0x00C (R/W)  MPU Region Base Address Register | ARM 内核 寄存器 DSP 数学 矩阵 | [Drivers/CMSIS/Include/core_armv8mml.h:1491](../Drivers/CMSIS/Include/core_armv8mml.h#L1491) |
@@ -6668,14 +6695,16 @@
 | `reason` | [PIDAutotune](#r-modules-telemetry-pid_autotune-h-15-9) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 PID 自动整定 闭环反馈 | [modules/telemetry/pid_autotune.h:19](../modules/telemetry/pid_autotune.h#L19) |
 | `Receive` | [USBD_CDC_ItfTypeDef](#r-Middlewares-ST-STM32_USB_Device_Library-Class-CDC-Inc-usbd_cdc-h-107-9) | 源码未注释 | USB 虚拟串口 遥测 调参 数据传输 STM32 外设 寄存器 HAL 配置 句柄 | [Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h:112](../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h#L112) |
 | `Receive` | [USBD_CDC_ItfTypeDef](#r-tests-usb_telemetry-stubs-usbd_cdc-h-22-9) | 源码未注释 | USB 虚拟串口 遥测 调参 数据传输 在线调参 参数保存 数据采样 | [tests/usb_telemetry/stubs/usbd_cdc.h:26](../tests/usb_telemetry/stubs/usbd_cdc.h#L26) |
-| `receive_step_ms` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-29-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:37](../modules/algorithm/chassis_remote_fusion.h#L37) |
-| `receive_step_ms` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-42-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:50](../modules/algorithm/chassis_remote_fusion.h#L50) |
+| `receive_step_ms` | [ChassisRemoteFusionAttempt_s](#r-modules-algorithm-chassis_remote_fusion-h-35-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:38](../modules/algorithm/chassis_remote_fusion.h#L38) |
+| `receive_step_ms` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-45-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:53](../modules/algorithm/chassis_remote_fusion.h#L53) |
+| `receive_step_ms` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-59-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:67](../modules/algorithm/chassis_remote_fusion.h#L67) |
 | `received_frame_count` | [PowerMeterInstance](#r-modules-power_meter-power_meter-h-12-9) | 源码未注释 | 功率计 电压 电流 实测功率 | [modules/power_meter/power_meter.h:18](../modules/power_meter/power_meter.h#L18) |
 | `received_frame_count` | [SuperCapSnapshot_s](#r-modules-super_cap-super_cap_types-h-6-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [modules/super_cap/super_cap_types.h:10](../modules/super_cap/super_cap_types.h#L10) |
 | `received_frame_count` | [SuperCapDiagnostics](#r-portable_modules-modules-super_cap-super_cap-h-58-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [portable_modules/modules/super_cap/super_cap.h:60](../portable_modules/modules/super_cap/super_cap.h#L60) |
 | `received_ms` | [ChassisForceIntentReceiver_s](#r-modules-chassis_force-chassis_force_intent-h-12-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_intent.h:14](../modules/chassis_force/chassis_force_intent.h#L14) |
 | `ReceiveData` | [referee_info_t](#r-modules-referee-rm_referee-h-24-9) | 自定义交互数据的接收 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/rm_referee.h:44](../modules/referee/rm_referee.h#L44) |
 | `ReceiveFifoLocked` | [CAN_InitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_can-h-60-9) | Enable or disable the Receive FIFO Locked mode. This parameter can be set to ENABLE or DISABLE. | CAN 总线 接收 发送 STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h:90](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h#L90) |
+| `receiver_call_ms` | [ChassisRemoteFusionAttempt_s](#r-modules-algorithm-chassis_remote_fusion-h-35-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:37](../modules/algorithm/chassis_remote_fusion.h#L37) |
 | `receiver_ID` | [ext_student_interactive_header_data_t](#r-modules-referee-referee_protocol-h-238-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_protocol.h:242](../modules/referee/referee_protocol.h#L242) |
 | `receiver_id` | [RefereeInteraction](#r-portable_modules-modules-referee-referee_protocol-h-150-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee_protocol.h:154](../portable_modules/modules/referee/referee_protocol.h#L154) |
 | `Receiver_Robot_ID` | [referee_id_t](#r-modules-referee-rm_referee-h-15-9) | 机器人车间通信时接收者的ID，必须和本机器人同颜色 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/rm_referee.h:20](../modules/referee/rm_referee.h#L20) |
@@ -6738,7 +6767,7 @@
 | `reduction_ratio` | [ChassisVelocityConfig_s](#r-modules-algorithm-chassis_velocity-h-21-9) | 源码未注释 | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity.h:23](../modules/algorithm/chassis_velocity.h#L23) |
 | `Ref` | [PIDInstance](#r-modules-algorithm-controller-h-54-9) | 源码未注释 | PID 控制器 滤波 误差 积分 算法 运动学 控制 计算 | [modules/algorithm/controller.h:89](../modules/algorithm/controller.h#L89) |
 | `referee` | [ChassisPowerCommandInput_s](#r-modules-chassis_power-chassis_power_policy-h-7-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_policy.h:9](../modules/chassis_power/chassis_power_policy.h#L9) |
-| `referee` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-70-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:74](../modules/chassis_power/chassis_power_types.h#L74) |
+| `referee` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-83-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:87](../modules/chassis_power/chassis_power_types.h#L87) |
 | `referee_buffer_energy_j` | [SuperCapCommand_s](#r-modules-super_cap-super_cap_protocol-h-24-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [modules/super_cap/super_cap_protocol.h:28](../modules/super_cap/super_cap_protocol.h#L28) |
 | `referee_buffer_energy_j` | [SuperCapCommand](#r-portable_modules-modules-super_cap-super_cap-h-41-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [portable_modules/modules/super_cap/super_cap.h:45](../portable_modules/modules/super_cap/super_cap.h#L45) |
 | `referee_id` | [referee_info_t](#r-modules-referee-rm_referee-h-24-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/rm_referee.h:26](../modules/referee/rm_referee.h#L26) |
@@ -6750,7 +6779,7 @@
 | `referee_power_limit_w` | [SuperCapCommand_s](#r-modules-super_cap-super_cap_protocol-h-24-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [modules/super_cap/super_cap_protocol.h:27](../modules/super_cap/super_cap_protocol.h#L27) |
 | `referee_power_limit_w` | [SuperCapCommand](#r-portable_modules-modules-super_cap-super_cap-h-41-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [portable_modules/modules/super_cap/super_cap.h:44](../portable_modules/modules/super_cap/super_cap.h#L44) |
 | `referee_w` | [PPEnergyInput](#r-modules-predictive_power-energy_scheduler-h-13-9) | 源码未注释 | 项目数据 | [modules/predictive_power/energy_scheduler.h:16](../modules/predictive_power/energy_scheduler.h#L16) |
-| `registered` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:51](../modules/chassis_power/chassis_power_types.h#L51) |
+| `registered` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:61](../modules/chassis_power/chassis_power_types.h#L61) |
 | `registered` | [DJIMotorOutputGroup_s](#r-modules-motor-DJImotor-dji_motor-h-96-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_motor.h:100](../modules/motor/DJImotor/dji_motor.h#L100) |
 | `registered` | [DJIMotorControlPolicy_s](#r-modules-motor-DJImotor-dji_motor-h-126-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_motor.h:128](../modules/motor/DJImotor/dji_motor.h#L128) |
 | `registered` | [GroupState](#r-modules-telemetry-runtime_tuning-c-15-9) | 源码未注释 | 在线调参 PID 自动整定 参数保存 遥测 数据采样 | [modules/telemetry/runtime_tuning.c:19](../modules/telemetry/runtime_tuning.c#L19) |
@@ -6758,8 +6787,8 @@
 | `rejected_frame_count` | [PowerMeterInstance](#r-modules-power_meter-power_meter-h-12-9) | 源码未注释 | 功率计 电压 电流 实测功率 | [modules/power_meter/power_meter.h:19](../modules/power_meter/power_meter.h#L19) |
 | `rejected_frame_count` | [SuperCapSnapshot_s](#r-modules-super_cap-super_cap_types-h-6-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [modules/super_cap/super_cap_types.h:11](../modules/super_cap/super_cap_types.h#L11) |
 | `rejected_frame_count` | [SuperCapDiagnostics](#r-portable_modules-modules-super_cap-super_cap-h-58-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 | [portable_modules/modules/super_cap/super_cap.h:61](../portable_modules/modules/super_cap/super_cap.h#L61) |
+| `rejected_groups` | [ChassisImuCanDecoder_s](#r-modules-imu-chassis_imu_can_protocol-h-13-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [modules/imu/chassis_imu_can_protocol.h:17](../modules/imu/chassis_imu_can_protocol.h#L17) |
 | `rejected_groups` | [ChassisImuCanSnapshot_s](#r-modules-imu-chassis_imu_sample-h-20-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/chassis_imu_sample.h:23](../modules/imu/chassis_imu_sample.h#L23) |
-| `rejected_groups` | [DmImuCanDecoder_s](#r-modules-imu-dm_imu_can_protocol-h-9-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [modules/imu/dm_imu_can_protocol.h:11](../modules/imu/dm_imu_can_protocol.h#L11) |
 | `rejected_records` | [CSCCapture](#r-modules-telemetry-chassis_speed_capture-h-27-9) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/chassis_speed_capture.h:32](../modules/telemetry/chassis_speed_capture.h#L32) |
 | `relative_yaw_rad` | [ChassisForceIntent_s](#r-modules-chassis_force-chassis_force_types-h-7-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_types.h:9](../modules/chassis_force/chassis_force_types.h#L9) |
 | `release_confirm_ms` | [ChassisPowerTransientConfig_s](#r-modules-algorithm-chassis_power_transient-h-14-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:16](../modules/algorithm/chassis_power_transient.h#L16) |
@@ -7246,8 +7275,9 @@
 | `reset` | [VehicleSafetyInput_s](#r-modules-vehicle_safety-vehicle_safety-h-6-9) | Explicit neutral/right-up recovery position. | 整车 安全 启停 遥控失联 | [modules/vehicle_safety/vehicle_safety.h:9](../modules/vehicle_safety/vehicle_safety.h#L9) |
 | `ResetCallback` | [PCD_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_pcd-h-93-9) | USB OTG PCD Reset callback | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h:122](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h#L122) |
 | `ResetCallback` | [PCD_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_pcd-h-95-9) | USB OTG PCD Reset callback | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h:122](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h#L122) |
-| `resets` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-29-9) | Saturating counters; updates counts accepted filter pairs. | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:38](../modules/algorithm/chassis_remote_fusion.h#L38) |
-| `resets` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-42-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:51](../modules/algorithm/chassis_remote_fusion.h#L51) |
+| `resets` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-45-9) | Saturating counters; updates counts accepted filter pairs. | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:54](../modules/algorithm/chassis_remote_fusion.h#L54) |
+| `resets` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-59-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:68](../modules/algorithm/chassis_remote_fusion.h#L68) |
+| `resets_before` | [ChassisRemoteFusionAttempt_s](#r-modules-algorithm-chassis_remote_fusion-h-35-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:37](../modules/algorithm/chassis_remote_fusion.h#L37) |
 | `residual` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:38](../modules/chassis_force/chassis_force_control.h#L38) |
 | `residual` | [PPAllocationResult](#r-modules-predictive_power-power_allocator-h-10-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_allocator.h:12](../modules/predictive_power/power_allocator.h#L12) |
 | `resistance` | [PPModel](#r-modules-predictive_power-power_prediction-h-8-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_prediction.h:12](../modules/predictive_power/power_prediction.h#L12) |
@@ -7338,7 +7368,8 @@
 | `robot_state_tick_ms` | [HeatControlData_s](#r-modules-heat_control-heat_control-h-18-9) | 源码未注释 | 热量 射击 冷却 发射限制 | [modules/heat_control/heat_control.h:24](../modules/heat_control/heat_control.h#L24) |
 | `robot_state_tick_ms` | [HeatControlInstance](#r-modules-heat_control-heat_control-h-35-9) | 源码未注释 | 热量 射击 冷却 发射限制 | [modules/heat_control/heat_control.h:47](../modules/heat_control/heat_control.h#L47) |
 | `robot_state_tick_ms` | [RefereePowerState_s](#r-modules-referee-referee_power-h-15-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:21](../modules/referee/referee_power.h#L21) |
-| `robot_state_tick_ms` | [RefereeHeatSnapshot_s](#r-modules-referee-referee_power-h-41-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:43](../modules/referee/referee_power.h#L43) |
+| `robot_state_tick_ms` | [RefereePowerSnapshot_s](#r-modules-referee-referee_power-h-29-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:37](../modules/referee/referee_power.h#L37) |
+| `robot_state_tick_ms` | [RefereeHeatSnapshot_s](#r-modules-referee-referee_power-h-43-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:45](../modules/referee/referee_power.h#L45) |
 | `robot_state_tick_ms` | [RefereeHeat](#r-portable_modules-modules-referee-referee-h-50-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee.h:53](../portable_modules/modules/referee/referee.h#L53) |
 | `robot_state_tick_ms` | [Referee](#r-portable_modules-modules-referee-referee-h-56-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee.h:63](../portable_modules/modules/referee/referee.h#L63) |
 | `RobotHurt` | [referee_info_t](#r-modules-referee-rm_referee-h-24-9) | 0x0206 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/rm_referee.h:40](../modules/referee/rm_referee.h#L40) |
@@ -7394,8 +7425,8 @@
 | `running` | [DMA_HandleTypeDef](#r-tests-bsp_usart-stubs-main-h-10-9) | 源码未注释 | 串口 UART DMA 接收 发送 | [tests/bsp_usart/stubs/main.h:14](../tests/bsp_usart/stubs/main.h#L14) |
 | `rx_buff` | [CANInstance](#r-bsp-can-bsp_can-h-15-9) | 接收缓存,最大消息长度为8 | CAN 总线 接收 发送 | [bsp/can/bsp_can.h:22](../bsp/can/bsp_can.h#L22) |
 | `rx_buff` | [CANInstance](#r-tests-can_comm-stubs-bsp_can-h-23-1) | 源码未注释 | 双板通信 CAN 收发 总线 接收 发送 | [tests/can_comm/stubs/bsp_can.h:30](../tests/can_comm/stubs/bsp_can.h#L30) |
+| `rx_buff` | [CANInstance](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-7-1) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:10](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L10) |
 | `rx_buff` | [CANInstance](#r-tests-dji_chassis_power_rtt-stubs-bsp_can-h-23-1) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 CAN 总线 接收 发送 | [tests/dji_chassis_power_rtt/stubs/bsp_can.h:30](../tests/dji_chassis_power_rtt/stubs/bsp_can.h#L30) |
-| `rx_buff` | [CANInstance](#r-tests-dm_imu_runtime-stubs-bsp_can-h-7-1) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/dm_imu_runtime/stubs/bsp_can.h:10](../tests/dm_imu_runtime/stubs/bsp_can.h#L10) |
 | `rx_buff` | [CANInstance](#r-tests-power_meter-stubs-bsp_can-h-12-1) | 源码未注释 | 功率计 电压 电流 实测功率 CAN 总线 接收 发送 | [tests/power_meter/stubs/bsp_can.h:18](../tests/power_meter/stubs/bsp_can.h#L18) |
 | `rx_buff` | [CANInstance](#r-tests-super_cap-stubs-bsp_can-h-12-1) | 源码未注释 | 超级电容 电容 电压 储能 功率 CAN 总线 接收 发送 | [tests/super_cap/stubs/bsp_can.h:18](../tests/super_cap/stubs/bsp_can.h#L18) |
 | `rx_buffer` | [IICInstance](#r-bsp-iic-bsp_iic-h-36-9) | 接收缓冲区指针 | I2C 外设 总线 通信 | [bsp/iic/bsp_iic.h:42](../bsp/iic/bsp_iic.h#L42) |
@@ -7416,10 +7447,10 @@
 | `rx_id` | [CAN_Init_Config_s](#r-bsp-can-bsp_can-h-32-9) | 接收id | CAN 总线 接收 发送 | [bsp/can/bsp_can.h:36](../bsp/can/bsp_can.h#L36) |
 | `rx_id` | [CANInstance](#r-tests-can_comm-stubs-bsp_can-h-23-1) | 源码未注释 | 双板通信 CAN 收发 总线 接收 发送 | [tests/can_comm/stubs/bsp_can.h:27](../tests/can_comm/stubs/bsp_can.h#L27) |
 | `rx_id` | [CAN_Init_Config_s](#r-tests-can_comm-stubs-bsp_can-h-35-9) | 源码未注释 | 双板通信 CAN 收发 总线 接收 发送 | [tests/can_comm/stubs/bsp_can.h:39](../tests/can_comm/stubs/bsp_can.h#L39) |
+| `rx_id` | [CANInstance](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-7-1) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:9](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L9) |
+| `rx_id` | [CAN_Init_Config_s](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-14-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:16](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L16) |
 | `rx_id` | [CANInstance](#r-tests-dji_chassis_power_rtt-stubs-bsp_can-h-23-1) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 CAN 总线 接收 发送 | [tests/dji_chassis_power_rtt/stubs/bsp_can.h:27](../tests/dji_chassis_power_rtt/stubs/bsp_can.h#L27) |
 | `rx_id` | [CAN_Init_Config_s](#r-tests-dji_chassis_power_rtt-stubs-bsp_can-h-35-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 CAN 总线 接收 发送 | [tests/dji_chassis_power_rtt/stubs/bsp_can.h:39](../tests/dji_chassis_power_rtt/stubs/bsp_can.h#L39) |
-| `rx_id` | [CANInstance](#r-tests-dm_imu_runtime-stubs-bsp_can-h-7-1) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/dm_imu_runtime/stubs/bsp_can.h:9](../tests/dm_imu_runtime/stubs/bsp_can.h#L9) |
-| `rx_id` | [CAN_Init_Config_s](#r-tests-dm_imu_runtime-stubs-bsp_can-h-14-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/dm_imu_runtime/stubs/bsp_can.h:16](../tests/dm_imu_runtime/stubs/bsp_can.h#L16) |
 | `rx_id` | [CANInstance](#r-tests-power_meter-stubs-bsp_can-h-12-1) | 源码未注释 | 功率计 电压 电流 实测功率 CAN 总线 接收 发送 | [tests/power_meter/stubs/bsp_can.h:16](../tests/power_meter/stubs/bsp_can.h#L16) |
 | `rx_id` | [CAN_Init_Config_s](#r-tests-power_meter-stubs-bsp_can-h-24-9) | 源码未注释 | 功率计 电压 电流 实测功率 CAN 总线 接收 发送 | [tests/power_meter/stubs/bsp_can.h:28](../tests/power_meter/stubs/bsp_can.h#L28) |
 | `rx_id` | [CANInstance](#r-tests-super_cap-stubs-bsp_can-h-12-1) | 源码未注释 | 超级电容 电容 电压 储能 功率 CAN 总线 接收 发送 | [tests/super_cap/stubs/bsp_can.h:16](../tests/super_cap/stubs/bsp_can.h#L16) |
@@ -7427,7 +7458,7 @@
 | `rx_len` | [CANInstance](#r-bsp-can-bsp_can-h-15-9) | 接收长度,可能为0-8 | CAN 总线 接收 发送 | [bsp/can/bsp_can.h:24](../bsp/can/bsp_can.h#L24) |
 | `rx_len` | [IICInstance](#r-bsp-iic-bsp_iic-h-36-9) | 接收长度 | I2C 外设 总线 通信 | [bsp/iic/bsp_iic.h:43](../bsp/iic/bsp_iic.h#L43) |
 | `rx_len` | [CANInstance](#r-tests-can_comm-stubs-bsp_can-h-23-1) | 源码未注释 | 双板通信 CAN 收发 总线 接收 发送 | [tests/can_comm/stubs/bsp_can.h:30](../tests/can_comm/stubs/bsp_can.h#L30) |
-| `rx_len` | [CANInstance](#r-tests-dm_imu_runtime-stubs-bsp_can-h-7-1) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/dm_imu_runtime/stubs/bsp_can.h:10](../tests/dm_imu_runtime/stubs/bsp_can.h#L10) |
+| `rx_len` | [CANInstance](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-7-1) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:10](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L10) |
 | `rx_len` | [CANInstance](#r-tests-power_meter-stubs-bsp_can-h-12-1) | 源码未注释 | 功率计 电压 电流 实测功率 CAN 总线 接收 发送 | [tests/power_meter/stubs/bsp_can.h:19](../tests/power_meter/stubs/bsp_can.h#L19) |
 | `rx_len` | [CANInstance](#r-tests-super_cap-stubs-bsp_can-h-12-1) | 源码未注释 | 超级电容 电容 电压 储能 功率 CAN 总线 接收 发送 | [tests/super_cap/stubs/bsp_can.h:19](../tests/super_cap/stubs/bsp_can.h#L19) |
 | `rx_max_us` | [FcCapture](#r-modules-chassis_force_calibration-force_calibration_capture-h-17-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration_capture.h:19](../modules/chassis_force_calibration/force_calibration_capture.h#L19) |
@@ -7552,8 +7583,9 @@
 | `Seq` | [xFrameHeader](#r-modules-referee-referee_protocol-h-58-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_protocol.h:62](../modules/referee/referee_protocol.h#L62) |
 | `seq` | [USBTelemetrySample_s](#r-modules-telemetry-usb_telemetry_format-h-50-9) | 字段宏 USB_TELEMETRY_FIELDS（定义第 9 行） → USB_FIELD_U（定义第 51 行） | USB 虚拟串口 遥测 调参 数据传输 在线调参 参数保存 数据采样 | [modules/telemetry/usb_telemetry_format.h:53](../modules/telemetry/usb_telemetry_format.h#L53) |
 | `sequence` | [ChassisSpeedObservationRequest](#r-application-runtime-chassis_speed_observation-h-5-9) | 源码未注释 | 项目数据 | [application/runtime/chassis_speed_observation.h:6](../application/runtime/chassis_speed_observation.h#L6) |
+| `sequence` | [ChassisRemoteFusionAttempt_s](#r-modules-algorithm-chassis_remote_fusion-h-35-9) | Wrapping call count; available remains true at zero. | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:36](../modules/algorithm/chassis_remote_fusion.h#L36) |
 | `sequence` | [FcRecord](#r-modules-chassis_force_calibration-force_calibration_capture-h-6-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration_capture.h:8](../modules/chassis_force_calibration/force_calibration_capture.h#L8) |
-| `sequence` | [ChassisImuCanSample_s](#r-modules-imu-chassis_imu_sample-h-12-9) | Locally generated sequence / first receive tick. | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/chassis_imu_sample.h:15](../modules/imu/chassis_imu_sample.h#L15) |
+| `sequence` | [ChassisImuCanSample_s](#r-modules-imu-chassis_imu_sample-h-12-9) | Source clock; never subtract from a receiver clock. | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/chassis_imu_sample.h:15](../modules/imu/chassis_imu_sample.h#L15) |
 | `sequence` | [INSMotionSnapshot_s](#r-modules-imu-ins_task-h-50-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/ins_task.h:56](../modules/imu/ins_task.h#L56) |
 | `sequence` | [PPMeasurement](#r-modules-predictive_power-power_observer-h-11-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_observer.h:12](../modules/predictive_power/power_observer.h#L12) |
 | `sequence` | [PPObserver](#r-modules-predictive_power-power_observer-h-16-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_observer.h:19](../modules/predictive_power/power_observer.h#L19) |
@@ -7695,8 +7727,9 @@
 | `slow_applied_w` | [ChassisPowerTransientOutput_s](#r-modules-algorithm-chassis_power_transient-h-50-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:51](../modules/algorithm/chassis_power_transient.h#L51) |
 | `slow_config` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:19](../modules/chassis_power/chassis_power_internal.h#L19) |
 | `slow_correction_w` | [ChassisTelemetrySnapshot_s](#r-application-chassis-chassis-h-15-9) | 源码未注释 | 底盘 运动 控制 轮速 | [application/chassis/chassis.h:27](../application/chassis/chassis.h#L27) |
-| `slow_correction_w` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-27-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:30](../modules/chassis_power/chassis_power_types.h#L30) |
-| `slow_version` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:20](../modules/chassis_power/chassis_power_internal.h#L20) |
+| `slow_correction_w` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-36-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:39](../modules/chassis_power/chassis_power_types.h#L39) |
+| `slow_observation` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:20](../modules/chassis_power/chassis_power_internal.h#L20) |
+| `slow_version` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:21](../modules/chassis_power/chassis_power_internal.h#L21) |
 | `slow_w` | [ChassisPowerTransientInput_s](#r-modules-algorithm-chassis_power_transient-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:24](../modules/algorithm/chassis_power_transient.h#L24) |
 | `slow_w` | [ChassisPowerCaptureSample_s](#r-modules-telemetry-chassis_power_capture-h-20-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/chassis_power_capture.h:25](../modules/telemetry/chassis_power_capture.h#L25) |
 | `small_error_threshold_rpm` | [ChassisPowerAlgorithmConfig_s](#r-modules-algorithm-power_model-h-29-9) | 源码未注释 | 功率模型 损耗 预测 功控 算法 运动学 滤波 控制 计算 | [modules/algorithm/power_model.h:32](../modules/algorithm/power_model.h#L32) |
@@ -7719,16 +7752,17 @@
 | `source` | [GroupState](#r-modules-telemetry-runtime_tuning-c-15-9) | 源码未注释 | 在线调参 PID 自动整定 参数保存 遥测 数据采样 | [modules/telemetry/runtime_tuning.c:20](../modules/telemetry/runtime_tuning.c#L20) |
 | `source_age_ms` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:44](../modules/chassis_force/chassis_force_control.h#L44) |
 | `source_age_ms` | [ChassisForceIntent_s](#r-modules-chassis_force-chassis_force_types-h-7-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_types.h:10](../modules/chassis_force/chassis_force_types.h#L10) |
-| `source_age_ms` | [ChassisImuCanSample_s](#r-modules-imu-chassis_imu_sample-h-12-9) | DM: 0; sensor-internal latency is unknown. | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/chassis_imu_sample.h:16](../modules/imu/chassis_imu_sample.h#L16) |
+| `source_age_ms` | [ChassisImuCanSample_s](#r-modules-imu-chassis_imu_sample-h-12-9) | Source-local age when this transfer was prepared. | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/chassis_imu_sample.h:16](../modules/imu/chassis_imu_sample.h#L16) |
 | `source_age_ms` | [FcPermit](#r-modules-motor-DJImotor-dji_force_calibration-h-6-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_force_calibration.h:8](../modules/motor/DJImotor/dji_force_calibration.h#L8) |
 | `source_epoch` | [PPObservationClock](#r-modules-predictive_power-speed_observation_time-h-6-9) | 源码未注释 | 项目数据 | [modules/predictive_power/speed_observation_time.h:8](../modules/predictive_power/speed_observation_time.h#L8) |
 | `source_epoch` | [PPWheelSample](#r-modules-predictive_power-wheel_speed_kf-h-15-9) | 源码未注释 | 项目数据 | [modules/predictive_power/wheel_speed_kf.h:17](../modules/predictive_power/wheel_speed_kf.h#L17) |
 | `source_epoch` | [PPWheelEstimate](#r-modules-predictive_power-wheel_speed_kf-h-21-9) | 源码未注释 | 项目数据 | [modules/predictive_power/wheel_speed_kf.h:24](../modules/predictive_power/wheel_speed_kf.h#L24) |
 | `source_id` | [ChassisForceIntent_s](#r-modules-chassis_force-chassis_force_types-h-7-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_types.h:13](../modules/chassis_force/chassis_force_types.h#L13) |
-| `source_sequence` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-29-9) | Latest examined source identity/timing, not necessarily the middle sample. | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:36](../modules/algorithm/chassis_remote_fusion.h#L36) |
-| `source_step_ms` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-29-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:37](../modules/algorithm/chassis_remote_fusion.h#L37) |
-| `source_step_ms` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-42-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:50](../modules/algorithm/chassis_remote_fusion.h#L50) |
-| `source_tick_ms` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-29-9) | Latest examined source identity/timing, not necessarily the middle sample. | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:36](../modules/algorithm/chassis_remote_fusion.h#L36) |
+| `source_sequence` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-45-9) | Latest examined source identity/timing, not necessarily the middle sample. | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:52](../modules/algorithm/chassis_remote_fusion.h#L52) |
+| `source_step_ms` | [ChassisRemoteFusionAttempt_s](#r-modules-algorithm-chassis_remote_fusion-h-35-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:38](../modules/algorithm/chassis_remote_fusion.h#L38) |
+| `source_step_ms` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-45-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:53](../modules/algorithm/chassis_remote_fusion.h#L53) |
+| `source_step_ms` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-59-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:67](../modules/algorithm/chassis_remote_fusion.h#L67) |
+| `source_tick_ms` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-45-9) | Latest examined source identity/timing, not necessarily the middle sample. | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:52](../modules/algorithm/chassis_remote_fusion.h#L52) |
 | `SpdifClockSelection` | [RCC_PeriphCLKInitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_rcc_ex-h-121-9) | Specifies SPDIFRX Clock Source Selection. This parameter can be a value of @ref RCCEx_SPDIFRX_Clock_Source | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc_ex.h:164](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc_ex.h#L164) |
 | `Speed` | [GPIO_InitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_gpio-h-46-9) | Specifies the speed for the selected pins. This parameter can be a value of @ref GPIO_speed_define | GPIO 引脚 中断 电平 STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio.h:57](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio.h#L57) |
 | `Speed` | [LL_GPIO_InitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_ll_gpio-h-63-9) | Specifies the speed for the selected pins. This parameter can be a value of @ref GPIO_LL_EC_SPEED. GPIO HW configuration can be modified afterwards using unitary function @ref LL_GPIO_SetPinSpeed(). | GPIO 引脚 中断 电平 STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_gpio.h:73](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_gpio.h#L73) |
@@ -7801,7 +7835,7 @@
 | `spin_capability_latched` | [ChassisPowerBudgetOutput_s](#r-modules-algorithm-chassis_power_budget-h-121-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_budget.h:135](../modules/algorithm/chassis_power_budget.h#L135) |
 | `spin_capability_latched` | [USBTelemetrySample_s](#r-modules-telemetry-usb_telemetry_format-h-50-9) | 字段宏 USB_TELEMETRY_FIELDS（定义第 9 行） → USB_FIELD_U（定义第 51 行） | USB 虚拟串口 遥测 调参 数据传输 在线调参 参数保存 数据采样 | [modules/telemetry/usb_telemetry_format.h:53](../modules/telemetry/usb_telemetry_format.h#L53) |
 | `spin_capability_limited` | [ChassisPowerBudgetInput_s](#r-modules-algorithm-chassis_power_budget-h-56-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_budget.h:81](../modules/algorithm/chassis_power_budget.h#L81) |
-| `spin_capability_limited` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-70-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:79](../modules/chassis_power/chassis_power_types.h#L79) |
+| `spin_capability_limited` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-83-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:92](../modules/chassis_power/chassis_power_types.h#L92) |
 | `spin_capability_release_ms` | [USBTelemetrySample_s](#r-modules-telemetry-usb_telemetry_format-h-50-9) | 字段宏 USB_TELEMETRY_FIELDS（定义第 9 行） → USB_FIELD_U（定义第 51 行） | USB 虚拟串口 遥测 调参 数据传输 在线调参 参数保存 数据采样 | [modules/telemetry/usb_telemetry_format.h:53](../modules/telemetry/usb_telemetry_format.h#L53) |
 | `spin_capability_release_s` | [ChassisTelemetrySnapshot_s](#r-application-chassis-chassis-h-15-9) | 源码未注释 | 底盘 运动 控制 轮速 | [application/chassis/chassis.h:33](../application/chassis/chassis.h#L33) |
 | `spin_capability_release_s` | [ChassisPowerBudgetState_s](#r-modules-algorithm-chassis_power_budget-h-93-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_budget.h:117](../modules/algorithm/chassis_power_budget.h#L117) |
@@ -7830,7 +7864,7 @@
 | `spin_gain` | [ChassisTelemetrySnapshot_s](#r-application-chassis-chassis-h-15-9) | 源码未注释 | 底盘 运动 控制 轮速 | [application/chassis/chassis.h:28](../application/chassis/chassis.h#L28) |
 | `spin_gain_milli` | [USBTelemetrySample_s](#r-modules-telemetry-usb_telemetry_format-h-50-9) | 字段宏 USB_TELEMETRY_FIELDS（定义第 9 行） → USB_FIELD_I（定义第 52 行） | USB 虚拟串口 遥测 调参 数据传输 在线调参 参数保存 数据采样 | [modules/telemetry/usb_telemetry_format.h:53](../modules/telemetry/usb_telemetry_format.h#L53) |
 | `spin_hard_margin` | [ChassisPowerBudgetInput_s](#r-modules-algorithm-chassis_power_budget-h-56-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_budget.h:82](../modules/algorithm/chassis_power_budget.h#L82) |
-| `spin_hard_margin` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-70-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:79](../modules/chassis_power/chassis_power_types.h#L79) |
+| `spin_hard_margin` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-83-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:92](../modules/chassis_power/chassis_power_types.h#L92) |
 | `spin_hard_wz` | [ChassisTelemetrySnapshot_s](#r-application-chassis-chassis-h-15-9) | 源码未注释 | 底盘 运动 控制 轮速 | [application/chassis/chassis.h:29](../application/chassis/chassis.h#L29) |
 | `spin_hard_wz_milli` | [USBTelemetrySample_s](#r-modules-telemetry-usb_telemetry_format-h-50-9) | 字段宏 USB_TELEMETRY_FIELDS（定义第 9 行） → USB_FIELD_I（定义第 52 行） | USB 虚拟串口 遥测 调参 数据传输 在线调参 参数保存 数据采样 | [modules/telemetry/usb_telemetry_format.h:53](../modules/telemetry/usb_telemetry_format.h#L53) |
 | `spin_limit_state` | [ChassisTelemetrySnapshot_s](#r-application-chassis-chassis-h-15-9) | 源码未注释 | 底盘 运动 控制 轮速 | [application/chassis/chassis.h:30](../application/chassis/chassis.h#L30) |
@@ -7987,7 +8021,7 @@
 | `state` | [FcDrive](#r-modules-chassis_force_calibration-force_calibration-h-24-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration.h:24](../modules/chassis_force_calibration/force_calibration.h#L24) |
 | `state` | [FcStatus](#r-modules-chassis_force_calibration-force_calibration-h-25-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration.h:27](../modules/chassis_force_calibration/force_calibration.h#L27) |
 | `state` | [FcRecord](#r-modules-chassis_force_calibration-force_calibration_capture-h-6-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration_capture.h:7](../modules/chassis_force_calibration/force_calibration_capture.h#L7) |
-| `state` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:23](../modules/chassis_power/chassis_power_internal.h#L23) |
+| `state` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:24](../modules/chassis_power/chassis_power_internal.h#L24) |
 | `state` | [JamDetectorInstance](#r-modules-jam_detector-jam_detector-h-51-9) | 当前状态 | 项目数据 | [modules/jam_detector/jam_detector.h:53](../modules/jam_detector/jam_detector.h#L53) |
 | `state` | [DM_Motor_Measure_s](#r-modules-motor-DMmotor-dmmotor-h-18-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DMmotor/dmmotor.h:21](../modules/motor/DMmotor/dmmotor.h#L21) |
 | `state` | [PPObserver](#r-modules-predictive_power-power_observer-h-16-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_observer.h:17](../modules/predictive_power/power_observer.h#L17) |
@@ -8041,7 +8075,7 @@
 | `stats` | [USARTInstance](#r-bsp-usart-bsp_usart-h-38-9) | 源码未注释 | 串口 UART DMA 接收 发送 | [bsp/usart/bsp_usart.h:45](../bsp/usart/bsp_usart.h#L45) |
 | `stats` | [RefereeStreamParser_s](#r-modules-referee-referee_stream_parser-h-31-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_stream_parser.h:37](../modules/referee/referee_stream_parser.h#L37) |
 | `status` | [ChassisFusedVelocitySnapshot_s](#r-application-chassis-chassis_velocity_observer-h-40-9) | 源码未注释 | 底盘 运动 控制 轮速 速度 闭环 | [application/chassis/chassis_velocity_observer.h:46](../application/chassis/chassis_velocity_observer.h#L46) |
-| `status` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-29-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:31](../modules/algorithm/chassis_remote_fusion.h#L31) |
+| `status` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-45-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:47](../modules/algorithm/chassis_remote_fusion.h#L47) |
 | `status` | [ChassisPowerOutput_s](#r-modules-algorithm-power_model-h-47-9) | 源码未注释 | 功率模型 损耗 预测 功控 算法 运动学 滤波 控制 计算 | [modules/algorithm/power_model.h:55](../modules/algorithm/power_model.h#L55) |
 | `status` | [FcCommandResult](#r-modules-chassis_force_calibration-force_calibration-h-40-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration.h:40](../modules/chassis_force_calibration/force_calibration.h#L40) |
 | `status` | [FcEngine](#r-modules-chassis_force_calibration-force_calibration-h-41-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration.h:42](../modules/chassis_force_calibration/force_calibration.h#L42) |
@@ -8097,12 +8131,14 @@
 | `submission` | [DJIMotorCycle_s](#r-modules-motor-DJImotor-dji_motor-h-112-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_motor.h:120](../modules/motor/DJImotor/dji_motor.h#L120) |
 | `submit_us` | [FcRecord](#r-modules-chassis_force_calibration-force_calibration_capture-h-6-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration_capture.h:11](../modules/chassis_force_calibration/force_calibration_capture.h#L11) |
 | `submitted` | [PPFinalActuation](#r-modules-predictive_power-power_observer-h-5-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_observer.h:9](../modules/predictive_power/power_observer.h#L9) |
-| `submitted_groups` | [ChassisPowerFinalInput_s](#r-modules-chassis_power-chassis_power_types-h-108-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:113](../modules/chassis_power/chassis_power_types.h#L113) |
+| `submitted_groups` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:78](../modules/chassis_power/chassis_power_types.h#L78) |
+| `submitted_groups` | [ChassisPowerFinalInput_s](#r-modules-chassis_power-chassis_power_types-h-121-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:126](../modules/chassis_power/chassis_power_types.h#L126) |
 | `submitted_groups` | [DJIMotorSubmission_s](#r-modules-motor-DJImotor-dji_motor-h-105-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_motor.h:108](../modules/motor/DJImotor/dji_motor.h#L108) |
 | `SubRegionDisable` | [MPU_Region_InitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_cortex-h-46-9) | Specifies the number of the subregion protection to disable. This parameter must be a number between Min_Data = 0x00 and Max_Data = 0xFF | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_cortex.h:55](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_cortex.h#L55) |
 | `SubSeconds` | [RTC_TimeTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_rtc-h-84-9) | Specifies the RTC_SSR RTC Sub Second register content. This parameter corresponds to a time unit range between [0-1] Second with [1 Sec / SecondFraction +1] granularity | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rtc.h:99](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rtc.h#L99) |
 | `successful` | [FcRecord](#r-modules-chassis_force_calibration-force_calibration_capture-h-6-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration_capture.h:11](../modules/chassis_force_calibration/force_calibration_capture.h#L11) |
-| `successful_groups` | [ChassisPowerFinalInput_s](#r-modules-chassis_power-chassis_power_types-h-108-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:113](../modules/chassis_power/chassis_power_types.h#L113) |
+| `successful_groups` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:78](../modules/chassis_power/chassis_power_types.h#L78) |
+| `successful_groups` | [ChassisPowerFinalInput_s](#r-modules-chassis_power-chassis_power_types-h-121-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:126](../modules/chassis_power/chassis_power_types.h#L126) |
 | `successful_groups` | [DJIMotorSubmission_s](#r-modules-motor-DJImotor-dji_motor-h-105-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_motor.h:108](../modules/motor/DJImotor/dji_motor.h#L108) |
 | `supply_action` | [RefereeData](#r-portable_modules-modules-referee-referee_protocol-h-159-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee_protocol.h:165](../portable_modules/modules/referee/referee_protocol.h#L165) |
 | `supply_projectile_id` | [ext_supply_projectile_action_t](#r-modules-referee-referee_protocol-h-153-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_protocol.h:155](../modules/referee/referee_protocol.h#L155) |
@@ -8158,6 +8194,7 @@
 | `T_Rotor` | [DM_Motor_Measure_s](#r-modules-motor-DMmotor-dmmotor-h-18-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DMmotor/dmmotor.h:27](../modules/motor/DMmotor/dmmotor.h#L27) |
 | `TAFCR` | [RTC_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f407xx-h-634-9) | RTC tamper and alternate function configuration register, Address offset: 0x40 | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h:652](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h#L652) |
 | `TAFCR` | [RTC_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f427xx-h-683-9) | RTC tamper and alternate function configuration register, Address offset: 0x40 | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h:701](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h#L701) |
+| `tail` | [frame](#r-application-runtime-vofa_observation-c-15-8) | 源码未注释 | 项目数据 | [application/runtime/vofa_observation.c:17](../application/runtime/vofa_observation.c#L17) |
 | `tail` | [frame](#r-application-runtime-vofa_telemetry-c-16-8) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 | [application/runtime/vofa_telemetry.c:18](../application/runtime/vofa_telemetry.c#L18) |
 | `tail` | [measurement_frame](#r-application-runtime-vofa_telemetry-c-90-8) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 | [application/runtime/vofa_telemetry.c:92](../application/runtime/vofa_telemetry.c#L92) |
 | `tail_ms` | [FcLimits](#r-modules-chassis_force_calibration-force_calibration-h-11-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration.h:13](../modules/chassis_force_calibration/force_calibration.h#L13) |
@@ -8178,14 +8215,14 @@
 | `target_power_w` | [ChassisTelemetrySnapshot_s](#r-application-chassis-chassis-h-15-9) | 源码未注释 | 底盘 运动 控制 轮速 | [application/chassis/chassis.h:22](../application/chassis/chassis.h#L22) |
 | `target_power_w` | [ChassisPowerOuterLoopInput_s](#r-modules-algorithm-chassis_power_outer_loop-h-41-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_outer_loop.h:44](../modules/algorithm/chassis_power_outer_loop.h#L44) |
 | `target_power_w` | [ChassisSpinInput_s](#r-modules-algorithm-chassis_spin-h-49-9) | 源码未注释 | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | [modules/algorithm/chassis_spin.h:52](../modules/algorithm/chassis_spin.h#L52) |
-| `target_power_w` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-27-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:30](../modules/chassis_power/chassis_power_types.h#L30) |
+| `target_power_w` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-36-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:39](../modules/chassis_power/chassis_power_types.h#L39) |
 | `target_power_w` | [ChassisPowerControlTelemetry_s](#r-modules-telemetry-rtt_telemetry-h-12-9) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/rtt_telemetry.h:15](../modules/telemetry/rtt_telemetry.h#L15) |
 | `target_rb_rpm` | [USBTelemetrySample_s](#r-modules-telemetry-usb_telemetry_format-h-50-9) | 字段宏 USB_TELEMETRY_FIELDS（定义第 9 行） → USB_FIELD_I（定义第 52 行） | USB 虚拟串口 遥测 调参 数据传输 在线调参 参数保存 数据采样 | [modules/telemetry/usb_telemetry_format.h:53](../modules/telemetry/usb_telemetry_format.h#L53) |
 | `target_rf_rpm` | [USBTelemetrySample_s](#r-modules-telemetry-usb_telemetry_format-h-50-9) | 字段宏 USB_TELEMETRY_FIELDS（定义第 9 行） → USB_FIELD_I（定义第 52 行） | USB 虚拟串口 遥测 调参 数据传输 在线调参 参数保存 数据采样 | [modules/telemetry/usb_telemetry_format.h:53](../modules/telemetry/usb_telemetry_format.h#L53) |
 | `target_rpm` | [ChassisPowerTransientInput_s](#r-modules-algorithm-chassis_power_transient-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:27](../modules/algorithm/chassis_power_transient.h#L27) |
 | `target_rpm` | [ChassisSpinInput_s](#r-modules-algorithm-chassis_spin-h-49-9) | 源码未注释 | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | [modules/algorithm/chassis_spin.h:56](../modules/algorithm/chassis_spin.h#L56) |
-| `target_rpm` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-27-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:32](../modules/chassis_power/chassis_power_types.h#L32) |
-| `target_rpm` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-85-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:91](../modules/chassis_power/chassis_power_types.h#L91) |
+| `target_rpm` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-36-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:41](../modules/chassis_power/chassis_power_types.h#L41) |
+| `target_rpm` | [ChassisPowerCycleInput_s](#r-modules-chassis_power-chassis_power_types-h-98-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:104](../modules/chassis_power/chassis_power_types.h#L104) |
 | `target_rpm` | [DJIMotorGroupControl_s](#r-modules-motor-DJImotor-dji_motor-h-89-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_motor.h:92](../modules/motor/DJImotor/dji_motor.h#L92) |
 | `target_rpm` | [AutotuneDrive](#r-modules-telemetry-autotune_protocol-h-5-9) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/autotune_protocol.h:9](../modules/telemetry/autotune_protocol.h#L9) |
 | `target_rpm` | [ChassisPowerCaptureSample_s](#r-modules-telemetry-chassis_power_capture-h-20-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/chassis_power_capture.h:23](../modules/telemetry/chassis_power_capture.h#L23) |
@@ -8211,9 +8248,9 @@
 | `TDLR` | [CAN_TxMailBox_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f427xx-h-220-9) | CAN mailbox data low register | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h:224](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h#L224) |
 | `TDTR` | [CAN_TxMailBox_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f407xx-h-215-9) | CAN mailbox data length control and time stamp register | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h:218](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h#L218) |
 | `TDTR` | [CAN_TxMailBox_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f427xx-h-220-9) | CAN mailbox data length control and time stamp register | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h:223](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h#L223) |
-| `telemetry` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-27-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:34](../modules/chassis_power/chassis_power_types.h#L34) |
-| `telemetry` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:53](../modules/chassis_power/chassis_power_types.h#L53) |
-| `telemetry_count` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:30](../modules/chassis_power/chassis_power_internal.h#L30) |
+| `telemetry` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-36-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:43](../modules/chassis_power/chassis_power_types.h#L43) |
+| `telemetry` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:63](../modules/chassis_power/chassis_power_types.h#L63) |
+| `telemetry_count` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:31](../modules/chassis_power/chassis_power_internal.h#L31) |
 | `temp` | [BMI088Instance.update_flag](#r-modules-BMI088-bmi088-h-66-5) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 | [modules/BMI088/bmi088.h:70](../modules/BMI088/bmi088.h#L70) |
 | `temp` | [KalmanFilter_t](#r-modules-algorithm-kalman_filter-h-44-9) | 源码未注释 | 卡尔曼滤波 状态估计 矩阵 算法 运动学 滤波 控制 计算 | [modules/algorithm/kalman_filter.h:61](../modules/algorithm/kalman_filter.h#L61) |
 | `temp_count` | [DaemonInstance](#r-modules-daemon-daemon-h-13-9) | 当前值,减为零说明模块离线或异常 | 守护 离线检测 看门狗 | [modules/daemon/daemon.h:18](../modules/daemon/daemon.h#L18) |
@@ -8265,13 +8302,13 @@
 | `tick_ms` | [ChassisVelocityDiagnostics_s](#r-application-chassis-chassis_velocity_observer-h-24-9) | 源码未注释 | 底盘 运动 控制 轮速 速度 闭环 | [application/chassis/chassis_velocity_observer.h:25](../application/chassis/chassis_velocity_observer.h#L25) |
 | `tick_ms` | [ChassisFusedVelocitySnapshot_s](#r-application-chassis-chassis_velocity_observer-h-40-9) | Epoch of the estimate; fused output has alignment latency. | 底盘 运动 控制 轮速 速度 闭环 | [application/chassis/chassis_velocity_observer.h:45](../application/chassis/chassis_velocity_observer.h#L45) |
 | `tick_ms` | [GimbalEncoderSample_s](#r-application-gimbal-gimbal-h-8-9) | 源码未注释 | 云台 俯仰 偏航 控制 | [application/gimbal/gimbal.h:9](../application/gimbal/gimbal.h#L9) |
-| `tick_ms` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-29-9) | Receiver-clock estimate of the middle sample epoch when fused. | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:34](../modules/algorithm/chassis_remote_fusion.h#L34) |
+| `tick_ms` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-45-9) | Receiver-clock estimate of the middle sample epoch when fused. | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:50](../modules/algorithm/chassis_remote_fusion.h#L50) |
 | `tick_ms` | [ChassisVelocity_s](#r-modules-algorithm-chassis_velocity-h-9-9) | Oldest of the four CAN feedback timestamps. | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity.h:11](../modules/algorithm/chassis_velocity.h#L11) |
 | `tick_ms` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:34](../modules/chassis_force/chassis_force_control.h#L34) |
 | `tick_ms` | [ChassisPowerShadowSnapshot](#r-modules-chassis_power-chassis_power_shadow-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_shadow.h:24](../modules/chassis_power/chassis_power_shadow.h#L24) |
-| `tick_ms` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-27-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:29](../modules/chassis_power/chassis_power_types.h#L29) |
-| `tick_ms` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:54](../modules/chassis_power/chassis_power_types.h#L54) |
-| `tick_ms` | [ChassisImuCanSample_s](#r-modules-imu-chassis_imu_sample-h-12-9) | Locally generated sequence / first receive tick. | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/chassis_imu_sample.h:15](../modules/imu/chassis_imu_sample.h#L15) |
+| `tick_ms` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-36-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:38](../modules/chassis_power/chassis_power_types.h#L38) |
+| `tick_ms` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:64](../modules/chassis_power/chassis_power_types.h#L64) |
+| `tick_ms` | [ChassisImuCanSample_s](#r-modules-imu-chassis_imu_sample-h-12-9) | Source clock; never subtract from a receiver clock. | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/chassis_imu_sample.h:15](../modules/imu/chassis_imu_sample.h#L15) |
 | `tick_ms` | [IMUSample_s](#r-modules-imu-imu_sample-h-5-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/imu_sample.h:8](../modules/imu/imu_sample.h#L8) |
 | `tick_ms` | [INSSnapshot_s](#r-modules-imu-ins_task-h-45-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/ins_task.h:45](../modules/imu/ins_task.h#L45) |
 | `tick_ms` | [INSMotionSnapshot_s](#r-modules-imu-ins_task-h-50-9) | Paired read completion time, not sensor conversion time. | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/ins_task.h:55](../modules/imu/ins_task.h#L55) |
@@ -8296,7 +8333,7 @@
 | `TimeStampEventCallback` | [RTC_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_rtc-h-165-9) | RTC Timestamp Event callback | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rtc.h:181](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rtc.h#L181) |
 | `TimeStampOnTamperDetection` | [RTC_TamperTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_rtc_ex-h-48-9) | Specifies the TimeStampOnTamperDetection. This parameter can be a value of @ref RTCEx_Tamper_TimeStampOnTamperDetection_Definitions | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rtc_ex.h:71](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rtc_ex.h#L71) |
 | `TimeTriggeredMode` | [CAN_InitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_can-h-60-9) | Enable or disable the time triggered communication mode. This parameter can be set to ENABLE or DISABLE. | CAN 总线 接收 发送 STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h:78](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h#L78) |
-| `timing_estimated` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-29-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:30](../modules/algorithm/chassis_remote_fusion.h#L30) |
+| `timing_estimated` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-45-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:46](../modules/algorithm/chassis_remote_fusion.h#L46) |
 | `timing_valid` | [ChassisPowerTransientOutput_s](#r-modules-algorithm-chassis_power_transient-h-50-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:53](../modules/algorithm/chassis_power_transient.h#L53) |
 | `TIMode` | [SPI_InitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_spi-h-46-9) | Specifies if the TI mode is enabled or not. This parameter can be a value of @ref SPI_TI_mode | SPI 外设 总线 通信 STM32 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h:76](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_spi.h#L76) |
 | `TIMPresSelection` | [RCC_PeriphCLKInitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_rcc_ex-h-121-9) | Specifies TIM Clock Source Selection. This parameter can be a value of @ref RCCEx_TIM_PRescaler_Selection | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc_ex.h:170](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc_ex.h#L170) |
@@ -8336,11 +8373,12 @@
 | `trace` | [ChassisPowerShadowEnergySnapshot](#r-modules-chassis_power-chassis_power_shadow-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_shadow.h:19](../modules/chassis_power/chassis_power_shadow.h#L19) |
 | `track_width_m` | [ChassisVelocityConfig_s](#r-modules-algorithm-chassis_velocity-h-21-9) | 源码未注释 | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity.h:23](../modules/algorithm/chassis_velocity.h#L23) |
 | `tracking_hold_s` | [ChassisSpinState_s](#r-modules-algorithm-chassis_spin-h-66-9) | 源码未注释 | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | [modules/algorithm/chassis_spin.h:80](../modules/algorithm/chassis_spin.h#L80) |
+| `transfer_tag` | [ChassisImuCanDecoder_s](#r-modules-imu-chassis_imu_can_protocol-h-13-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [modules/imu/chassis_imu_can_protocol.h:15](../modules/imu/chassis_imu_can_protocol.h#L15) |
 | `TransferDirection` | [LL_USART_InitTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_ll_usart-h-73-9) | Specifies whether the Receive and/or Transmit mode is enabled or disabled. This parameter can be a value of @ref USART_LL_EC_DIRECTION. This feature can be modified afterwards using unitary function @ref LL_USART_SetTransferDirection(). | 串口 UART DMA 接收 发送 STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usart.h:94](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usart.h#L94) |
-| `transient` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:25](../modules/chassis_power/chassis_power_internal.h#L25) |
+| `transient` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:26](../modules/chassis_power/chassis_power_internal.h#L26) |
 | `transient` | [ChassisPower_Init_Config_s](#r-modules-chassis_power-chassis_power_types-h-15-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:21](../modules/chassis_power/chassis_power_types.h#L21) |
-| `transient` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:62](../modules/chassis_power/chassis_power_types.h#L62) |
-| `transient` | [ChassisPowerCycleOutput_s](#r-modules-chassis_power-chassis_power_types-h-99-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:104](../modules/chassis_power/chassis_power_types.h#L104) |
+| `transient` | [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:74](../modules/chassis_power/chassis_power_types.h#L74) |
+| `transient` | [ChassisPowerCycleOutput_s](#r-modules-chassis_power-chassis_power_types-h-112-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:117](../modules/chassis_power/chassis_power_types.h#L117) |
 | `translation_mps` | [ChassisSpinInput_s](#r-modules-algorithm-chassis_spin-h-49-9) | 源码未注释 | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | [modules/algorithm/chassis_spin.h:60](../modules/algorithm/chassis_spin.h#L60) |
 | `translation_overspeed` | [ChassisForceController_s](#r-modules-chassis_force-chassis_force_control-h-51-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:65](../modules/chassis_force/chassis_force_control.h#L65) |
 | `transmit_failure_count` | [RefereeDiagnostics](#r-portable_modules-modules-referee-referee-h-28-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee.h:37](../portable_modules/modules/referee/referee.h#L37) |
@@ -8395,6 +8433,8 @@
 | `TSSSR` | [RTC_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f427xx-h-683-9) | RTC time-stamp sub second register,                       Address offset: 0x38 | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h:699](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h#L699) |
 | `TSTR` | [RTC_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f407xx-h-634-9) | RTC time stamp time register,                             Address offset: 0x30 | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h:648](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h#L648) |
 | `TSTR` | [RTC_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f427xx-h-683-9) | RTC time stamp time register,                             Address offset: 0x30 | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h:697](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h#L697) |
+| `tuning_source` | [ChassisPower_Init_Config_s](#r-modules-chassis_power-chassis_power_types-h-15-9) | RuntimeTuning source of this complete configuration. | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:25](../modules/chassis_power/chassis_power_types.h#L25) |
+| `tuning_source` | [ChassisPowerConfigObservation_s](#r-modules-chassis_power-chassis_power_types-h-28-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:31](../modules/chassis_power/chassis_power_types.h#L31) |
 | `twidCoefModifier` | [arm_cfft_radix2_instance_q15](#r-Middlewares-ST-ARM-DSP-Inc-arm_math-h-1929-11) | twiddle coefficient modifier that supports different size FFTs with the same twiddle factor table. | 第三方中间件 | [Middlewares/ST/ARM/DSP/Inc/arm_math.h:1936](../Middlewares/ST/ARM/DSP/Inc/arm_math.h#L1936) |
 | `twidCoefModifier` | [arm_cfft_radix4_instance_q15](#r-Middlewares-ST-ARM-DSP-Inc-arm_math-h-1956-11) | twiddle coefficient modifier that supports different size FFTs with the same twiddle factor table. | 第三方中间件 | [Middlewares/ST/ARM/DSP/Inc/arm_math.h:1963](../Middlewares/ST/ARM/DSP/Inc/arm_math.h#L1963) |
 | `twidCoefModifier` | [arm_cfft_radix2_instance_q31](#r-Middlewares-ST-ARM-DSP-Inc-arm_math-h-1982-11) | twiddle coefficient modifier that supports different size FFTs with the same twiddle factor table. | 第三方中间件 | [Middlewares/ST/ARM/DSP/Inc/arm_math.h:1989](../Middlewares/ST/ARM/DSP/Inc/arm_math.h#L1989) |
@@ -8418,8 +8458,8 @@
 | `TwoSamplingDelay` | [ADC_MultiModeTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_adc_ex-h-114-9) | Configures the Delay between 2 sampling phases. This parameter can be a value of @ref ADC_delay_between_2_sampling_phases | STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc_ex.h:120](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc_ex.h#L120) |
 | `tx_buff` | [CANInstance](#r-bsp-can-bsp_can-h-15-9) | 发送缓存,发送消息长度可以通过CANSetDLC()设定,最大为8 | CAN 总线 接收 发送 | [bsp/can/bsp_can.h:21](../bsp/can/bsp_can.h#L21) |
 | `tx_buff` | [CANInstance](#r-tests-can_comm-stubs-bsp_can-h-23-1) | 源码未注释 | 双板通信 CAN 收发 总线 接收 发送 | [tests/can_comm/stubs/bsp_can.h:29](../tests/can_comm/stubs/bsp_can.h#L29) |
+| `tx_buff` | [CANInstance](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-7-1) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:10](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L10) |
 | `tx_buff` | [CANInstance](#r-tests-dji_chassis_power_rtt-stubs-bsp_can-h-23-1) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 CAN 总线 接收 发送 | [tests/dji_chassis_power_rtt/stubs/bsp_can.h:29](../tests/dji_chassis_power_rtt/stubs/bsp_can.h#L29) |
-| `tx_buff` | [CANInstance](#r-tests-dm_imu_runtime-stubs-bsp_can-h-7-1) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/dm_imu_runtime/stubs/bsp_can.h:10](../tests/dm_imu_runtime/stubs/bsp_can.h#L10) |
 | `tx_buff` | [CANInstance](#r-tests-power_meter-stubs-bsp_can-h-12-1) | 源码未注释 | 功率计 电压 电流 实测功率 CAN 总线 接收 发送 | [tests/power_meter/stubs/bsp_can.h:17](../tests/power_meter/stubs/bsp_can.h#L17) |
 | `tx_buff` | [CANInstance](#r-tests-super_cap-stubs-bsp_can-h-12-1) | 源码未注释 | 超级电容 电容 电压 储能 功率 CAN 总线 接收 发送 | [tests/super_cap/stubs/bsp_can.h:17](../tests/super_cap/stubs/bsp_can.h#L17) |
 | `tx_buffer` | [Referee](#r-portable_modules-modules-referee-referee-h-56-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee.h:65](../portable_modules/modules/referee/referee.h#L65) |
@@ -8431,17 +8471,17 @@
 | `tx_id` | [CAN_Init_Config_s](#r-bsp-can-bsp_can-h-32-9) | 发送id | CAN 总线 接收 发送 | [bsp/can/bsp_can.h:35](../bsp/can/bsp_can.h#L35) |
 | `tx_id` | [CANInstance](#r-tests-can_comm-stubs-bsp_can-h-23-1) | 源码未注释 | 双板通信 CAN 收发 总线 接收 发送 | [tests/can_comm/stubs/bsp_can.h:26](../tests/can_comm/stubs/bsp_can.h#L26) |
 | `tx_id` | [CAN_Init_Config_s](#r-tests-can_comm-stubs-bsp_can-h-35-9) | 源码未注释 | 双板通信 CAN 收发 总线 接收 发送 | [tests/can_comm/stubs/bsp_can.h:38](../tests/can_comm/stubs/bsp_can.h#L38) |
+| `tx_id` | [CANInstance](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-7-1) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:9](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L9) |
+| `tx_id` | [CAN_Init_Config_s](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-14-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:16](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L16) |
 | `tx_id` | [CANInstance](#r-tests-dji_chassis_power_rtt-stubs-bsp_can-h-23-1) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 CAN 总线 接收 发送 | [tests/dji_chassis_power_rtt/stubs/bsp_can.h:26](../tests/dji_chassis_power_rtt/stubs/bsp_can.h#L26) |
 | `tx_id` | [CAN_Init_Config_s](#r-tests-dji_chassis_power_rtt-stubs-bsp_can-h-35-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 CAN 总线 接收 发送 | [tests/dji_chassis_power_rtt/stubs/bsp_can.h:38](../tests/dji_chassis_power_rtt/stubs/bsp_can.h#L38) |
-| `tx_id` | [CANInstance](#r-tests-dm_imu_runtime-stubs-bsp_can-h-7-1) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/dm_imu_runtime/stubs/bsp_can.h:9](../tests/dm_imu_runtime/stubs/bsp_can.h#L9) |
-| `tx_id` | [CAN_Init_Config_s](#r-tests-dm_imu_runtime-stubs-bsp_can-h-14-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/dm_imu_runtime/stubs/bsp_can.h:16](../tests/dm_imu_runtime/stubs/bsp_can.h#L16) |
 | `tx_id` | [CANInstance](#r-tests-power_meter-stubs-bsp_can-h-12-1) | 源码未注释 | 功率计 电压 电流 实测功率 CAN 总线 接收 发送 | [tests/power_meter/stubs/bsp_can.h:15](../tests/power_meter/stubs/bsp_can.h#L15) |
 | `tx_id` | [CAN_Init_Config_s](#r-tests-power_meter-stubs-bsp_can-h-24-9) | 源码未注释 | 功率计 电压 电流 实测功率 CAN 总线 接收 发送 | [tests/power_meter/stubs/bsp_can.h:27](../tests/power_meter/stubs/bsp_can.h#L27) |
 | `tx_id` | [CANInstance](#r-tests-super_cap-stubs-bsp_can-h-12-1) | 源码未注释 | 超级电容 电容 电压 储能 功率 CAN 总线 接收 发送 | [tests/super_cap/stubs/bsp_can.h:15](../tests/super_cap/stubs/bsp_can.h#L15) |
 | `tx_id` | [CAN_Init_Config_s](#r-tests-super_cap-stubs-bsp_can-h-24-9) | 源码未注释 | 超级电容 电容 电压 储能 功率 CAN 总线 接收 发送 | [tests/super_cap/stubs/bsp_can.h:27](../tests/super_cap/stubs/bsp_can.h#L27) |
 | `tx_length` | [Referee](#r-portable_modules-modules-referee-referee-h-56-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee.h:66](../portable_modules/modules/referee/referee.h#L66) |
 | `tx_mailbox` | [CANInstance](#r-bsp-can-bsp_can-h-15-9) | CAN消息填入的邮箱号 | CAN 总线 接收 发送 | [bsp/can/bsp_can.h:20](../bsp/can/bsp_can.h#L20) |
-| `tx_mailbox` | [CANInstance](#r-tests-dm_imu_runtime-stubs-bsp_can-h-7-1) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/dm_imu_runtime/stubs/bsp_can.h:9](../tests/dm_imu_runtime/stubs/bsp_can.h#L9) |
+| `tx_mailbox` | [CANInstance](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-7-1) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:9](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L9) |
 | `tx_sequence` | [Referee](#r-portable_modules-modules-referee-referee-h-56-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee.h:67](../portable_modules/modules/referee/referee.h#L67) |
 | `TxBuffer` | [USBD_CDC_HandleTypeDef](#r-Middlewares-ST-STM32_USB_Device_Library-Class-CDC-Inc-usbd_cdc-h-117-9) | 源码未注释 | USB 虚拟串口 遥测 调参 数据传输 STM32 外设 寄存器 HAL 配置 句柄 | [Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h:123](../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h#L123) |
 | `TxBuffer` | [USBD_CDC_HandleTypeDef](#r-tests-usb_telemetry-stubs-usbd_cdc-h-20-9) | 源码未注释 | USB 虚拟串口 遥测 调参 数据传输 在线调参 参数保存 数据采样 | [tests/usb_telemetry/stubs/usbd_cdc.h:20](../tests/usb_telemetry/stubs/usbd_cdc.h#L20) |
@@ -8553,8 +8593,8 @@
 | `update_flag` | [BMI088Instance](#r-modules-BMI088-bmi088-h-38-9) | 位域,节省空间提高可读性 1:有新数据,0:无新数据 1:数据溢出,0:无溢出 1:IMU数据准备好,0:IMU数据未准备好(gyro+acc) 后续可添加其他标志位,不够用可以扩充16or32,太多可以删 | 惯性测量 姿态 陀螺仪 加速度 | [modules/BMI088/bmi088.h:76](../modules/BMI088/bmi088.h#L76) |
 | `update_flag` | [CANCommInstance](#r-modules-can_comm-can_comm-h-26-9) | 数据更新标志位,当接收到新数据时,会将此标志位置1,调用CANCommGet()后会将此标志位置0 | 双板通信 CAN 收发 总线 接收 发送 | [modules/can_comm/can_comm.h:41](../modules/can_comm/can_comm.h#L41) |
 | `UpdateCount` | [QEKF_INS_t](#r-modules-algorithm-QuaternionEKF-h-26-9) | 源码未注释 | 四元数 姿态 扩展卡尔曼 算法 运动学 滤波 控制 计算 | [modules/algorithm/QuaternionEKF.h:33](../modules/algorithm/QuaternionEKF.h#L33) |
-| `updates` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-29-9) | Saturating counters; updates counts accepted filter pairs. | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:38](../modules/algorithm/chassis_remote_fusion.h#L38) |
-| `updates` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-42-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:51](../modules/algorithm/chassis_remote_fusion.h#L51) |
+| `updates` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-45-9) | Saturating counters; updates counts accepted filter pairs. | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:54](../modules/algorithm/chassis_remote_fusion.h#L54) |
+| `updates` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-59-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:68](../modules/algorithm/chassis_remote_fusion.h#L68) |
 | `urb_state` | [USB_OTG_HCTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_ll_usb-h-163-9) | URB state. This parameter can be any value of @ref USB_OTG_URBStateTypeDef | USB 虚拟串口 遥测 调参 数据传输 STM32 外设 寄存器 HAL 配置 句柄 | [Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h:212](../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h#L212) |
 | `us` | [DWT_Time_t](#r-bsp-dwt-bsp_dwt-h-21-9) | 源码未注释 | 计时 时钟 时间间隔 | [bsp/dwt/bsp_dwt.h:25](../bsp/dwt/bsp_dwt.h#L25) |
 | `usart_handle` | [USARTInstance](#r-bsp-usart-bsp_usart-h-38-9) | 实例对应的usart_handle | 串口 UART DMA 接收 发送 | [bsp/usart/bsp_usart.h:43](../bsp/usart/bsp_usart.h#L43) |
@@ -8689,14 +8729,14 @@
 | `VAL` | [SysTick_Type](#r-Drivers-CMSIS-Include-core_sc300-h-676-9) | Offset: 0x008 (R/W)  SysTick Current Value Register | ARM 内核 寄存器 DSP 数学 矩阵 | [Drivers/CMSIS/Include/core_sc300.h:680](../Drivers/CMSIS/Include/core_sc300.h#L680) |
 | `valid` | [ChassisTelemetrySnapshot_s](#r-application-chassis-chassis-h-15-9) | 源码未注释 | 底盘 运动 控制 轮速 | [application/chassis/chassis.h:16](../application/chassis/chassis.h#L16) |
 | `valid` | [ChassisFusedVelocitySnapshot_s](#r-application-chassis-chassis_velocity_observer-h-40-9) | 源码未注释 | 底盘 运动 控制 轮速 速度 闭环 | [application/chassis/chassis_velocity_observer.h:47](../application/chassis/chassis_velocity_observer.h#L47) |
-| `valid` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-29-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:30](../modules/algorithm/chassis_remote_fusion.h#L30) |
+| `valid` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-45-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:46](../modules/algorithm/chassis_remote_fusion.h#L46) |
 | `valid` | [ChassisVelocity_s](#r-modules-algorithm-chassis_velocity-h-9-9) | 源码未注释 | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity.h:10](../modules/algorithm/chassis_velocity.h#L10) |
 | `valid` | [ChassisVelocityFusionOutput_s](#r-modules-algorithm-chassis_velocity_fusion-h-25-9) | 源码未注释 | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity_fusion.h:27](../modules/algorithm/chassis_velocity_fusion.h#L27) |
 | `valid` | [ChassisForceAllocationOutput_s](#r-modules-chassis_force-chassis_force_allocator-h-12-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_allocator.h:14](../modules/chassis_force/chassis_force_allocator.h#L14) |
 | `valid` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:46](../modules/chassis_force/chassis_force_control.h#L46) |
 | `valid` | [ChassisForceIntentReceiver_s](#r-modules-chassis_force-chassis_force_intent-h-12-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_intent.h:15](../modules/chassis_force/chassis_force_intent.h#L15) |
-| `valid` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-37-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:43](../modules/chassis_power/chassis_power_types.h#L43) |
-| `valid` | [ChassisPowerCycleOutput_s](#r-modules-chassis_power-chassis_power_types-h-99-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:102](../modules/chassis_power/chassis_power_types.h#L102) |
+| `valid` | [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-46-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:53](../modules/chassis_power/chassis_power_types.h#L53) |
+| `valid` | [ChassisPowerCycleOutput_s](#r-modules-chassis_power-chassis_power_types-h-112-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:115](../modules/chassis_power/chassis_power_types.h#L115) |
 | `valid` | [HeatControlData_s](#r-modules-heat_control-heat_control-h-18-9) | 源码未注释 | 热量 射击 冷却 发射限制 | [modules/heat_control/heat_control.h:23](../modules/heat_control/heat_control.h#L23) |
 | `valid` | [ChassisImuCanSample_s](#r-modules-imu-chassis_imu_sample-h-12-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/chassis_imu_sample.h:17](../modules/imu/chassis_imu_sample.h#L17) |
 | `valid` | [IMUSample_s](#r-modules-imu-imu_sample-h-5-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 | [modules/imu/imu_sample.h:10](../modules/imu/imu_sample.h#L10) |
@@ -8707,7 +8747,7 @@
 | `valid` | [PPPrediction](#r-modules-predictive_power-power_prediction-h-24-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_prediction.h:29](../modules/predictive_power/power_prediction.h#L29) |
 | `valid` | [PPWheelEstimate](#r-modules-predictive_power-wheel_speed_kf-h-21-9) | 源码未注释 | 项目数据 | [modules/predictive_power/wheel_speed_kf.h:25](../modules/predictive_power/wheel_speed_kf.h#L25) |
 | `valid` | [RefereePowerSnapshot_s](#r-modules-referee-referee_power-h-29-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:31](../modules/referee/referee_power.h#L31) |
-| `valid` | [RefereeHeatSnapshot_s](#r-modules-referee-referee_power-h-41-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:44](../modules/referee/referee_power.h#L44) |
+| `valid` | [RefereeHeatSnapshot_s](#r-modules-referee-referee_power-h-43-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_power.h:46](../modules/referee/referee_power.h#L46) |
 | `valid` | [Writer](#r-modules-telemetry-chassis_force_telemetry-c-17-9) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 | [modules/telemetry/chassis_force_telemetry.c:17](../modules/telemetry/chassis_force_telemetry.c#L17) |
 | `valid` | [TuningStorage](#r-modules-telemetry-tuning_storage-h-19-9) | 源码未注释 | 在线调参 PID 自动整定 参数保存 遥测 数据采样 | [modules/telemetry/tuning_storage.h:24](../modules/telemetry/tuning_storage.h#L24) |
 | `valid` | [RefereePower](#r-portable_modules-modules-referee-referee-h-42-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee.h:44](../portable_modules/modules/referee/referee.h#L44) |
@@ -8753,7 +8793,7 @@
 | `velocity_target_wz_mrps` | [USBTelemetrySample_s](#r-modules-telemetry-usb_telemetry_format-h-50-9) | 字段宏 USB_TELEMETRY_FIELDS（定义第 9 行） → USB_FIELD_I（定义第 52 行） | USB 虚拟串口 遥测 调参 数据传输 在线调参 参数保存 数据采样 | [modules/telemetry/usb_telemetry_format.h:53](../modules/telemetry/usb_telemetry_format.h#L53) |
 | `velocity_tick_ms` | [ChassisSpinInput_s](#r-modules-algorithm-chassis_spin-h-49-9) | 源码未注释 | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | [modules/algorithm/chassis_spin.h:59](../modules/algorithm/chassis_spin.h#L59) |
 | `velocity_valid` | [ChassisSpinInput_s](#r-modules-algorithm-chassis_spin-h-49-9) | 源码未注释 | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | [modules/algorithm/chassis_spin.h:58](../modules/algorithm/chassis_spin.h#L58) |
-| `version` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-27-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:29](../modules/chassis_power/chassis_power_types.h#L29) |
+| `version` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-36-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:38](../modules/chassis_power/chassis_power_types.h#L38) |
 | `version` | [DJIMotorGroupControl_s](#r-modules-motor-DJImotor-dji_motor-h-89-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_motor.h:91](../modules/motor/DJImotor/dji_motor.h#L91) |
 | `version` | [PPModel](#r-modules-predictive_power-power_prediction-h-8-9) | 源码未注释 | 项目数据 | [modules/predictive_power/power_prediction.h:9](../modules/predictive_power/power_prediction.h#L9) |
 | `version` | [PPWheelKFConfig](#r-modules-predictive_power-wheel_speed_kf-h-10-9) | 源码未注释 | 项目数据 | [modules/predictive_power/wheel_speed_kf.h:11](../modules/predictive_power/wheel_speed_kf.h#L11) |
@@ -8780,7 +8820,7 @@
 | `vx_cmd` | [ChassisTelemetrySnapshot_s](#r-application-chassis-chassis-h-15-9) | 源码未注释 | 底盘 运动 控制 轮速 | [application/chassis/chassis.h:19](../application/chassis/chassis.h#L19) |
 | `vx_cmd_milli` | [USBTelemetrySample_s](#r-modules-telemetry-usb_telemetry_format-h-50-9) | 字段宏 USB_TELEMETRY_FIELDS（定义第 9 行） → USB_FIELD_I（定义第 52 行） | USB 虚拟串口 遥测 调参 数据传输 在线调参 参数保存 数据采样 | [modules/telemetry/usb_telemetry_format.h:53](../modules/telemetry/usb_telemetry_format.h#L53) |
 | `vx_mps` | [ChassisFusedVelocitySnapshot_s](#r-application-chassis-chassis_velocity_observer-h-40-9) | Estimate in the chassis frame, forward/right positive. | 底盘 运动 控制 轮速 速度 闭环 | [application/chassis/chassis_velocity_observer.h:42](../application/chassis/chassis_velocity_observer.h#L42) |
-| `vx_mps` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-29-9) | Chassis forward/right; current wheel fallback if not fused. | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:32](../modules/algorithm/chassis_remote_fusion.h#L32) |
+| `vx_mps` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-45-9) | Chassis forward/right; current wheel fallback if not fused. | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:48](../modules/algorithm/chassis_remote_fusion.h#L48) |
 | `vx_mps` | [ChassisVelocity_s](#r-modules-algorithm-chassis_velocity-h-9-9) | Geometric center: forward/right positive, m/s. | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity.h:12](../modules/algorithm/chassis_velocity.h#L12) |
 | `vy` | [Chassis_Ctrl_Cmd_s](#r-application-robot_def-h-108-9) | 横移方向速度 | 机器人 跨模块 控制指令 上传反馈 底盘 云台 发射 | [application/robot_def.h:112](../application/robot_def.h#L112) |
 | `vy` | [ChassisKinematicsInput_s](#r-modules-algorithm-chassis_kinematics-h-15-9) | 源码未注释 | 底盘 运动学 轮速 速度 解算 算法 滤波 控制 计算 | [modules/algorithm/chassis_kinematics.h:18](../modules/algorithm/chassis_kinematics.h#L18) |
@@ -8788,7 +8828,7 @@
 | `vy_cmd` | [ChassisTelemetrySnapshot_s](#r-application-chassis-chassis-h-15-9) | 源码未注释 | 底盘 运动 控制 轮速 | [application/chassis/chassis.h:19](../application/chassis/chassis.h#L19) |
 | `vy_cmd_milli` | [USBTelemetrySample_s](#r-modules-telemetry-usb_telemetry_format-h-50-9) | 字段宏 USB_TELEMETRY_FIELDS（定义第 9 行） → USB_FIELD_I（定义第 52 行） | USB 虚拟串口 遥测 调参 数据传输 在线调参 参数保存 数据采样 | [modules/telemetry/usb_telemetry_format.h:53](../modules/telemetry/usb_telemetry_format.h#L53) |
 | `vy_mps` | [ChassisFusedVelocitySnapshot_s](#r-application-chassis-chassis_velocity_observer-h-40-9) | Estimate in the chassis frame, forward/right positive. | 底盘 运动 控制 轮速 速度 闭环 | [application/chassis/chassis_velocity_observer.h:42](../application/chassis/chassis_velocity_observer.h#L42) |
-| `vy_mps` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-29-9) | Chassis forward/right; current wheel fallback if not fused. | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:32](../modules/algorithm/chassis_remote_fusion.h#L32) |
+| `vy_mps` | [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-45-9) | Chassis forward/right; current wheel fallback if not fused. | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:48](../modules/algorithm/chassis_remote_fusion.h#L48) |
 | `vy_mps` | [ChassisVelocity_s](#r-modules-algorithm-chassis_velocity-h-9-9) | Geometric center: forward/right positive, m/s. | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity.h:12](../modules/algorithm/chassis_velocity.h#L12) |
 | `w` | [Key_t.匿名struct@L67C5](#r-modules-remote-remote_control-h-67-5) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 | [modules/remote/remote_control.h:69](../modules/remote/remote_control.h#L69) |
 | `w` | [APSR_Type](#r-Drivers-CMSIS-Include-core_armv8mbl-h-233-9) | Type      used for word access | ARM 内核 寄存器 DSP 数学 矩阵 | [Drivers/CMSIS/Include/core_armv8mbl.h:243](../Drivers/CMSIS/Include/core_armv8mbl.h#L243) |
@@ -8876,9 +8916,9 @@
 | `wheel` | [PIDAutotuneTrial](#r-modules-telemetry-pid_autotune-h-10-9) | 源码未注释 | 遥测 在线调参 参数保存 数据采样 PID 自动整定 闭环反馈 | [modules/telemetry/pid_autotune.h:10](../modules/telemetry/pid_autotune.h#L10) |
 | `wheel_b_mps` | [ChassisVelocityCenterSample_s](#r-modules-algorithm-chassis_velocity_center-h-6-9) | forward, left | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity_center.h:10](../modules/algorithm/chassis_velocity_center.h#L10) |
 | `wheel_base_m` | [ChassisVelocityConfig_s](#r-modules-algorithm-chassis_velocity-h-21-9) | 源码未注释 | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity.h:23](../modules/algorithm/chassis_velocity.h#L23) |
-| `wheel_count` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-42-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:44](../modules/algorithm/chassis_remote_fusion.h#L44) |
+| `wheel_count` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-59-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:61](../modules/algorithm/chassis_remote_fusion.h#L61) |
 | `wheel_hard_rpm` | [ChassisSpinConfig_s](#r-modules-algorithm-chassis_spin-h-8-9) | 源码未注释 | 底盘 小陀螺 旋转 自旋 功率分配 算法 运动学 滤波 控制 计算 SPI 外设 总线 通信 | [modules/algorithm/chassis_spin.h:19](../modules/algorithm/chassis_spin.h#L19) |
-| `wheel_head` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-42-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:44](../modules/algorithm/chassis_remote_fusion.h#L44) |
+| `wheel_head` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-59-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:61](../modules/algorithm/chassis_remote_fusion.h#L61) |
 | `wheel_kf` | [ChassisPowerShadowSnapshot](#r-modules-chassis_power-chassis_power_shadow-h-23-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_shadow.h:34](../modules/chassis_power/chassis_power_shadow.h#L34) |
 | `wheel_limit_rpm` | [ChassisForceConfig_s](#r-config-22_chassis_force-chassis_force_config-h-20-9) | 车体平移速度保护上限，单位 m/s；须大于 0，不是正常目标速度。 车体旋转角速度保护上限，单位 rad/s；须大于 0。 电机转子转速保护上限，单位 rpm；须大于 0。 速度保护解除时的回滞比例，无单位，须在 (0,1) 内。 | 项目数据 | [config/22_chassis_force/chassis_force_config.h:36](../config/22_chassis_force/chassis_force_config.h#L36) |
 | `wheel_n_mps` | [ChassisVelocityFusionInput_s](#r-modules-algorithm-chassis_velocity_fusion-h-19-9) | 源码未注释 | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity_fusion.h:21](../modules/algorithm/chassis_velocity_fusion.h#L21) |
@@ -8892,7 +8932,7 @@
 | `wheel_us` | [ChassisVelocityFusionInput_s](#r-modules-algorithm-chassis_velocity_fusion-h-19-9) | 源码未注释 | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity_fusion.h:20](../modules/algorithm/chassis_velocity_fusion.h#L20) |
 | `wheel_valid` | [ChassisVelocityFusionInput_s](#r-modules-algorithm-chassis_velocity_fusion-h-19-9) | 源码未注释 | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity_fusion.h:22](../modules/algorithm/chassis_velocity_fusion.h#L22) |
 | `wheel_variance` | [ChassisVelocityFusionConfig_s](#r-modules-algorithm-chassis_velocity_fusion-h-7-9) | (m/s)^2 | 底盘 速度 轮速 闭环 控制 算法 运动学 滤波 计算 | [modules/algorithm/chassis_velocity_fusion.h:8](../modules/algorithm/chassis_velocity_fusion.h#L8) |
-| `wheels` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-42-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:43](../modules/algorithm/chassis_remote_fusion.h#L43) |
+| `wheels` | [ChassisRemoteFusion_s](#r-modules-algorithm-chassis_remote_fusion-h-59-9) | 源码未注释 | 遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_remote_fusion.h:60](../modules/algorithm/chassis_remote_fusion.h#L60) |
 | `width` | [Graph_Data_t](#r-modules-referee-referee_protocol-h-326-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [modules/referee/referee_protocol.h:335](../modules/referee/referee_protocol.h#L335) |
 | `width` | [RefereeGraphic](#r-portable_modules-modules-referee-referee_ui-h-52-9) | 源码未注释 | 裁判系统 比赛状态 血量 功率 热量 图形交互 | [portable_modules/modules/referee/referee_ui.h:61](../portable_modules/modules/referee/referee_ui.h#L61) |
 | `wIndex` | [USBD_SetupReqTypedef](#r-Middlewares-ST-STM32_USB_Device_Library-Core-Inc-usbd_def-h-197-10) | 源码未注释 | USB 虚拟串口 遥测 调参 数据传输 STM32 外设 寄存器 HAL 配置 句柄 | [Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h:202](../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h#L202) |
@@ -8915,7 +8955,7 @@
 | `work_mode` | [BMI088_Init_Config_s](#r-modules-BMI088-bmi088-h-80-9) | 源码未注释 | 惯性测量 姿态 陀螺仪 加速度 | [modules/BMI088/bmi088.h:82](../modules/BMI088/bmi088.h#L82) |
 | `work_mode` | [Vision_Send_s](#r-modules-master_machine-master_process-h-72-9) | 源码未注释 | 视觉 自瞄 上位机 通信 | [modules/master_machine/master_process.h:75](../modules/master_machine/master_process.h#L75) |
 | `work_mode` | [IIC_Init_Config_s](#r-tests-oled-stubs-bsp_iic-h-7-9) | 源码未注释 | I2C 外设 总线 通信 显示屏 OLED 图像 | [tests/oled/stubs/bsp_iic.h:7](../tests/oled/stubs/bsp_iic.h#L7) |
-| `working_state` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:23](../modules/chassis_power/chassis_power_internal.h#L23) |
+| `working_state` | [ChassisPowerInstance_s](#r-modules-chassis_power-chassis_power_internal-h-17-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_internal.h:24](../modules/chassis_power/chassis_power_internal.h#L24) |
 | `WPR` | [RTC_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f407xx-h-634-9) | RTC write protection register,                            Address offset: 0x24 | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h:645](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h#L645) |
 | `WPR` | [RTC_TypeDef](#r-Drivers-CMSIS-Device-ST-STM32F4xx-Include-stm32f427xx-h-683-9) | RTC write protection register,                            Address offset: 0x24 | ARM 内核 寄存器 DSP 数学 矩阵 STM32 外设 HAL 配置 句柄 | [Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h:694](../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f427xx.h#L694) |
 | `wrench_map` | [ChassisForceGeometry_s](#r-modules-chassis_force-chassis_force_geometry-h-4-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_geometry.h:5](../modules/chassis_force/chassis_force_geometry.h#L5) |
@@ -9109,8 +9149,8 @@
 | `z_data` | [KalmanFilter_t](#r-modules-algorithm-kalman_filter-h-44-9) | 源码未注释 | 卡尔曼滤波 状态估计 矩阵 算法 运动学 滤波 控制 计算 | [modules/algorithm/kalman_filter.h:95](../modules/algorithm/kalman_filter.h#L95) |
 | `zero_enter_rpm` | [ChassisPowerTransientConfig_s](#r-modules-algorithm-chassis_power_transient-h-14-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:19](../modules/algorithm/chassis_power_transient.h#L19) |
 | `zero_exit_rpm` | [ChassisPowerTransientConfig_s](#r-modules-algorithm-chassis_power_transient-h-14-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 算法 运动学 滤波 控制 计算 | [modules/algorithm/chassis_power_transient.h:19](../modules/algorithm/chassis_power_transient.h#L19) |
-| `zero_force` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-27-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:33](../modules/chassis_power/chassis_power_types.h#L33) |
-| `zero_force` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-70-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:78](../modules/chassis_power/chassis_power_types.h#L78) |
+| `zero_force` | [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-36-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:42](../modules/chassis_power/chassis_power_types.h#L42) |
+| `zero_force` | [ChassisPowerPolicyInput_s](#r-modules-chassis_power-chassis_power_types-h-83-9) | 源码未注释 | 底盘功率 功控 预算 限幅 缓冲能量 | [modules/chassis_power/chassis_power_types.h:91](../modules/chassis_power/chassis_power_types.h#L91) |
 | `zero_force` | [DJIMotorGroupControl_s](#r-modules-motor-DJImotor-dji_motor-h-89-9) | 源码未注释 | 电机 电流 转速 角度 控制器 | [modules/motor/DJImotor/dji_motor.h:93](../modules/motor/DJImotor/dji_motor.h#L93) |
 | `zero_over_budget` | [ChassisForceCycleOutput_s](#r-modules-chassis_force-chassis_force_control-h-33-9) | 源码未注释 | 项目数据 | [modules/chassis_force/chassis_force_control.h:46](../modules/chassis_force/chassis_force_control.h#L46) |
 | `zero_submitted` | [FcInput](#r-modules-chassis_force_calibration-force_calibration-h-17-9) | 源码未注释 | 项目数据 | [modules/chassis_force_calibration/force_calibration.h:22](../modules/chassis_force_calibration/force_calibration.h#L22) |
@@ -9264,7 +9304,7 @@
 
 - `ChassisFusedVelocitySnapshot_s.wheel` → [ChassisVelocity_s](#r-modules-algorithm-chassis_velocity-h-9-9)（modules/algorithm/chassis_velocity.h:9）。声明中的 `*` 表示指针关系。
 - `ChassisFusedVelocitySnapshot_s.diagnostics` → [ChassisVelocityDiagnostics_s](#r-application-chassis-chassis_velocity_observer-h-24-9)（application/chassis/chassis_velocity_observer.h:24）。声明中的 `*` 表示指针关系。
-- `ChassisFusedVelocitySnapshot_s.remote` → [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-29-9)（modules/algorithm/chassis_remote_fusion.h:29）。声明中的 `*` 表示指针关系。
+- `ChassisFusedVelocitySnapshot_s.remote` → [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-45-9)（modules/algorithm/chassis_remote_fusion.h:45）。声明中的 `*` 表示指针关系。
 
 <a id="r-application-gimbal-gimbal-h-8-9"></a>
 
@@ -9401,7 +9441,7 @@
 嵌套关系：
 
 - `Chassis_Upload_Data_s.power_control` → [Chassis_Power_Control_Data_s](#r-modules-algorithm-power_model-h-58-9)（modules/algorithm/power_model.h:58）。声明中的 `*` 表示指针关系。
-- `Chassis_Upload_Data_s.heat` → [RefereeHeatSnapshot_s](#r-modules-referee-referee_power-h-41-9)（modules/referee/referee_power.h:41）。声明中的 `*` 表示指针关系。
+- `Chassis_Upload_Data_s.heat` → [RefereeHeatSnapshot_s](#r-modules-referee-referee_power-h-43-9)（modules/referee/referee_power.h:43）。声明中的 `*` 表示指针关系。
 
 <a id="r-application-robot_def-h-175-9"></a>
 
@@ -9536,6 +9576,24 @@
 
 无可链接的仓库内结构体/联合体成员。
 
+<a id="r-application-runtime-vofa_observation-c-15-8"></a>
+
+### frame
+
+- 类型：struct；来源：项目源码；定义：[application/runtime/vofa_observation.c:15](../application/runtime/vofa_observation.c#L15)。
+- 中文用途关键词：项目数据。
+- 源码说明：源码未注释。
+- 源码条件：`#if VOFA_TELEMETRY_ENABLE && VOFA_TELEMETRY_MODE == 2 && VOFA_OBSERVATION_PROFILE != 0`。
+
+| 成员 | 声明 | 成员说明 | 源码位置 |
+| --- | --- | --- | --- |
+| `channels` | `float channels[96];` | 源码未注释 | [application/runtime/vofa_observation.c:16](../application/runtime/vofa_observation.c#L16) |
+| `tail` | `uint8_t tail[4];` | 源码未注释 | [application/runtime/vofa_observation.c:17](../application/runtime/vofa_observation.c#L17) |
+
+嵌套关系：
+
+无可链接的仓库内结构体/联合体成员。
+
 <a id="r-application-runtime-vofa_telemetry-c-16-8"></a>
 
 ### frame
@@ -9616,7 +9674,7 @@
 
 嵌套关系：
 
-- `CANInstance.can_handle` → [CAN_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_can-h-208-9)（Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h:208）、[CAN_HandleTypeDef](#r-tests-can_comm-stubs-bsp_can-h-6-9)（tests/can_comm/stubs/bsp_can.h:6）、[CAN_HandleTypeDef](#r-tests-dji_chassis_power_rtt-stubs-bsp_can-h-6-9)（tests/dji_chassis_power_rtt/stubs/bsp_can.h:6）、[CAN_HandleTypeDef](#r-tests-dm_imu_runtime-stubs-bsp_can-h-4-9)（tests/dm_imu_runtime/stubs/bsp_can.h:4）、[CAN_HandleTypeDef](#r-tests-power_meter-stubs-bsp_can-h-6-9)（tests/power_meter/stubs/bsp_can.h:6）、[CAN_HandleTypeDef](#r-tests-super_cap-stubs-bsp_can-h-6-9)（tests/super_cap/stubs/bsp_can.h:6）。声明中的 `*` 表示指针关系。
+- `CANInstance.can_handle` → [CAN_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_can-h-208-9)（Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h:208）、[CAN_HandleTypeDef](#r-tests-can_comm-stubs-bsp_can-h-6-9)（tests/can_comm/stubs/bsp_can.h:6）、[CAN_HandleTypeDef](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-4-9)（tests/chassis_imu_can_runtime/stubs/bsp_can.h:4）、[CAN_HandleTypeDef](#r-tests-dji_chassis_power_rtt-stubs-bsp_can-h-6-9)（tests/dji_chassis_power_rtt/stubs/bsp_can.h:6）、[CAN_HandleTypeDef](#r-tests-power_meter-stubs-bsp_can-h-6-9)（tests/power_meter/stubs/bsp_can.h:6）、[CAN_HandleTypeDef](#r-tests-super_cap-stubs-bsp_can-h-6-9)（tests/super_cap/stubs/bsp_can.h:6）。声明中的 `*` 表示指针关系。
 - `CANInstance.txconf` → [CAN_TxHeaderTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_can-h-151-9)（Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h:151）、[CAN_TxHeaderTypeDef](#r-tests-can_comm-stubs-bsp_can-h-14-9)（tests/can_comm/stubs/bsp_can.h:14）、[CAN_TxHeaderTypeDef](#r-tests-dji_chassis_power_rtt-stubs-bsp_can-h-14-9)（tests/dji_chassis_power_rtt/stubs/bsp_can.h:14）。声明中的 `*` 表示指针关系。
 
 <a id="r-bsp-can-bsp_can-h-32-9"></a>
@@ -9639,7 +9697,7 @@
 
 嵌套关系：
 
-- `CAN_Init_Config_s.can_handle` → [CAN_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_can-h-208-9)（Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h:208）、[CAN_HandleTypeDef](#r-tests-can_comm-stubs-bsp_can-h-6-9)（tests/can_comm/stubs/bsp_can.h:6）、[CAN_HandleTypeDef](#r-tests-dji_chassis_power_rtt-stubs-bsp_can-h-6-9)（tests/dji_chassis_power_rtt/stubs/bsp_can.h:6）、[CAN_HandleTypeDef](#r-tests-dm_imu_runtime-stubs-bsp_can-h-4-9)（tests/dm_imu_runtime/stubs/bsp_can.h:4）、[CAN_HandleTypeDef](#r-tests-power_meter-stubs-bsp_can-h-6-9)（tests/power_meter/stubs/bsp_can.h:6）、[CAN_HandleTypeDef](#r-tests-super_cap-stubs-bsp_can-h-6-9)（tests/super_cap/stubs/bsp_can.h:6）。声明中的 `*` 表示指针关系。
+- `CAN_Init_Config_s.can_handle` → [CAN_HandleTypeDef](#r-Drivers-STM32F4xx_HAL_Driver-Inc-stm32f4xx_hal_can-h-208-9)（Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_can.h:208）、[CAN_HandleTypeDef](#r-tests-can_comm-stubs-bsp_can-h-6-9)（tests/can_comm/stubs/bsp_can.h:6）、[CAN_HandleTypeDef](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-4-9)（tests/chassis_imu_can_runtime/stubs/bsp_can.h:4）、[CAN_HandleTypeDef](#r-tests-dji_chassis_power_rtt-stubs-bsp_can-h-6-9)（tests/dji_chassis_power_rtt/stubs/bsp_can.h:6）、[CAN_HandleTypeDef](#r-tests-power_meter-stubs-bsp_can-h-6-9)（tests/power_meter/stubs/bsp_can.h:6）、[CAN_HandleTypeDef](#r-tests-super_cap-stubs-bsp_can-h-6-9)（tests/super_cap/stubs/bsp_can.h:6）。声明中的 `*` 表示指针关系。
 
 <a id="r-bsp-dwt-bsp_dwt-h-21-9"></a>
 
@@ -10870,11 +10928,42 @@
 
 - `ChassisRemoteFusionConfig_s.filter` → [ChassisVelocityFusionConfig_s](#r-modules-algorithm-chassis_velocity_fusion-h-7-9)（modules/algorithm/chassis_velocity_fusion.h:7）。声明中的 `*` 表示指针关系。
 
-<a id="r-modules-algorithm-chassis_remote_fusion-h-29-9"></a>
+<a id="r-modules-algorithm-chassis_remote_fusion-h-35-9"></a>
+
+### ChassisRemoteFusionAttempt_s
+
+- 类型：struct；来源：项目源码；定义：[modules/algorithm/chassis_remote_fusion.h:35](../modules/algorithm/chassis_remote_fusion.h#L35)。
+- 中文用途关键词：遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算。
+- 源码说明：Last actual production-filter call, including rejected calls. The input and effective config are copied BEFORE the filter runs. Pipeline resets and repeated source samples preserve this record; only a new call replaces it. All us times are the filter's wrapping uint32 clock, not receiver uptime. source/receive steps describe the newest source that completed this attempt; middle_receiver_ms and pair_span_ms describe the paired middle sample.。
+- 名称与别名：`ChassisRemoteFusionAttempt_s`。
+- 源码条件：`#ifndef CHASSIS_REMOTE_FUSION_H`。
+
+| 成员 | 声明 | 成员说明 | 源码位置 |
+| --- | --- | --- | --- |
+| `sequence` | `uint32_t sequence;` | Wrapping call count; available remains true at zero. | [modules/algorithm/chassis_remote_fusion.h:36](../modules/algorithm/chassis_remote_fusion.h#L36) |
+| `receiver_call_ms` | `uint32_t receiver_call_ms, middle_receiver_ms, resets_before;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:37](../modules/algorithm/chassis_remote_fusion.h#L37) |
+| `middle_receiver_ms` | `uint32_t receiver_call_ms, middle_receiver_ms, resets_before;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:37](../modules/algorithm/chassis_remote_fusion.h#L37) |
+| `resets_before` | `uint32_t receiver_call_ms, middle_receiver_ms, resets_before;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:37](../modules/algorithm/chassis_remote_fusion.h#L37) |
+| `pair_span_ms` | `uint32_t pair_span_ms, source_step_ms, receive_step_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:38](../modules/algorithm/chassis_remote_fusion.h#L38) |
+| `source_step_ms` | `uint32_t pair_span_ms, source_step_ms, receive_step_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:38](../modules/algorithm/chassis_remote_fusion.h#L38) |
+| `receive_step_ms` | `uint32_t pair_span_ms, source_step_ms, receive_step_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:38](../modules/algorithm/chassis_remote_fusion.h#L38) |
+| `input` | `ChassisVelocityFusionInput_s input;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:39](../modules/algorithm/chassis_remote_fusion.h#L39) |
+| `output` | `ChassisVelocityFusionOutput_s output;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:40](../modules/algorithm/chassis_remote_fusion.h#L40) |
+| `config` | `ChassisRemoteFusionConfig_s config;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:41](../modules/algorithm/chassis_remote_fusion.h#L41) |
+| `available` | `bool available, initialized_before;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:42](../modules/algorithm/chassis_remote_fusion.h#L42) |
+| `initialized_before` | `bool available, initialized_before;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:42](../modules/algorithm/chassis_remote_fusion.h#L42) |
+
+嵌套关系：
+
+- `ChassisRemoteFusionAttempt_s.input` → [ChassisVelocityFusionInput_s](#r-modules-algorithm-chassis_velocity_fusion-h-19-9)（modules/algorithm/chassis_velocity_fusion.h:19）。声明中的 `*` 表示指针关系。
+- `ChassisRemoteFusionAttempt_s.output` → [ChassisVelocityFusionOutput_s](#r-modules-algorithm-chassis_velocity_fusion-h-25-9)（modules/algorithm/chassis_velocity_fusion.h:25）。声明中的 `*` 表示指针关系。
+- `ChassisRemoteFusionAttempt_s.config` → [ChassisRemoteFusionConfig_s](#r-modules-algorithm-chassis_remote_fusion-h-22-9)（modules/algorithm/chassis_remote_fusion.h:22）。声明中的 `*` 表示指针关系。
+
+<a id="r-modules-algorithm-chassis_remote_fusion-h-45-9"></a>
 
 ### ChassisRemoteFusionOutput_s
 
-- 类型：struct；来源：项目源码；定义：[modules/algorithm/chassis_remote_fusion.h:29](../modules/algorithm/chassis_remote_fusion.h#L29)。
+- 类型：struct；来源：项目源码；定义：[modules/algorithm/chassis_remote_fusion.h:45](../modules/algorithm/chassis_remote_fusion.h#L45)。
 - 中文用途关键词：遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算。
 - 源码说明：源码未注释。
 - 名称与别名：`ChassisRemoteFusionOutput_s`。
@@ -10882,32 +10971,33 @@
 
 | 成员 | 声明 | 成员说明 | 源码位置 |
 | --- | --- | --- | --- |
-| `valid` | `bool valid, timing_estimated;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:30](../modules/algorithm/chassis_remote_fusion.h#L30) |
-| `timing_estimated` | `bool valid, timing_estimated;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:30](../modules/algorithm/chassis_remote_fusion.h#L30) |
-| `status` | `ChassisRemoteFusionStatus_e status;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:31](../modules/algorithm/chassis_remote_fusion.h#L31) |
-| `vx_mps` | `float vx_mps, vy_mps;` | Chassis forward/right; current wheel fallback if not fused. | [modules/algorithm/chassis_remote_fusion.h:32](../modules/algorithm/chassis_remote_fusion.h#L32) |
-| `vy_mps` | `float vx_mps, vy_mps;` | Chassis forward/right; current wheel fallback if not fused. | [modules/algorithm/chassis_remote_fusion.h:32](../modules/algorithm/chassis_remote_fusion.h#L32) |
-| `paired_wheel_mps` | `float paired_wheel_mps[2], center_accel_n_mps2[2];` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:33](../modules/algorithm/chassis_remote_fusion.h#L33) |
-| `center_accel_n_mps2` | `float paired_wheel_mps[2], center_accel_n_mps2[2];` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:33](../modules/algorithm/chassis_remote_fusion.h#L33) |
-| `tick_ms` | `uint32_t tick_ms;` | Receiver-clock estimate of the middle sample epoch when fused. | [modules/algorithm/chassis_remote_fusion.h:34](../modules/algorithm/chassis_remote_fusion.h#L34) |
-| `source_sequence` | `uint32_t source_sequence, source_tick_ms, estimated_sample_ms;` | Latest examined source identity/timing, not necessarily the middle sample. | [modules/algorithm/chassis_remote_fusion.h:36](../modules/algorithm/chassis_remote_fusion.h#L36) |
-| `source_tick_ms` | `uint32_t source_sequence, source_tick_ms, estimated_sample_ms;` | Latest examined source identity/timing, not necessarily the middle sample. | [modules/algorithm/chassis_remote_fusion.h:36](../modules/algorithm/chassis_remote_fusion.h#L36) |
-| `estimated_sample_ms` | `uint32_t source_sequence, source_tick_ms, estimated_sample_ms;` | Latest examined source identity/timing, not necessarily the middle sample. | [modules/algorithm/chassis_remote_fusion.h:36](../modules/algorithm/chassis_remote_fusion.h#L36) |
-| `source_step_ms` | `uint32_t source_step_ms, receive_step_ms, pair_span_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:37](../modules/algorithm/chassis_remote_fusion.h#L37) |
-| `receive_step_ms` | `uint32_t source_step_ms, receive_step_ms, pair_span_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:37](../modules/algorithm/chassis_remote_fusion.h#L37) |
-| `pair_span_ms` | `uint32_t source_step_ms, receive_step_ms, pair_span_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:37](../modules/algorithm/chassis_remote_fusion.h#L37) |
-| `updates` | `uint32_t updates, resets;` | Saturating counters; updates counts accepted filter pairs. | [modules/algorithm/chassis_remote_fusion.h:38](../modules/algorithm/chassis_remote_fusion.h#L38) |
-| `resets` | `uint32_t updates, resets;` | Saturating counters; updates counts accepted filter pairs. | [modules/algorithm/chassis_remote_fusion.h:38](../modules/algorithm/chassis_remote_fusion.h#L38) |
+| `valid` | `bool valid, timing_estimated;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:46](../modules/algorithm/chassis_remote_fusion.h#L46) |
+| `timing_estimated` | `bool valid, timing_estimated;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:46](../modules/algorithm/chassis_remote_fusion.h#L46) |
+| `status` | `ChassisRemoteFusionStatus_e status;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:47](../modules/algorithm/chassis_remote_fusion.h#L47) |
+| `vx_mps` | `float vx_mps, vy_mps;` | Chassis forward/right; current wheel fallback if not fused. | [modules/algorithm/chassis_remote_fusion.h:48](../modules/algorithm/chassis_remote_fusion.h#L48) |
+| `vy_mps` | `float vx_mps, vy_mps;` | Chassis forward/right; current wheel fallback if not fused. | [modules/algorithm/chassis_remote_fusion.h:48](../modules/algorithm/chassis_remote_fusion.h#L48) |
+| `paired_wheel_mps` | `float paired_wheel_mps[2], center_accel_n_mps2[2];` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:49](../modules/algorithm/chassis_remote_fusion.h#L49) |
+| `center_accel_n_mps2` | `float paired_wheel_mps[2], center_accel_n_mps2[2];` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:49](../modules/algorithm/chassis_remote_fusion.h#L49) |
+| `tick_ms` | `uint32_t tick_ms;` | Receiver-clock estimate of the middle sample epoch when fused. | [modules/algorithm/chassis_remote_fusion.h:50](../modules/algorithm/chassis_remote_fusion.h#L50) |
+| `source_sequence` | `uint32_t source_sequence, source_tick_ms, estimated_sample_ms;` | Latest examined source identity/timing, not necessarily the middle sample. | [modules/algorithm/chassis_remote_fusion.h:52](../modules/algorithm/chassis_remote_fusion.h#L52) |
+| `source_tick_ms` | `uint32_t source_sequence, source_tick_ms, estimated_sample_ms;` | Latest examined source identity/timing, not necessarily the middle sample. | [modules/algorithm/chassis_remote_fusion.h:52](../modules/algorithm/chassis_remote_fusion.h#L52) |
+| `estimated_sample_ms` | `uint32_t source_sequence, source_tick_ms, estimated_sample_ms;` | Latest examined source identity/timing, not necessarily the middle sample. | [modules/algorithm/chassis_remote_fusion.h:52](../modules/algorithm/chassis_remote_fusion.h#L52) |
+| `source_step_ms` | `uint32_t source_step_ms, receive_step_ms, pair_span_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:53](../modules/algorithm/chassis_remote_fusion.h#L53) |
+| `receive_step_ms` | `uint32_t source_step_ms, receive_step_ms, pair_span_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:53](../modules/algorithm/chassis_remote_fusion.h#L53) |
+| `pair_span_ms` | `uint32_t source_step_ms, receive_step_ms, pair_span_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:53](../modules/algorithm/chassis_remote_fusion.h#L53) |
+| `updates` | `uint32_t updates, resets;` | Saturating counters; updates counts accepted filter pairs. | [modules/algorithm/chassis_remote_fusion.h:54](../modules/algorithm/chassis_remote_fusion.h#L54) |
+| `resets` | `uint32_t updates, resets;` | Saturating counters; updates counts accepted filter pairs. | [modules/algorithm/chassis_remote_fusion.h:54](../modules/algorithm/chassis_remote_fusion.h#L54) |
+| `attempt` | `ChassisRemoteFusionAttempt_s attempt;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:55](../modules/algorithm/chassis_remote_fusion.h#L55) |
 
 嵌套关系：
 
-无可链接的仓库内结构体/联合体成员。
+- `ChassisRemoteFusionOutput_s.attempt` → [ChassisRemoteFusionAttempt_s](#r-modules-algorithm-chassis_remote_fusion-h-35-9)（modules/algorithm/chassis_remote_fusion.h:35）。声明中的 `*` 表示指针关系。
 
-<a id="r-modules-algorithm-chassis_remote_fusion-h-42-9"></a>
+<a id="r-modules-algorithm-chassis_remote_fusion-h-59-9"></a>
 
 ### ChassisRemoteFusion_s
 
-- 类型：struct；来源：项目源码；定义：[modules/algorithm/chassis_remote_fusion.h:42](../modules/algorithm/chassis_remote_fusion.h#L42)。
+- 类型：struct；来源：项目源码；定义：[modules/algorithm/chassis_remote_fusion.h:59](../modules/algorithm/chassis_remote_fusion.h#L59)。
 - 中文用途关键词：遥控器 遥控通道 拨杆 键盘 鼠标 算法 运动学 滤波 控制 计算。
 - 源码说明：Fixed storage, no allocation. Reset on startup or explicit configuration change.。
 - 名称与别名：`ChassisRemoteFusion_s`。
@@ -10915,33 +11005,35 @@
 
 | 成员 | 声明 | 成员说明 | 源码位置 |
 | --- | --- | --- | --- |
-| `wheels` | `ChassisVelocity_s wheels[CHASSIS_REMOTE_WHEEL_HISTORY_CAPACITY];` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:43](../modules/algorithm/chassis_remote_fusion.h#L43) |
-| `wheel_head` | `unsigned wheel_head, wheel_count;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:44](../modules/algorithm/chassis_remote_fusion.h#L44) |
-| `wheel_count` | `unsigned wheel_head, wheel_count;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:44](../modules/algorithm/chassis_remote_fusion.h#L44) |
-| `center` | `ChassisVelocityCenter_s center;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:45](../modules/algorithm/chassis_remote_fusion.h#L45) |
-| `filter` | `ChassisVelocityFusion_s filter;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:46](../modules/algorithm/chassis_remote_fusion.h#L46) |
-| `center_local_ms` | `uint32_t center_local_ms[2], center_pair_span_ms[2];` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:47](../modules/algorithm/chassis_remote_fusion.h#L47) |
-| `center_pair_span_ms` | `uint32_t center_local_ms[2], center_pair_span_ms[2];` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:47](../modules/algorithm/chassis_remote_fusion.h#L47) |
-| `held` | `ChassisRemoteFusionOutput_s held;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:48](../modules/algorithm/chassis_remote_fusion.h#L48) |
-| `last_sequence` | `uint32_t last_sequence, last_source_ms, last_receive_ms, last_estimated_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:49](../modules/algorithm/chassis_remote_fusion.h#L49) |
-| `last_source_ms` | `uint32_t last_sequence, last_source_ms, last_receive_ms, last_estimated_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:49](../modules/algorithm/chassis_remote_fusion.h#L49) |
-| `last_receive_ms` | `uint32_t last_sequence, last_source_ms, last_receive_ms, last_estimated_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:49](../modules/algorithm/chassis_remote_fusion.h#L49) |
-| `last_estimated_ms` | `uint32_t last_sequence, last_source_ms, last_receive_ms, last_estimated_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:49](../modules/algorithm/chassis_remote_fusion.h#L49) |
-| `source_step_ms` | `uint32_t source_step_ms, receive_step_ms, pair_span_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:50](../modules/algorithm/chassis_remote_fusion.h#L50) |
-| `receive_step_ms` | `uint32_t source_step_ms, receive_step_ms, pair_span_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:50](../modules/algorithm/chassis_remote_fusion.h#L50) |
-| `pair_span_ms` | `uint32_t source_step_ms, receive_step_ms, pair_span_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:50](../modules/algorithm/chassis_remote_fusion.h#L50) |
-| `updates` | `uint32_t updates, resets, last_now_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:51](../modules/algorithm/chassis_remote_fusion.h#L51) |
-| `resets` | `uint32_t updates, resets, last_now_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:51](../modules/algorithm/chassis_remote_fusion.h#L51) |
-| `last_now_ms` | `uint32_t updates, resets, last_now_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:51](../modules/algorithm/chassis_remote_fusion.h#L51) |
-| `have_source` | `bool have_source, have_now;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:52](../modules/algorithm/chassis_remote_fusion.h#L52) |
-| `have_now` | `bool have_source, have_now;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:52](../modules/algorithm/chassis_remote_fusion.h#L52) |
+| `wheels` | `ChassisVelocity_s wheels[CHASSIS_REMOTE_WHEEL_HISTORY_CAPACITY];` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:60](../modules/algorithm/chassis_remote_fusion.h#L60) |
+| `wheel_head` | `unsigned wheel_head, wheel_count;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:61](../modules/algorithm/chassis_remote_fusion.h#L61) |
+| `wheel_count` | `unsigned wheel_head, wheel_count;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:61](../modules/algorithm/chassis_remote_fusion.h#L61) |
+| `center` | `ChassisVelocityCenter_s center;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:62](../modules/algorithm/chassis_remote_fusion.h#L62) |
+| `filter` | `ChassisVelocityFusion_s filter;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:63](../modules/algorithm/chassis_remote_fusion.h#L63) |
+| `center_local_ms` | `uint32_t center_local_ms[2], center_pair_span_ms[2];` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:64](../modules/algorithm/chassis_remote_fusion.h#L64) |
+| `center_pair_span_ms` | `uint32_t center_local_ms[2], center_pair_span_ms[2];` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:64](../modules/algorithm/chassis_remote_fusion.h#L64) |
+| `held` | `ChassisRemoteFusionOutput_s held;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:65](../modules/algorithm/chassis_remote_fusion.h#L65) |
+| `last_sequence` | `uint32_t last_sequence, last_source_ms, last_receive_ms, last_estimated_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:66](../modules/algorithm/chassis_remote_fusion.h#L66) |
+| `last_source_ms` | `uint32_t last_sequence, last_source_ms, last_receive_ms, last_estimated_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:66](../modules/algorithm/chassis_remote_fusion.h#L66) |
+| `last_receive_ms` | `uint32_t last_sequence, last_source_ms, last_receive_ms, last_estimated_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:66](../modules/algorithm/chassis_remote_fusion.h#L66) |
+| `last_estimated_ms` | `uint32_t last_sequence, last_source_ms, last_receive_ms, last_estimated_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:66](../modules/algorithm/chassis_remote_fusion.h#L66) |
+| `source_step_ms` | `uint32_t source_step_ms, receive_step_ms, pair_span_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:67](../modules/algorithm/chassis_remote_fusion.h#L67) |
+| `receive_step_ms` | `uint32_t source_step_ms, receive_step_ms, pair_span_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:67](../modules/algorithm/chassis_remote_fusion.h#L67) |
+| `pair_span_ms` | `uint32_t source_step_ms, receive_step_ms, pair_span_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:67](../modules/algorithm/chassis_remote_fusion.h#L67) |
+| `updates` | `uint32_t updates, resets, last_now_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:68](../modules/algorithm/chassis_remote_fusion.h#L68) |
+| `resets` | `uint32_t updates, resets, last_now_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:68](../modules/algorithm/chassis_remote_fusion.h#L68) |
+| `last_now_ms` | `uint32_t updates, resets, last_now_ms;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:68](../modules/algorithm/chassis_remote_fusion.h#L68) |
+| `have_source` | `bool have_source, have_now;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:69](../modules/algorithm/chassis_remote_fusion.h#L69) |
+| `have_now` | `bool have_source, have_now;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:69](../modules/algorithm/chassis_remote_fusion.h#L69) |
+| `attempt` | `ChassisRemoteFusionAttempt_s attempt;` | 源码未注释 | [modules/algorithm/chassis_remote_fusion.h:70](../modules/algorithm/chassis_remote_fusion.h#L70) |
 
 嵌套关系：
 
 - `ChassisRemoteFusion_s.wheels` → [ChassisVelocity_s](#r-modules-algorithm-chassis_velocity-h-9-9)（modules/algorithm/chassis_velocity.h:9）。声明中的 `*` 表示指针关系。
 - `ChassisRemoteFusion_s.center` → [ChassisVelocityCenter_s](#r-modules-algorithm-chassis_velocity_center-h-14-9)（modules/algorithm/chassis_velocity_center.h:14）。声明中的 `*` 表示指针关系。
 - `ChassisRemoteFusion_s.filter` → [ChassisVelocityFusion_s](#r-modules-algorithm-chassis_velocity_fusion-h-37-9)（modules/algorithm/chassis_velocity_fusion.h:37）。声明中的 `*` 表示指针关系。
-- `ChassisRemoteFusion_s.held` → [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-29-9)（modules/algorithm/chassis_remote_fusion.h:29）。声明中的 `*` 表示指针关系。
+- `ChassisRemoteFusion_s.held` → [ChassisRemoteFusionOutput_s](#r-modules-algorithm-chassis_remote_fusion-h-45-9)（modules/algorithm/chassis_remote_fusion.h:45）。声明中的 `*` 表示指针关系。
+- `ChassisRemoteFusion_s.attempt` → [ChassisRemoteFusionAttempt_s](#r-modules-algorithm-chassis_remote_fusion-h-35-9)（modules/algorithm/chassis_remote_fusion.h:35）。声明中的 `*` 表示指针关系。
 
 <a id="r-modules-algorithm-chassis_spin-h-8-9"></a>
 
@@ -12452,44 +12544,50 @@
 | `config` | `ChassisPower_Init_Config_s config, slow_config, pending_config;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:19](../modules/chassis_power/chassis_power_internal.h#L19) |
 | `slow_config` | `ChassisPower_Init_Config_s config, slow_config, pending_config;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:19](../modules/chassis_power/chassis_power_internal.h#L19) |
 | `pending_config` | `ChassisPower_Init_Config_s config, slow_config, pending_config;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:19](../modules/chassis_power/chassis_power_internal.h#L19) |
-| `config_version` | `uint32_t config_version, slow_version, pending_version;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:20](../modules/chassis_power/chassis_power_internal.h#L20) |
-| `slow_version` | `uint32_t config_version, slow_version, pending_version;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:20](../modules/chassis_power/chassis_power_internal.h#L20) |
-| `pending_version` | `uint32_t config_version, slow_version, pending_version;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:20](../modules/chassis_power/chassis_power_internal.h#L20) |
-| `config_pending` | `bool config_pending;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:21](../modules/chassis_power/chassis_power_internal.h#L21) |
-| `input` | `ChassisPowerInput_s input;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:22](../modules/chassis_power/chassis_power_internal.h#L22) |
-| `state` | `ChassisPowerSnapshot_s state, working_state;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:23](../modules/chassis_power/chassis_power_internal.h#L23) |
-| `working_state` | `ChassisPowerSnapshot_s state, working_state;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:23](../modules/chassis_power/chassis_power_internal.h#L23) |
-| `control` | `ChassisPowerControlSnapshot_s control;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:24](../modules/chassis_power/chassis_power_internal.h#L24) |
-| `transient` | `ChassisPowerTransientState_s transient;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:25](../modules/chassis_power/chassis_power_internal.h#L25) |
-| `budget_state` | `ChassisPowerBudgetState_s budget_state;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:26](../modules/chassis_power/chassis_power_internal.h#L26) |
-| `outer_state` | `ChassisPowerOuterLoopState_s outer_state;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:27](../modules/chassis_power/chassis_power_internal.h#L27) |
-| `policy` | `ChassisPowerPolicyOutput_s policy;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:28](../modules/chassis_power/chassis_power_internal.h#L28) |
-| `policy_tick_ms` | `uint32_t policy_tick_ms, policy_version;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:29](../modules/chassis_power/chassis_power_internal.h#L29) |
-| `policy_version` | `uint32_t policy_tick_ms, policy_version;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:29](../modules/chassis_power/chassis_power_internal.h#L29) |
-| `telemetry_count` | `uint8_t telemetry_count;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:30](../modules/chassis_power/chassis_power_internal.h#L30) |
-| `cap_sent_command` | `SuperCapCommand_s cap_sent_command;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:31](../modules/chassis_power/chassis_power_internal.h#L31) |
-| `cap_sent_ms` | `uint32_t cap_sent_ms, cap_anchor_frames, cap_confirmed_tick_ms;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:32](../modules/chassis_power/chassis_power_internal.h#L32) |
-| `cap_anchor_frames` | `uint32_t cap_sent_ms, cap_anchor_frames, cap_confirmed_tick_ms;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:32](../modules/chassis_power/chassis_power_internal.h#L32) |
-| `cap_confirmed_tick_ms` | `uint32_t cap_sent_ms, cap_anchor_frames, cap_confirmed_tick_ms;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:32](../modules/chassis_power/chassis_power_internal.h#L32) |
-| `cap_send_failures` | `uint32_t cap_send_failures, cap_confirmation_timeouts;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:33](../modules/chassis_power/chassis_power_internal.h#L33) |
-| `cap_confirmation_timeouts` | `uint32_t cap_send_failures, cap_confirmation_timeouts;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:33](../modules/chassis_power/chassis_power_internal.h#L33) |
-| `cap_command_ok` | `bool cap_command_ok, cap_confirmed, cap_timeout_reported;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:34](../modules/chassis_power/chassis_power_internal.h#L34) |
-| `cap_confirmed` | `bool cap_command_ok, cap_confirmed, cap_timeout_reported;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:34](../modules/chassis_power/chassis_power_internal.h#L34) |
-| `cap_timeout_reported` | `bool cap_command_ok, cap_confirmed, cap_timeout_reported;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:34](../modules/chassis_power/chassis_power_internal.h#L34) |
+| `config_observation` | `ChassisPowerConfigObservation_s config_observation, slow_observation, pending_observation;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:20](../modules/chassis_power/chassis_power_internal.h#L20) |
+| `slow_observation` | `ChassisPowerConfigObservation_s config_observation, slow_observation, pending_observation;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:20](../modules/chassis_power/chassis_power_internal.h#L20) |
+| `pending_observation` | `ChassisPowerConfigObservation_s config_observation, slow_observation, pending_observation;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:20](../modules/chassis_power/chassis_power_internal.h#L20) |
+| `config_version` | `uint32_t config_version, slow_version, pending_version;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:21](../modules/chassis_power/chassis_power_internal.h#L21) |
+| `slow_version` | `uint32_t config_version, slow_version, pending_version;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:21](../modules/chassis_power/chassis_power_internal.h#L21) |
+| `pending_version` | `uint32_t config_version, slow_version, pending_version;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:21](../modules/chassis_power/chassis_power_internal.h#L21) |
+| `config_pending` | `bool config_pending;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:22](../modules/chassis_power/chassis_power_internal.h#L22) |
+| `input` | `ChassisPowerInput_s input;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:23](../modules/chassis_power/chassis_power_internal.h#L23) |
+| `state` | `ChassisPowerSnapshot_s state, working_state;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:24](../modules/chassis_power/chassis_power_internal.h#L24) |
+| `working_state` | `ChassisPowerSnapshot_s state, working_state;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:24](../modules/chassis_power/chassis_power_internal.h#L24) |
+| `control` | `ChassisPowerControlSnapshot_s control;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:25](../modules/chassis_power/chassis_power_internal.h#L25) |
+| `transient` | `ChassisPowerTransientState_s transient;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:26](../modules/chassis_power/chassis_power_internal.h#L26) |
+| `budget_state` | `ChassisPowerBudgetState_s budget_state;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:27](../modules/chassis_power/chassis_power_internal.h#L27) |
+| `outer_state` | `ChassisPowerOuterLoopState_s outer_state;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:28](../modules/chassis_power/chassis_power_internal.h#L28) |
+| `policy` | `ChassisPowerPolicyOutput_s policy;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:29](../modules/chassis_power/chassis_power_internal.h#L29) |
+| `policy_tick_ms` | `uint32_t policy_tick_ms, policy_version;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:30](../modules/chassis_power/chassis_power_internal.h#L30) |
+| `policy_version` | `uint32_t policy_tick_ms, policy_version;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:30](../modules/chassis_power/chassis_power_internal.h#L30) |
+| `telemetry_count` | `uint8_t telemetry_count;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:31](../modules/chassis_power/chassis_power_internal.h#L31) |
+| `cap_sent_command` | `SuperCapCommand_s cap_sent_command;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:32](../modules/chassis_power/chassis_power_internal.h#L32) |
+| `cap_sent_ms` | `uint32_t cap_sent_ms, cap_anchor_frames, cap_confirmed_tick_ms;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:33](../modules/chassis_power/chassis_power_internal.h#L33) |
+| `cap_anchor_frames` | `uint32_t cap_sent_ms, cap_anchor_frames, cap_confirmed_tick_ms;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:33](../modules/chassis_power/chassis_power_internal.h#L33) |
+| `cap_confirmed_tick_ms` | `uint32_t cap_sent_ms, cap_anchor_frames, cap_confirmed_tick_ms;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:33](../modules/chassis_power/chassis_power_internal.h#L33) |
+| `cap_send_failures` | `uint32_t cap_send_failures, cap_confirmation_timeouts;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:34](../modules/chassis_power/chassis_power_internal.h#L34) |
+| `cap_confirmation_timeouts` | `uint32_t cap_send_failures, cap_confirmation_timeouts;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:34](../modules/chassis_power/chassis_power_internal.h#L34) |
+| `cap_command_ok` | `bool cap_command_ok, cap_confirmed, cap_timeout_reported;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:35](../modules/chassis_power/chassis_power_internal.h#L35) |
+| `cap_confirmed` | `bool cap_command_ok, cap_confirmed, cap_timeout_reported;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:35](../modules/chassis_power/chassis_power_internal.h#L35) |
+| `cap_timeout_reported` | `bool cap_command_ok, cap_confirmed, cap_timeout_reported;` | 源码未注释 | [modules/chassis_power/chassis_power_internal.h:35](../modules/chassis_power/chassis_power_internal.h#L35) |
 
 嵌套关系：
 
 - `ChassisPowerInstance_s.config` → [ChassisPower_Init_Config_s](#r-modules-chassis_power-chassis_power_types-h-15-9)（modules/chassis_power/chassis_power_types.h:15）。声明中的 `*` 表示指针关系。
 - `ChassisPowerInstance_s.slow_config` → [ChassisPower_Init_Config_s](#r-modules-chassis_power-chassis_power_types-h-15-9)（modules/chassis_power/chassis_power_types.h:15）。声明中的 `*` 表示指针关系。
 - `ChassisPowerInstance_s.pending_config` → [ChassisPower_Init_Config_s](#r-modules-chassis_power-chassis_power_types-h-15-9)（modules/chassis_power/chassis_power_types.h:15）。声明中的 `*` 表示指针关系。
+- `ChassisPowerInstance_s.config_observation` → [ChassisPowerConfigObservation_s](#r-modules-chassis_power-chassis_power_types-h-28-9)（modules/chassis_power/chassis_power_types.h:28）。声明中的 `*` 表示指针关系。
+- `ChassisPowerInstance_s.slow_observation` → [ChassisPowerConfigObservation_s](#r-modules-chassis_power-chassis_power_types-h-28-9)（modules/chassis_power/chassis_power_types.h:28）。声明中的 `*` 表示指针关系。
+- `ChassisPowerInstance_s.pending_observation` → [ChassisPowerConfigObservation_s](#r-modules-chassis_power-chassis_power_types-h-28-9)（modules/chassis_power/chassis_power_types.h:28）。声明中的 `*` 表示指针关系。
 - `ChassisPowerInstance_s.input` → [ChassisPowerInput_s](#r-modules-algorithm-power_model-h-38-9)（modules/algorithm/power_model.h:38）。声明中的 `*` 表示指针关系。
-- `ChassisPowerInstance_s.state` → [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9)（modules/chassis_power/chassis_power_types.h:49）。声明中的 `*` 表示指针关系。
-- `ChassisPowerInstance_s.working_state` → [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9)（modules/chassis_power/chassis_power_types.h:49）。声明中的 `*` 表示指针关系。
-- `ChassisPowerInstance_s.control` → [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-27-9)（modules/chassis_power/chassis_power_types.h:27）。声明中的 `*` 表示指针关系。
+- `ChassisPowerInstance_s.state` → [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9)（modules/chassis_power/chassis_power_types.h:59）。声明中的 `*` 表示指针关系。
+- `ChassisPowerInstance_s.working_state` → [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9)（modules/chassis_power/chassis_power_types.h:59）。声明中的 `*` 表示指针关系。
+- `ChassisPowerInstance_s.control` → [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-36-9)（modules/chassis_power/chassis_power_types.h:36）。声明中的 `*` 表示指针关系。
 - `ChassisPowerInstance_s.transient` → [ChassisPowerTransientState_s](#r-modules-algorithm-chassis_power_transient-h-33-9)（modules/algorithm/chassis_power_transient.h:33）。声明中的 `*` 表示指针关系。
 - `ChassisPowerInstance_s.budget_state` → [ChassisPowerBudgetState_s](#r-modules-algorithm-chassis_power_budget-h-93-9)（modules/algorithm/chassis_power_budget.h:93）。声明中的 `*` 表示指针关系。
 - `ChassisPowerInstance_s.outer_state` → [ChassisPowerOuterLoopState_s](#r-modules-algorithm-chassis_power_outer_loop-h-27-9)（modules/algorithm/chassis_power_outer_loop.h:27）。声明中的 `*` 表示指针关系。
-- `ChassisPowerInstance_s.policy` → [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-37-9)（modules/chassis_power/chassis_power_types.h:37）。声明中的 `*` 表示指针关系。
+- `ChassisPowerInstance_s.policy` → [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-46-9)（modules/chassis_power/chassis_power_types.h:46）。声明中的 `*` 表示指针关系。
 - `ChassisPowerInstance_s.cap_sent_command` → [SuperCapCommand_s](#r-modules-super_cap-super_cap_protocol-h-24-9)（modules/super_cap/super_cap_protocol.h:24）。声明中的 `*` 表示指针关系。
 
 <a id="r-modules-chassis_power-chassis_power_policy-h-7-9"></a>
@@ -12650,6 +12748,7 @@
 | `meter_enabled` | `bool use_supercap, meter_enabled, buffer_enabled;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:23](../modules/chassis_power/chassis_power_types.h#L23) |
 | `buffer_enabled` | `bool use_supercap, meter_enabled, buffer_enabled;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:23](../modules/chassis_power/chassis_power_types.h#L23) |
 | `force_control` | `bool force_control;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:24](../modules/chassis_power/chassis_power_types.h#L24) |
+| `tuning_source` | `uint8_t tuning_source;` | RuntimeTuning source of this complete configuration. | [modules/chassis_power/chassis_power_types.h:25](../modules/chassis_power/chassis_power_types.h#L25) |
 
 嵌套关系：
 
@@ -12659,11 +12758,32 @@
 - `ChassisPower_Init_Config_s.outer` → [ChassisPowerOuterLoopConfig_s](#r-modules-algorithm-chassis_power_outer_loop-h-14-9)（modules/algorithm/chassis_power_outer_loop.h:14）。声明中的 `*` 表示指针关系。
 - `ChassisPower_Init_Config_s.transient` → [ChassisPowerTransientConfig_s](#r-modules-algorithm-chassis_power_transient-h-14-9)（modules/algorithm/chassis_power_transient.h:14）。声明中的 `*` 表示指针关系。
 
-<a id="r-modules-chassis_power-chassis_power_types-h-27-9"></a>
+<a id="r-modules-chassis_power-chassis_power_types-h-28-9"></a>
+
+### ChassisPowerConfigObservation_s
+
+- 类型：struct；来源：项目源码；定义：[modules/chassis_power/chassis_power_types.h:28](../modules/chassis_power/chassis_power_types.h#L28)。
+- 中文用途关键词：底盘功率 功控 预算 限幅 缓冲能量。
+- 源码说明：源码未注释。
+- 名称与别名：`ChassisPowerConfigObservation_s`。
+- 源码条件：`#ifndef CHASSIS_POWER_TYPES_H`。
+
+| 成员 | 声明 | 成员说明 | 源码位置 |
+| --- | --- | --- | --- |
+| `fingerprint` | `uint32_t fingerprint;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:30](../modules/chassis_power/chassis_power_types.h#L30) |
+| `tuning_source` | `uint8_t tuning_source;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:31](../modules/chassis_power/chassis_power_types.h#L31) |
+| `available` | `bool available;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:32](../modules/chassis_power/chassis_power_types.h#L32) |
+| `outer` | `ChassisPowerOuterLoopConfig_s outer;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:33](../modules/chassis_power/chassis_power_types.h#L33) |
+
+嵌套关系：
+
+- `ChassisPowerConfigObservation_s.outer` → [ChassisPowerOuterLoopConfig_s](#r-modules-algorithm-chassis_power_outer_loop-h-14-9)（modules/algorithm/chassis_power_outer_loop.h:14）。声明中的 `*` 表示指针关系。
+
+<a id="r-modules-chassis_power-chassis_power_types-h-36-9"></a>
 
 ### ChassisPowerControlSnapshot_s
 
-- 类型：struct；来源：项目源码；定义：[modules/chassis_power/chassis_power_types.h:27](../modules/chassis_power/chassis_power_types.h#L27)。
+- 类型：struct；来源：项目源码；定义：[modules/chassis_power/chassis_power_types.h:36](../modules/chassis_power/chassis_power_types.h#L36)。
 - 中文用途关键词：底盘功率 功控 预算 限幅 缓冲能量。
 - 源码说明：源码未注释。
 - 名称与别名：`ChassisPowerControlSnapshot_s`。
@@ -12671,30 +12791,30 @@
 
 | 成员 | 声明 | 成员说明 | 源码位置 |
 | --- | --- | --- | --- |
-| `version` | `uint32_t version, tick_ms, config_version;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:29](../modules/chassis_power/chassis_power_types.h#L29) |
-| `tick_ms` | `uint32_t version, tick_ms, config_version;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:29](../modules/chassis_power/chassis_power_types.h#L29) |
-| `config_version` | `uint32_t version, tick_ms, config_version;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:29](../modules/chassis_power/chassis_power_types.h#L29) |
-| `nominal_budget_w` | `float nominal_budget_w, target_power_w, slow_correction_w, legacy_budget_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:30](../modules/chassis_power/chassis_power_types.h#L30) |
-| `target_power_w` | `float nominal_budget_w, target_power_w, slow_correction_w, legacy_budget_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:30](../modules/chassis_power/chassis_power_types.h#L30) |
-| `slow_correction_w` | `float nominal_budget_w, target_power_w, slow_correction_w, legacy_budget_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:30](../modules/chassis_power/chassis_power_types.h#L30) |
-| `legacy_budget_w` | `float nominal_budget_w, target_power_w, slow_correction_w, legacy_budget_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:30](../modules/chassis_power/chassis_power_types.h#L30) |
-| `power_ceiling_w` | `float power_ceiling_w, power_deadband_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:31](../modules/chassis_power/chassis_power_types.h#L31) |
-| `power_deadband_w` | `float power_ceiling_w, power_deadband_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:31](../modules/chassis_power/chassis_power_types.h#L31) |
-| `target_rpm` | `float target_rpm[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:32](../modules/chassis_power/chassis_power_types.h#L32) |
-| `control_enabled` | `bool control_enabled, autotune_permitted, zero_force;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:33](../modules/chassis_power/chassis_power_types.h#L33) |
-| `autotune_permitted` | `bool control_enabled, autotune_permitted, zero_force;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:33](../modules/chassis_power/chassis_power_types.h#L33) |
-| `zero_force` | `bool control_enabled, autotune_permitted, zero_force;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:33](../modules/chassis_power/chassis_power_types.h#L33) |
-| `telemetry` | `ChassisPowerControlTelemetry_s telemetry;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:34](../modules/chassis_power/chassis_power_types.h#L34) |
+| `version` | `uint32_t version, tick_ms, config_version;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:38](../modules/chassis_power/chassis_power_types.h#L38) |
+| `tick_ms` | `uint32_t version, tick_ms, config_version;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:38](../modules/chassis_power/chassis_power_types.h#L38) |
+| `config_version` | `uint32_t version, tick_ms, config_version;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:38](../modules/chassis_power/chassis_power_types.h#L38) |
+| `nominal_budget_w` | `float nominal_budget_w, target_power_w, slow_correction_w, legacy_budget_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:39](../modules/chassis_power/chassis_power_types.h#L39) |
+| `target_power_w` | `float nominal_budget_w, target_power_w, slow_correction_w, legacy_budget_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:39](../modules/chassis_power/chassis_power_types.h#L39) |
+| `slow_correction_w` | `float nominal_budget_w, target_power_w, slow_correction_w, legacy_budget_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:39](../modules/chassis_power/chassis_power_types.h#L39) |
+| `legacy_budget_w` | `float nominal_budget_w, target_power_w, slow_correction_w, legacy_budget_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:39](../modules/chassis_power/chassis_power_types.h#L39) |
+| `power_ceiling_w` | `float power_ceiling_w, power_deadband_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:40](../modules/chassis_power/chassis_power_types.h#L40) |
+| `power_deadband_w` | `float power_ceiling_w, power_deadband_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:40](../modules/chassis_power/chassis_power_types.h#L40) |
+| `target_rpm` | `float target_rpm[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:41](../modules/chassis_power/chassis_power_types.h#L41) |
+| `control_enabled` | `bool control_enabled, autotune_permitted, zero_force;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:42](../modules/chassis_power/chassis_power_types.h#L42) |
+| `autotune_permitted` | `bool control_enabled, autotune_permitted, zero_force;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:42](../modules/chassis_power/chassis_power_types.h#L42) |
+| `zero_force` | `bool control_enabled, autotune_permitted, zero_force;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:42](../modules/chassis_power/chassis_power_types.h#L42) |
+| `telemetry` | `ChassisPowerControlTelemetry_s telemetry;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:43](../modules/chassis_power/chassis_power_types.h#L43) |
 
 嵌套关系：
 
 - `ChassisPowerControlSnapshot_s.telemetry` → [ChassisPowerControlTelemetry_s](#r-modules-telemetry-rtt_telemetry-h-12-9)（modules/telemetry/rtt_telemetry.h:12）。声明中的 `*` 表示指针关系。
 
-<a id="r-modules-chassis_power-chassis_power_types-h-37-9"></a>
+<a id="r-modules-chassis_power-chassis_power_types-h-46-9"></a>
 
 ### ChassisPowerPolicyOutput_s
 
-- 类型：struct；来源：项目源码；定义：[modules/chassis_power/chassis_power_types.h:37](../modules/chassis_power/chassis_power_types.h#L37)。
+- 类型：struct；来源：项目源码；定义：[modules/chassis_power/chassis_power_types.h:46](../modules/chassis_power/chassis_power_types.h#L46)。
 - 中文用途关键词：底盘功率 功控 预算 限幅 缓冲能量。
 - 源码说明：源码未注释。
 - 名称与别名：`ChassisPowerPolicyOutput_s`。
@@ -12702,33 +12822,35 @@
 
 | 成员 | 声明 | 成员说明 | 源码位置 |
 | --- | --- | --- | --- |
-| `budget` | `ChassisPowerBudgetOutput_s budget;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:39](../modules/chassis_power/chassis_power_types.h#L39) |
-| `outer` | `ChassisPowerOuterLoopOutput_s outer;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:40](../modules/chassis_power/chassis_power_types.h#L40) |
-| `control` | `ChassisPowerControlSnapshot_s control;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:41](../modules/chassis_power/chassis_power_types.h#L41) |
-| `cap_command` | `SuperCapCommand_s cap_command;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:42](../modules/chassis_power/chassis_power_types.h#L42) |
-| `cap_command_valid` | `bool cap_command_valid, valid, buffer_estimate_valid;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:43](../modules/chassis_power/chassis_power_types.h#L43) |
-| `valid` | `bool cap_command_valid, valid, buffer_estimate_valid;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:43](../modules/chassis_power/chassis_power_types.h#L43) |
-| `buffer_estimate_valid` | `bool cap_command_valid, valid, buffer_estimate_valid;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:43](../modules/chassis_power/chassis_power_types.h#L43) |
-| `physical_load_target_w` | `float physical_load_target_w, confirmed_input_target_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:44](../modules/chassis_power/chassis_power_types.h#L44) |
-| `confirmed_input_target_w` | `float physical_load_target_w, confirmed_input_target_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:44](../modules/chassis_power/chassis_power_types.h#L44) |
-| `force_growth_allowed` | `bool force_growth_allowed, input_confirmed;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:45](../modules/chassis_power/chassis_power_types.h#L45) |
-| `input_confirmed` | `bool force_growth_allowed, input_confirmed;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:45](../modules/chassis_power/chassis_power_types.h#L45) |
-| `confirmed_age_ms` | `uint32_t confirmed_age_ms, cap_send_failures, cap_confirmation_timeouts;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:46](../modules/chassis_power/chassis_power_types.h#L46) |
-| `cap_send_failures` | `uint32_t confirmed_age_ms, cap_send_failures, cap_confirmation_timeouts;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:46](../modules/chassis_power/chassis_power_types.h#L46) |
-| `cap_confirmation_timeouts` | `uint32_t confirmed_age_ms, cap_send_failures, cap_confirmation_timeouts;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:46](../modules/chassis_power/chassis_power_types.h#L46) |
+| `budget` | `ChassisPowerBudgetOutput_s budget;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:48](../modules/chassis_power/chassis_power_types.h#L48) |
+| `outer` | `ChassisPowerOuterLoopOutput_s outer;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:49](../modules/chassis_power/chassis_power_types.h#L49) |
+| `control` | `ChassisPowerControlSnapshot_s control;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:50](../modules/chassis_power/chassis_power_types.h#L50) |
+| `config` | `ChassisPowerConfigObservation_s config;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:51](../modules/chassis_power/chassis_power_types.h#L51) |
+| `cap_command` | `SuperCapCommand_s cap_command;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:52](../modules/chassis_power/chassis_power_types.h#L52) |
+| `cap_command_valid` | `bool cap_command_valid, valid, buffer_estimate_valid;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:53](../modules/chassis_power/chassis_power_types.h#L53) |
+| `valid` | `bool cap_command_valid, valid, buffer_estimate_valid;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:53](../modules/chassis_power/chassis_power_types.h#L53) |
+| `buffer_estimate_valid` | `bool cap_command_valid, valid, buffer_estimate_valid;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:53](../modules/chassis_power/chassis_power_types.h#L53) |
+| `physical_load_target_w` | `float physical_load_target_w, confirmed_input_target_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:54](../modules/chassis_power/chassis_power_types.h#L54) |
+| `confirmed_input_target_w` | `float physical_load_target_w, confirmed_input_target_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:54](../modules/chassis_power/chassis_power_types.h#L54) |
+| `force_growth_allowed` | `bool force_growth_allowed, input_confirmed;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:55](../modules/chassis_power/chassis_power_types.h#L55) |
+| `input_confirmed` | `bool force_growth_allowed, input_confirmed;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:55](../modules/chassis_power/chassis_power_types.h#L55) |
+| `confirmed_age_ms` | `uint32_t confirmed_age_ms, cap_send_failures, cap_confirmation_timeouts;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:56](../modules/chassis_power/chassis_power_types.h#L56) |
+| `cap_send_failures` | `uint32_t confirmed_age_ms, cap_send_failures, cap_confirmation_timeouts;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:56](../modules/chassis_power/chassis_power_types.h#L56) |
+| `cap_confirmation_timeouts` | `uint32_t confirmed_age_ms, cap_send_failures, cap_confirmation_timeouts;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:56](../modules/chassis_power/chassis_power_types.h#L56) |
 
 嵌套关系：
 
 - `ChassisPowerPolicyOutput_s.budget` → [ChassisPowerBudgetOutput_s](#r-modules-algorithm-chassis_power_budget-h-121-9)（modules/algorithm/chassis_power_budget.h:121）。声明中的 `*` 表示指针关系。
 - `ChassisPowerPolicyOutput_s.outer` → [ChassisPowerOuterLoopOutput_s](#r-modules-algorithm-chassis_power_outer_loop-h-57-9)（modules/algorithm/chassis_power_outer_loop.h:57）。声明中的 `*` 表示指针关系。
-- `ChassisPowerPolicyOutput_s.control` → [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-27-9)（modules/chassis_power/chassis_power_types.h:27）。声明中的 `*` 表示指针关系。
+- `ChassisPowerPolicyOutput_s.control` → [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-36-9)（modules/chassis_power/chassis_power_types.h:36）。声明中的 `*` 表示指针关系。
+- `ChassisPowerPolicyOutput_s.config` → [ChassisPowerConfigObservation_s](#r-modules-chassis_power-chassis_power_types-h-28-9)（modules/chassis_power/chassis_power_types.h:28）。声明中的 `*` 表示指针关系。
 - `ChassisPowerPolicyOutput_s.cap_command` → [SuperCapCommand_s](#r-modules-super_cap-super_cap_protocol-h-24-9)（modules/super_cap/super_cap_protocol.h:24）。声明中的 `*` 表示指针关系。
 
-<a id="r-modules-chassis_power-chassis_power_types-h-49-9"></a>
+<a id="r-modules-chassis_power-chassis_power_types-h-59-9"></a>
 
 ### ChassisPowerSnapshot_s
 
-- 类型：struct；来源：项目源码；定义：[modules/chassis_power/chassis_power_types.h:49](../modules/chassis_power/chassis_power_types.h#L49)。
+- 类型：struct；来源：项目源码；定义：[modules/chassis_power/chassis_power_types.h:59](../modules/chassis_power/chassis_power_types.h#L59)。
 - 中文用途关键词：底盘功率 功控 预算 限幅 缓冲能量。
 - 源码说明：源码未注释。
 - 名称与别名：`ChassisPowerSnapshot_s`。
@@ -12736,46 +12858,52 @@
 
 | 成员 | 声明 | 成员说明 | 源码位置 |
 | --- | --- | --- | --- |
-| `registered` | `bool registered;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:51](../modules/chassis_power/chassis_power_types.h#L51) |
-| `power` | `ChassisPowerOutput_s power;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:52](../modules/chassis_power/chassis_power_types.h#L52) |
-| `telemetry` | `ChassisPowerTelemetry_s telemetry;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:53](../modules/chassis_power/chassis_power_types.h#L53) |
-| `control_version` | `uint32_t control_version, control_tick_ms, tick_ms, config_version;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:54](../modules/chassis_power/chassis_power_types.h#L54) |
-| `control_tick_ms` | `uint32_t control_version, control_tick_ms, tick_ms, config_version;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:54](../modules/chassis_power/chassis_power_types.h#L54) |
-| `tick_ms` | `uint32_t control_version, control_tick_ms, tick_ms, config_version;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:54](../modules/chassis_power/chassis_power_types.h#L54) |
-| `config_version` | `uint32_t control_version, control_tick_ms, tick_ms, config_version;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:54](../modules/chassis_power/chassis_power_types.h#L54) |
-| `raw_current` | `float raw_current[4], feedback_current[4], proposed_current[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:55](../modules/chassis_power/chassis_power_types.h#L55) |
-| `feedback_current` | `float raw_current[4], feedback_current[4], proposed_current[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:55](../modules/chassis_power/chassis_power_types.h#L55) |
-| `proposed_current` | `float raw_current[4], feedback_current[4], proposed_current[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:55](../modules/chassis_power/chassis_power_types.h#L55) |
-| `feedback_sequence` | `uint32_t feedback_sequence[4], feedback_tick_ms[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:56](../modules/chassis_power/chassis_power_types.h#L56) |
-| `feedback_tick_ms` | `uint32_t feedback_sequence[4], feedback_tick_ms[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:56](../modules/chassis_power/chassis_power_types.h#L56) |
-| `online_mask` | `uint8_t online_mask;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:57](../modules/chassis_power/chassis_power_types.h#L57) |
-| `base_limited` | `bool base_limited, numeric_error;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:58](../modules/chassis_power/chassis_power_types.h#L58) |
-| `numeric_error` | `bool base_limited, numeric_error;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:58](../modules/chassis_power/chassis_power_types.h#L58) |
-| `measured_power_w` | `float measured_power_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:59](../modules/chassis_power/chassis_power_types.h#L59) |
-| `meter_tick_ms` | `uint32_t meter_tick_ms, meter_sequence;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:60](../modules/chassis_power/chassis_power_types.h#L60) |
-| `meter_sequence` | `uint32_t meter_tick_ms, meter_sequence;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:60](../modules/chassis_power/chassis_power_types.h#L60) |
-| `meter_online` | `bool meter_online;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:61](../modules/chassis_power/chassis_power_types.h#L61) |
-| `transient` | `ChassisPowerTransientOutput_s transient;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:62](../modules/chassis_power/chassis_power_types.h#L62) |
-| `cycle_valid` | `bool cycle_valid, final_valid, can_submitted;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:63](../modules/chassis_power/chassis_power_types.h#L63) |
-| `final_valid` | `bool cycle_valid, final_valid, can_submitted;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:63](../modules/chassis_power/chassis_power_types.h#L63) |
-| `can_submitted` | `bool cycle_valid, final_valid, can_submitted;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:63](../modules/chassis_power/chassis_power_types.h#L63) |
-| `final_tick_ms` | `uint32_t final_tick_ms;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:64](../modules/chassis_power/chassis_power_types.h#L64) |
-| `final_current` | `int16_t final_current[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:65](../modules/chassis_power/chassis_power_types.h#L65) |
-| `policy` | `ChassisPowerPolicyOutput_s policy;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:66](../modules/chassis_power/chassis_power_types.h#L66) |
-| `policy_tick_ms` | `uint32_t policy_tick_ms;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:67](../modules/chassis_power/chassis_power_types.h#L67) |
+| `registered` | `bool registered;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:61](../modules/chassis_power/chassis_power_types.h#L61) |
+| `power` | `ChassisPowerOutput_s power;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:62](../modules/chassis_power/chassis_power_types.h#L62) |
+| `telemetry` | `ChassisPowerTelemetry_s telemetry;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:63](../modules/chassis_power/chassis_power_types.h#L63) |
+| `control_version` | `uint32_t control_version, control_tick_ms, tick_ms, config_version;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:64](../modules/chassis_power/chassis_power_types.h#L64) |
+| `control_tick_ms` | `uint32_t control_version, control_tick_ms, tick_ms, config_version;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:64](../modules/chassis_power/chassis_power_types.h#L64) |
+| `tick_ms` | `uint32_t control_version, control_tick_ms, tick_ms, config_version;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:64](../modules/chassis_power/chassis_power_types.h#L64) |
+| `config_version` | `uint32_t control_version, control_tick_ms, tick_ms, config_version;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:64](../modules/chassis_power/chassis_power_types.h#L64) |
+| `cycle_control` | `ChassisPowerControlSnapshot_s cycle_control;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:65](../modules/chassis_power/chassis_power_types.h#L65) |
+| `cycle_config` | `ChassisPowerConfigObservation_s cycle_config;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:66](../modules/chassis_power/chassis_power_types.h#L66) |
+| `raw_current` | `float raw_current[4], feedback_current[4], proposed_current[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:67](../modules/chassis_power/chassis_power_types.h#L67) |
+| `feedback_current` | `float raw_current[4], feedback_current[4], proposed_current[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:67](../modules/chassis_power/chassis_power_types.h#L67) |
+| `proposed_current` | `float raw_current[4], feedback_current[4], proposed_current[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:67](../modules/chassis_power/chassis_power_types.h#L67) |
+| `feedback_sequence` | `uint32_t feedback_sequence[4], feedback_tick_ms[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:68](../modules/chassis_power/chassis_power_types.h#L68) |
+| `feedback_tick_ms` | `uint32_t feedback_sequence[4], feedback_tick_ms[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:68](../modules/chassis_power/chassis_power_types.h#L68) |
+| `online_mask` | `uint8_t online_mask;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:69](../modules/chassis_power/chassis_power_types.h#L69) |
+| `base_limited` | `bool base_limited, numeric_error;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:70](../modules/chassis_power/chassis_power_types.h#L70) |
+| `numeric_error` | `bool base_limited, numeric_error;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:70](../modules/chassis_power/chassis_power_types.h#L70) |
+| `measured_power_w` | `float measured_power_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:71](../modules/chassis_power/chassis_power_types.h#L71) |
+| `meter_tick_ms` | `uint32_t meter_tick_ms, meter_sequence;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:72](../modules/chassis_power/chassis_power_types.h#L72) |
+| `meter_sequence` | `uint32_t meter_tick_ms, meter_sequence;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:72](../modules/chassis_power/chassis_power_types.h#L72) |
+| `meter_online` | `bool meter_online;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:73](../modules/chassis_power/chassis_power_types.h#L73) |
+| `transient` | `ChassisPowerTransientOutput_s transient;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:74](../modules/chassis_power/chassis_power_types.h#L74) |
+| `cycle_valid` | `bool cycle_valid, final_valid, can_submitted;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:75](../modules/chassis_power/chassis_power_types.h#L75) |
+| `final_valid` | `bool cycle_valid, final_valid, can_submitted;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:75](../modules/chassis_power/chassis_power_types.h#L75) |
+| `can_submitted` | `bool cycle_valid, final_valid, can_submitted;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:75](../modules/chassis_power/chassis_power_types.h#L75) |
+| `final_tick_ms` | `uint32_t final_tick_ms;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:76](../modules/chassis_power/chassis_power_types.h#L76) |
+| `final_current` | `int16_t final_current[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:77](../modules/chassis_power/chassis_power_types.h#L77) |
+| `submitted_groups` | `uint8_t submitted_groups, successful_groups;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:78](../modules/chassis_power/chassis_power_types.h#L78) |
+| `successful_groups` | `uint8_t submitted_groups, successful_groups;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:78](../modules/chassis_power/chassis_power_types.h#L78) |
+| `policy` | `ChassisPowerPolicyOutput_s policy;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:79](../modules/chassis_power/chassis_power_types.h#L79) |
+| `policy_tick_ms` | `uint32_t policy_tick_ms;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:80](../modules/chassis_power/chassis_power_types.h#L80) |
 
 嵌套关系：
 
 - `ChassisPowerSnapshot_s.power` → [ChassisPowerOutput_s](#r-modules-algorithm-power_model-h-47-9)（modules/algorithm/power_model.h:47）。声明中的 `*` 表示指针关系。
 - `ChassisPowerSnapshot_s.telemetry` → [ChassisPowerTelemetry_s](#r-modules-algorithm-power_model-h-65-9)（modules/algorithm/power_model.h:65）。声明中的 `*` 表示指针关系。
+- `ChassisPowerSnapshot_s.cycle_control` → [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-36-9)（modules/chassis_power/chassis_power_types.h:36）。声明中的 `*` 表示指针关系。
+- `ChassisPowerSnapshot_s.cycle_config` → [ChassisPowerConfigObservation_s](#r-modules-chassis_power-chassis_power_types-h-28-9)（modules/chassis_power/chassis_power_types.h:28）。声明中的 `*` 表示指针关系。
 - `ChassisPowerSnapshot_s.transient` → [ChassisPowerTransientOutput_s](#r-modules-algorithm-chassis_power_transient-h-50-9)（modules/algorithm/chassis_power_transient.h:50）。声明中的 `*` 表示指针关系。
-- `ChassisPowerSnapshot_s.policy` → [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-37-9)（modules/chassis_power/chassis_power_types.h:37）。声明中的 `*` 表示指针关系。
+- `ChassisPowerSnapshot_s.policy` → [ChassisPowerPolicyOutput_s](#r-modules-chassis_power-chassis_power_types-h-46-9)（modules/chassis_power/chassis_power_types.h:46）。声明中的 `*` 表示指针关系。
 
-<a id="r-modules-chassis_power-chassis_power_types-h-70-9"></a>
+<a id="r-modules-chassis_power-chassis_power_types-h-83-9"></a>
 
 ### ChassisPowerPolicyInput_s
 
-- 类型：struct；来源：项目源码；定义：[modules/chassis_power/chassis_power_types.h:70](../modules/chassis_power/chassis_power_types.h#L70)。
+- 类型：struct；来源：项目源码；定义：[modules/chassis_power/chassis_power_types.h:83](../modules/chassis_power/chassis_power_types.h#L83)。
 - 中文用途关键词：底盘功率 功控 预算 限幅 缓冲能量。
 - 源码说明：源码未注释。
 - 名称与别名：`ChassisPowerPolicyInput_s`。
@@ -12783,38 +12911,38 @@
 
 | 成员 | 声明 | 成员说明 | 源码位置 |
 | --- | --- | --- | --- |
-| `now_ms` | `uint32_t now_ms;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:72](../modules/chassis_power/chassis_power_types.h#L72) |
-| `dt_s` | `float dt_s;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:73](../modules/chassis_power/chassis_power_types.h#L73) |
-| `referee` | `RefereePowerSnapshot_s referee;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:74](../modules/chassis_power/chassis_power_types.h#L74) |
-| `cap` | `SuperCapSnapshot_s cap;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:75](../modules/chassis_power/chassis_power_types.h#L75) |
-| `meter` | `PowerMeterStatus_s meter;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:76](../modules/chassis_power/chassis_power_types.h#L76) |
-| `previous` | `ChassisPowerSnapshot_s previous;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:77](../modules/chassis_power/chassis_power_types.h#L77) |
-| `previous_valid` | `bool previous_valid, zero_force, bench_enabled, hold_positive_learning;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:78](../modules/chassis_power/chassis_power_types.h#L78) |
-| `zero_force` | `bool previous_valid, zero_force, bench_enabled, hold_positive_learning;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:78](../modules/chassis_power/chassis_power_types.h#L78) |
-| `bench_enabled` | `bool previous_valid, zero_force, bench_enabled, hold_positive_learning;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:78](../modules/chassis_power/chassis_power_types.h#L78) |
-| `hold_positive_learning` | `bool previous_valid, zero_force, bench_enabled, hold_positive_learning;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:78](../modules/chassis_power/chassis_power_types.h#L78) |
-| `adaptive_spin` | `bool adaptive_spin, spin_capability_limited, spin_hard_margin;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:79](../modules/chassis_power/chassis_power_types.h#L79) |
-| `spin_capability_limited` | `bool adaptive_spin, spin_capability_limited, spin_hard_margin;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:79](../modules/chassis_power/chassis_power_types.h#L79) |
-| `spin_hard_margin` | `bool adaptive_spin, spin_capability_limited, spin_hard_margin;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:79](../modules/chassis_power/chassis_power_types.h#L79) |
-| `bench_limit_w` | `float bench_limit_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:80](../modules/chassis_power/chassis_power_types.h#L80) |
-| `force_backend` | `bool force_backend, force_operating_valid, force_offer_valid;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:81](../modules/chassis_power/chassis_power_types.h#L81) |
-| `force_operating_valid` | `bool force_backend, force_operating_valid, force_offer_valid;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:81](../modules/chassis_power/chassis_power_types.h#L81) |
-| `force_offer_valid` | `bool force_backend, force_operating_valid, force_offer_valid;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:81](../modules/chassis_power/chassis_power_types.h#L81) |
-| `force_operating_demand_w` | `float force_operating_demand_w, force_offered_demand_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:82](../modules/chassis_power/chassis_power_types.h#L82) |
-| `force_offered_demand_w` | `float force_operating_demand_w, force_offered_demand_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:82](../modules/chassis_power/chassis_power_types.h#L82) |
+| `now_ms` | `uint32_t now_ms;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:85](../modules/chassis_power/chassis_power_types.h#L85) |
+| `dt_s` | `float dt_s;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:86](../modules/chassis_power/chassis_power_types.h#L86) |
+| `referee` | `RefereePowerSnapshot_s referee;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:87](../modules/chassis_power/chassis_power_types.h#L87) |
+| `cap` | `SuperCapSnapshot_s cap;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:88](../modules/chassis_power/chassis_power_types.h#L88) |
+| `meter` | `PowerMeterStatus_s meter;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:89](../modules/chassis_power/chassis_power_types.h#L89) |
+| `previous` | `ChassisPowerSnapshot_s previous;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:90](../modules/chassis_power/chassis_power_types.h#L90) |
+| `previous_valid` | `bool previous_valid, zero_force, bench_enabled, hold_positive_learning;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:91](../modules/chassis_power/chassis_power_types.h#L91) |
+| `zero_force` | `bool previous_valid, zero_force, bench_enabled, hold_positive_learning;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:91](../modules/chassis_power/chassis_power_types.h#L91) |
+| `bench_enabled` | `bool previous_valid, zero_force, bench_enabled, hold_positive_learning;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:91](../modules/chassis_power/chassis_power_types.h#L91) |
+| `hold_positive_learning` | `bool previous_valid, zero_force, bench_enabled, hold_positive_learning;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:91](../modules/chassis_power/chassis_power_types.h#L91) |
+| `adaptive_spin` | `bool adaptive_spin, spin_capability_limited, spin_hard_margin;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:92](../modules/chassis_power/chassis_power_types.h#L92) |
+| `spin_capability_limited` | `bool adaptive_spin, spin_capability_limited, spin_hard_margin;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:92](../modules/chassis_power/chassis_power_types.h#L92) |
+| `spin_hard_margin` | `bool adaptive_spin, spin_capability_limited, spin_hard_margin;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:92](../modules/chassis_power/chassis_power_types.h#L92) |
+| `bench_limit_w` | `float bench_limit_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:93](../modules/chassis_power/chassis_power_types.h#L93) |
+| `force_backend` | `bool force_backend, force_operating_valid, force_offer_valid;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:94](../modules/chassis_power/chassis_power_types.h#L94) |
+| `force_operating_valid` | `bool force_backend, force_operating_valid, force_offer_valid;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:94](../modules/chassis_power/chassis_power_types.h#L94) |
+| `force_offer_valid` | `bool force_backend, force_operating_valid, force_offer_valid;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:94](../modules/chassis_power/chassis_power_types.h#L94) |
+| `force_operating_demand_w` | `float force_operating_demand_w, force_offered_demand_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:95](../modules/chassis_power/chassis_power_types.h#L95) |
+| `force_offered_demand_w` | `float force_operating_demand_w, force_offered_demand_w;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:95](../modules/chassis_power/chassis_power_types.h#L95) |
 
 嵌套关系：
 
 - `ChassisPowerPolicyInput_s.referee` → [RefereePowerSnapshot_s](#r-modules-referee-referee_power-h-29-9)（modules/referee/referee_power.h:29）。声明中的 `*` 表示指针关系。
 - `ChassisPowerPolicyInput_s.cap` → [SuperCapSnapshot_s](#r-modules-super_cap-super_cap_types-h-6-9)（modules/super_cap/super_cap_types.h:6）。声明中的 `*` 表示指针关系。
 - `ChassisPowerPolicyInput_s.meter` → [PowerMeterStatus_s](#r-modules-power_meter-power_meter_types-h-7-9)（modules/power_meter/power_meter_types.h:7）。声明中的 `*` 表示指针关系。
-- `ChassisPowerPolicyInput_s.previous` → [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-49-9)（modules/chassis_power/chassis_power_types.h:49）。声明中的 `*` 表示指针关系。
+- `ChassisPowerPolicyInput_s.previous` → [ChassisPowerSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-59-9)（modules/chassis_power/chassis_power_types.h:59）。声明中的 `*` 表示指针关系。
 
-<a id="r-modules-chassis_power-chassis_power_types-h-85-9"></a>
+<a id="r-modules-chassis_power-chassis_power_types-h-98-9"></a>
 
 ### ChassisPowerCycleInput_s
 
-- 类型：struct；来源：项目源码；定义：[modules/chassis_power/chassis_power_types.h:85](../modules/chassis_power/chassis_power_types.h#L85)。
+- 类型：struct；来源：项目源码；定义：[modules/chassis_power/chassis_power_types.h:98](../modules/chassis_power/chassis_power_types.h#L98)。
 - 中文用途关键词：底盘功率 功控 预算 限幅 缓冲能量。
 - 源码说明：源码未注释。
 - 名称与别名：`ChassisPowerCycleInput_s`。
@@ -12822,33 +12950,33 @@
 
 | 成员 | 声明 | 成员说明 | 源码位置 |
 | --- | --- | --- | --- |
-| `control` | `ChassisPowerControlSnapshot_s control;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:87](../modules/chassis_power/chassis_power_types.h#L87) |
-| `raw_speed` | `PPWheelSample raw_speed[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:88](../modules/chassis_power/chassis_power_types.h#L88) |
-| `observation_now_us` | `uint64_t observation_now_us;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:89](../modules/chassis_power/chassis_power_types.h#L89) |
-| `raw_time_valid_mask` | `uint8_t raw_time_valid_mask;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:90](../modules/chassis_power/chassis_power_types.h#L90) |
-| `raw_current` | `float raw_current[4], actual_rpm[4], target_rpm[4], feedback_current[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:91](../modules/chassis_power/chassis_power_types.h#L91) |
-| `actual_rpm` | `float raw_current[4], actual_rpm[4], target_rpm[4], feedback_current[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:91](../modules/chassis_power/chassis_power_types.h#L91) |
-| `target_rpm` | `float raw_current[4], actual_rpm[4], target_rpm[4], feedback_current[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:91](../modules/chassis_power/chassis_power_types.h#L91) |
-| `feedback_current` | `float raw_current[4], actual_rpm[4], target_rpm[4], feedback_current[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:91](../modules/chassis_power/chassis_power_types.h#L91) |
-| `feedback_tick_ms` | `uint32_t feedback_tick_ms[4], feedback_sequence[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:92](../modules/chassis_power/chassis_power_types.h#L92) |
-| `feedback_sequence` | `uint32_t feedback_tick_ms[4], feedback_sequence[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:92](../modules/chassis_power/chassis_power_types.h#L92) |
-| `online_mask` | `uint8_t online_mask, enabled_mask;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:93](../modules/chassis_power/chassis_power_types.h#L93) |
-| `enabled_mask` | `uint8_t online_mask, enabled_mask;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:93](../modules/chassis_power/chassis_power_types.h#L93) |
-| `meter` | `PowerMeterStatus_s meter;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:94](../modules/chassis_power/chassis_power_types.h#L94) |
-| `now_ms` | `uint32_t now_ms;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:95](../modules/chassis_power/chassis_power_types.h#L95) |
-| `dt_s` | `float dt_s;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:96](../modules/chassis_power/chassis_power_types.h#L96) |
+| `control` | `ChassisPowerControlSnapshot_s control;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:100](../modules/chassis_power/chassis_power_types.h#L100) |
+| `raw_speed` | `PPWheelSample raw_speed[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:101](../modules/chassis_power/chassis_power_types.h#L101) |
+| `observation_now_us` | `uint64_t observation_now_us;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:102](../modules/chassis_power/chassis_power_types.h#L102) |
+| `raw_time_valid_mask` | `uint8_t raw_time_valid_mask;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:103](../modules/chassis_power/chassis_power_types.h#L103) |
+| `raw_current` | `float raw_current[4], actual_rpm[4], target_rpm[4], feedback_current[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:104](../modules/chassis_power/chassis_power_types.h#L104) |
+| `actual_rpm` | `float raw_current[4], actual_rpm[4], target_rpm[4], feedback_current[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:104](../modules/chassis_power/chassis_power_types.h#L104) |
+| `target_rpm` | `float raw_current[4], actual_rpm[4], target_rpm[4], feedback_current[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:104](../modules/chassis_power/chassis_power_types.h#L104) |
+| `feedback_current` | `float raw_current[4], actual_rpm[4], target_rpm[4], feedback_current[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:104](../modules/chassis_power/chassis_power_types.h#L104) |
+| `feedback_tick_ms` | `uint32_t feedback_tick_ms[4], feedback_sequence[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:105](../modules/chassis_power/chassis_power_types.h#L105) |
+| `feedback_sequence` | `uint32_t feedback_tick_ms[4], feedback_sequence[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:105](../modules/chassis_power/chassis_power_types.h#L105) |
+| `online_mask` | `uint8_t online_mask, enabled_mask;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:106](../modules/chassis_power/chassis_power_types.h#L106) |
+| `enabled_mask` | `uint8_t online_mask, enabled_mask;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:106](../modules/chassis_power/chassis_power_types.h#L106) |
+| `meter` | `PowerMeterStatus_s meter;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:107](../modules/chassis_power/chassis_power_types.h#L107) |
+| `now_ms` | `uint32_t now_ms;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:108](../modules/chassis_power/chassis_power_types.h#L108) |
+| `dt_s` | `float dt_s;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:109](../modules/chassis_power/chassis_power_types.h#L109) |
 
 嵌套关系：
 
-- `ChassisPowerCycleInput_s.control` → [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-27-9)（modules/chassis_power/chassis_power_types.h:27）。声明中的 `*` 表示指针关系。
+- `ChassisPowerCycleInput_s.control` → [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-36-9)（modules/chassis_power/chassis_power_types.h:36）。声明中的 `*` 表示指针关系。
 - `ChassisPowerCycleInput_s.raw_speed` → [PPWheelSample](#r-modules-predictive_power-wheel_speed_kf-h-15-9)（modules/predictive_power/wheel_speed_kf.h:15）。声明中的 `*` 表示指针关系。
 - `ChassisPowerCycleInput_s.meter` → [PowerMeterStatus_s](#r-modules-power_meter-power_meter_types-h-7-9)（modules/power_meter/power_meter_types.h:7）。声明中的 `*` 表示指针关系。
 
-<a id="r-modules-chassis_power-chassis_power_types-h-99-9"></a>
+<a id="r-modules-chassis_power-chassis_power_types-h-112-9"></a>
 
 ### ChassisPowerCycleOutput_s
 
-- 类型：struct；来源：项目源码；定义：[modules/chassis_power/chassis_power_types.h:99](../modules/chassis_power/chassis_power_types.h#L99)。
+- 类型：struct；来源：项目源码；定义：[modules/chassis_power/chassis_power_types.h:112](../modules/chassis_power/chassis_power_types.h#L112)。
 - 中文用途关键词：底盘功率 功控 预算 限幅 缓冲能量。
 - 源码说明：源码未注释。
 - 名称与别名：`ChassisPowerCycleOutput_s`。
@@ -12856,22 +12984,22 @@
 
 | 成员 | 声明 | 成员说明 | 源码位置 |
 | --- | --- | --- | --- |
-| `current` | `float current[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:101](../modules/chassis_power/chassis_power_types.h#L101) |
-| `valid` | `bool valid;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:102](../modules/chassis_power/chassis_power_types.h#L102) |
-| `control_version` | `uint32_t control_version;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:103](../modules/chassis_power/chassis_power_types.h#L103) |
-| `transient` | `ChassisPowerTransientOutput_s transient;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:104](../modules/chassis_power/chassis_power_types.h#L104) |
-| `model` | `ChassisPowerOutput_s model;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:105](../modules/chassis_power/chassis_power_types.h#L105) |
+| `current` | `float current[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:114](../modules/chassis_power/chassis_power_types.h#L114) |
+| `valid` | `bool valid;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:115](../modules/chassis_power/chassis_power_types.h#L115) |
+| `control_version` | `uint32_t control_version;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:116](../modules/chassis_power/chassis_power_types.h#L116) |
+| `transient` | `ChassisPowerTransientOutput_s transient;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:117](../modules/chassis_power/chassis_power_types.h#L117) |
+| `model` | `ChassisPowerOutput_s model;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:118](../modules/chassis_power/chassis_power_types.h#L118) |
 
 嵌套关系：
 
 - `ChassisPowerCycleOutput_s.transient` → [ChassisPowerTransientOutput_s](#r-modules-algorithm-chassis_power_transient-h-50-9)（modules/algorithm/chassis_power_transient.h:50）。声明中的 `*` 表示指针关系。
 - `ChassisPowerCycleOutput_s.model` → [ChassisPowerOutput_s](#r-modules-algorithm-power_model-h-47-9)（modules/algorithm/power_model.h:47）。声明中的 `*` 表示指针关系。
 
-<a id="r-modules-chassis_power-chassis_power_types-h-108-9"></a>
+<a id="r-modules-chassis_power-chassis_power_types-h-121-9"></a>
 
 ### ChassisPowerFinalInput_s
 
-- 类型：struct；来源：项目源码；定义：[modules/chassis_power/chassis_power_types.h:108](../modules/chassis_power/chassis_power_types.h#L108)。
+- 类型：struct；来源：项目源码；定义：[modules/chassis_power/chassis_power_types.h:121](../modules/chassis_power/chassis_power_types.h#L121)。
 - 中文用途关键词：底盘功率 功控 预算 限幅 缓冲能量。
 - 源码说明：源码未注释。
 - 名称与别名：`ChassisPowerFinalInput_s`。
@@ -12879,13 +13007,13 @@
 
 | 成员 | 声明 | 成员说明 | 源码位置 |
 | --- | --- | --- | --- |
-| `now_ms` | `uint32_t now_ms, control_version;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:110](../modules/chassis_power/chassis_power_types.h#L110) |
-| `control_version` | `uint32_t now_ms, control_version;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:110](../modules/chassis_power/chassis_power_types.h#L110) |
-| `current_command` | `int16_t current_command[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:111](../modules/chassis_power/chassis_power_types.h#L111) |
-| `can_submitted` | `bool can_submitted;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:112](../modules/chassis_power/chassis_power_types.h#L112) |
-| `enabled_mask` | `uint8_t enabled_mask, submitted_groups, successful_groups;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:113](../modules/chassis_power/chassis_power_types.h#L113) |
-| `submitted_groups` | `uint8_t enabled_mask, submitted_groups, successful_groups;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:113](../modules/chassis_power/chassis_power_types.h#L113) |
-| `successful_groups` | `uint8_t enabled_mask, submitted_groups, successful_groups;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:113](../modules/chassis_power/chassis_power_types.h#L113) |
+| `now_ms` | `uint32_t now_ms, control_version;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:123](../modules/chassis_power/chassis_power_types.h#L123) |
+| `control_version` | `uint32_t now_ms, control_version;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:123](../modules/chassis_power/chassis_power_types.h#L123) |
+| `current_command` | `int16_t current_command[4];` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:124](../modules/chassis_power/chassis_power_types.h#L124) |
+| `can_submitted` | `bool can_submitted;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:125](../modules/chassis_power/chassis_power_types.h#L125) |
+| `enabled_mask` | `uint8_t enabled_mask, submitted_groups, successful_groups;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:126](../modules/chassis_power/chassis_power_types.h#L126) |
+| `submitted_groups` | `uint8_t enabled_mask, submitted_groups, successful_groups;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:126](../modules/chassis_power/chassis_power_types.h#L126) |
+| `successful_groups` | `uint8_t enabled_mask, submitted_groups, successful_groups;` | 源码未注释 | [modules/chassis_power/chassis_power_types.h:126](../modules/chassis_power/chassis_power_types.h#L126) |
 
 嵌套关系：
 
@@ -13029,24 +13157,51 @@
 
 无可链接的仓库内结构体/联合体成员。
 
+<a id="r-modules-imu-chassis_imu_can_protocol-h-13-9"></a>
+
+### ChassisImuCanDecoder_s
+
+- 类型：struct；来源：项目源码；定义：[modules/imu/chassis_imu_can_protocol.h:13](../modules/imu/chassis_imu_can_protocol.h#L13)。
+- 中文用途关键词：惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送。
+- 源码说明：Caller-owned storage. Only the receive context mutates it; synchronize copies from another context. Rejections preserve the last complete sample's times.。
+- 名称与别名：`ChassisImuCanDecoder_s`。
+- 源码条件：`#ifndef CHASSIS_IMU_CAN_PROTOCOL_H`。
+
+| 成员 | 声明 | 成员说明 | 源码位置 |
+| --- | --- | --- | --- |
+| `payload` | `uint8_t payload[CHASSIS_IMU_CAN_PAYLOAD_BYTES];` | 源码未注释 | [modules/imu/chassis_imu_can_protocol.h:14](../modules/imu/chassis_imu_can_protocol.h#L14) |
+| `next_index` | `uint8_t next_index, transfer_tag, last_transfer_tag;` | 源码未注释 | [modules/imu/chassis_imu_can_protocol.h:15](../modules/imu/chassis_imu_can_protocol.h#L15) |
+| `transfer_tag` | `uint8_t next_index, transfer_tag, last_transfer_tag;` | 源码未注释 | [modules/imu/chassis_imu_can_protocol.h:15](../modules/imu/chassis_imu_can_protocol.h#L15) |
+| `last_transfer_tag` | `uint8_t next_index, transfer_tag, last_transfer_tag;` | 源码未注释 | [modules/imu/chassis_imu_can_protocol.h:15](../modules/imu/chassis_imu_can_protocol.h#L15) |
+| `last_crc` | `uint16_t last_crc;` | 源码未注释 | [modules/imu/chassis_imu_can_protocol.h:16](../modules/imu/chassis_imu_can_protocol.h#L16) |
+| `first_rx_tick_ms` | `uint32_t first_rx_tick_ms, rejected_groups;` | 源码未注释 | [modules/imu/chassis_imu_can_protocol.h:17](../modules/imu/chassis_imu_can_protocol.h#L17) |
+| `rejected_groups` | `uint32_t first_rx_tick_ms, rejected_groups;` | 源码未注释 | [modules/imu/chassis_imu_can_protocol.h:17](../modules/imu/chassis_imu_can_protocol.h#L17) |
+| `assembling` | `bool assembling, have_last;` | 源码未注释 | [modules/imu/chassis_imu_can_protocol.h:18](../modules/imu/chassis_imu_can_protocol.h#L18) |
+| `have_last` | `bool assembling, have_last;` | 源码未注释 | [modules/imu/chassis_imu_can_protocol.h:18](../modules/imu/chassis_imu_can_protocol.h#L18) |
+| `latest` | `ChassisImuCanSnapshot_s latest;` | 源码未注释 | [modules/imu/chassis_imu_can_protocol.h:19](../modules/imu/chassis_imu_can_protocol.h#L19) |
+
+嵌套关系：
+
+- `ChassisImuCanDecoder_s.latest` → [ChassisImuCanSnapshot_s](#r-modules-imu-chassis_imu_sample-h-20-9)（modules/imu/chassis_imu_sample.h:20）。声明中的 `*` 表示指针关系。
+
 <a id="r-modules-imu-chassis_imu_sample-h-12-9"></a>
 
 ### ChassisImuCanSample_s
 
 - 类型：struct；来源：项目源码；定义：[modules/imu/chassis_imu_sample.h:12](../modules/imu/chassis_imu_sample.h#L12)。
 - 中文用途关键词：惯性测量 姿态 陀螺仪 加速度。
-- 源码说明：Names retained for the existing fusion and telemetry interfaces. The dedicated IMU supplies no source timestamp: timing is estimated locally.。
+- 源码说明：The dedicated A board supplies its own sample identity and source-local age. Source and receiver clocks have independent epochs.。
 - 名称与别名：`ChassisImuCanSample_s`。
 - 源码条件：`#ifndef CHASSIS_IMU_SAMPLE_H`。
 
 | 成员 | 声明 | 成员说明 | 源码位置 |
 | --- | --- | --- | --- |
-| `quaternion` | `float quaternion[4];` | Unit [w,x,y,z], sensor to navigation frame. | [modules/imu/chassis_imu_sample.h:13](../modules/imu/chassis_imu_sample.h#L13) |
+| `quaternion` | `float quaternion[4];` | Unit [w,x,y,z], sensor to source-board navigation frame. | [modules/imu/chassis_imu_sample.h:13](../modules/imu/chassis_imu_sample.h#L13) |
 | `accel_n_mps2` | `float accel_n_mps2[3], gyro_sensor_radps[3];` | 源码未注释 | [modules/imu/chassis_imu_sample.h:14](../modules/imu/chassis_imu_sample.h#L14) |
 | `gyro_sensor_radps` | `float accel_n_mps2[3], gyro_sensor_radps[3];` | 源码未注释 | [modules/imu/chassis_imu_sample.h:14](../modules/imu/chassis_imu_sample.h#L14) |
-| `sequence` | `uint32_t sequence, tick_ms;` | Locally generated sequence / first receive tick. | [modules/imu/chassis_imu_sample.h:15](../modules/imu/chassis_imu_sample.h#L15) |
-| `tick_ms` | `uint32_t sequence, tick_ms;` | Locally generated sequence / first receive tick. | [modules/imu/chassis_imu_sample.h:15](../modules/imu/chassis_imu_sample.h#L15) |
-| `source_age_ms` | `uint16_t source_age_ms;` | DM: 0; sensor-internal latency is unknown. | [modules/imu/chassis_imu_sample.h:16](../modules/imu/chassis_imu_sample.h#L16) |
+| `sequence` | `uint32_t sequence, tick_ms;` | Source clock; never subtract from a receiver clock. | [modules/imu/chassis_imu_sample.h:15](../modules/imu/chassis_imu_sample.h#L15) |
+| `tick_ms` | `uint32_t sequence, tick_ms;` | Source clock; never subtract from a receiver clock. | [modules/imu/chassis_imu_sample.h:15](../modules/imu/chassis_imu_sample.h#L15) |
+| `source_age_ms` | `uint16_t source_age_ms;` | Source-local age when this transfer was prepared. | [modules/imu/chassis_imu_sample.h:16](../modules/imu/chassis_imu_sample.h#L16) |
 | `valid` | `bool valid;` | 源码未注释 | [modules/imu/chassis_imu_sample.h:17](../modules/imu/chassis_imu_sample.h#L17) |
 
 嵌套关系：
@@ -13069,34 +13224,11 @@
 | `first_rx_tick_ms` | `uint32_t first_rx_tick_ms, last_rx_tick_ms;` | Both use the receiver clock. | [modules/imu/chassis_imu_sample.h:22](../modules/imu/chassis_imu_sample.h#L22) |
 | `last_rx_tick_ms` | `uint32_t first_rx_tick_ms, last_rx_tick_ms;` | Both use the receiver clock. | [modules/imu/chassis_imu_sample.h:22](../modules/imu/chassis_imu_sample.h#L22) |
 | `rejected_groups` | `uint32_t rejected_groups;` | 源码未注释 | [modules/imu/chassis_imu_sample.h:23](../modules/imu/chassis_imu_sample.h#L23) |
-| `available` | `bool available;` | A complete sample exists; freshness is checked by its consumer. | [modules/imu/chassis_imu_sample.h:24](../modules/imu/chassis_imu_sample.h#L24) |
+| `available` | `bool available;` | A complete packet exists, even if sample.valid is false. | [modules/imu/chassis_imu_sample.h:24](../modules/imu/chassis_imu_sample.h#L24) |
 
 嵌套关系：
 
 - `ChassisImuCanSnapshot_s.sample` → [ChassisImuCanSample_s](#r-modules-imu-chassis_imu_sample-h-12-9)（modules/imu/chassis_imu_sample.h:12）。声明中的 `*` 表示指针关系。
-
-<a id="r-modules-imu-dm_imu_can_protocol-h-9-9"></a>
-
-### DmImuCanDecoder_s
-
-- 类型：struct；来源：项目源码；定义：[modules/imu/dm_imu_can_protocol.h:9](../modules/imu/dm_imu_can_protocol.h#L9)。
-- 中文用途关键词：惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送。
-- 源码说明：Caller-owned; receive context owns mutations. Synchronize snapshot copies. DM supplies neither source timestamps nor group tags: local receive time is only an estimate, and the ordered assembly window cannot prove simultaneity.。
-- 名称与别名：`DmImuCanDecoder_s`。
-- 源码条件：`#ifndef DM_IMU_CAN_PROTOCOL_H`。
-
-| 成员 | 声明 | 成员说明 | 源码位置 |
-| --- | --- | --- | --- |
-| `accel_sensor_mps2` | `float accel_sensor_mps2[3], gyro_sensor_radps[3];` | 源码未注释 | [modules/imu/dm_imu_can_protocol.h:10](../modules/imu/dm_imu_can_protocol.h#L10) |
-| `gyro_sensor_radps` | `float accel_sensor_mps2[3], gyro_sensor_radps[3];` | 源码未注释 | [modules/imu/dm_imu_can_protocol.h:10](../modules/imu/dm_imu_can_protocol.h#L10) |
-| `first_rx_tick_ms` | `uint32_t first_rx_tick_ms, rejected_groups;` | 源码未注释 | [modules/imu/dm_imu_can_protocol.h:11](../modules/imu/dm_imu_can_protocol.h#L11) |
-| `rejected_groups` | `uint32_t first_rx_tick_ms, rejected_groups;` | 源码未注释 | [modules/imu/dm_imu_can_protocol.h:11](../modules/imu/dm_imu_can_protocol.h#L11) |
-| `next_type` | `uint8_t next_type;` | 源码未注释 | [modules/imu/dm_imu_can_protocol.h:12](../modules/imu/dm_imu_can_protocol.h#L12) |
-| `latest` | `ChassisImuCanSnapshot_s latest;` | 源码未注释 | [modules/imu/dm_imu_can_protocol.h:13](../modules/imu/dm_imu_can_protocol.h#L13) |
-
-嵌套关系：
-
-- `DmImuCanDecoder_s.latest` → [ChassisImuCanSnapshot_s](#r-modules-imu-chassis_imu_sample-h-20-9)（modules/imu/chassis_imu_sample.h:20）。声明中的 `*` 表示指针关系。
 
 <a id="r-modules-imu-imu_sample-h-5-9"></a>
 
@@ -13601,7 +13733,7 @@
 嵌套关系：
 
 - `ChassisForceActuationSnapshot_s.intent` → [ChassisForceIntent_s](#r-modules-chassis_force-chassis_force_types-h-7-9)（modules/chassis_force/chassis_force_types.h:7）。声明中的 `*` 表示指针关系。
-- `ChassisForceActuationSnapshot_s.power` → [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-27-9)（modules/chassis_power/chassis_power_types.h:27）。声明中的 `*` 表示指针关系。
+- `ChassisForceActuationSnapshot_s.power` → [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-36-9)（modules/chassis_power/chassis_power_types.h:36）。声明中的 `*` 表示指针关系。
 
 <a id="r-modules-motor-DJImotor-dji_force_calibration-h-6-9"></a>
 
@@ -13625,7 +13757,7 @@
 
 嵌套关系：
 
-- `FcPermit.power` → [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-27-9)（modules/chassis_power/chassis_power_types.h:27）。声明中的 `*` 表示指针关系。
+- `FcPermit.power` → [ChassisPowerControlSnapshot_s](#r-modules-chassis_power-chassis_power_types-h-36-9)（modules/chassis_power/chassis_power_types.h:36）。声明中的 `*` 表示指针关系。
 
 <a id="r-modules-motor-DJImotor-dji_motor-c-431-9"></a>
 
@@ -15017,18 +15149,21 @@
 | `chassis_power_limit_w` | `uint16_t chassis_power_limit_w;` | 源码未注释 | [modules/referee/referee_power.h:34](../modules/referee/referee_power.h#L34) |
 | `buffer_energy_j` | `uint16_t buffer_energy_j;` | 源码未注释 | [modules/referee/referee_power.h:35](../modules/referee/referee_power.h#L35) |
 | `buffer_tick_ms` | `uint32_t buffer_tick_ms;` | 源码未注释 | [modules/referee/referee_power.h:36](../modules/referee/referee_power.h#L36) |
-| `chassis_power_w` | `float chassis_power_w;` | 源码未注释 | [modules/referee/referee_power.h:37](../modules/referee/referee_power.h#L37) |
-| `chassis_power_valid` | `bool chassis_power_valid;` | 源码未注释 | [modules/referee/referee_power.h:38](../modules/referee/referee_power.h#L38) |
+| `robot_state_tick_ms` | `uint32_t robot_state_tick_ms;` | 源码未注释 | [modules/referee/referee_power.h:37](../modules/referee/referee_power.h#L37) |
+| `has_robot_state` | `bool has_robot_state, has_power_heat;` | 源码未注释 | [modules/referee/referee_power.h:38](../modules/referee/referee_power.h#L38) |
+| `has_power_heat` | `bool has_robot_state, has_power_heat;` | 源码未注释 | [modules/referee/referee_power.h:38](../modules/referee/referee_power.h#L38) |
+| `chassis_power_w` | `float chassis_power_w;` | 源码未注释 | [modules/referee/referee_power.h:39](../modules/referee/referee_power.h#L39) |
+| `chassis_power_valid` | `bool chassis_power_valid;` | 源码未注释 | [modules/referee/referee_power.h:40](../modules/referee/referee_power.h#L40) |
 
 嵌套关系：
 
 无可链接的仓库内结构体/联合体成员。
 
-<a id="r-modules-referee-referee_power-h-41-9"></a>
+<a id="r-modules-referee-referee_power-h-43-9"></a>
 
 ### RefereeHeatSnapshot_s
 
-- 类型：struct；来源：项目源码；定义：[modules/referee/referee_power.h:41](../modules/referee/referee_power.h#L41)。
+- 类型：struct；来源：项目源码；定义：[modules/referee/referee_power.h:43](../modules/referee/referee_power.h#L43)。
 - 中文用途关键词：裁判系统 比赛状态 血量 功率 热量 图形交互。
 - 源码说明：源码未注释。
 - 名称与别名：`RefereeHeatSnapshot_s`。
@@ -15036,12 +15171,12 @@
 
 | 成员 | 声明 | 成员说明 | 源码位置 |
 | --- | --- | --- | --- |
-| `current_heat` | `uint16_t current_heat, heat_limit, cooling_rate;` | 源码未注释 | [modules/referee/referee_power.h:42](../modules/referee/referee_power.h#L42) |
-| `heat_limit` | `uint16_t current_heat, heat_limit, cooling_rate;` | 源码未注释 | [modules/referee/referee_power.h:42](../modules/referee/referee_power.h#L42) |
-| `cooling_rate` | `uint16_t current_heat, heat_limit, cooling_rate;` | 源码未注释 | [modules/referee/referee_power.h:42](../modules/referee/referee_power.h#L42) |
-| `robot_state_tick_ms` | `uint32_t robot_state_tick_ms, power_heat_tick_ms;` | 源码未注释 | [modules/referee/referee_power.h:43](../modules/referee/referee_power.h#L43) |
-| `power_heat_tick_ms` | `uint32_t robot_state_tick_ms, power_heat_tick_ms;` | 源码未注释 | [modules/referee/referee_power.h:43](../modules/referee/referee_power.h#L43) |
-| `valid` | `bool valid;` | 源码未注释 | [modules/referee/referee_power.h:44](../modules/referee/referee_power.h#L44) |
+| `current_heat` | `uint16_t current_heat, heat_limit, cooling_rate;` | 源码未注释 | [modules/referee/referee_power.h:44](../modules/referee/referee_power.h#L44) |
+| `heat_limit` | `uint16_t current_heat, heat_limit, cooling_rate;` | 源码未注释 | [modules/referee/referee_power.h:44](../modules/referee/referee_power.h#L44) |
+| `cooling_rate` | `uint16_t current_heat, heat_limit, cooling_rate;` | 源码未注释 | [modules/referee/referee_power.h:44](../modules/referee/referee_power.h#L44) |
+| `robot_state_tick_ms` | `uint32_t robot_state_tick_ms, power_heat_tick_ms;` | 源码未注释 | [modules/referee/referee_power.h:45](../modules/referee/referee_power.h#L45) |
+| `power_heat_tick_ms` | `uint32_t robot_state_tick_ms, power_heat_tick_ms;` | 源码未注释 | [modules/referee/referee_power.h:45](../modules/referee/referee_power.h#L45) |
+| `valid` | `bool valid;` | 源码未注释 | [modules/referee/referee_power.h:46](../modules/referee/referee_power.h#L46) |
 
 嵌套关系：
 
@@ -15923,11 +16058,17 @@
 | `command_fail_count` | `uint32_t command_fail_count;` | 源码未注释 | [modules/super_cap/super_cap_types.h:14](../modules/super_cap/super_cap_types.h#L14) |
 | `snapshot_tick_ms` | `uint32_t snapshot_tick_ms;` | 源码未注释 | [modules/super_cap/super_cap_types.h:15](../modules/super_cap/super_cap_types.h#L15) |
 | `input_feedback_enabled` | `bool input_feedback_enabled;` | 源码未注释 | [modules/super_cap/super_cap_types.h:16](../modules/super_cap/super_cap_types.h#L16) |
+| `last_command` | `SuperCapCommand_s last_command;` | 源码未注释 | [modules/super_cap/super_cap_types.h:17](../modules/super_cap/super_cap_types.h#L17) |
+| `command_attempt_tick_ms` | `uint32_t command_attempt_tick_ms, command_attempt_sequence;` | 源码未注释 | [modules/super_cap/super_cap_types.h:18](../modules/super_cap/super_cap_types.h#L18) |
+| `command_attempt_sequence` | `uint32_t command_attempt_tick_ms, command_attempt_sequence;` | 源码未注释 | [modules/super_cap/super_cap_types.h:18](../modules/super_cap/super_cap_types.h#L18) |
+| `command_attempted` | `bool command_attempted, command_submitted;` | 源码未注释 | [modules/super_cap/super_cap_types.h:19](../modules/super_cap/super_cap_types.h#L19) |
+| `command_submitted` | `bool command_attempted, command_submitted;` | 源码未注释 | [modules/super_cap/super_cap_types.h:19](../modules/super_cap/super_cap_types.h#L19) |
 
 嵌套关系：
 
 - `SuperCapSnapshot_s.status` → [SuperCapStatus_s](#r-modules-super_cap-super_cap_protocol-h-42-9)（modules/super_cap/super_cap_protocol.h:42）。声明中的 `*` 表示指针关系。
 - `SuperCapSnapshot_s.input_power` → [SuperCapInputPower_s](#r-modules-super_cap-super_cap_protocol-h-33-9)（modules/super_cap/super_cap_protocol.h:33）。声明中的 `*` 表示指针关系。
+- `SuperCapSnapshot_s.last_command` → [SuperCapCommand_s](#r-modules-super_cap-super_cap_protocol-h-24-9)（modules/super_cap/super_cap_protocol.h:24）。声明中的 `*` 表示指针关系。
 
 <a id="r-modules-telemetry-autotune_protocol-c-17-8"></a>
 
@@ -33626,6 +33767,74 @@
 
 无可链接的仓库内结构体/联合体成员。
 
+<a id="r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-4-9"></a>
+
+### CAN_HandleTypeDef
+
+- 类型：struct；来源：测试与测试桩；定义：[tests/chassis_imu_can_runtime/stubs/bsp_can.h:4](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L4)。
+- 中文用途关键词：惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送。
+- 源码说明：源码未注释。
+- 名称与别名：`CAN_HandleTypeDef`。
+- 源码条件：`#ifndef TEST_BSP_CAN_H`。
+
+| 成员 | 声明 | 成员说明 | 源码位置 |
+| --- | --- | --- | --- |
+| `bus` | `unsigned bus;` | 源码未注释 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:4](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L4) |
+
+嵌套关系：
+
+无可链接的仓库内结构体/联合体成员。
+
+<a id="r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-7-1"></a>
+
+### CANInstance
+
+- 类型：struct；来源：测试与测试桩；定义：[tests/chassis_imu_can_runtime/stubs/bsp_can.h:7](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L7)。
+- 中文用途关键词：惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送。
+- 源码说明：源码未注释。
+- 名称与别名：`CANInstance`、`struct CANInstance`。
+- 别名声明：`CANInstance`：[tests/chassis_imu_can_runtime/stubs/bsp_can.h:6](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L6)。
+- 源码条件：`#ifndef TEST_BSP_CAN_H`。
+
+| 成员 | 声明 | 成员说明 | 源码位置 |
+| --- | --- | --- | --- |
+| `can_handle` | `CAN_HandleTypeDef *can_handle;` | 源码未注释 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:8](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L8) |
+| `tx_id` | `uint32_t tx_id,rx_id,tx_mailbox;` | 源码未注释 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:9](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L9) |
+| `rx_id` | `uint32_t tx_id,rx_id,tx_mailbox;` | 源码未注释 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:9](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L9) |
+| `tx_mailbox` | `uint32_t tx_id,rx_id,tx_mailbox;` | 源码未注释 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:9](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L9) |
+| `tx_buff` | `uint8_t tx_buff[8],rx_buff[8],rx_len,dlc;` | 源码未注释 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:10](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L10) |
+| `rx_buff` | `uint8_t tx_buff[8],rx_buff[8],rx_len,dlc;` | 源码未注释 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:10](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L10) |
+| `rx_len` | `uint8_t tx_buff[8],rx_buff[8],rx_len,dlc;` | 源码未注释 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:10](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L10) |
+| `dlc` | `uint8_t tx_buff[8],rx_buff[8],rx_len,dlc;` | 源码未注释 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:10](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L10) |
+| `can_module_callback` | `void (*can_module_callback)(CANInstance *);` | 源码未注释 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:11](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L11) |
+| `id` | `void *id;` | 源码未注释 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:12](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L12) |
+
+嵌套关系：
+
+- `CANInstance.can_handle` → [CAN_HandleTypeDef](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-4-9)（tests/chassis_imu_can_runtime/stubs/bsp_can.h:4）。声明中的 `*` 表示指针关系。
+
+<a id="r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-14-9"></a>
+
+### CAN_Init_Config_s
+
+- 类型：struct；来源：测试与测试桩；定义：[tests/chassis_imu_can_runtime/stubs/bsp_can.h:14](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L14)。
+- 中文用途关键词：惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送。
+- 源码说明：源码未注释。
+- 名称与别名：`CAN_Init_Config_s`。
+- 源码条件：`#ifndef TEST_BSP_CAN_H`。
+
+| 成员 | 声明 | 成员说明 | 源码位置 |
+| --- | --- | --- | --- |
+| `can_handle` | `CAN_HandleTypeDef *can_handle;` | 源码未注释 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:15](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L15) |
+| `tx_id` | `uint32_t tx_id,rx_id;` | 源码未注释 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:16](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L16) |
+| `rx_id` | `uint32_t tx_id,rx_id;` | 源码未注释 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:16](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L16) |
+| `can_module_callback` | `void (*can_module_callback)(CANInstance *);` | 源码未注释 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:17](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L17) |
+| `id` | `void *id;` | 源码未注释 | [tests/chassis_imu_can_runtime/stubs/bsp_can.h:18](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L18) |
+
+嵌套关系：
+
+- `CAN_Init_Config_s.can_handle` → [CAN_HandleTypeDef](#r-tests-chassis_imu_can_runtime-stubs-bsp_can-h-4-9)（tests/chassis_imu_can_runtime/stubs/bsp_can.h:4）。声明中的 `*` 表示指针关系。
+
 <a id="r-tests-chassis_motion-stubs-arm_math-h-6-9"></a>
 
 ### arm_matrix_instance_f32
@@ -33929,91 +34138,6 @@
 嵌套关系：
 
 无可链接的仓库内结构体/联合体成员。
-
-<a id="r-tests-dm_imu_can_protocol-test_dm_imu_can_protocol-c-156-11"></a>
-
-### cases
-
-- 类型：struct；来源：测试与测试桩；定义：[tests/dm_imu_can_protocol/test_dm_imu_can_protocol.c:156](../tests/dm_imu_can_protocol/test_dm_imu_can_protocol.c#L156)。
-- 中文用途关键词：惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送。
-- 源码说明：源码未注释。
-
-| 成员 | 声明 | 成员说明 | 源码位置 |
-| --- | --- | --- | --- |
-| `gap` | `uint32_t gap;` | 源码未注释 | [tests/dm_imu_can_protocol/test_dm_imu_can_protocol.c:156](../tests/dm_imu_can_protocol/test_dm_imu_can_protocol.c#L156) |
-| `publish` | `bool publish;` | 源码未注释 | [tests/dm_imu_can_protocol/test_dm_imu_can_protocol.c:156](../tests/dm_imu_can_protocol/test_dm_imu_can_protocol.c#L156) |
-
-嵌套关系：
-
-无可链接的仓库内结构体/联合体成员。
-
-<a id="r-tests-dm_imu_runtime-stubs-bsp_can-h-4-9"></a>
-
-### CAN_HandleTypeDef
-
-- 类型：struct；来源：测试与测试桩；定义：[tests/dm_imu_runtime/stubs/bsp_can.h:4](../tests/dm_imu_runtime/stubs/bsp_can.h#L4)。
-- 中文用途关键词：惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送。
-- 源码说明：源码未注释。
-- 名称与别名：`CAN_HandleTypeDef`。
-- 源码条件：`#ifndef TEST_BSP_CAN_H`。
-
-| 成员 | 声明 | 成员说明 | 源码位置 |
-| --- | --- | --- | --- |
-| `bus` | `unsigned bus;` | 源码未注释 | [tests/dm_imu_runtime/stubs/bsp_can.h:4](../tests/dm_imu_runtime/stubs/bsp_can.h#L4) |
-
-嵌套关系：
-
-无可链接的仓库内结构体/联合体成员。
-
-<a id="r-tests-dm_imu_runtime-stubs-bsp_can-h-7-1"></a>
-
-### CANInstance
-
-- 类型：struct；来源：测试与测试桩；定义：[tests/dm_imu_runtime/stubs/bsp_can.h:7](../tests/dm_imu_runtime/stubs/bsp_can.h#L7)。
-- 中文用途关键词：惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送。
-- 源码说明：源码未注释。
-- 名称与别名：`CANInstance`、`struct CANInstance`。
-- 别名声明：`CANInstance`：[tests/dm_imu_runtime/stubs/bsp_can.h:6](../tests/dm_imu_runtime/stubs/bsp_can.h#L6)。
-- 源码条件：`#ifndef TEST_BSP_CAN_H`。
-
-| 成员 | 声明 | 成员说明 | 源码位置 |
-| --- | --- | --- | --- |
-| `can_handle` | `CAN_HandleTypeDef *can_handle;` | 源码未注释 | [tests/dm_imu_runtime/stubs/bsp_can.h:8](../tests/dm_imu_runtime/stubs/bsp_can.h#L8) |
-| `tx_id` | `uint32_t tx_id,rx_id,tx_mailbox;` | 源码未注释 | [tests/dm_imu_runtime/stubs/bsp_can.h:9](../tests/dm_imu_runtime/stubs/bsp_can.h#L9) |
-| `rx_id` | `uint32_t tx_id,rx_id,tx_mailbox;` | 源码未注释 | [tests/dm_imu_runtime/stubs/bsp_can.h:9](../tests/dm_imu_runtime/stubs/bsp_can.h#L9) |
-| `tx_mailbox` | `uint32_t tx_id,rx_id,tx_mailbox;` | 源码未注释 | [tests/dm_imu_runtime/stubs/bsp_can.h:9](../tests/dm_imu_runtime/stubs/bsp_can.h#L9) |
-| `tx_buff` | `uint8_t tx_buff[8],rx_buff[8],rx_len,dlc;` | 源码未注释 | [tests/dm_imu_runtime/stubs/bsp_can.h:10](../tests/dm_imu_runtime/stubs/bsp_can.h#L10) |
-| `rx_buff` | `uint8_t tx_buff[8],rx_buff[8],rx_len,dlc;` | 源码未注释 | [tests/dm_imu_runtime/stubs/bsp_can.h:10](../tests/dm_imu_runtime/stubs/bsp_can.h#L10) |
-| `rx_len` | `uint8_t tx_buff[8],rx_buff[8],rx_len,dlc;` | 源码未注释 | [tests/dm_imu_runtime/stubs/bsp_can.h:10](../tests/dm_imu_runtime/stubs/bsp_can.h#L10) |
-| `dlc` | `uint8_t tx_buff[8],rx_buff[8],rx_len,dlc;` | 源码未注释 | [tests/dm_imu_runtime/stubs/bsp_can.h:10](../tests/dm_imu_runtime/stubs/bsp_can.h#L10) |
-| `can_module_callback` | `void (*can_module_callback)(CANInstance *);` | 源码未注释 | [tests/dm_imu_runtime/stubs/bsp_can.h:11](../tests/dm_imu_runtime/stubs/bsp_can.h#L11) |
-| `id` | `void *id;` | 源码未注释 | [tests/dm_imu_runtime/stubs/bsp_can.h:12](../tests/dm_imu_runtime/stubs/bsp_can.h#L12) |
-
-嵌套关系：
-
-- `CANInstance.can_handle` → [CAN_HandleTypeDef](#r-tests-dm_imu_runtime-stubs-bsp_can-h-4-9)（tests/dm_imu_runtime/stubs/bsp_can.h:4）。声明中的 `*` 表示指针关系。
-
-<a id="r-tests-dm_imu_runtime-stubs-bsp_can-h-14-9"></a>
-
-### CAN_Init_Config_s
-
-- 类型：struct；来源：测试与测试桩；定义：[tests/dm_imu_runtime/stubs/bsp_can.h:14](../tests/dm_imu_runtime/stubs/bsp_can.h#L14)。
-- 中文用途关键词：惯性测量 姿态 陀螺仪 加速度 CAN 总线 接收 发送。
-- 源码说明：源码未注释。
-- 名称与别名：`CAN_Init_Config_s`。
-- 源码条件：`#ifndef TEST_BSP_CAN_H`。
-
-| 成员 | 声明 | 成员说明 | 源码位置 |
-| --- | --- | --- | --- |
-| `can_handle` | `CAN_HandleTypeDef *can_handle;` | 源码未注释 | [tests/dm_imu_runtime/stubs/bsp_can.h:15](../tests/dm_imu_runtime/stubs/bsp_can.h#L15) |
-| `tx_id` | `uint32_t tx_id,rx_id;` | 源码未注释 | [tests/dm_imu_runtime/stubs/bsp_can.h:16](../tests/dm_imu_runtime/stubs/bsp_can.h#L16) |
-| `rx_id` | `uint32_t tx_id,rx_id;` | 源码未注释 | [tests/dm_imu_runtime/stubs/bsp_can.h:16](../tests/dm_imu_runtime/stubs/bsp_can.h#L16) |
-| `can_module_callback` | `void (*can_module_callback)(CANInstance *);` | 源码未注释 | [tests/dm_imu_runtime/stubs/bsp_can.h:17](../tests/dm_imu_runtime/stubs/bsp_can.h#L17) |
-| `id` | `void *id;` | 源码未注释 | [tests/dm_imu_runtime/stubs/bsp_can.h:18](../tests/dm_imu_runtime/stubs/bsp_can.h#L18) |
-
-嵌套关系：
-
-- `CAN_Init_Config_s.can_handle` → [CAN_HandleTypeDef](#r-tests-dm_imu_runtime-stubs-bsp_can-h-4-9)（tests/dm_imu_runtime/stubs/bsp_can.h:4）。声明中的 `*` 表示指针关系。
 
 <a id="r-tests-imu_capture-stubs-FreeRTOS-h-7-9"></a>
 
@@ -35234,6 +35358,9 @@
 | [application/runtime/shadow_jscope.h:1](../application/runtime/shadow_jscope.h#L1) | 项目源码 | 1 | 5 |
 | [application/runtime/tuning_policy.c:1](../application/runtime/tuning_policy.c#L1) | 项目源码 | 0 | 0 |
 | [application/runtime/tuning_policy.h:1](../application/runtime/tuning_policy.h#L1) | 项目源码 | 0 | 0 |
+| [application/runtime/vofa_observation.c:1](../application/runtime/vofa_observation.c#L1) | 项目源码 | 1 | 2 |
+| [application/runtime/vofa_observation.h:1](../application/runtime/vofa_observation.h#L1) | 项目源码 | 0 | 0 |
+| [application/runtime/vofa_schema.h:1](../application/runtime/vofa_schema.h#L1) | 项目源码 | 0 | 0 |
 | [application/runtime/vofa_telemetry.c:1](../application/runtime/vofa_telemetry.c#L1) | 项目源码 | 2 | 4 |
 | [application/runtime/vofa_telemetry.h:1](../application/runtime/vofa_telemetry.h#L1) | 项目源码 | 0 | 0 |
 | [application/shoot/shoot.c:1](../application/shoot/shoot.c#L1) | 项目源码 | 0 | 0 |
@@ -35279,6 +35406,7 @@
 | [config/20_chassis_power/chassis_energy_config.h:1](../config/20_chassis_power/chassis_energy_config.h#L1) | 项目源码 | 0 | 0 |
 | [config/20_chassis_power/chassis_power_config.c:1](../config/20_chassis_power/chassis_power_config.c#L1) | 项目源码 | 0 | 0 |
 | [config/20_chassis_power/chassis_power_config.h:1](../config/20_chassis_power/chassis_power_config.h#L1) | 项目源码 | 0 | 0 |
+| [config/20_chassis_power/chassis_power_defaults.h:1](../config/20_chassis_power/chassis_power_defaults.h#L1) | 项目源码 | 0 | 0 |
 | [config/20_chassis_power/chassis_power_model_config.h:1](../config/20_chassis_power/chassis_power_model_config.h#L1) | 项目源码 | 0 | 0 |
 | [config/21_chassis_spin/chassis_spin_config.c:1](../config/21_chassis_spin/chassis_spin_config.c#L1) | 项目源码 | 0 | 0 |
 | [config/21_chassis_spin/chassis_spin_config.h:1](../config/21_chassis_spin/chassis_spin_config.h#L1) | 项目源码 | 0 | 0 |
@@ -35301,8 +35429,8 @@
 | [config/90_board/log_config.h:1](../config/90_board/log_config.h#L1) | 项目源码 | 0 | 0 |
 | [config/90_board/referee_config.h:1](../config/90_board/referee_config.h#L1) | 项目源码 | 0 | 0 |
 | [config/91_motor/dji_motor_config.h:1](../config/91_motor/dji_motor_config.h#L1) | 项目源码 | 0 | 0 |
-| [config/92_imu/dm_imu_config.h:1](../config/92_imu/dm_imu_config.h#L1) | 项目源码 | 0 | 0 |
 | [config/92_imu/imu_config.h:1](../config/92_imu/imu_config.h#L1) | 项目源码 | 0 | 0 |
+| [config/_vofa/vofa_config.h:1](../config/_vofa/vofa_config.h#L1) | 项目源码 | 0 | 0 |
 | [modules/BMI088/bmi088.c:1](../modules/BMI088/bmi088.c#L1) | 项目源码 | 0 | 0 |
 | [modules/BMI088/bmi088.h:1](../modules/BMI088/bmi088.h#L1) | 项目源码 | 4 | 36 |
 | [modules/BMI088/bmi088_regNdef.h:1](../modules/BMI088/bmi088_regNdef.h#L1) | 项目源码 | 0 | 0 |
@@ -35327,7 +35455,7 @@
 | [modules/algorithm/chassis_power_transient.c:1](../modules/algorithm/chassis_power_transient.c#L1) | 项目源码 | 1 | 2 |
 | [modules/algorithm/chassis_power_transient.h:1](../modules/algorithm/chassis_power_transient.h#L1) | 项目源码 | 4 | 107 |
 | [modules/algorithm/chassis_remote_fusion.c:1](../modules/algorithm/chassis_remote_fusion.c#L1) | 项目源码 | 0 | 0 |
-| [modules/algorithm/chassis_remote_fusion.h:1](../modules/algorithm/chassis_remote_fusion.h#L1) | 项目源码 | 3 | 42 |
+| [modules/algorithm/chassis_remote_fusion.h:1](../modules/algorithm/chassis_remote_fusion.h#L1) | 项目源码 | 4 | 56 |
 | [modules/algorithm/chassis_spin.c:1](../modules/algorithm/chassis_spin.c#L1) | 项目源码 | 0 | 0 |
 | [modules/algorithm/chassis_spin.h:1](../modules/algorithm/chassis_spin.h#L1) | 项目源码 | 3 | 86 |
 | [modules/algorithm/chassis_spin_config.h:1](../modules/algorithm/chassis_spin_config.h#L1) | 项目源码 | 0 | 0 |
@@ -35378,7 +35506,7 @@
 | [modules/chassis_power/chassis_power_command.c:1](../modules/chassis_power/chassis_power_command.c#L1) | 项目源码 | 0 | 0 |
 | [modules/chassis_power/chassis_power_force.c:1](../modules/chassis_power/chassis_power_force.c#L1) | 项目源码 | 0 | 0 |
 | [modules/chassis_power/chassis_power_force.h:1](../modules/chassis_power/chassis_power_force.h#L1) | 项目源码 | 0 | 0 |
-| [modules/chassis_power/chassis_power_internal.h:1](../modules/chassis_power/chassis_power_internal.h#L1) | 项目源码 | 1 | 27 |
+| [modules/chassis_power/chassis_power_internal.h:1](../modules/chassis_power/chassis_power_internal.h#L1) | 项目源码 | 1 | 30 |
 | [modules/chassis_power/chassis_power_limiter.c:1](../modules/chassis_power/chassis_power_limiter.c#L1) | 项目源码 | 0 | 0 |
 | [modules/chassis_power/chassis_power_policy.c:1](../modules/chassis_power/chassis_power_policy.c#L1) | 项目源码 | 0 | 0 |
 | [modules/chassis_power/chassis_power_policy.h:1](../modules/chassis_power/chassis_power_policy.h#L1) | 项目源码 | 2 | 6 |
@@ -35386,7 +35514,7 @@
 | [modules/chassis_power/chassis_power_shadow.h:1](../modules/chassis_power/chassis_power_shadow.h#L1) | 项目源码 | 3 | 40 |
 | [modules/chassis_power/chassis_power_shadow_energy.c:1](../modules/chassis_power/chassis_power_shadow_energy.c#L1) | 项目源码 | 0 | 0 |
 | [modules/chassis_power/chassis_power_telemetry.c:1](../modules/chassis_power/chassis_power_telemetry.c#L1) | 项目源码 | 0 | 0 |
-| [modules/chassis_power/chassis_power_types.h:1](../modules/chassis_power/chassis_power_types.h#L1) | 项目源码 | 8 | 111 |
+| [modules/chassis_power/chassis_power_types.h:1](../modules/chassis_power/chassis_power_types.h#L1) | 项目源码 | 9 | 121 |
 | [modules/daemon/daemon.c:1](../modules/daemon/daemon.c#L1) | 项目源码 | 0 | 0 |
 | [modules/daemon/daemon.h:1](../modules/daemon/daemon.h#L1) | 项目源码 | 2 | 8 |
 | [modules/general_def.h:1](../modules/general_def.h#L1) | 项目源码 | 0 | 0 |
@@ -35397,9 +35525,9 @@
 | [modules/imu/BMI088driver.c:1](../modules/imu/BMI088driver.c#L1) | 项目源码 | 0 | 0 |
 | [modules/imu/BMI088driver.h:1](../modules/imu/BMI088driver.h#L1) | 项目源码 | 1 | 7 |
 | [modules/imu/BMI088reg.h:1](../modules/imu/BMI088reg.h#L1) | 项目源码 | 0 | 0 |
+| [modules/imu/chassis_imu_can_protocol.c:1](../modules/imu/chassis_imu_can_protocol.c#L1) | 项目源码 | 0 | 0 |
+| [modules/imu/chassis_imu_can_protocol.h:1](../modules/imu/chassis_imu_can_protocol.h#L1) | 项目源码 | 1 | 10 |
 | [modules/imu/chassis_imu_sample.h:1](../modules/imu/chassis_imu_sample.h#L1) | 项目源码 | 2 | 12 |
-| [modules/imu/dm_imu_can_protocol.c:1](../modules/imu/dm_imu_can_protocol.c#L1) | 项目源码 | 0 | 0 |
-| [modules/imu/dm_imu_can_protocol.h:1](../modules/imu/dm_imu_can_protocol.h#L1) | 项目源码 | 1 | 6 |
 | [modules/imu/imu_sample.h:1](../modules/imu/imu_sample.h#L1) | 项目源码 | 1 | 6 |
 | [modules/imu/ins_math.c:1](../modules/imu/ins_math.c#L1) | 项目源码 | 0 | 0 |
 | [modules/imu/ins_math.h:1](../modules/imu/ins_math.h#L1) | 项目源码 | 0 | 0 |
@@ -35487,7 +35615,7 @@
 | [modules/referee/referee_UI.c:1](../modules/referee/referee_UI.c#L1) | 项目源码 | 0 | 0 |
 | [modules/referee/referee_UI.h:1](../modules/referee/referee_UI.h#L1) | 项目源码 | 3 | 15 |
 | [modules/referee/referee_power.c:1](../modules/referee/referee_power.c#L1) | 项目源码 | 0 | 0 |
-| [modules/referee/referee_power.h:1](../modules/referee/referee_power.h#L1) | 项目源码 | 3 | 26 |
+| [modules/referee/referee_power.h:1](../modules/referee/referee_power.h#L1) | 项目源码 | 3 | 29 |
 | [modules/referee/referee_protocol.h:1](../modules/referee/referee_protocol.h#L1) | 项目源码 | 19 | 89 |
 | [modules/referee/referee_stream_parser.c:1](../modules/referee/referee_stream_parser.c#L1) | 项目源码 | 0 | 0 |
 | [modules/referee/referee_stream_parser.h:1](../modules/referee/referee_stream_parser.h#L1) | 项目源码 | 2 | 10 |
@@ -35503,7 +35631,7 @@
 | [modules/super_cap/super_cap.h:1](../modules/super_cap/super_cap.h#L1) | 项目源码 | 1 | 3 |
 | [modules/super_cap/super_cap_protocol.c:1](../modules/super_cap/super_cap_protocol.c#L1) | 项目源码 | 0 | 0 |
 | [modules/super_cap/super_cap_protocol.h:1](../modules/super_cap/super_cap_protocol.h#L1) | 项目源码 | 3 | 17 |
-| [modules/super_cap/super_cap_types.h:1](../modules/super_cap/super_cap_types.h#L1) | 项目源码 | 1 | 9 |
+| [modules/super_cap/super_cap_types.h:1](../modules/super_cap/super_cap_types.h#L1) | 项目源码 | 1 | 14 |
 | [modules/telemetry/autotune_protocol.c:1](../modules/telemetry/autotune_protocol.c#L1) | 项目源码 | 1 | 12 |
 | [modules/telemetry/autotune_protocol.h:1](../modules/telemetry/autotune_protocol.h#L1) | 项目源码 | 2 | 14 |
 | [modules/telemetry/chassis_force_telemetry.c:1](../modules/telemetry/chassis_force_telemetry.c#L1) | 项目源码 | 1 | 4 |
@@ -35550,6 +35678,7 @@
 | [portable_modules/modules/super_cap/super_cap.c:1](../portable_modules/modules/super_cap/super_cap.c#L1) | 便携副本 | 0 | 0 |
 | [portable_modules/modules/super_cap/super_cap.h:1](../portable_modules/modules/super_cap/super_cap.h#L1) | 便携副本 | 5 | 26 |
 | [portable_modules/modules/super_cap/tests/test_super_cap.c:1](../portable_modules/modules/super_cap/tests/test_super_cap.c#L1) | 便携副本 | 0 | 0 |
+| [scripts/vofa_config_export.c:1](../scripts/vofa_config_export.c#L1) | 项目源码 | 0 | 0 |
 | [tests/atype/imu_stubs/QuaternionEKF.h:1](../tests/atype/imu_stubs/QuaternionEKF.h#L1) | 测试与测试桩 | 1 | 5 |
 | [tests/atype/imu_stubs/SEGGER_RTT.h:1](../tests/atype/imu_stubs/SEGGER_RTT.h#L1) | 测试与测试桩 | 0 | 0 |
 | [tests/atype/imu_stubs/bsp_dwt.h:1](../tests/atype/imu_stubs/bsp_dwt.h#L1) | 测试与测试桩 | 0 | 0 |
@@ -35589,6 +35718,12 @@
 | [tests/chassis_force/test_energy.c:1](../tests/chassis_force/test_energy.c#L1) | 测试与测试桩 | 0 | 0 |
 | [tests/chassis_force/test_force.c:1](../tests/chassis_force/test_force.c#L1) | 测试与测试桩 | 0 | 0 |
 | [tests/chassis_gimbal_imu/test_chassis_gimbal_imu.c:1](../tests/chassis_gimbal_imu/test_chassis_gimbal_imu.c#L1) | 测试与测试桩 | 1 | 4 |
+| [tests/chassis_imu_can_protocol/test_chassis_imu_can_protocol.c:1](../tests/chassis_imu_can_protocol/test_chassis_imu_can_protocol.c#L1) | 测试与测试桩 | 0 | 0 |
+| [tests/chassis_imu_can_runtime/stubs/FreeRTOS.h:1](../tests/chassis_imu_can_runtime/stubs/FreeRTOS.h#L1) | 测试与测试桩 | 0 | 0 |
+| [tests/chassis_imu_can_runtime/stubs/bsp_can.h:1](../tests/chassis_imu_can_runtime/stubs/bsp_can.h#L1) | 测试与测试桩 | 3 | 16 |
+| [tests/chassis_imu_can_runtime/stubs/main.h:1](../tests/chassis_imu_can_runtime/stubs/main.h#L1) | 测试与测试桩 | 0 | 0 |
+| [tests/chassis_imu_can_runtime/stubs/task.h:1](../tests/chassis_imu_can_runtime/stubs/task.h#L1) | 测试与测试桩 | 0 | 0 |
+| [tests/chassis_imu_can_runtime/test_runtime.c:1](../tests/chassis_imu_can_runtime/test_runtime.c#L1) | 测试与测试桩 | 0 | 0 |
 | [tests/chassis_kinematics/test_chassis_kinematics.c:1](../tests/chassis_kinematics/test_chassis_kinematics.c#L1) | 测试与测试桩 | 0 | 0 |
 | [tests/chassis_motion/stubs/arm_math.h:1](../tests/chassis_motion/stubs/arm_math.h#L1) | 测试与测试桩 | 1 | 3 |
 | [tests/chassis_motion/stubs/bsp_usart.h:1](../tests/chassis_motion/stubs/bsp_usart.h#L1) | 测试与测试桩 | 0 | 0 |
@@ -35630,12 +35765,6 @@
 | [tests/dji_chassis_power_rtt/stubs/general_def.h:1](../tests/dji_chassis_power_rtt/stubs/general_def.h#L1) | 测试与测试桩 | 0 | 0 |
 | [tests/dji_chassis_power_rtt/stubs/task.h:1](../tests/dji_chassis_power_rtt/stubs/task.h#L1) | 测试与测试桩 | 0 | 0 |
 | [tests/dji_chassis_power_rtt/test_dji_chassis_power_rtt.c:1](../tests/dji_chassis_power_rtt/test_dji_chassis_power_rtt.c#L1) | 测试与测试桩 | 1 | 8 |
-| [tests/dm_imu_can_protocol/test_dm_imu_can_protocol.c:1](../tests/dm_imu_can_protocol/test_dm_imu_can_protocol.c#L1) | 测试与测试桩 | 1 | 2 |
-| [tests/dm_imu_runtime/stubs/FreeRTOS.h:1](../tests/dm_imu_runtime/stubs/FreeRTOS.h#L1) | 测试与测试桩 | 0 | 0 |
-| [tests/dm_imu_runtime/stubs/bsp_can.h:1](../tests/dm_imu_runtime/stubs/bsp_can.h#L1) | 测试与测试桩 | 3 | 16 |
-| [tests/dm_imu_runtime/stubs/main.h:1](../tests/dm_imu_runtime/stubs/main.h#L1) | 测试与测试桩 | 0 | 0 |
-| [tests/dm_imu_runtime/stubs/task.h:1](../tests/dm_imu_runtime/stubs/task.h#L1) | 测试与测试桩 | 0 | 0 |
-| [tests/dm_imu_runtime/test_runtime.c:1](../tests/dm_imu_runtime/test_runtime.c#L1) | 测试与测试桩 | 0 | 0 |
 | [tests/force_calibration/ownership_stubs/task.h:1](../tests/force_calibration/ownership_stubs/task.h#L1) | 测试与测试桩 | 0 | 0 |
 | [tests/force_calibration/stubs/FreeRTOS.h:1](../tests/force_calibration/stubs/FreeRTOS.h#L1) | 测试与测试桩 | 0 | 0 |
 | [tests/force_calibration/stubs/bsp_usb.h:1](../tests/force_calibration/stubs/bsp_usb.h#L1) | 测试与测试桩 | 0 | 0 |
@@ -35767,10 +35896,12 @@
 | [tests/vehicle_motion/stubs/main.h:1](../tests/vehicle_motion/stubs/main.h#L1) | 测试与测试桩 | 0 | 0 |
 | [tests/vehicle_motion/stubs/usart.h:1](../tests/vehicle_motion/stubs/usart.h#L1) | 测试与测试桩 | 0 | 0 |
 | [tests/vehicle_motion/test_vehicle_motion.c:1](../tests/vehicle_motion/test_vehicle_motion.c#L1) | 测试与测试桩 | 2 | 5 |
+| [tests/vofa_analysis/fusion_bridge.c:1](../tests/vofa_analysis/fusion_bridge.c#L1) | 测试与测试桩 | 0 | 0 |
 | [tests/vofa_telemetry/justfloat_decode.h:1](../tests/vofa_telemetry/justfloat_decode.h#L1) | 测试与测试桩 | 0 | 0 |
 | [tests/vofa_telemetry/stubs/usart.h:1](../tests/vofa_telemetry/stubs/usart.h#L1) | 测试与测试桩 | 1 | 1 |
 | [tests/vofa_telemetry/test_imu_capture.c:1](../tests/vofa_telemetry/test_imu_capture.c#L1) | 测试与测试桩 | 0 | 0 |
 | [tests/vofa_telemetry/test_measurement_transport.c:1](../tests/vofa_telemetry/test_measurement_transport.c#L1) | 测试与测试桩 | 0 | 0 |
+| [tests/vofa_telemetry/test_observation.c:1](../tests/vofa_telemetry/test_observation.c#L1) | 测试与测试桩 | 0 | 0 |
 | [tests/vofa_telemetry/test_vofa_measurement.c:1](../tests/vofa_telemetry/test_vofa_measurement.c#L1) | 测试与测试桩 | 0 | 0 |
 | [tests/vofa_telemetry/test_vofa_remote.c:1](../tests/vofa_telemetry/test_vofa_remote.c#L1) | 测试与测试桩 | 0 | 0 |
 | [tests/vofa_telemetry/test_vofa_telemetry.c:1](../tests/vofa_telemetry/test_vofa_telemetry.c#L1) | 测试与测试桩 | 0 | 0 |

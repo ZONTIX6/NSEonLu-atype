@@ -72,9 +72,9 @@ typedef struct {
 
 void ChassisRemoteFusionReset(ChassisRemoteFusion_s *state);
 /* Source age <=20 ms, known total age <=60 ms, wheel age <=20 ms.
- * DM supplies receive-estimated dt. first_rx-source_age pairs wheel history
- * and labels the output; it omits unknown sensor/transport latency and is not
- * hardware synchronized. The DM adapter always sets source_age_ms to zero.
+ * Source-board intervals supply the physical dt. first_rx-source_age pairs
+ * wheel history and labels the output on the receiver clock; transport delay
+ * remains unknown, and the two boards are not hardware synchronized.
  * Repeated source identities never refresh the estimate or reapply measurements.
  * A missing wheel invalidates everything; other failures return current wheels. */
 void ChassisRemoteFusionUpdate(ChassisRemoteFusion_s *state,

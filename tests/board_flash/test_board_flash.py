@@ -122,26 +122,36 @@ class BoardFlashTests(unittest.TestCase):
         self.assertEqual(selected["board"], target)
         self.assertEqual(self.commands(), [])
 
-    def test_main_preset_uses_dm_observation_without_obsolete_board_options(self):
+    def test_presets_use_matching_can_roles_and_distinct_outputs(self):
         main = self.show("-Board", 1)
-        expected = {
+        imu = self.show("-Board", 2)
+        self.assertNotEqual(main["buildDirectory"], imu["buildDirectory"])
+        common = {
             "ONE_BOARD": "1", "CHASSIS_CONTROL_MODE": "0",
             "CHASSIS_FORCE_CALIBRATION_ENABLE": "0", "ATYPE_BENCH_MODE": "0",
             "CHASSIS_VELOCITY_FUSION_CALIBRATED": "0",
-            "IMU_CAPTURE_ONLY": "0", "CHASSIS_IMU_CAN_RX_ENABLE": "1",
-            "CHASSIS_VELOCITY_FUSION_ENABLE": "1", "CHASSIS_REMOTE_IMU_FUSION_ENABLE": "1",
-            "VOFA_TELEMETRY_ENABLE": "1", "VOFA_TELEMETRY_MODE": "2", "USB_TELEMETRY_ENABLE": "1",
             "VOFA_OBSERVATION_PROFILE": "2",
         }
-        options = dict(option.split("=", 1) for option in main["options"])
-        for key, value in expected.items():
-            self.assertEqual(options.get(key), value, key)
-        for key in ("CHASSIS_BOARD", "GIMBAL_BOARD", "IMU_CAPTURE_CAN_TX_ENABLE", "CHASSIS_IMU_CAN_SOURCE"):
-            self.assertNotIn(key, options)
-        self.assertIn("BUILD_DIR=" + main["buildDirectory"], main["buildArguments"])
-        self.assertIn("BUILD_DIR=" + main["buildDirectory"], main["flashArguments"])
-        self.assertTrue(set(main["options"]) <= set(main["buildArguments"]))
-        self.assertNotIn("BOARD_FLASH_2_", CONFIG.read_text(encoding="utf-8-sig"))
+        cases = (
+            (main, {"IMU_CAPTURE_ONLY": "0", "IMU_CAPTURE_CAN_TX_ENABLE": "0",
+                    "CHASSIS_IMU_CAN_RX_ENABLE": "1", "CHASSIS_VELOCITY_FUSION_ENABLE": "1",
+                    "CHASSIS_REMOTE_IMU_FUSION_ENABLE": "1",
+                    "VOFA_TELEMETRY_ENABLE": "1", "VOFA_TELEMETRY_MODE": "2", "USB_TELEMETRY_ENABLE": "1"}),
+            (imu, {"IMU_CAPTURE_ONLY": "1", "IMU_CAPTURE_CAN_TX_ENABLE": "1",
+                   "CHASSIS_IMU_CAN_RX_ENABLE": "0", "CHASSIS_VELOCITY_FUSION_ENABLE": "0",
+                   "CHASSIS_REMOTE_IMU_FUSION_ENABLE": "0",
+                   "VOFA_TELEMETRY_ENABLE": "0", "VOFA_TELEMETRY_MODE": "1", "USB_TELEMETRY_ENABLE": "0"}),
+        )
+        for selected, role in cases:
+            with self.subTest(board=selected["board"]):
+                options = dict(option.split("=", 1) for option in selected["options"])
+                for key, value in {**common, **role}.items():
+                    self.assertEqual(options.get(key), value, key)
+                for key in ("CHASSIS_BOARD", "GIMBAL_BOARD", "CHASSIS_IMU_CAN_SOURCE"):
+                    self.assertNotIn(key, options)
+                self.assertIn("BUILD_DIR=" + selected["buildDirectory"], selected["buildArguments"])
+                self.assertIn("BUILD_DIR=" + selected["buildDirectory"], selected["flashArguments"])
+                self.assertTrue(set(selected["options"]) <= set(selected["buildArguments"]))
 
     def test_observation_profile_is_forwarded_without_changing_transport(self):
         for profile in (0, 1, 2):
@@ -164,13 +174,18 @@ class BoardFlashTests(unittest.TestCase):
     def test_zero_and_one_select_the_same_main_board(self):
         self.assertEqual(self.show("-Board", 0), self.show("-Board", 1))
 
-    def test_removed_board_argument_is_rejected_before_tools(self):
-        result = self.invoke("-Board", 2, "-Action", "Flash")
+    def test_config_selection_and_explicit_override(self):
+        path = self.config_with(BOARD_FLASH_TARGET=2)
+        self.assertEqual(self.show("-ConfigFile", path)["board"], 2)
+        self.assertEqual(self.show("-ConfigFile", path, "-Board", 1)["board"], 1)
+
+    def test_invalid_board_argument_is_rejected_before_tools(self):
+        result = self.invoke("-Board", 3, "-Action", "Flash")
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(self.commands(), [])
 
     def test_invalid_config_selection_stops_before_build_or_flash(self):
-        for target in (0, 2, 3):
+        for target in (0, 3):
             with self.subTest(target=target):
                 path = self.config_with(BOARD_FLASH_TARGET=target)
                 result = self.invoke("-ConfigFile", path, "-Action", "Flash")
@@ -178,7 +193,7 @@ class BoardFlashTests(unittest.TestCase):
                 self.assertEqual(self.commands(), [])
 
     def test_invalid_config_cannot_be_masked_by_explicit_main_board(self):
-        path = self.config_with(BOARD_FLASH_TARGET=2)
+        path = self.config_with(BOARD_FLASH_TARGET=3)
         result = self.invoke("-ConfigFile", path, "-Board", 1, "-Action", "Flash")
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(self.commands(), [])
@@ -195,6 +210,18 @@ class BoardFlashTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(self.commands(), [])
 
+    def test_boards_cannot_share_the_same_output_directory(self):
+        source = CONFIG.read_text(encoding="utf-8-sig")
+        main_directory = re.search(r'^#define BOARD_FLASH_1_BUILD_DIR\s+"([^"]+)"', source, re.M)[1]
+        source = re.sub(r'(^#define BOARD_FLASH_2_BUILD_DIR\s+)"[^"]*"',
+                        lambda m: m.group(1) + '"build/' + main_directory[6:].upper() + '"', source, flags=re.M)
+        path = self.directory / "shared output.h"
+        path.write_text(source, encoding="utf-8")
+        result = self.invoke("-ConfigFile", path, "-Action", "Flash", "-Board", 2)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("different build directories", result.stderr)
+        self.assertEqual(self.commands(), [])
+
     def test_programmer_selection_changes_only_the_download_target(self):
         dap = self.show("-ConfigFile", self.config_with(BOARD_FLASH_PROGRAMMER=1))
         jlink = self.show("-ConfigFile", self.config_with(BOARD_FLASH_PROGRAMMER=2))
@@ -205,18 +232,21 @@ class BoardFlashTests(unittest.TestCase):
         self.assertEqual(dap["buildArguments"], jlink["buildArguments"])
 
     def test_show_for_flash_configuration_never_invokes_a_tool(self):
-        self.show("-Board", 1, "-Jobs", 3)
+        self.show("-Board", 2, "-Jobs", 3)
         self.assertEqual(self.commands(), [])
 
     def test_build_failure_never_invokes_download(self):
-        result = self.invoke("-Action", "Flash", "-Board", 1)
-        self.assertNotEqual(result.returncode, 0)
-        commands = self.commands()
-        self.assertEqual(len(commands), 1, commands)
-        self.assertTrue(commands[0].startswith(("make ", "mingw32-make ")), commands)
-        self.assertNotIn("download_", commands[0])
-        self.assertIn("IMU_CAPTURE_ONLY=0", commands[0])
-        self.assertIn("BUILD_DIR=build/board-1-main", commands[0])
+        for board, capture, directory in ((1, 0, "board-1-main"), (2, 1, "board-2-imu")):
+            with self.subTest(board=board):
+                before = len(self.commands())
+                result = self.invoke("-Action", "Flash", "-Board", board)
+                self.assertNotEqual(result.returncode, 0)
+                commands = self.commands()[before:]
+                self.assertEqual(len(commands), 1, commands)
+                self.assertTrue(commands[0].startswith(("make ", "mingw32-make ")), commands)
+                self.assertNotIn("download_", commands[0])
+                self.assertIn(f"IMU_CAPTURE_ONLY={capture}", commands[0])
+                self.assertIn(f"BUILD_DIR=build/{directory}", commands[0])
 
 
 if __name__ == "__main__":

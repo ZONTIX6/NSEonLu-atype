@@ -237,9 +237,9 @@ static void Kalman(float *f, const USBTelemetrySample_s *sample,
     K(VALID) = (wheel ? 1U : 0U) | (target ? 2U : 0U) | (estimate ? 4U : 0U) | (imu ? 8U : 0U) |
         (attempt ? 16U : 0U) | (CHASSIS_REMOTE_IMU_CONFIG_VERIFIED ? 32U : 0U);
     K(OBSERVER_STATUS) = v == &empty ? -1.0f : (float)v->status;
-    K(CONFIG_SOURCE) = 0; /* This fixed DM path has no runtime filter override. */
+    K(CONFIG_SOURCE) = 0; /* Fixed A-board configuration; no runtime filter override. */
     if (a->available) U32(f, VOFA_KALMAN_CONFIG_FINGERPRINT_HI, ConfigFingerprint(c));
-    K(IMU_SOURCE) = CHASSIS_IMU_CAN_RX_ENABLE ? 2 : 0;
+    K(IMU_SOURCE) = CHASSIS_IMU_CAN_RX_ENABLE ? 1 : 0; /* 1=remote A board; legacy 2=DM. */
     K(WHEEL_ONLINE_MASK) = online;
     K(WHEEL_VX_MPS) = v->wheel.vx_mps; K(WHEEL_VY_MPS) = v->wheel.vy_mps;
     K(WHEEL_WZ_RADPS) = v->wheel.wz_rpm * (6.283185307179586f / 60.0f);
@@ -256,8 +256,8 @@ static void Kalman(float *f, const USBTelemetrySample_s *sample,
         f[VOFA_KALMAN_IMU_GX_RADPS + i] = gyro[i];
     }
     K(IMU_AGE_MS) = imu_age;
-    /* DM sample epoch is the complete group's FIRST receive time. No sensor
-     * timestamp exists; zero source age does not assert zero sensor latency. */
+    /* A-board source age plus first reception estimates the receiver epoch;
+     * the boards' absolute clocks are not synchronized. */
     K(IMU_RECEIVE_AGE_MS) = receive_age;
     K(IMU_SOURCE_AGE_MS) = source_age;
     U32(f, VOFA_KALMAN_IMU_SEQUENCE_HI, imu_sequence);

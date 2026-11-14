@@ -1,6 +1,6 @@
 param(
     [ValidateSet('Show','Build','Flash')][string]$Action='Build',
-    [ValidateRange(0,1)][int]$Board=0,
+    [ValidateRange(0,2)][int]$Board=0,
     [string]$ConfigFile=(Join-Path $PSScriptRoot '../config/00_flash/board_flash_config.h'),
     [ValidateRange(1,64)][int]$Jobs=8
 )
@@ -27,17 +27,22 @@ function Setting([string]$Key) {
     return $settings[$Key]
 }
 $selected=Setting 'BOARD_FLASH_TARGET'
-if($selected -ne '1') { throw 'BOARD_FLASH_TARGET must be 1 (main board).' }
+if($selected -notin @('1','2')) { throw 'BOARD_FLASH_TARGET must be 1 or 2.' }
 if($Board -ne 0) { $selected=[string]$Board }
 $programmerId=Setting 'BOARD_FLASH_PROGRAMMER'
 if($programmerId -notin @('1','2')) { throw 'BOARD_FLASH_PROGRAMMER must be 1 (DAP) or 2 (JLink).' }
 $profile=Setting 'BOARD_FLASH_PROFILE'
 if($profile -notin @('atype-vehicle','atype-bench','atype-direct')) { throw 'Invalid BOARD_FLASH_PROFILE.' }
+$board1Dir=Setting 'BOARD_FLASH_1_BUILD_DIR'
+$board2Dir=Setting 'BOARD_FLASH_2_BUILD_DIR'
+foreach($directory in @($board1Dir,$board2Dir)) {
+    if($directory -notmatch '^build/[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*$') {
+        throw 'Board build directories must be simple relative paths below build/.'
+    }
+}
+if($board1Dir -ieq $board2Dir) { throw 'The two boards must use different build directories.' }
 $prefix="BOARD_FLASH_${selected}_"
 $buildDirectory=Setting ($prefix+'BUILD_DIR')
-if($buildDirectory -notmatch '^build/[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*$') {
-    throw 'The build directory must be a simple relative path below build/.'
-}
 $name=Setting ($prefix+'NAME')
 $allowed=@(Get-Content -LiteralPath (Join-Path $boardProjectRoot 'config/99_build/atype-options.txt'))
 $optionValues=@{}
@@ -65,8 +70,9 @@ if(-not $optionValues.ContainsKey('VOFA_OBSERVATION_PROFILE')) {
     }
     $optionValues['VOFA_OBSERVATION_PROFILE']=$vofaValue
 }
-# Keep the main-board observation contract explicit; diagnostic/tool switches use their defaults.
-foreach($required in @('ONE_BOARD','CHASSIS_CONTROL_MODE','CHASSIS_IMU_CAN_RX_ENABLE',
+# Require explicit role switches so changing boards cannot inherit unsafe defaults.
+foreach($required in @('ONE_BOARD','CHASSIS_CONTROL_MODE','CHASSIS_FORCE_CALIBRATION_ENABLE',
+    'ATYPE_BENCH_MODE','IMU_CAPTURE_ONLY','IMU_CAPTURE_CAN_TX_ENABLE','CHASSIS_IMU_CAN_RX_ENABLE',
     'CHASSIS_VELOCITY_FUSION_ENABLE','CHASSIS_VELOCITY_FUSION_CALIBRATED','CHASSIS_REMOTE_IMU_FUSION_ENABLE',
     'VOFA_TELEMETRY_ENABLE','VOFA_TELEMETRY_MODE','VOFA_OBSERVATION_PROFILE','USB_TELEMETRY_ENABLE')) {
     if(-not $optionValues.ContainsKey($required)) { throw "Missing board option: $prefix$required" }

@@ -2,14 +2,23 @@
 #define CHASSIS_IMU_CAN_H
 
 #include "imu_capture_config.h"
-#include "chassis_imu_sample.h"
+#include "chassis_imu_can_protocol.h"
 
-#if CHASSIS_IMU_CAN_RX_ENABLE
-/* Register the DM-IMU-L1 observation endpoint before enabling IRQs. */
+#if IMU_CAPTURE_CAN_TX_ENABLE || CHASSIS_IMU_CAN_RX_ENABLE
+/* Register one diagnostic-only CAN1 / 0x520 endpoint before enabling IRQs. */
 void ChassisImuCanInit(void);
-/* Copy the latest complete group, even if stale; return receive freshness.
- * Tick/sequence are generated on complete reception, with unknown sensor delay.
- * Caller must not refresh timestamps on reads or treat these as hardware time. */
+#endif
+#if IMU_CAPTURE_CAN_TX_ENABLE
+/* Low-priority 20 ms task; bounded per-frame wait, minimum 15 ms between groups
+ * to tolerate scheduler jitter while rejecting rapid catch-up calls. */
+void ChassisImuCanSend(uint32_t now_ms);
+uint32_t ChassisImuCanTxDropCount(void);
+#endif
+#if CHASSIS_IMU_CAN_RX_ENABLE
+/* Always copies the latest complete group and reject count, including stale or
+ * source-invalid data. Return value adds local freshness to source validity.
+ * Source tick belongs to the second board and is never subtracted from now_ms. */
 bool ChassisImuCanReadSnapshot(ChassisImuCanSnapshot_s *snapshot,uint32_t now_ms);
 #endif
+
 #endif
