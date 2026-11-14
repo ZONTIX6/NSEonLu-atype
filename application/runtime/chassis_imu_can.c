@@ -39,7 +39,7 @@ bool ChassisImuCanReadSnapshot(ChassisImuCanSnapshot_s *snapshot,uint32_t now_ms
 void ChassisImuCanInit(void)
 {
     if(endpoint) return;
-    CAN_Init_Config_s config={.can_handle=&hcan2,.tx_id=CHASSIS_IMU_CAN_DATA_ID,
+    CAN_Init_Config_s config={.can_handle=BOARD_CHASSIS_IMU_CAN,.tx_id=CHASSIS_IMU_CAN_DATA_ID,
         .rx_id=CHASSIS_IMU_CAN_DATA_ID};
 #if CHASSIS_IMU_CAN_RX_ENABLE
     ChassisImuCanDecoderInit(&decoder);

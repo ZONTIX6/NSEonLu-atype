@@ -7,6 +7,10 @@
 #include <string.h>
 
 CAN_HandleTypeDef hcan1={1},hcan2={2};
+#ifndef EXPECT_CAN_PORT
+#define EXPECT_CAN_PORT 2
+#endif
+static CAN_HandleTypeDef *const expected_can=EXPECT_CAN_PORT==1 ? &hcan1 : &hcan2;
 static CANInstance registered;
 static unsigned registrations,critical;
 static uint32_t tick;
@@ -15,7 +19,7 @@ void TestEnterCritical(void) { ++critical; }
 void TestExitCritical(void) { assert(critical); --critical; }
 CANInstance *CANRegister(CAN_Init_Config_s *config)
 {
-    assert(config->can_handle==&hcan2 && config->tx_id==0x520 && config->rx_id==0x520);
+    assert(config->can_handle==expected_can && config->tx_id==0x520 && config->rx_id==0x520);
     registered=(CANInstance){.can_handle=config->can_handle,.tx_id=config->tx_id,
         .rx_id=config->rx_id,.can_module_callback=config->can_module_callback,.dlc=8};
     ++registrations;
@@ -34,7 +38,7 @@ static bool abort_stuck;
 bool INSGetMotionSnapshot(INSMotionSnapshot_s *out) { *out=imu;return imu.valid; }
 uint8_t CANTransmit(CANInstance *instance,float timeout)
 {
-    assert(instance==&registered && instance->can_handle==&hcan2 && instance->tx_id==0x520);
+    assert(instance==&registered && instance->can_handle==expected_can && instance->tx_id==0x520);
     assert(instance->dlc==8 && timeout>0 && timeout<=1.0f);
     ++calls;
     /* Four high-priority motor feedback frames can occupy the bus for 0.5 ms. */
@@ -49,10 +53,10 @@ uint8_t CANTransmit(CANInstance *instance,float timeout)
     return 1;
 }
 uint32_t HAL_CAN_IsTxMessagePending(CAN_HandleTypeDef *can,uint32_t mask)
-{ assert(can==&hcan2);return (pending&mask)!=0; }
+{ assert(can==expected_can);return (pending&mask)!=0; }
 HAL_StatusTypeDef HAL_CAN_AbortTxRequest(CAN_HandleTypeDef *can,uint32_t mask)
 {
-    assert(can==&hcan2 && mask && (mask&~7U)==0);
+    assert(can==expected_can && mask && (mask&~7U)==0);
     ++aborts;abort_mask=mask;
     if(!abort_stuck) pending&=~mask;
     return HAL_OK;

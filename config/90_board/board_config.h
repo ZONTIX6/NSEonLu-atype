@@ -17,6 +17,9 @@
 #ifndef LOG_OUTPUT
 #define LOG_OUTPUT 1 /* 日志输出：0=关闭，1=RTT，2=USART2，3=RTT与USART2同时输出。 */
 #endif
+#ifndef CHASSIS_IMU_CAN_PORT
+#define CHASSIS_IMU_CAN_PORT 2 /* 主板与IMU采集板通信：1=CAN1，2=CAN2（默认）；两板共用，修改后分别重新编译烧录。 */
+#endif
 #ifndef VOFA_TELEMETRY_MODE
 #define VOFA_TELEMETRY_MODE 2 /* VOFA传输：0=旧19路JustFloat，1=旧FireWater，2=JustFloat用途观测。 */
 #endif
@@ -32,6 +35,9 @@
 #endif
 #if LOG_OUTPUT < 0 || LOG_OUTPUT > 3
 #error LOG_OUTPUT must be 0, 1, 2, or 3.
+#endif
+#if CHASSIS_IMU_CAN_PORT != 1 && CHASSIS_IMU_CAN_PORT != 2
+#error CHASSIS_IMU_CAN_PORT must be 1 (CAN1) or 2 (CAN2).
 #endif
 #if VOFA_TELEMETRY_MODE != 0 && VOFA_TELEMETRY_MODE != 1 && VOFA_TELEMETRY_MODE != 2
 #error VOFA_TELEMETRY_MODE must be 0, 1 or 2.
@@ -57,6 +63,11 @@
 #define BOARD_VOFA_UART (&huart7) /* VOFA遥测绑定UART7，不能与裁判或UART7辅助设备同时占用。 */
 #define BOARD_SUPERCAP_CAN (&hcan1) /* 超级电容通信绑定CAN1；协议CAN ID仍由协议模块定义。 */
 #define BOARD_POWER_METER_CAN (&hcan1) /* 功率计通信绑定CAN1；启用开关POWER_METER_ENABLE见chassis_power_config.h。 */
+#if CHASSIS_IMU_CAN_PORT == 1
+#define BOARD_CHASSIS_IMU_CAN (&hcan1) /* 板间IMU通信句柄，由CHASSIS_IMU_CAN_PORT自动选择，不单独修改。 */
+#else
+#define BOARD_CHASSIS_IMU_CAN (&hcan2) /* 板间IMU通信句柄，由CHASSIS_IMU_CAN_PORT自动选择，不单独修改。 */
+#endif
 
 #ifndef OLED_USE_I2C
 #define OLED_USE_I2C 0 /* OLED后端：0=SPI1（默认），1=I2C2；还需BOARD_OLED_ENABLE=1注册显示屏。 */

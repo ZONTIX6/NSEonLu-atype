@@ -44,6 +44,13 @@ class BoardConfiguration(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("VOFA_OBSERVATION_PROFILE", result.stderr)
 
+    def test_imu_can_rejects_unsupported_ports(self):
+        for port in (-1, 0, 3):
+            with self.subTest(port=port):
+                result = self.compile("", f"CHASSIS_IMU_CAN_PORT={port}")
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("CHASSIS_IMU_CAN_PORT", result.stderr)
+
     def test_retired_uart1_selector_is_rejected(self):
         result = self.compile("", "UART1_USE=0")
         self.assertNotEqual(result.returncode, 0)

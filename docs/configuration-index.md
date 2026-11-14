@@ -2,7 +2,7 @@
 
 更新日期：2026-11-14。当前目标为 STM32F427 A 板。配套说明：[配置指南](configuration-guide.md)、[宏迁移表](atype-macro-migration.md)。
 
-由 `scripts/generate-configuration-index.py` 扫描 397 个项目 C/H 文件，记录 4491 条预处理、配置初始化和 HAL/NVIC 项。预处理条目包含互斥分支与保护宏，不能将所有条目同时理解为有效配置。可从构建命令覆盖的选项见 `config/99_build/atype-options.txt`；普通源码 PID/功率模型初值也列在所属文件下。
+由 `scripts/generate-configuration-index.py` 扫描 397 个项目 C/H 文件，记录 4501 条预处理、配置初始化和 HAL/NVIC 项。预处理条目包含互斥分支与保护宏，不能将所有条目同时理解为有效配置。可从构建命令覆盖的选项见 `config/99_build/atype-options.txt`；普通源码 PID/功率模型初值也列在所属文件下。
 
 `modules/imu/ins_task.c`、`BMI088driver.c`、`BMI088Middleware.c` 是未链接的旧 C 板实现；当前 INS 只链接 MPU6500 和公共数学接口。便携副本有独立 API，未加入固件链接。
 
@@ -578,7 +578,7 @@
 | [13](../application/runtime/chassis_imu_can.c#L13) | 预处理 | `#endif` |
 | [17](../application/runtime/chassis_imu_can.c#L17) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
 | [37](../application/runtime/chassis_imu_can.c#L37) | 预处理 | `#endif` |
-| [42](../application/runtime/chassis_imu_can.c#L42) | 配置初值 | `CAN_Init_Config_s config={.can_handle=&hcan2,.tx_id=CHASSIS_IMU_CAN_DATA_ID,` |
+| [42](../application/runtime/chassis_imu_can.c#L42) | 配置初值 | `CAN_Init_Config_s config={.can_handle=BOARD_CHASSIS_IMU_CAN,.tx_id=CHASSIS_IMU_CAN_DATA_ID,` |
 | [43](../application/runtime/chassis_imu_can.c#L43) | 配置初值 | `.rx_id=CHASSIS_IMU_CAN_DATA_ID};` |
 | [44](../application/runtime/chassis_imu_can.c#L44) | 预处理 | `#if CHASSIS_IMU_CAN_RX_ENABLE` |
 | [47](../application/runtime/chassis_imu_can.c#L47) | 预处理 | `#endif` |
@@ -978,7 +978,7 @@
 | [8](../bsp/can/bsp_can.h#L8) | 预处理 | `#define CAN_MX_REGISTER_CNT 16     // 这个数量取决于CAN总线的负载` |
 | [9](../bsp/can/bsp_can.h#L9) | 预处理 | `#define MX_CAN_FILTER_CNT (2 * 14) // 最多可以使用的CAN过滤器数量,目前远不会用到这么多` |
 | [10](../bsp/can/bsp_can.h#L10) | 预处理 | `#define DEVICE_CAN_CNT 2           // 根据板子设定,F407IG有CAN1,CAN2,因此为2;F334只有一个,则设为1` |
-| [74](../bsp/can/bsp_can.h#L74) | 预处理 | `#endif` |
+| [77](../bsp/can/bsp_can.h#L77) | 预处理 | `#endif` |
 
 ## bsp/dwt/bsp_dwt.h
 
@@ -1148,37 +1148,37 @@
 | [11](../config/00_flash/board_flash_config.h#L11) | 预处理 | `#define BOARD_FLASH_TARGET 1 /* 烧录目标：1=整车主板，2=下方独立底盘IMU采集板。 */` |
 | [12](../config/00_flash/board_flash_config.h#L12) | 预处理 | `#define BOARD_FLASH_PROGRAMMER 1 /* 下载器：1=DAPLink/OpenOCD，2=J-Link/J-Flash；仅Flash动作使用。 */` |
 | [13](../config/00_flash/board_flash_config.h#L13) | 预处理 | `#define BOARD_FLASH_PROFILE "atype-vehicle" /* 两板共用编译profile，任务由各板采集开关区分。 */` |
-| [17](../config/00_flash/board_flash_config.h#L17) | 预处理 | `#define BOARD_FLASH_1_NAME "第一块：整车主板" /* 命令执行前显示的板卡名称。 */` |
-| [18](../config/00_flash/board_flash_config.h#L18) | 预处理 | `#define BOARD_FLASH_1_BUILD_DIR "build/board-1-main" /* 主板输出目录；build下使用英文字母/数字/下划线/连字符和斜杠。 */` |
-| [19](../config/00_flash/board_flash_config.h#L19) | 预处理 | `#define BOARD_FLASH_1_ONE_BOARD 1 /* 单板整车角色：必须为1，不与CHASSIS_BOARD或GIMBAL_BOARD同时定义。 */` |
-| [20](../config/00_flash/board_flash_config.h#L20) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_CONTROL_MODE 0 /* 控制后端：0=速度控制；当前远端IMU观测路径要求0。 */` |
-| [21](../config/00_flash/board_flash_config.h#L21) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_FORCE_CALIBRATION_ENABLE 0 /* 力控标定工具：0=关闭；本方案不编译标定固件。 */` |
-| [22](../config/00_flash/board_flash_config.h#L22) | 预处理 | `#define BOARD_FLASH_1_ATYPE_BENCH_MODE 0 /* 台架门控：0=正常整车应用；此项不代替遥控器的启停。 */` |
-| [23](../config/00_flash/board_flash_config.h#L23) | 预处理 | `#define BOARD_FLASH_1_IMU_CAPTURE_ONLY 0 /* 0=完整整车任务；本入口不启用独立本地IMU诊断任务。 */` |
-| [24](../config/00_flash/board_flash_config.h#L24) | 预处理 | `#define BOARD_FLASH_1_IMU_CAPTURE_CAN_TX_ENABLE 0 /* 0=主板不发送采集帧，避免与第二块重复发送。 */` |
-| [25](../config/00_flash/board_flash_config.h#L25) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_IMU_CAN_RX_ENABLE 1 /* 1=接收所选底盘IMU；0=关闭外部接收。 */` |
-| [26](../config/00_flash/board_flash_config.h#L26) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_VELOCITY_FUSION_ENABLE 1 /* 1=启用速度观测接口；当前远端接收路径要求1。 */` |
-| [27](../config/00_flash/board_flash_config.h#L27) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_VELOCITY_FUSION_CALIBRATED 0 /* 0=不启用本地云台标定；远端固定底盘IMU使用独立的安装与噪声配置。 */` |
-| [28](../config/00_flash/board_flash_config.h#L28) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_REMOTE_IMU_FUSION_ENABLE 1 /* 1=用固定底盘IMU做只读卡尔曼观测；不表示安装与噪声参数已实测审核，也不接管控制。 */` |
-| [29](../config/00_flash/board_flash_config.h#L29) | 预处理 | `#define BOARD_FLASH_1_VOFA_TELEMETRY_ENABLE 1 /* 1=开启UART7统一遥测，需保持UART7未被裁判/辅助设备占用。 */` |
-| [30](../config/00_flash/board_flash_config.h#L30) | 预处理 | `#define BOARD_FLASH_1_VOFA_TELEMETRY_MODE 2 /* 2=JustFloat二进制观测；0/1保留旧格式，不使用用途选择。 */` |
-| [32](../config/00_flash/board_flash_config.h#L32) | 预处理 | `#define BOARD_FLASH_1_USB_TELEMETRY_ENABLE 1 /* 1=保留USB网页遥测；视觉应使用UART，不能同时选USB视觉。 */` |
-| [36](../config/00_flash/board_flash_config.h#L36) | 预处理 | `#define BOARD_FLASH_2_NAME "第二块：底盘IMU采集板" /* 命令执行前显示的板卡名称。 */` |
-| [37](../config/00_flash/board_flash_config.h#L37) | 预处理 | `#define BOARD_FLASH_2_BUILD_DIR "build/board-2-imu" /* 独立输出目录，不能与第一块相同。 */` |
-| [38](../config/00_flash/board_flash_config.h#L38) | 预处理 | `#define BOARD_FLASH_2_ONE_BOARD 1 /* 同工程默认角色；IMU_CAPTURE_ONLY选择独立采集任务。 */` |
-| [39](../config/00_flash/board_flash_config.h#L39) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_CONTROL_MODE 0 /* 0=速度后端编译配置；采集模式不会启动底盘控制。 */` |
-| [40](../config/00_flash/board_flash_config.h#L40) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_FORCE_CALIBRATION_ENABLE 0 /* 0=关闭力控标定工具。 */` |
-| [41](../config/00_flash/board_flash_config.h#L41) | 预处理 | `#define BOARD_FLASH_2_ATYPE_BENCH_MODE 0 /* 0=不使用整车台架任务。 */` |
-| [42](../config/00_flash/board_flash_config.h#L42) | 预处理 | `#define BOARD_FLASH_2_IMU_CAPTURE_ONLY 1 /* 1=仅IMU采集固件。 */` |
-| [43](../config/00_flash/board_flash_config.h#L43) | 预处理 | `#define BOARD_FLASH_2_IMU_CAPTURE_CAN_TX_ENABLE 1 /* 1=经CAN2发送IMU，主板对应开启接收。 */` |
-| [44](../config/00_flash/board_flash_config.h#L44) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_IMU_CAN_RX_ENABLE 0 /* 0=不作为整车接收端。 */` |
-| [45](../config/00_flash/board_flash_config.h#L45) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_VELOCITY_FUSION_ENABLE 0 /* 0=不运行整车速度融合。 */` |
-| [46](../config/00_flash/board_flash_config.h#L46) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_VELOCITY_FUSION_CALIBRATED 0 /* 0=不加载整车融合标定。 */` |
-| [47](../config/00_flash/board_flash_config.h#L47) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_REMOTE_IMU_FUSION_ENABLE 0 /* 0=采集板只发送IMU。 */` |
-| [48](../config/00_flash/board_flash_config.h#L48) | 预处理 | `#define BOARD_FLASH_2_VOFA_TELEMETRY_ENABLE 0 /* 0=关闭本板UART7遥测，由主板统一输出。 */` |
-| [49](../config/00_flash/board_flash_config.h#L49) | 预处理 | `#define BOARD_FLASH_2_VOFA_TELEMETRY_MODE 1 /* 预留格式；遥测关闭时不产生串口输出。 */` |
-| [50](../config/00_flash/board_flash_config.h#L50) | 预处理 | `#define BOARD_FLASH_2_USB_TELEMETRY_ENABLE 0 /* 0=关闭USB网页遥测，独立采集固件要求关闭。 */` |
-| [52](../config/00_flash/board_flash_config.h#L52) | 预处理 | `#endif` |
+| [18](../config/00_flash/board_flash_config.h#L18) | 预处理 | `#define BOARD_FLASH_1_NAME "第一块：整车主板" /* 命令执行前显示的板卡名称。 */` |
+| [19](../config/00_flash/board_flash_config.h#L19) | 预处理 | `#define BOARD_FLASH_1_BUILD_DIR "build/board-1-main" /* 主板输出目录；build下使用英文字母/数字/下划线/连字符和斜杠。 */` |
+| [20](../config/00_flash/board_flash_config.h#L20) | 预处理 | `#define BOARD_FLASH_1_ONE_BOARD 1 /* 单板整车角色：必须为1，不与CHASSIS_BOARD或GIMBAL_BOARD同时定义。 */` |
+| [21](../config/00_flash/board_flash_config.h#L21) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_CONTROL_MODE 0 /* 控制后端：0=速度控制；当前远端IMU观测路径要求0。 */` |
+| [22](../config/00_flash/board_flash_config.h#L22) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_FORCE_CALIBRATION_ENABLE 0 /* 力控标定工具：0=关闭；本方案不编译标定固件。 */` |
+| [23](../config/00_flash/board_flash_config.h#L23) | 预处理 | `#define BOARD_FLASH_1_ATYPE_BENCH_MODE 0 /* 台架门控：0=正常整车应用；此项不代替遥控器的启停。 */` |
+| [24](../config/00_flash/board_flash_config.h#L24) | 预处理 | `#define BOARD_FLASH_1_IMU_CAPTURE_ONLY 0 /* 0=完整整车任务；本入口不启用独立本地IMU诊断任务。 */` |
+| [25](../config/00_flash/board_flash_config.h#L25) | 预处理 | `#define BOARD_FLASH_1_IMU_CAPTURE_CAN_TX_ENABLE 0 /* 0=主板不发送采集帧，避免与第二块重复发送。 */` |
+| [26](../config/00_flash/board_flash_config.h#L26) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_IMU_CAN_RX_ENABLE 1 /* 1=接收所选底盘IMU；0=关闭外部接收。 */` |
+| [27](../config/00_flash/board_flash_config.h#L27) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_VELOCITY_FUSION_ENABLE 1 /* 1=启用速度观测接口；当前远端接收路径要求1。 */` |
+| [28](../config/00_flash/board_flash_config.h#L28) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_VELOCITY_FUSION_CALIBRATED 0 /* 0=不启用本地云台标定；远端固定底盘IMU使用独立的安装与噪声配置。 */` |
+| [29](../config/00_flash/board_flash_config.h#L29) | 预处理 | `#define BOARD_FLASH_1_CHASSIS_REMOTE_IMU_FUSION_ENABLE 1 /* 1=用固定底盘IMU做只读卡尔曼观测；不表示安装与噪声参数已实测审核，也不接管控制。 */` |
+| [30](../config/00_flash/board_flash_config.h#L30) | 预处理 | `#define BOARD_FLASH_1_VOFA_TELEMETRY_ENABLE 1 /* 1=开启UART7统一遥测，需保持UART7未被裁判/辅助设备占用。 */` |
+| [31](../config/00_flash/board_flash_config.h#L31) | 预处理 | `#define BOARD_FLASH_1_VOFA_TELEMETRY_MODE 2 /* 2=JustFloat二进制观测；0/1保留旧格式，不使用用途选择。 */` |
+| [33](../config/00_flash/board_flash_config.h#L33) | 预处理 | `#define BOARD_FLASH_1_USB_TELEMETRY_ENABLE 1 /* 1=保留USB网页遥测；视觉应使用UART，不能同时选USB视觉。 */` |
+| [37](../config/00_flash/board_flash_config.h#L37) | 预处理 | `#define BOARD_FLASH_2_NAME "第二块：底盘IMU采集板" /* 命令执行前显示的板卡名称。 */` |
+| [38](../config/00_flash/board_flash_config.h#L38) | 预处理 | `#define BOARD_FLASH_2_BUILD_DIR "build/board-2-imu" /* 独立输出目录，不能与第一块相同。 */` |
+| [39](../config/00_flash/board_flash_config.h#L39) | 预处理 | `#define BOARD_FLASH_2_ONE_BOARD 1 /* 同工程默认角色；IMU_CAPTURE_ONLY选择独立采集任务。 */` |
+| [40](../config/00_flash/board_flash_config.h#L40) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_CONTROL_MODE 0 /* 0=速度后端编译配置；采集模式不会启动底盘控制。 */` |
+| [41](../config/00_flash/board_flash_config.h#L41) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_FORCE_CALIBRATION_ENABLE 0 /* 0=关闭力控标定工具。 */` |
+| [42](../config/00_flash/board_flash_config.h#L42) | 预处理 | `#define BOARD_FLASH_2_ATYPE_BENCH_MODE 0 /* 0=不使用整车台架任务。 */` |
+| [43](../config/00_flash/board_flash_config.h#L43) | 预处理 | `#define BOARD_FLASH_2_IMU_CAPTURE_ONLY 1 /* 1=仅IMU采集固件。 */` |
+| [44](../config/00_flash/board_flash_config.h#L44) | 预处理 | `#define BOARD_FLASH_2_IMU_CAPTURE_CAN_TX_ENABLE 1 /* 1=经所选CAN发送IMU，主板对应开启接收。 */` |
+| [45](../config/00_flash/board_flash_config.h#L45) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_IMU_CAN_RX_ENABLE 0 /* 0=不作为整车接收端。 */` |
+| [46](../config/00_flash/board_flash_config.h#L46) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_VELOCITY_FUSION_ENABLE 0 /* 0=不运行整车速度融合。 */` |
+| [47](../config/00_flash/board_flash_config.h#L47) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_VELOCITY_FUSION_CALIBRATED 0 /* 0=不加载整车融合标定。 */` |
+| [48](../config/00_flash/board_flash_config.h#L48) | 预处理 | `#define BOARD_FLASH_2_CHASSIS_REMOTE_IMU_FUSION_ENABLE 0 /* 0=采集板只发送IMU。 */` |
+| [49](../config/00_flash/board_flash_config.h#L49) | 预处理 | `#define BOARD_FLASH_2_VOFA_TELEMETRY_ENABLE 0 /* 0=关闭本板UART7遥测，由主板统一输出。 */` |
+| [50](../config/00_flash/board_flash_config.h#L50) | 预处理 | `#define BOARD_FLASH_2_VOFA_TELEMETRY_MODE 1 /* 预留格式；遥测关闭时不产生串口输出。 */` |
+| [51](../config/00_flash/board_flash_config.h#L51) | 预处理 | `#define BOARD_FLASH_2_USB_TELEMETRY_ENABLE 0 /* 0=关闭USB网页遥测，独立采集固件要求关闭。 */` |
+| [53](../config/00_flash/board_flash_config.h#L53) | 预处理 | `#endif` |
 
 ## config/01_pid/pid_config.c
 
@@ -2263,83 +2263,93 @@
 | [17](../config/90_board/board_config.h#L17) | 预处理 | `#ifndef LOG_OUTPUT` |
 | [18](../config/90_board/board_config.h#L18) | 预处理 | `#define LOG_OUTPUT 1 /* 日志输出：0=关闭，1=RTT，2=USART2，3=RTT与USART2同时输出。 */` |
 | [19](../config/90_board/board_config.h#L19) | 预处理 | `#endif` |
-| [20](../config/90_board/board_config.h#L20) | 预处理 | `#ifndef VOFA_TELEMETRY_MODE` |
-| [21](../config/90_board/board_config.h#L21) | 预处理 | `#define VOFA_TELEMETRY_MODE 2 /* VOFA传输：0=旧19路JustFloat，1=旧FireWater，2=JustFloat用途观测。 */` |
+| [20](../config/90_board/board_config.h#L20) | 预处理 | `#ifndef CHASSIS_IMU_CAN_PORT` |
+| [21](../config/90_board/board_config.h#L21) | 预处理 | `#define CHASSIS_IMU_CAN_PORT 2 /* 主板与IMU采集板通信：1=CAN1，2=CAN2（默认）；两板共用，修改后分别重新编译烧录。 */` |
 | [22](../config/90_board/board_config.h#L22) | 预处理 | `#endif` |
-| [24](../config/90_board/board_config.h#L24) | 预处理 | `#ifndef ATYPE_BENCH_MODE` |
-| [25](../config/90_board/board_config.h#L25) | 预处理 | `#define ATYPE_BENCH_MODE 0 /* 台架模式：0=整车正常控制，1=台架门控（云台/发射锁停）；atype-bench构建默认设1。 */` |
-| [26](../config/90_board/board_config.h#L26) | 预处理 | `#endif` |
-| [27](../config/90_board/board_config.h#L27) | 预处理 | `#if REFEREE_ENABLE != 0 && REFEREE_ENABLE != 1` |
+| [23](../config/90_board/board_config.h#L23) | 预处理 | `#ifndef VOFA_TELEMETRY_MODE` |
+| [24](../config/90_board/board_config.h#L24) | 预处理 | `#define VOFA_TELEMETRY_MODE 2 /* VOFA传输：0=旧19路JustFloat，1=旧FireWater，2=JustFloat用途观测。 */` |
+| [25](../config/90_board/board_config.h#L25) | 预处理 | `#endif` |
+| [27](../config/90_board/board_config.h#L27) | 预处理 | `#ifndef ATYPE_BENCH_MODE` |
+| [28](../config/90_board/board_config.h#L28) | 预处理 | `#define ATYPE_BENCH_MODE 0 /* 台架模式：0=整车正常控制，1=台架门控（云台/发射锁停）；atype-bench构建默认设1。 */` |
 | [29](../config/90_board/board_config.h#L29) | 预处理 | `#endif` |
-| [30](../config/90_board/board_config.h#L30) | 预处理 | `#if REFEREE_UART_PORT != 6 && REFEREE_UART_PORT != 7` |
+| [30](../config/90_board/board_config.h#L30) | 预处理 | `#if REFEREE_ENABLE != 0 && REFEREE_ENABLE != 1` |
 | [32](../config/90_board/board_config.h#L32) | 预处理 | `#endif` |
-| [33](../config/90_board/board_config.h#L33) | 预处理 | `#if LOG_OUTPUT < 0 &#124;&#124; LOG_OUTPUT > 3` |
+| [33](../config/90_board/board_config.h#L33) | 预处理 | `#if REFEREE_UART_PORT != 6 && REFEREE_UART_PORT != 7` |
 | [35](../config/90_board/board_config.h#L35) | 预处理 | `#endif` |
-| [36](../config/90_board/board_config.h#L36) | 预处理 | `#if VOFA_TELEMETRY_MODE != 0 && VOFA_TELEMETRY_MODE != 1 && VOFA_TELEMETRY_MODE != 2` |
+| [36](../config/90_board/board_config.h#L36) | 预处理 | `#if LOG_OUTPUT < 0 &#124;&#124; LOG_OUTPUT > 3` |
 | [38](../config/90_board/board_config.h#L38) | 预处理 | `#endif` |
-| [39](../config/90_board/board_config.h#L39) | 预处理 | `#if VOFA_OBSERVATION_PROFILE != 0 && VOFA_OBSERVATION_PROFILE != 1 && VOFA_OBSERVATION_PROFILE != 2` |
+| [39](../config/90_board/board_config.h#L39) | 预处理 | `#if CHASSIS_IMU_CAN_PORT != 1 && CHASSIS_IMU_CAN_PORT != 2` |
 | [41](../config/90_board/board_config.h#L41) | 预处理 | `#endif` |
-| [42](../config/90_board/board_config.h#L42) | 预处理 | `#if ATYPE_BENCH_MODE != 0 && ATYPE_BENCH_MODE != 1` |
+| [42](../config/90_board/board_config.h#L42) | 预处理 | `#if VOFA_TELEMETRY_MODE != 0 && VOFA_TELEMETRY_MODE != 1 && VOFA_TELEMETRY_MODE != 2` |
 | [44](../config/90_board/board_config.h#L44) | 预处理 | `#endif` |
-| [45](../config/90_board/board_config.h#L45) | 预处理 | `#define BOARD_LOG_UART_ENABLED (LOG_OUTPUT == 2 &#124;&#124; LOG_OUTPUT == 3) /* 按LOG_OUTPUT自动判断是否启用串口日志，不单独修改。 */` |
-| [46](../config/90_board/board_config.h#L46) | 预处理 | `#define BOARD_LOG_RTT_ENABLED (LOG_OUTPUT == 1 &#124;&#124; LOG_OUTPUT == 3) /* 按LOG_OUTPUT自动判断是否启用RTT日志，不单独修改。 */` |
-| [48](../config/90_board/board_config.h#L48) | 预处理 | `#define BOARD_REMOTE_UART (&huart1) /* DBUS遥控器固定连接USART1；更改句柄前须同步硬件与串口初始化。 */` |
-| [49](../config/90_board/board_config.h#L49) | 预处理 | `#define BOARD_VISION_UART (&huart3) /* 视觉通信绑定USART3；启用方式见robot_config.h。 */` |
-| [50](../config/90_board/board_config.h#L50) | 预处理 | `#define BOARD_VTX_UART (&huart8) /* 图传键鼠输入绑定UART8。 */` |
-| [51](../config/90_board/board_config.h#L51) | 预处理 | `#if REFEREE_UART_PORT == 7` |
-| [52](../config/90_board/board_config.h#L52) | 预处理 | `#define BOARD_REFEREE_UART (&huart7) /* 裁判串口句柄，由REFEREE_UART_PORT自动选择，不单独修改。 */` |
-| [53](../config/90_board/board_config.h#L53) | 预处理 | `#else` |
-| [54](../config/90_board/board_config.h#L54) | 预处理 | `#define BOARD_REFEREE_UART (&huart6) /* 裁判串口句柄，由REFEREE_UART_PORT自动选择，不单独修改。 */` |
-| [55](../config/90_board/board_config.h#L55) | 预处理 | `#endif` |
-| [56](../config/90_board/board_config.h#L56) | 预处理 | `#define BOARD_LOG_UART (&huart2) /* 串口日志绑定USART2；由LOG_OUTPUT决定是否启用。 */` |
-| [57](../config/90_board/board_config.h#L57) | 预处理 | `#define BOARD_VOFA_UART (&huart7) /* VOFA遥测绑定UART7，不能与裁判或UART7辅助设备同时占用。 */` |
-| [58](../config/90_board/board_config.h#L58) | 预处理 | `#define BOARD_SUPERCAP_CAN (&hcan1) /* 超级电容通信绑定CAN1；协议CAN ID仍由协议模块定义。 */` |
-| [59](../config/90_board/board_config.h#L59) | 预处理 | `#define BOARD_POWER_METER_CAN (&hcan1) /* 功率计通信绑定CAN1；启用开关POWER_METER_ENABLE见chassis_power_config.h。 */` |
-| [61](../config/90_board/board_config.h#L61) | 预处理 | `#ifndef OLED_USE_I2C` |
-| [62](../config/90_board/board_config.h#L62) | 预处理 | `#define OLED_USE_I2C 0 /* OLED后端：0=SPI1（默认），1=I2C2；还需BOARD_OLED_ENABLE=1注册显示屏。 */` |
-| [63](../config/90_board/board_config.h#L63) | 预处理 | `#endif` |
-| [64](../config/90_board/board_config.h#L64) | 预处理 | `#if OLED_USE_I2C != 0 && OLED_USE_I2C != 1` |
-| [66](../config/90_board/board_config.h#L66) | 预处理 | `#endif` |
-| [70](../config/90_board/board_config.h#L70) | 预处理 | `#ifndef BOARD_AUX_UART2_DEVICE` |
-| [71](../config/90_board/board_config.h#L71) | 预处理 | `#define BOARD_AUX_UART2_DEVICE 0 /* USART2辅助设备：0=无，1=TFmini，2=HC05，3=总线舵机；非0时LOG_OUTPUT不能为2或3。 */` |
-| [72](../config/90_board/board_config.h#L72) | 预处理 | `#endif` |
-| [73](../config/90_board/board_config.h#L73) | 预处理 | `#ifndef BOARD_AUX_UART7_DEVICE` |
-| [74](../config/90_board/board_config.h#L74) | 预处理 | `#define BOARD_AUX_UART7_DEVICE 0 /* UART7辅助设备：0=无，1=TFmini，2=HC05，3=总线舵机；非0时不能同时接UART7裁判或启用VOFA。 */` |
-| [75](../config/90_board/board_config.h#L75) | 预处理 | `#endif` |
-| [76](../config/90_board/board_config.h#L76) | 预处理 | `#ifndef BOARD_OLED_ENABLE` |
-| [77](../config/90_board/board_config.h#L77) | 预处理 | `#define BOARD_OLED_ENABLE 0 /* OLED开关：0=不注册（默认），1=注册并初始化；后端由OLED_USE_I2C选择。 */` |
-| [78](../config/90_board/board_config.h#L78) | 预处理 | `#endif` |
-| [79](../config/90_board/board_config.h#L79) | 预处理 | `#ifndef BOARD_KEY_ENABLE` |
-| [80](../config/90_board/board_config.h#L80) | 预处理 | `#define BOARD_KEY_ENABLE 0 /* 板载按键开关：0=不注册（默认），1=注册按键模块。 */` |
-| [81](../config/90_board/board_config.h#L81) | 预处理 | `#endif` |
-| [82](../config/90_board/board_config.h#L82) | 预处理 | `#if BOARD_AUX_UART2_DEVICE < 0 &#124;&#124; BOARD_AUX_UART2_DEVICE > 3 &#124;&#124; BOARD_AUX_UART7_DEVICE < 0 &#124;&#124; BOARD_AUX_UART7_DEVICE > 3` |
-| [84](../config/90_board/board_config.h#L84) | 预处理 | `#endif` |
-| [85](../config/90_board/board_config.h#L85) | 预处理 | `#if BOARD_AUX_UART2_DEVICE && BOARD_LOG_UART_ENABLED` |
-| [87](../config/90_board/board_config.h#L87) | 预处理 | `#endif` |
-| [88](../config/90_board/board_config.h#L88) | 预处理 | `#if REFEREE_ENABLE && REFEREE_UART_PORT == 7 && BOARD_AUX_UART7_DEVICE` |
-| [90](../config/90_board/board_config.h#L90) | 预处理 | `#endif` |
-| [91](../config/90_board/board_config.h#L91) | 预处理 | `#define BOARD_UART7_RESERVED_FOR_DEVICE ((REFEREE_ENABLE && REFEREE_UART_PORT == 7) &#124;&#124; BOARD_AUX_UART7_DEVICE) /* 按裁判和辅助设备选择自动判断UART7是否被占用，不单独修改。 */` |
-| [94](../config/90_board/board_config.h#L94) | 预处理 | `#ifndef VOFA_TELEMETRY_ENABLE` |
-| [95](../config/90_board/board_config.h#L95) | 预处理 | `#if (!defined(CHASSIS_CONTROL_MODE) &#124;&#124; CHASSIS_CONTROL_MODE == 0) && !BOARD_UART7_RESERVED_FOR_DEVICE` |
-| [96](../config/90_board/board_config.h#L96) | 预处理 | `#define VOFA_TELEMETRY_ENABLE 1 /* VOFA发送开关：1=发送，0=关闭；默认速度后端且UART7空闲时为1，其余情况为0。 */` |
-| [97](../config/90_board/board_config.h#L97) | 预处理 | `#else` |
-| [98](../config/90_board/board_config.h#L98) | 预处理 | `#define VOFA_TELEMETRY_ENABLE 0 /* VOFA发送开关：1=发送，0=关闭；默认速度后端且UART7空闲时为1，其余情况为0。 */` |
-| [99](../config/90_board/board_config.h#L99) | 预处理 | `#endif` |
-| [100](../config/90_board/board_config.h#L100) | 预处理 | `#endif` |
-| [101](../config/90_board/board_config.h#L101) | 预处理 | `#if VOFA_TELEMETRY_ENABLE != 0 && VOFA_TELEMETRY_ENABLE != 1` |
-| [103](../config/90_board/board_config.h#L103) | 预处理 | `#endif` |
-| [104](../config/90_board/board_config.h#L104) | 预处理 | `#if VOFA_TELEMETRY_ENABLE && BOARD_UART7_RESERVED_FOR_DEVICE` |
-| [106](../config/90_board/board_config.h#L106) | 预处理 | `#endif` |
-| [108](../config/90_board/board_config.h#L108) | 预处理 | `#if VOFA_TELEMETRY_ENABLE && VOFA_TELEMETRY_MODE == 2` |
-| [109](../config/90_board/board_config.h#L109) | 预处理 | `#define BOARD_UART7_BAUDRATE 230400U /* 模式2配合20ms输出；VOFA和串口接收设备须使用相同波特率。 */` |
-| [110](../config/90_board/board_config.h#L110) | 预处理 | `#else` |
-| [111](../config/90_board/board_config.h#L111) | 预处理 | `#define BOARD_UART7_BAUDRATE 115200U /* 模式0/1、VOFA关闭、裁判或辅助设备使用UART7时保留原值。 */` |
-| [112](../config/90_board/board_config.h#L112) | 预处理 | `#endif` |
-| [113](../config/90_board/board_config.h#L113) | 预处理 | `#if BOARD_AUX_UART2_DEVICE && BOARD_AUX_UART7_DEVICE && BOARD_AUX_UART2_DEVICE == BOARD_AUX_UART7_DEVICE` |
-| [115](../config/90_board/board_config.h#L115) | 预处理 | `#endif` |
-| [116](../config/90_board/board_config.h#L116) | 预处理 | `#if BOARD_OLED_ENABLE < 0 &#124;&#124; BOARD_OLED_ENABLE > 1 &#124;&#124; BOARD_KEY_ENABLE < 0 &#124;&#124; BOARD_KEY_ENABLE > 1` |
-| [118](../config/90_board/board_config.h#L118) | 预处理 | `#endif` |
-| [120](../config/90_board/board_config.h#L120) | 预处理 | `#endif` |
+| [45](../config/90_board/board_config.h#L45) | 预处理 | `#if VOFA_OBSERVATION_PROFILE != 0 && VOFA_OBSERVATION_PROFILE != 1 && VOFA_OBSERVATION_PROFILE != 2` |
+| [47](../config/90_board/board_config.h#L47) | 预处理 | `#endif` |
+| [48](../config/90_board/board_config.h#L48) | 预处理 | `#if ATYPE_BENCH_MODE != 0 && ATYPE_BENCH_MODE != 1` |
+| [50](../config/90_board/board_config.h#L50) | 预处理 | `#endif` |
+| [51](../config/90_board/board_config.h#L51) | 预处理 | `#define BOARD_LOG_UART_ENABLED (LOG_OUTPUT == 2 &#124;&#124; LOG_OUTPUT == 3) /* 按LOG_OUTPUT自动判断是否启用串口日志，不单独修改。 */` |
+| [52](../config/90_board/board_config.h#L52) | 预处理 | `#define BOARD_LOG_RTT_ENABLED (LOG_OUTPUT == 1 &#124;&#124; LOG_OUTPUT == 3) /* 按LOG_OUTPUT自动判断是否启用RTT日志，不单独修改。 */` |
+| [54](../config/90_board/board_config.h#L54) | 预处理 | `#define BOARD_REMOTE_UART (&huart1) /* DBUS遥控器固定连接USART1；更改句柄前须同步硬件与串口初始化。 */` |
+| [55](../config/90_board/board_config.h#L55) | 预处理 | `#define BOARD_VISION_UART (&huart3) /* 视觉通信绑定USART3；启用方式见robot_config.h。 */` |
+| [56](../config/90_board/board_config.h#L56) | 预处理 | `#define BOARD_VTX_UART (&huart8) /* 图传键鼠输入绑定UART8。 */` |
+| [57](../config/90_board/board_config.h#L57) | 预处理 | `#if REFEREE_UART_PORT == 7` |
+| [58](../config/90_board/board_config.h#L58) | 预处理 | `#define BOARD_REFEREE_UART (&huart7) /* 裁判串口句柄，由REFEREE_UART_PORT自动选择，不单独修改。 */` |
+| [59](../config/90_board/board_config.h#L59) | 预处理 | `#else` |
+| [60](../config/90_board/board_config.h#L60) | 预处理 | `#define BOARD_REFEREE_UART (&huart6) /* 裁判串口句柄，由REFEREE_UART_PORT自动选择，不单独修改。 */` |
+| [61](../config/90_board/board_config.h#L61) | 预处理 | `#endif` |
+| [62](../config/90_board/board_config.h#L62) | 预处理 | `#define BOARD_LOG_UART (&huart2) /* 串口日志绑定USART2；由LOG_OUTPUT决定是否启用。 */` |
+| [63](../config/90_board/board_config.h#L63) | 预处理 | `#define BOARD_VOFA_UART (&huart7) /* VOFA遥测绑定UART7，不能与裁判或UART7辅助设备同时占用。 */` |
+| [64](../config/90_board/board_config.h#L64) | 预处理 | `#define BOARD_SUPERCAP_CAN (&hcan1) /* 超级电容通信绑定CAN1；协议CAN ID仍由协议模块定义。 */` |
+| [65](../config/90_board/board_config.h#L65) | 预处理 | `#define BOARD_POWER_METER_CAN (&hcan1) /* 功率计通信绑定CAN1；启用开关POWER_METER_ENABLE见chassis_power_config.h。 */` |
+| [66](../config/90_board/board_config.h#L66) | 预处理 | `#if CHASSIS_IMU_CAN_PORT == 1` |
+| [67](../config/90_board/board_config.h#L67) | 预处理 | `#define BOARD_CHASSIS_IMU_CAN (&hcan1) /* 板间IMU通信句柄，由CHASSIS_IMU_CAN_PORT自动选择，不单独修改。 */` |
+| [68](../config/90_board/board_config.h#L68) | 预处理 | `#else` |
+| [69](../config/90_board/board_config.h#L69) | 预处理 | `#define BOARD_CHASSIS_IMU_CAN (&hcan2) /* 板间IMU通信句柄，由CHASSIS_IMU_CAN_PORT自动选择，不单独修改。 */` |
+| [70](../config/90_board/board_config.h#L70) | 预处理 | `#endif` |
+| [72](../config/90_board/board_config.h#L72) | 预处理 | `#ifndef OLED_USE_I2C` |
+| [73](../config/90_board/board_config.h#L73) | 预处理 | `#define OLED_USE_I2C 0 /* OLED后端：0=SPI1（默认），1=I2C2；还需BOARD_OLED_ENABLE=1注册显示屏。 */` |
+| [74](../config/90_board/board_config.h#L74) | 预处理 | `#endif` |
+| [75](../config/90_board/board_config.h#L75) | 预处理 | `#if OLED_USE_I2C != 0 && OLED_USE_I2C != 1` |
+| [77](../config/90_board/board_config.h#L77) | 预处理 | `#endif` |
+| [81](../config/90_board/board_config.h#L81) | 预处理 | `#ifndef BOARD_AUX_UART2_DEVICE` |
+| [82](../config/90_board/board_config.h#L82) | 预处理 | `#define BOARD_AUX_UART2_DEVICE 0 /* USART2辅助设备：0=无，1=TFmini，2=HC05，3=总线舵机；非0时LOG_OUTPUT不能为2或3。 */` |
+| [83](../config/90_board/board_config.h#L83) | 预处理 | `#endif` |
+| [84](../config/90_board/board_config.h#L84) | 预处理 | `#ifndef BOARD_AUX_UART7_DEVICE` |
+| [85](../config/90_board/board_config.h#L85) | 预处理 | `#define BOARD_AUX_UART7_DEVICE 0 /* UART7辅助设备：0=无，1=TFmini，2=HC05，3=总线舵机；非0时不能同时接UART7裁判或启用VOFA。 */` |
+| [86](../config/90_board/board_config.h#L86) | 预处理 | `#endif` |
+| [87](../config/90_board/board_config.h#L87) | 预处理 | `#ifndef BOARD_OLED_ENABLE` |
+| [88](../config/90_board/board_config.h#L88) | 预处理 | `#define BOARD_OLED_ENABLE 0 /* OLED开关：0=不注册（默认），1=注册并初始化；后端由OLED_USE_I2C选择。 */` |
+| [89](../config/90_board/board_config.h#L89) | 预处理 | `#endif` |
+| [90](../config/90_board/board_config.h#L90) | 预处理 | `#ifndef BOARD_KEY_ENABLE` |
+| [91](../config/90_board/board_config.h#L91) | 预处理 | `#define BOARD_KEY_ENABLE 0 /* 板载按键开关：0=不注册（默认），1=注册按键模块。 */` |
+| [92](../config/90_board/board_config.h#L92) | 预处理 | `#endif` |
+| [93](../config/90_board/board_config.h#L93) | 预处理 | `#if BOARD_AUX_UART2_DEVICE < 0 &#124;&#124; BOARD_AUX_UART2_DEVICE > 3 &#124;&#124; BOARD_AUX_UART7_DEVICE < 0 &#124;&#124; BOARD_AUX_UART7_DEVICE > 3` |
+| [95](../config/90_board/board_config.h#L95) | 预处理 | `#endif` |
+| [96](../config/90_board/board_config.h#L96) | 预处理 | `#if BOARD_AUX_UART2_DEVICE && BOARD_LOG_UART_ENABLED` |
+| [98](../config/90_board/board_config.h#L98) | 预处理 | `#endif` |
+| [99](../config/90_board/board_config.h#L99) | 预处理 | `#if REFEREE_ENABLE && REFEREE_UART_PORT == 7 && BOARD_AUX_UART7_DEVICE` |
+| [101](../config/90_board/board_config.h#L101) | 预处理 | `#endif` |
+| [102](../config/90_board/board_config.h#L102) | 预处理 | `#define BOARD_UART7_RESERVED_FOR_DEVICE ((REFEREE_ENABLE && REFEREE_UART_PORT == 7) &#124;&#124; BOARD_AUX_UART7_DEVICE) /* 按裁判和辅助设备选择自动判断UART7是否被占用，不单独修改。 */` |
+| [105](../config/90_board/board_config.h#L105) | 预处理 | `#ifndef VOFA_TELEMETRY_ENABLE` |
+| [106](../config/90_board/board_config.h#L106) | 预处理 | `#if (!defined(CHASSIS_CONTROL_MODE) &#124;&#124; CHASSIS_CONTROL_MODE == 0) && !BOARD_UART7_RESERVED_FOR_DEVICE` |
+| [107](../config/90_board/board_config.h#L107) | 预处理 | `#define VOFA_TELEMETRY_ENABLE 1 /* VOFA发送开关：1=发送，0=关闭；默认速度后端且UART7空闲时为1，其余情况为0。 */` |
+| [108](../config/90_board/board_config.h#L108) | 预处理 | `#else` |
+| [109](../config/90_board/board_config.h#L109) | 预处理 | `#define VOFA_TELEMETRY_ENABLE 0 /* VOFA发送开关：1=发送，0=关闭；默认速度后端且UART7空闲时为1，其余情况为0。 */` |
+| [110](../config/90_board/board_config.h#L110) | 预处理 | `#endif` |
+| [111](../config/90_board/board_config.h#L111) | 预处理 | `#endif` |
+| [112](../config/90_board/board_config.h#L112) | 预处理 | `#if VOFA_TELEMETRY_ENABLE != 0 && VOFA_TELEMETRY_ENABLE != 1` |
+| [114](../config/90_board/board_config.h#L114) | 预处理 | `#endif` |
+| [115](../config/90_board/board_config.h#L115) | 预处理 | `#if VOFA_TELEMETRY_ENABLE && BOARD_UART7_RESERVED_FOR_DEVICE` |
+| [117](../config/90_board/board_config.h#L117) | 预处理 | `#endif` |
+| [119](../config/90_board/board_config.h#L119) | 预处理 | `#if VOFA_TELEMETRY_ENABLE && VOFA_TELEMETRY_MODE == 2` |
+| [120](../config/90_board/board_config.h#L120) | 预处理 | `#define BOARD_UART7_BAUDRATE 230400U /* 模式2配合20ms输出；VOFA和串口接收设备须使用相同波特率。 */` |
+| [121](../config/90_board/board_config.h#L121) | 预处理 | `#else` |
+| [122](../config/90_board/board_config.h#L122) | 预处理 | `#define BOARD_UART7_BAUDRATE 115200U /* 模式0/1、VOFA关闭、裁判或辅助设备使用UART7时保留原值。 */` |
+| [123](../config/90_board/board_config.h#L123) | 预处理 | `#endif` |
+| [124](../config/90_board/board_config.h#L124) | 预处理 | `#if BOARD_AUX_UART2_DEVICE && BOARD_AUX_UART7_DEVICE && BOARD_AUX_UART2_DEVICE == BOARD_AUX_UART7_DEVICE` |
+| [126](../config/90_board/board_config.h#L126) | 预处理 | `#endif` |
+| [127](../config/90_board/board_config.h#L127) | 预处理 | `#if BOARD_OLED_ENABLE < 0 &#124;&#124; BOARD_OLED_ENABLE > 1 &#124;&#124; BOARD_KEY_ENABLE < 0 &#124;&#124; BOARD_KEY_ENABLE > 1` |
+| [129](../config/90_board/board_config.h#L129) | 预处理 | `#endif` |
+| [131](../config/90_board/board_config.h#L131) | 预处理 | `#endif` |
 
 ## config/90_board/log_config.h
 

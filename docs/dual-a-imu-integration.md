@@ -27,7 +27,11 @@
 
 ## 接线与构建
 
-两板通过 CAN2 总线连接：CAN_H 对 CAN_H、CAN_L 对 CAN_L、参考地相连，使用收发器后的总线接口。当前速率 1 Mbps，标准 ID `0x520`；按整条总线两端设置终端电阻。主板 UART7 接 VOFA+ 接收器，下方板无需单独串口记录。
+两板通过所选 CAN 总线连接（默认 CAN2）：CAN_H 对 CAN_H、CAN_L 对 CAN_L、参考地相连，使用收发器后的总线接口。当前速率 1 Mbps，标准 ID `0x520`；按整条总线两端设置终端电阻。主板 UART7 接 VOFA+ 接收器，下方板无需单独串口记录。
+
+在 [`config/90_board/board_config.h`](../config/90_board/board_config.h) 中修改 `CHASSIS_IMU_CAN_PORT`：`1`=CAN1，`2`=CAN2（默认），其他值编译报错。`BOARD_CHASSIS_IMU_CAN` 由该宏派生，无需单独修改。两板的默认构建预设共用此头文件；切换后分别重新构建、烧录两板，并将两端接到对应的 CAN1 或 CAN2 接口。该宏只选择这条 IMU 链路，电机等设备保留各自绑定。
+
+手动 Make 构建可附加 `CHASSIS_IMU_CAN_PORT=1` 或 `2`，CMake 使用 `-DCHASSIS_IMU_CAN_PORT=1` 或 `2`，并保留各板原有角色与采集开关。显式构建参数优先于头文件默认值；已有 CMake 缓存若设置过该参数，用 `-UCHASSIS_IMU_CAN_PORT` 重新配置可恢复读取头文件默认值。两板使用相同选值，并核对实际接线。
 
 [板卡预设](../config/00_flash/board_flash_config.h) 的目标 `1` 为整车主板，目标 `2` 为下方采集板，各用独立目录：
 
