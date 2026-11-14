@@ -4,26 +4,26 @@
 
 ## 安装坐标
 
-用户图示为 **+X 前、+Y 右**，下方板位于图示 +Y 116 mm。融合内部几何坐标为 **+X 前、+Y 左、+Z 上**，所以 [远端配置](../config/30_velocity_observation/chassis_remote_imu_config.h) 中写入：
+远端融合直接采用 **A 板原生 IMU 坐标**，将原点平移到底盘中心，三根轴保持与 A 板原生轴平行。当前照片中 USB 朝上、XT30 朝下、板面向上，轴向如下：
+
+| A 板原生轴 | 照片方向 |
+| --- | --- |
+| +X | 向左 |
+| +Y | 向下 |
+| +Z | 离开板面、朝上 |
+
+用户已确认 116 mm 量到 MPU6500 芯片位置，不是 A 板中心。底盘中心到芯片沿 A 板 +Y，因此 [远端配置](../config/30_velocity_observation/chassis_remote_imu_config.h) 写为：
 
 ```c
-#define CHASSIS_REMOTE_IMU_OFFSET_BODY_M {0.0f, -0.116f, 0.0f}
-#define CHASSIS_REMOTE_IMU_SENSOR_TO_BODY {0.0f, 0.0f, 0.0f, 1.0f}
+#define CHASSIS_REMOTE_IMU_OFFSET_BODY_M {0.0f, 0.116f, 0.0f}
+#define CHASSIS_REMOTE_IMU_SENSOR_TO_BODY {1.0f, 0.0f, 0.0f, 0.0f}
 ```
 
-用户已确认 116 mm 量到 MPU6500 芯片位置，不是 A 板中心。源 INS 输出已去重力的导航系加速度，主板在融合前扣除旋转杆臂的二阶导数，包含向心和切向项；不修改原始 IMU 遥测，不重复补偿。安装旋转由官方图纸与安装照片推导为绕 Z 轴 180°，Hamilton `[w,x,y,z]=[0,0,0,1]`。推导尚未通过实物轴向测试，保持 `CHASSIS_REMOTE_IMU_CONFIG_VERIFIED=0`。
+机体系与原生传感器轴同向，安装四元数使用恒等旋转 `[1,0,0,0]`。源四元数仍表示原生传感器到导航系的实时姿态，角速度仍在原生传感器系；源 INS 的去重力加速度位于导航系，不能直接当成 A 板机体系分量。主板在融合前扣除旋转杆臂的二阶导数，包含向心和切向项；不修改原始 IMU 遥测、不重复扣除重力。`CHASSIS_REMOTE_IMU_CONFIG_VERIFIED=0` 保留尚未完成实测验收的状态。
 
-[RoboMaster 官方 A 板原理图与位号图](https://cdn-hz.robomaster.com/tem/RoboMaster%20%E5%BC%80%E5%8F%91%E6%9D%BF%E5%8E%9F%E7%90%86%E5%9B%BE%26%E4%BD%8D%E5%8F%B7%E5%9B%BE.zip) 中，XT30 的 J10 在左、USB 的 J14 在右，U3 的 1 脚位于芯片左下角。[TDK MPU-6500 数据手册第 36 页图 14](https://product.tdk.cn/system/files/dam/doc/product/sensor/mortion-inertial/imu/data_sheet/mpu-6500-datasheet2.pdf) 将 1 脚角定义在 `(-X,+Y)`，+Z 朝封装上方。因此在官方板图中，传感器 +X 向上、+Y 向左。
+轴向依据来自 [RoboMaster 官方 A 板原理图与位号图](https://cdn-hz.robomaster.com/tem/RoboMaster%20%E5%BC%80%E5%8F%91%E6%9D%BF%E5%8E%9F%E7%90%86%E5%9B%BE%26%E4%BD%8D%E5%8F%B7%E5%9B%BE.zip) 和 [TDK MPU-6500 数据手册第 36 页图 14](https://product.tdk.cn/system/files/dam/doc/product/sensor/mortion-inertial/imu/data_sheet/mpu-6500-datasheet2.pdf)：官方板图中 J10（XT30）在左、J14（USB）在右，U3 的 1 脚位于芯片左下角；芯片 1 脚角对应 `(-X,+Y)`，+Z 离开封装上表面。因此官方板图中原生 +X 向上、+Y 向左，转到当前照片方向后得到上表。
 
-照片中 USB 朝上、XT30 朝下，结合用户确认的“照片右方为车前、照片下方为车右”，可推导以下安装关系：
-
-| 传感器轴 | 照片方向 | 实车方向 | 程序内部底盘轴 |
-| --- | --- | --- | --- |
-| +X | 左 | 后 | −X |
-| +Y | 下 | 右 | −Y |
-| +Z | 板面向上 | 上 | +Z |
-
-对应 `v_body=(-v_sensor_x,-v_sensor_y,v_sensor_z)`。这只改变传感器到底盘的安装变换；图示右侧 116 mm 的位置向量仍为内部 `(0,-0.116,0) m`。
+现有轮速、控制与 VOFA 速度公共接口继续使用前/右定义。为兼容该接口，远端融合仅在边界换算：公共 `(vx,vy)` 进入融合时变为 A 板 `(-vx,+vy)`；导航系结果转回 A 板后，再变为公共 `(-vA_x,+vA_y)`。配对轮速输出、失效时的轮速回退同样遵循公共接口。这个边界换算不改变原生 IMU 数据和 +Y 116 mm 配置。
 
 ## 接线与构建
 
@@ -53,6 +53,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Act
 
 ## 轴向与补偿检查
 
-在底盘零输出、板固定的条件下，先静止等待 INS 初始化。用主板卡尔曼档的 `imu_gx_radps/imu_gy_radps/imu_gz_radps` 检查缓慢单轴转动时哪一轴响应及其正负；这些是传感器系角速度。按当前图纸推导，绕底盘前轴的右手正转应主要表现为 `gx<0`，绕底盘左轴正转为 `gy<0`，绕上轴正转为 `gz>0`。逐轴核对幅值主轴与符号，确认 `CHASSIS_REMOTE_IMU_SENSOR_TO_BODY`；若实物不同，先修正安装变换再评价偏移补偿。
+在底盘零输出、板固定的条件下，先静止等待 INS 初始化。用主板卡尔曼档 `imu_gx_radps/imu_gy_radps/imu_gz_radps` 检查绕 A 板 +X、+Y、+Z 的右手正转：对应原生陀螺仪轴应为正值，反转为负值。照片方向按上表核对，不给原始角速度再套用公共速度的前/右定义。
 
-再做水平及倾斜后静止检查：源导航系去重力加速度应回到接近零；导航系加速度不能直接当作图示车体系的前/右分量。轴向核对后，绕中心正反旋转并起停，比较原始 IMU 与融合输入中心加速度，检查 116 mm 杆臂补偿。缺少独立运动参考时，不将观察到 FUSED 当作精度验收；具体试次见 [实测手册](kalman-chassis-test-and-acceptance.md)。
+再做水平及倾斜后静止检查：源导航系去重力加速度应回到接近零，导航系分量不能直接当作 A 板机体系分量。沿 A 板正反 X/Y 分别平移、起停，检查公共接口中 `vx=-vA_x`、`vy=+vA_y`，并确认轮速、融合结果与配对轮速一致；远端断流回退后符号应保持。绕中心正反旋转并起停，比较原始 IMU 与融合输入中心加速度，检查 +Y 116 mm 杆臂补偿。
+
+缺少独立运动参考时，不将观察到 FUSED 当作精度验收；具体试次见 [实测手册](kalman-chassis-test-and-acceptance.md)。

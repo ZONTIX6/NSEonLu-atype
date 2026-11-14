@@ -15,8 +15,10 @@ typedef struct {
     float imu_offset_nav_m[3];    /* Chassis center to IMU, in navigation axes. */
 } ChassisGimbalImuPose_s;
 
-/* Chassis and zero-angle gimbal axes are +X forward, +Y left, +Z up.
+/* For gimbal use, chassis and zero-angle gimbal axes are +X forward, +Y left, +Z up.
  * Yaw is about chassis +Z; pitch is about the yaw frame's +Y (nose down).
+ * A fixed IMU may use another right-handed body frame with yaw=pitch=0 and
+ * its center-to-IMU offset stored in yaw_origin_b_m (other offsets zero).
  * Quaternions are Hamilton wxyz and rotate vectors from source to destination.
  * A small norm error is normalized; nonfinite input or a quaternion with norm
  * squared outside [0.98, 1.02] returns false. Output is written only on success. */

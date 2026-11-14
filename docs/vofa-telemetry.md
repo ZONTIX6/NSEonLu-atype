@@ -42,7 +42,7 @@ make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-can1-main ONE_BOARD=1 CHAS
 
 功率采集将最后一个参数改为 `VOFA_OBSERVATION_PROFILE=1`，输出目录改为 `build/power-main`。CMake 接受同名 `-DVOFA_OBSERVATION_PROFILE=1` 或 `2`；手动 Make/CMake 不读取 `BOARD_FLASH_1_` 前缀预设。新档输出 `I0=4/5`，旧 `I0=2/3` 不能套用新布局。
 
-固定安装旋转、芯片偏移和滤波噪声见 [远端 IMU 配置](../config/30_velocity_observation/chassis_remote_imu_config.h)。用户图示右侧 116 mm 对应内部前/左/上坐标 `(0,-0.116,0) m`；安装四元数按官方板图、MPU6500 轴定义和照片推导为 `[0,0,0,1]`（绕 Z 轴 180°），尚待实物轴向验证，`CHASSIS_REMOTE_IMU_CONFIG_VERIFIED=0` 不会阻止算法运行，但不能用于证明精度。
+固定安装、芯片偏移和滤波噪声见 [远端 IMU 配置](../config/30_velocity_observation/chassis_remote_imu_config.h)。远端融合采用以底盘中心为原点的 A 板原生轴，芯片偏移 `(0,+0.116,0) m`、安装四元数 `[1,0,0,0]`。轮速、目标速度、融合速度和配对轮速的 VOFA 公共接口继续为前/右；融合入口将公共 `(vx,vy)` 转为 A 板 `(-vx,+vy)`，出口反向换算。`CHASSIS_REMOTE_IMU_CONFIG_VERIFIED=0` 不会阻止算法运行，但不能用于证明精度。
 
 需要纯采集对照时，只把 `BOARD_FLASH_1_CHASSIS_REMOTE_IMU_FUSION_ENABLE` 改为 `0`；手动命令同样仅将 `CHASSIS_REMOTE_IMU_FUSION_ENABLE=0` 并改用独立构建目录。双板 CAN 传输与主板遥测继续运行。
 
@@ -275,7 +275,7 @@ schema 3 的 `I33`–`I45` 始终来自编译时选择的外部 CAN IMU；远端
 | 云台尽量固定，低速左移/右移并起停 | 30–60 s，重复 3–5 次 | 横向响应、安装坐标与轮速符号 |
 | 零输出手推旋转，或采用已经验证的受限动力配置 | 每方向 20–30 s | 固定安装偏移与旋转期间的中心补偿；默认自旋档不是低速档 |
 
-先核对下方 A 板的传感器轴向，并完成倾斜静止去重力检查。图示 +Y 右侧 116 mm 已换算为程序内部 `Y=-0.116 m`；安装旋转 `[0,0,0,1]` 的图纸推导不能替代轴向实测。没有独立速度/位移参考时，CSV 仅支持噪声与响应调试，不能证明真实车速精度或打滑误差。[实测与验收步骤](kalman-chassis-test-and-acceptance.md)
+先核对下方 A 板原生轴向，并完成倾斜静止去重力检查。偏移使用 A 板 +Y 116 mm（已量到芯片），安装四元数为 `[1,0,0,0]`；正反 X/Y 平移应同时检查融合前后的公共速度符号，不能只看单向或静止工况。原生四元数、角速度保持传感器定义，导航系加速度不等于机体系加速度。没有独立速度/位移参考时，CSV 仅支持噪声与响应调试，不能证明真实车速精度或打滑误差。[实测与验收步骤](kalman-chassis-test-and-acceptance.md)
 
 ### 从原始 CSV 到参数复采
 

@@ -2062,22 +2062,22 @@
 | --- | --- | --- |
 | [1](../config/30_velocity_observation/chassis_remote_imu_config.h#L1) | 预处理 | `#ifndef CHASSIS_REMOTE_IMU_CONFIG_H` |
 | [2](../config/30_velocity_observation/chassis_remote_imu_config.h#L2) | 预处理 | `#define CHASSIS_REMOTE_IMU_CONFIG_H` |
-| [11](../config/30_velocity_observation/chassis_remote_imu_config.h#L11) | 预处理 | `#ifndef CHASSIS_REMOTE_IMU_CONFIG_VERIFIED` |
-| [12](../config/30_velocity_observation/chassis_remote_imu_config.h#L12) | 预处理 | `#define CHASSIS_REMOTE_IMU_CONFIG_VERIFIED 0 /* 0=未实测初值；完成安装/参数审核后才设1；只作记录标识，不放行控制。 */` |
-| [13](../config/30_velocity_observation/chassis_remote_imu_config.h#L13) | 预处理 | `#endif` |
-| [14](../config/30_velocity_observation/chassis_remote_imu_config.h#L14) | 预处理 | `#if CHASSIS_REMOTE_IMU_CONFIG_VERIFIED != 0 && CHASSIS_REMOTE_IMU_CONFIG_VERIFIED != 1` |
-| [16](../config/30_velocity_observation/chassis_remote_imu_config.h#L16) | 预处理 | `#endif` |
-| [21](../config/30_velocity_observation/chassis_remote_imu_config.h#L21) | 预处理 | `#define CHASSIS_REMOTE_IMU_SENSOR_TO_BODY {0.0f, 0.0f, 0.0f, 1.0f}` |
-| [25](../config/30_velocity_observation/chassis_remote_imu_config.h#L25) | 预处理 | `#define CHASSIS_REMOTE_IMU_OFFSET_BODY_M {0.0f, -0.116f, 0.0f}` |
-| [29](../config/30_velocity_observation/chassis_remote_imu_config.h#L29) | 预处理 | `#define CHASSIS_REMOTE_IMU_WHEEL_VARIANCE 0.01f` |
-| [30](../config/30_velocity_observation/chassis_remote_imu_config.h#L30) | 预处理 | `#define CHASSIS_REMOTE_IMU_ACCEL_VARIANCE 0.25f` |
-| [31](../config/30_velocity_observation/chassis_remote_imu_config.h#L31) | 预处理 | `#define CHASSIS_REMOTE_IMU_JERK_DENSITY 1.0f` |
-| [32](../config/30_velocity_observation/chassis_remote_imu_config.h#L32) | 预处理 | `#define CHASSIS_REMOTE_IMU_MAX_RESIDUAL_MPS 1.5f` |
-| [38](../config/30_velocity_observation/chassis_remote_imu_config.h#L38) | 预处理 | `#define CHASSIS_REMOTE_IMU_MAX_PAIR_SPAN_MS 15U` |
-| [39](../config/30_velocity_observation/chassis_remote_imu_config.h#L39) | 预处理 | `#define CHASSIS_REMOTE_IMU_MAX_WHEEL_SKEW_MS 3U` |
-| [40](../config/30_velocity_observation/chassis_remote_imu_config.h#L40) | 预处理 | `#define CHASSIS_REMOTE_IMU_MAX_TIMING_JITTER_MS 10U` |
-| [43](../config/30_velocity_observation/chassis_remote_imu_config.h#L43) | 预处理 | `#define CHASSIS_REMOTE_IMU_CONFIG_INITIALIZER { \` |
-| [55](../config/30_velocity_observation/chassis_remote_imu_config.h#L55) | 预处理 | `#endif` |
+| [12](../config/30_velocity_observation/chassis_remote_imu_config.h#L12) | 预处理 | `#ifndef CHASSIS_REMOTE_IMU_CONFIG_VERIFIED` |
+| [13](../config/30_velocity_observation/chassis_remote_imu_config.h#L13) | 预处理 | `#define CHASSIS_REMOTE_IMU_CONFIG_VERIFIED 0 /* 0=未实测初值；完成安装/参数审核后才设1；只作记录标识，不放行控制。 */` |
+| [14](../config/30_velocity_observation/chassis_remote_imu_config.h#L14) | 预处理 | `#endif` |
+| [15](../config/30_velocity_observation/chassis_remote_imu_config.h#L15) | 预处理 | `#if CHASSIS_REMOTE_IMU_CONFIG_VERIFIED != 0 && CHASSIS_REMOTE_IMU_CONFIG_VERIFIED != 1` |
+| [17](../config/30_velocity_observation/chassis_remote_imu_config.h#L17) | 预处理 | `#endif` |
+| [20](../config/30_velocity_observation/chassis_remote_imu_config.h#L20) | 预处理 | `#define CHASSIS_REMOTE_IMU_SENSOR_TO_BODY {1.0f, 0.0f, 0.0f, 0.0f}` |
+| [24](../config/30_velocity_observation/chassis_remote_imu_config.h#L24) | 预处理 | `#define CHASSIS_REMOTE_IMU_OFFSET_BODY_M {0.0f, 0.116f, 0.0f}` |
+| [28](../config/30_velocity_observation/chassis_remote_imu_config.h#L28) | 预处理 | `#define CHASSIS_REMOTE_IMU_WHEEL_VARIANCE 0.01f` |
+| [29](../config/30_velocity_observation/chassis_remote_imu_config.h#L29) | 预处理 | `#define CHASSIS_REMOTE_IMU_ACCEL_VARIANCE 0.25f` |
+| [30](../config/30_velocity_observation/chassis_remote_imu_config.h#L30) | 预处理 | `#define CHASSIS_REMOTE_IMU_JERK_DENSITY 1.0f` |
+| [31](../config/30_velocity_observation/chassis_remote_imu_config.h#L31) | 预处理 | `#define CHASSIS_REMOTE_IMU_MAX_RESIDUAL_MPS 1.5f` |
+| [37](../config/30_velocity_observation/chassis_remote_imu_config.h#L37) | 预处理 | `#define CHASSIS_REMOTE_IMU_MAX_PAIR_SPAN_MS 15U` |
+| [38](../config/30_velocity_observation/chassis_remote_imu_config.h#L38) | 预处理 | `#define CHASSIS_REMOTE_IMU_MAX_WHEEL_SKEW_MS 3U` |
+| [39](../config/30_velocity_observation/chassis_remote_imu_config.h#L39) | 预处理 | `#define CHASSIS_REMOTE_IMU_MAX_TIMING_JITTER_MS 10U` |
+| [42](../config/30_velocity_observation/chassis_remote_imu_config.h#L42) | 预处理 | `#define CHASSIS_REMOTE_IMU_CONFIG_INITIALIZER { \` |
+| [54](../config/30_velocity_observation/chassis_remote_imu_config.h#L54) | 预处理 | `#endif` |
 
 ## config/30_velocity_observation/chassis_velocity_config.h
 
@@ -3160,7 +3160,7 @@
 | --- | --- | --- |
 | [1](../modules/algorithm/chassis_gimbal_imu.h#L1) | 预处理 | `#ifndef CHASSIS_GIMBAL_IMU_H` |
 | [2](../modules/algorithm/chassis_gimbal_imu.h#L2) | 预处理 | `#define CHASSIS_GIMBAL_IMU_H` |
-| [28](../modules/algorithm/chassis_gimbal_imu.h#L28) | 预处理 | `#endif` |
+| [30](../modules/algorithm/chassis_gimbal_imu.h#L30) | 预处理 | `#endif` |
 
 ## modules/algorithm/chassis_kinematics.c
 
@@ -3216,7 +3216,7 @@
 | [1](../modules/algorithm/chassis_remote_fusion.h#L1) | 预处理 | `#ifndef CHASSIS_REMOTE_FUSION_H` |
 | [2](../modules/algorithm/chassis_remote_fusion.h#L2) | 预处理 | `#define CHASSIS_REMOTE_FUSION_H` |
 | [9](../modules/algorithm/chassis_remote_fusion.h#L9) | 预处理 | `#define CHASSIS_REMOTE_WHEEL_HISTORY_CAPACITY 32U` |
-| [85](../modules/algorithm/chassis_remote_fusion.h#L85) | 预处理 | `#endif` |
+| [89](../modules/algorithm/chassis_remote_fusion.h#L89) | 预处理 | `#endif` |
 
 ## modules/algorithm/chassis_spin.c
 

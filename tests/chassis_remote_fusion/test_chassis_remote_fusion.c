@@ -81,7 +81,7 @@ static void HistoricalInterpolationAndAcceleration(void)
     for(uint32_t t=100;t<=185;t+=5) {
         if(t>=125 && (t-125)%20==0) {
             packet=Packet(500000+t-3,t-1,t);
-            packet.sample.accel_n_mps2[0]=10;
+            packet.sample.accel_n_mps2[0]=-10; /* Public forward is native A-board -X. */
         }
         out=Run(&state,&config,packet.available?&packet:NULL,t,(float)(t-100)*.01f,0);
     }
@@ -172,10 +172,10 @@ static void FixedMountAndOffsetUseSourceIntervals(void)
     Near(out.vx_mps,0,.001f); Near(out.vy_mps,0,.001f);
 }
 
-static void RightMountedABoardUsesProductionOffset(void)
+static void NativeABoardUsesProductionOffset(void)
 {
-    /* User +Y is RIGHT; fusion +Y is LEFT. A sensor 116 mm right of a
-     * stationary center has a_B = (+.116*alpha, +.116*omega^2, 0).
+    /* In native A-board axes, r = (0,+.116,0) gives rotational acceleration
+     * a_B = (-.116*alpha, -.116*omega^2, 0).
      * These analytic inputs do not reuse the production position derivative.
      * Catch a missing, reversed, millimetre-valued or double-applied offset. */
     const float cases[][4] = {
@@ -187,6 +187,9 @@ static void RightMountedABoardUsesProductionOffset(void)
     for(unsigned k=0;k<sizeof cases/sizeof cases[0];++k) {
         ChassisRemoteFusion_s state={0};
         const ChassisRemoteFusionConfig_s config=CHASSIS_REMOTE_IMU_CONFIG_INITIALIZER;
+        Near(config.sensor_to_body_quaternion[0],1,.00001f);
+        Near(config.sensor_to_body_quaternion[3],0,.00001f);
+        Near(config.imu_offset_body_m[1],.116f,.00001f);
         ChassisImuCanSnapshot_s packet={0};
         ChassisRemoteFusionOutput_s out={0};
         const float omega0=cases[k][0], alpha=cases[k][1];
@@ -198,18 +201,16 @@ static void RightMountedABoardUsesProductionOffset(void)
             if(t>=125 && (t-125)%20==0) {
                 const uint32_t jitter=((t-125)/20)%2 ? 2 : 0;
                 packet=Packet(700000+t-3,t-1-jitter,t);
-                /* Official A-board placement plus the photographed mounting:
-                 * sensor +X backward, +Y right, +Z up => R_BS = yaw(pi).
-                 * q_NS = q_NB * [0,0,0,1]. */
-                packet.sample.quaternion[0]=-sinf(theta*.5f);
-                packet.sample.quaternion[3]=cosf(theta*.5f);
+                /* Body axes are the native MPU6500 axes: q_NS = q_NB. */
+                packet.sample.quaternion[0]=cosf(theta*.5f);
+                packet.sample.quaternion[3]=sinf(theta*.5f);
                 const float omega=omega0+alpha*seconds;
-                packet.sample.accel_n_mps2[0]=ax+.116f*(alpha*c-omega*omega*s);
-                packet.sample.accel_n_mps2[1]=ay+.116f*(alpha*s+omega*omega*c);
+                packet.sample.accel_n_mps2[0]=ax-.116f*(alpha*c-omega*omega*s);
+                packet.sample.accel_n_mps2[1]=ay-.116f*(alpha*s+omega*omega*c);
                 packet.sample.gyro_sensor_radps[2]=omega;
             }
-            const float vx=seconds*(c*ax+s*ay);
-            const float vy=seconds*(s*ax-c*ay); /* Public right-positive velocity. */
+            const float vx=-seconds*(c*ax+s*ay); /* Public forward is native -X. */
+            const float vy=seconds*(-s*ax+c*ay); /* Public right is native +Y. */
             out=Run(&state,&config,packet.available?&packet:NULL,t,vx,vy);
         }
         assert(out.status==CHASSIS_REMOTE_FUSED && out.updates==4);
@@ -220,6 +221,55 @@ static void RightMountedABoardUsesProductionOffset(void)
             Near(out.vy_mps,0,.001f);
         }
     }
+}
+
+static void NativeABoardTranslationPreservesPublicVelocity(void)
+{
+    /* An IMU aligned with its own board must project wheels into the SAME
+     * navigation frame as acceleration, for both signs of each board axis.
+     * Nonzero acceleration catches a wrong projection hidden by round trips. */
+    const float headings[]={0,.7f,-1.1f};
+    const float acceleration[][2]={{1,0},{-1,0},{0,1},{0,-1}};
+    for(unsigned h=0;h<sizeof headings/sizeof headings[0];++h)
+        for(unsigned k=0;k<sizeof acceleration/sizeof acceleration[0];++k) {
+            ChassisRemoteFusion_s state={0};
+            const ChassisRemoteFusionConfig_s config=CHASSIS_REMOTE_IMU_CONFIG_INITIALIZER;
+            ChassisImuCanSnapshot_s packet={0};
+            ChassisRemoteFusionOutput_s out={0};
+            const float angle=headings[h], c=cosf(angle), s=sinf(angle);
+            const float ax=acceleration[k][0], ay=acceleration[k][1];
+            for(uint32_t t=100;t<=225;t+=5) {
+                if(t>=125 && (t-125)%20==0) {
+                    packet=Packet(900000+t-3,t-1,t);
+                    packet.sample.quaternion[0]=cosf(angle*.5f);
+                    packet.sample.quaternion[3]=sinf(angle*.5f);
+                    packet.sample.accel_n_mps2[0]=c*ax-s*ay;
+                    packet.sample.accel_n_mps2[1]=s*ax+c*ay;
+                }
+                const float seconds=(float)(t-100)*.001f;
+                out=Run(&state,&config,packet.available?&packet:NULL,t,
+                    -ax*(.3f+seconds),ay*(.3f+seconds));
+            }
+            assert(out.valid && out.status==CHASSIS_REMOTE_FUSED && out.updates==4);
+            const float seconds=(float)(out.tick_ms-100)*.001f;
+            const float x=ax*(.3f+seconds), y=ay*(.3f+seconds);
+            Near(out.attempt.input.wheel_n_mps[0],c*x-s*y,.0001f);
+            Near(out.attempt.input.wheel_n_mps[1],s*x+c*y,.0001f);
+            Near(out.attempt.input.accel_n_mps2[0],c*ax-s*ay,.0001f);
+            Near(out.attempt.input.accel_n_mps2[1],s*ax+c*ay,.0001f);
+            Near(out.vx_mps,-x,.0001f); Near(out.vy_mps,y,.0001f);
+            Near(out.paired_wheel_mps[0],-x,.0001f);
+            Near(out.paired_wheel_mps[1],y,.0001f);
+            /* Repeated packets hold public-axis results; loss returns public
+             * wheel velocities without an extra sign change. */
+            const uint32_t held_tick=out.tick_ms;
+            out=Run(&state,&config,&packet,230,.8f,-.6f);
+            assert(out.status==CHASSIS_REMOTE_FUSED && out.tick_ms==held_tick);
+            Near(out.vx_mps,-x,.0001f); Near(out.vy_mps,y,.0001f);
+            out=Run(&state,&config,NULL,235,.8f,-.6f);
+            assert(out.valid && out.status==CHASSIS_REMOTE_IMU_UNAVAILABLE);
+            Near(out.vx_mps,.8f,.00001f); Near(out.vy_mps,-.6f,.00001f);
+        }
 }
 
 static void LossAndSamePacketRecoveryDoNotReuseMeasurement(void)
@@ -373,13 +423,13 @@ static void AttemptRecordsMiddleNavigationInputAndEffectiveConfig(void)
     assert(attempt->input.now_us==900165000 && attempt->input.wheel_us==900142000);
     assert(attempt->input.imu_us==900142000);
     assert(attempt->input.wheel_valid && attempt->input.imu_valid);
-    Near(attempt->input.wheel_n_mps[0],2,.00001f);
-    Near(attempt->input.wheel_n_mps[1],1,.00001f);
+    Near(attempt->input.wheel_n_mps[0],-2,.00001f);
+    Near(attempt->input.wheel_n_mps[1],-1,.00001f);
     Near(attempt->input.accel_n_mps2[0],5,.00001f);
     Near(attempt->input.accel_n_mps2[1],.25f,.00001f);
     assert(attempt->output.valid && attempt->output.fused);
     assert(attempt->output.sample_us==900142000);
-    Near(attempt->output.velocity_n_mps[0],2,.00001f);
+    Near(attempt->output.velocity_n_mps[0],-2,.00001f);
     assert(attempt->resets_before==0 && attempt->pair_span_ms==5);
     assert(attempt->source_step_ms==20 && attempt->receive_step_ms==20);
     assert(attempt->config.filter.wheel_variance==.01f);
@@ -412,13 +462,13 @@ static void RejectedAttemptSurvivesResetAndReacquiresWithNewIdentity(void)
     assert(out.status==CHASSIS_REMOTE_REJECTED && out.resets==1);
     assert(out.attempt.available && out.attempt.sequence==3);
     assert(out.attempt.initialized_before && out.attempt.resets_before==0);
-    assert(out.attempt.input.wheel_n_mps[0]==100);
+    assert(out.attempt.input.wheel_n_mps[0]==-100);
     assert(out.attempt.output.valid && !out.attempt.output.fused);
     assert(out.attempt.receiver_call_ms==205 && out.attempt.middle_receiver_ms==182);
     ChassisVelocity_s wheel={.valid=false};
     ChassisRemoteFusionUpdate(&state,&config,&wheel,0,&packet,true,210,&out);
     assert(out.status==CHASSIS_REMOTE_WHEEL_UNAVAILABLE);
-    assert(out.attempt.sequence==3 && out.attempt.input.wheel_n_mps[0]==100);
+    assert(out.attempt.sequence==3 && out.attempt.input.wheel_n_mps[0]==-100);
     assert(out.attempt.receiver_call_ms==205 && !out.attempt.output.fused);
     for(uint32_t t=215;t<=265;t+=5) {
         if(t>=225 && (t-225)%20==0) packet=Packet(900000+t-3,t-1,t);
@@ -426,7 +476,7 @@ static void RejectedAttemptSurvivesResetAndReacquiresWithNewIdentity(void)
     }
     assert(out.status==CHASSIS_REMOTE_FUSED && out.attempt.sequence==4);
     assert(!out.attempt.initialized_before && out.attempt.resets_before==1);
-    assert(out.attempt.input.wheel_n_mps[0]==100);
+    assert(out.attempt.input.wheel_n_mps[0]==-100);
 }
 
 static void AttemptSequenceWrapIsNotUnavailable(void)
@@ -451,7 +501,8 @@ int main(void)
     EveryNewPacketMayWaitForItsLaterWheelBracket();
     PendingWheelBracketHasABoundedWait();
     FixedMountAndOffsetUseSourceIntervals();
-    RightMountedABoardUsesProductionOffset();
+    NativeABoardUsesProductionOffset();
+    NativeABoardTranslationPreservesPublicVelocity();
     LossAndSamePacketRecoveryDoNotReuseMeasurement();
     StaleOutputAndRemoteBecomeWheelFallback();
     GapsRebootsAndJitterRejectThenReacquire();

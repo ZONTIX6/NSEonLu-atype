@@ -22,13 +22,15 @@
 
 | 字段/标识 | 填法与边界 |
 | --- | --- |
-| `CHASSIS_REMOTE_IMU_SENSOR_TO_BODY` → `sensor_to_body_quaternion` | 原生传感器坐标到底盘前/左/上的安装旋转，Hamilton `[w,x,y,z]` 单位四元数；不是传感器到导航系的实时姿态 |
-| `CHASSIS_REMOTE_IMU_OFFSET_BODY_M` → `imu_offset_body_m` | 底盘几何中心到 IMU 芯片的固定三维向量，底盘前/左/上，单位 m；靠近中心不等于零偏移 |
+| `CHASSIS_REMOTE_IMU_SENSOR_TO_BODY` → `sensor_to_body_quaternion` | 原生传感器到远端融合机体系的安装旋转，Hamilton `[w,x,y,z]`；当前机体系与 A 板原生轴平行，使用 `[1,0,0,0]`，不是实时姿态 |
+| `CHASSIS_REMOTE_IMU_OFFSET_BODY_M` → `imu_offset_body_m` | 底盘几何中心到 IMU 芯片的固定三维向量，按 A 板原生轴表达，单位 m；当前 `(0,+0.116,0)` |
 | `filter.wheel_variance`、`accel_variance`、`jerk_density`、`max_velocity_residual_mps` | 用辨识数据设定、独立验证段检查，再冻结；单位与约束见 [滤波头](../modules/algorithm/chassis_velocity_fusion.h) |
 | `filter.max_age_us/max_skew_us/max_gap_us`、`max_pair_span_ms/max_wheel_skew_ms/max_timing_jitter_ms` | 分别约束滤波时间、轮速配对跨度、四轮反馈偏差和接收估计时间抖动；按实际配置记录，不通过放宽门槛隐藏传输异常 |
 | `CHASSIS_REMOTE_IMU_CONFIG_VERIFIED` | 默认 `0`；安装、噪声和时间参数完成实测审核后改为 `1`，对应 bit 18。只是审核声明，不阻止算法运行，也不能代替实车验收 |
 
-用户图示坐标为 +X 前、+Y 右，板位于图示 +Y 116 mm。程序安装坐标为前/左/上，所以 `imu_offset_body_m=(0,-0.116,0) m`。补偿扣除旋转杆臂的二阶导数，涵盖向心与切向加速度；只在主板融合前执行一次。根据官方板图、MPU6500 轴定义和照片安装方向推导，安装四元数为 `[0,0,0,1]`，即绕 Z 轴 180°。依据见 [安装坐标](dual-a-imu-integration.md#安装坐标)，仍须做 [实物轴向检查](dual-a-imu-integration.md#轴向与补偿检查)。`CONFIG_VERIFIED=0` 保留未审核身份。远端路径不加载本地云台标定头。
+远端融合的机体系原点放在底盘中心，轴向直接采用 A 板原生 IMU。当前照片 USB 朝上、XT30 朝下：A 板 +X 向照片左、+Y 向照片下、+Z 离开板面；中心到芯片为 `imu_offset_body_m=(0,+0.116,0) m`，`sensor_to_body_quaternion=[1,0,0,0]`。主板在融合前扣除旋转杆臂的二阶导数，涵盖向心与切向加速度。源四元数、角速度保持原生定义，导航系加速度仍不等于 A 板机体系加速度。依据与检查见 [双板安装坐标](dual-a-imu-integration.md#安装坐标)，`CONFIG_VERIFIED=0` 保留未审核身份。
+
+现有轮速、控制和 VOFA 速度接口保持前/右：融合入口将公共速度 `(vx,vy)` 转成 A 板坐标 `(-vx,+vy)`，导航系融合后先转回 A 板坐标，再以相同变号关系返回公共接口。配对轮速输出和失效时的轮速回退也遵循公共接口；不得把 A 板 +X 的速度直接当成公共 `vx`。本页后半部分的可选云台路径仍使用它原来的前/左/上几何定义。
 
 当前配对跨度、四轮反馈偏差、时间抖动的初值分别为 15 ms、3 ms、10 ms，对应 `CHASSIS_REMOTE_IMU_MAX_PAIR_SPAN_MS/MAX_WHEEL_SKEW_MS/MAX_TIMING_JITTER_MS`。滤波输入在配对后使用同一个估计样本时刻，因此初始化器中的 `filter.max_skew_us=0` 不表示真实传感器零偏斜；`max_age_us/max_gap_us=60000` 也不取消中心算法每侧 15～30 ms 的约束。
 
@@ -62,7 +64,7 @@
 
 两板上电后保持静止，等待姿态与远端有效位稳定，并先完成轴向和倾斜静止核对。每个工况保存一份 CSV：静止 30–60 s、低速前后起停/换向 30–60 s、低速左右起停/换向 30–60 s，以及两个方向旋转各 20–30 s。旋转按 [手册 T7](kalman-chassis-test-and-acceptance.md#6-t1t8按表执行实测) 先零输出手推，有动力时仅用已验证的受限配置；默认自旋档不能直接当作低速档。各动作前后保留约 5 s 静止，重复 3–5 次，保留起停与换向过程。
 
-日常 schema 5 提交完整 `I0`–`I95`；旧 schema 3 提交完整 `I0`–`I71`，保留表头与 VOFA 时间列。附两板固件身份、构建命令、安装照片、图示右侧 116 mm 与内部负 Y 的转换、实际动作、地面与载荷。不要混用两个 schema 的字段和单位。
+日常 schema 5 提交完整 `I0`–`I95`；旧 schema 3 提交完整 `I0`–`I71`，保留表头与 VOFA 时间列。附两板固件身份、构建命令、安装照片、A 板原生轴向及 +Y 116 mm 芯片偏移、实际动作、地面与载荷。不要混用两个 schema 的字段和单位。
 
 旧 schema 3 的平移速度使用 mm/s，加速度使用 mm/s²，IMU 角速度使用 mrad/s。`I23`、`I26` 的车体旋转速度为 mrev/s（`1000×转/秒`），由 `wz_rpm×1000/60` 得到。模式 `2` 的 20 ms CSV 记录最新快照（旧模式 `1` 为 80 ms），不会提高 IMU 或融合器的内部更新率，也不能保证捕获每个输入样本、逐次重放高频滤波器或完整辨识 Q/R；实际速度误差和打滑表现还需独立速度参考。
 

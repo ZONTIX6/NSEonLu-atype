@@ -45,10 +45,9 @@ static ChassisFusedVelocitySnapshot_s Step(bool new_remote)
         ++remote.sample.sequence;
         remote.sample.tick_ms=900000+tick;
         remote.sample.source_age_ms=2;
-        /* Photographed A-board mounting is yaw(pi) relative to the chassis;
-         * this fixture keeps the chassis forward axis aligned with nav +X. */
-        remote.sample.quaternion[0]=0;
-        remote.sample.quaternion[3]=1;
+        /* Native A-board axes aligned with nav; +A-X is public backward. */
+        remote.sample.quaternion[0]=1;
+        remote.sample.quaternion[3]=0;
         remote.sample.accel_n_mps2[0]=1;
         remote.first_rx_tick_ms=tick-1;
         remote.last_rx_tick_ms=tick;
@@ -76,7 +75,7 @@ int main(void)
     assert(out.status==CHASSIS_VELOCITY_FUSED && out.valid);
     /* Zero wheel observations plus measured acceleration must actually enter
        the KF, rather than merely labelling a copied wheel value as fused. */
-    assert(out.vx_mps>0.0001f && out.vx_mps<.5f);
+    assert(out.vx_mps<-.0001f && out.vx_mps>-.5f);
     assert(fabsf(out.vy_mps)<.00001f);
     assert(out.paired_wheel_mps[0]==0 && out.paired_wheel_mps[1]==0);
     assert(fabsf(out.center_accel_n_mps2[0]-1)<.00001f);

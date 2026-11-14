@@ -7,7 +7,7 @@ typedef struct {
     uint32_t imu_us, wheel_us;
     float imu_offset_n_m[3];
     float accel_n_mps2[3];
-    float wheel_b_mps[2]; /* forward, left */
+    float wheel_b_mps[2]; /* Fixed body X/Y: gimbal forward/left, remote native A-board axes. */
     float body_to_nav_xy[2][2];
 } ChassisVelocityCenterSample_s;
 

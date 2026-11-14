@@ -188,6 +188,7 @@ void ChassisRemoteFusionUpdate(ChassisRemoteFusion_s *state,
         ResetPipeline(s);out->status=CHASSIS_REMOTE_REJECTED;goto done;
     }
     ChassisGimbalImuGeometry_s geometry={0};
+    /* Reuse the rigid-pose math with A-board axes as its fixed body frame. */
     for(unsigned i=0;i<3;++i) geometry.yaw_origin_b_m[i]=config->imu_offset_body_m[i];
     for(unsigned i=0;i<4;++i) geometry.sensor_to_head_quaternion[i]=config->sensor_to_body_quaternion[i];
     ChassisGimbalImuPose_s pose;
@@ -212,8 +213,10 @@ void ChassisRemoteFusionUpdate(ChassisRemoteFusion_s *state,
     }
     out->pair_span_ms=span;
     RememberSource(s,remote,estimated,out->source_step_ms,out->receive_step_ms);
+    /* Existing public wheel axes are forward/right. The installed A board's
+     * native axes are backward/right/up; raw IMU/nav data keep their own axes. */
     ChassisVelocityCenterSample_s sample={.imu_us=remote->sample.tick_ms*1000U,
-        .wheel_us=remote->sample.tick_ms*1000U,.wheel_b_mps={paired[0],-paired[1]}};
+        .wheel_us=remote->sample.tick_ms*1000U,.wheel_b_mps={-paired[0],paired[1]}};
     for(unsigned i=0;i<3;++i) {
         sample.imu_offset_n_m[i]=pose.imu_offset_nav_m[i];
         sample.accel_n_mps2[i]=remote->sample.accel_n_mps2[i];
@@ -261,13 +264,14 @@ void ChassisRemoteFusionUpdate(ChassisRemoteFusion_s *state,
     if(!filtered.valid || !filtered.fused || !(det>.5f) || now_ms-middle_local_ms>REMOTE_MAX_KNOWN_AGE_MS) {
         ResetPipeline(s);out->status=CHASSIS_REMOTE_REJECTED;goto done;
     }
-    const float vx=(d*filtered.velocity_n_mps[0]-b*filtered.velocity_n_mps[1])/det;
-    const float vy=(c*filtered.velocity_n_mps[0]-a*filtered.velocity_n_mps[1])/det;
+    /* Invert nav -> native board, then return public forward/right velocities. */
+    const float vx=-(d*filtered.velocity_n_mps[0]-b*filtered.velocity_n_mps[1])/det;
+    const float vy=(a*filtered.velocity_n_mps[1]-c*filtered.velocity_n_mps[0])/det;
     if(!isfinite(vx) || !isfinite(vy)) {
         ResetPipeline(s);out->status=CHASSIS_REMOTE_REJECTED;goto done;
     }
     s->held=(ChassisRemoteFusionOutput_s){.valid=true,.tick_ms=middle_local_ms,
-        .vx_mps=vx,.vy_mps=vy,.paired_wheel_mps={center.wheel_b_mps[0],-center.wheel_b_mps[1]},
+        .vx_mps=vx,.vy_mps=vy,.paired_wheel_mps={-center.wheel_b_mps[0],center.wheel_b_mps[1]},
         .center_accel_n_mps2={center.accel_n_mps2[0],center.accel_n_mps2[1]},.pair_span_ms=middle_span};
     Increment(&s->updates);
     PublishHeld(s,out);

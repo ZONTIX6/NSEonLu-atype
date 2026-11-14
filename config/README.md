@@ -52,7 +52,7 @@ VS Code 的 `show selected board`、`build selected board`、`flash selected boa
 2. 调运动与手感：底盘尺寸/跟随模式在 `02_chassis`，云台限位在 `03_gimbal`，摇杆和键鼠增益在 `05_remote`。
 3. 调发射：摩擦轮目标转速和拨弹参数在 `04_shoot/shoot_config.h`，单发热量、预留弹数和射频规划在同目录 `heat_control_config.h`。
 4. 调功率/自旋：功率外环独立 PI 的 `kp`、`ki` 在 `20_chassis_power/chassis_power_config.c` 的 `chassis_outer_loop_config`；小陀螺参数在 `21_chassis_spin`。这些不是电机 PID 参数。
-5. 调底盘 IMU 融合：在 `30_velocity_observation/chassis_remote_imu_config.h` 配置传感器到底盘的单位四元数、底盘中心到芯片的固定三维偏移、滤波噪声与时间门槛。程序坐标为前/左/上，偏移单位 m；用户图示 +Y 为右，116 mm 对应这里的 `(0,-0.116,0)`。按官方板图、芯片轴定义及安装照片推导，安装四元数为 `[0,0,0,1]`（绕 Z 轴 180°）；推导过程见 [双板安装说明](../docs/dual-a-imu-integration.md#安装坐标)，实物轴向仍须核对，噪声仍是试运行初值。完成实测、独立验证并冻结参数后，才把 `CHASSIS_REMOTE_IMU_CONFIG_VERIFIED` 改为 `1`；此标识只记录审核声明，不控制算法是否运行，也不代替验收。参见 [融合说明](../docs/chassis-velocity-fusion.md) 与 [实测手册](../docs/kalman-chassis-test-and-acceptance.md)。
+5. 调底盘 IMU 融合：在 `30_velocity_observation/chassis_remote_imu_config.h` 配置安装、芯片偏移、滤波噪声与时间门槛。远端融合以底盘中心为原点，轴向直接采用 A 板原生 IMU：当前照片中 +X 向左、+Y 向下、+Z 离开板面。安装四元数为 `[1,0,0,0]`，中心到芯片的偏移为 `(0,+0.116,0) m`，116 mm 已确认量到芯片。现有前/右速度接口由融合边界换算，具体见 [双板坐标说明](../docs/dual-a-imu-integration.md#安装坐标)。完成实测、独立验证并冻结参数后，才把 `CHASSIS_REMOTE_IMU_CONFIG_VERIFIED` 改为 `1`；此标识只记录审核声明，不控制算法是否运行，也不代替验收。
 
 板间通信为 CAN1、1 Mbps、标准 ID `0x520`，采集任务名义每 20 ms 尝试发送一组。主板使用源板 INS 已去重力的导航系加速度，只做安装与中心偏移补偿，不再使用 DM 模块的重力常量或协议换算。
 
