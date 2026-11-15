@@ -57,3 +57,6 @@ __pycache__/
 .vscode/.cortex-debug.peripherals.state.json
 .vscode/.cortex-debug.registers.state.json
 *.jdebug*
+
+# Machine-local EmberProbe bridge descriptor
+/.agents/skills/_emberprobe/agent-bridge.json
