@@ -37,7 +37,7 @@ if (speed.target.valid) {
 - 实际值：临界区复制 `motor_lf/rf/lb/rb->measure.speed_aps`、接收时间和在线状态，除以 6 还原转子 rpm。保留 DJI 解码器已有的速度滤波，不额外滤波。停机/零力时仍读取反馈，因此滑行和手推可以显示非零速度。四轮中任意一个无首帧、离线、超过 20 ms 或含非有限值，整车实际速度置无效。
 - 目标值：由 `pending_power_control.target_rpm[]` 换算，表示底盘下发轮速目标对应的整体运动需求；控制不允许、零力或整车安全门禁禁止驱动时为零。功率限流作用于电流，不改写目标。单轮自动整定的驱动层覆盖值不属于此底盘目标。
 - 两组速度均在底盘车身坐标系，取几何中心；不随云台转动变成云台坐标。旋转正号与既有底盘运动学保持一致，实车须核对方向。不是直接把 `vx_cmd/vy_cmd/wz_cmd` 当 SI 单位。
-- 当前实车轮径为 76 mm，对应 `RADIUS_WHEEL=38 mm` 半径；减速比 19、轴距 350 mm、轮距 300 mm。电机对象顺序为 LF/RF/LB/RB，当前 CAN ID 分别是 1/4/2/3。全向轮方向校正沿用 `OMNI_X_*_DIRECTION`。
+- 当前实车轮半径为 76 mm，对应 `RADIUS_WHEEL=76`；减速比 19、轴距 350 mm、轮距 300 mm。电机对象顺序为 LF/RF/LB/RB，当前 CAN ID 分别是 1/4/2/3。全向轮方向校正沿用 `OMNI_X_*_DIRECTION`。
 
 轮周速度：`u = rotor_rpm * 2π * R / (60 * reduction)`，单位 m/s。全向轮令 `p=1/√2`，`L=(wheel_base+track_width)/2`，校正方向后的四轮速度按 LF/RF/LB/RB 排列：
 
