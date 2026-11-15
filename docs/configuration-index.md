@@ -4183,7 +4183,7 @@
 | --- | --- | --- |
 | [1](../modules/imu/chassis_imu_can_protocol.h#L1) | 预处理 | `#ifndef CHASSIS_IMU_CAN_PROTOCOL_H` |
 | [2](../modules/imu/chassis_imu_can_protocol.h#L2) | 预处理 | `#define CHASSIS_IMU_CAN_PROTOCOL_H` |
-| [6](../modules/imu/chassis_imu_can_protocol.h#L6) | 预处理 | `#define CHASSIS_IMU_CAN_DATA_ID 0x520U` |
+| [6](../modules/imu/chassis_imu_can_protocol.h#L6) | 预处理 | `#define CHASSIS_IMU_CAN_DATA_ID 0x180U` |
 | [7](../modules/imu/chassis_imu_can_protocol.h#L7) | 预处理 | `#define CHASSIS_IMU_CAN_FRAME_COUNT 9U` |
 | [8](../modules/imu/chassis_imu_can_protocol.h#L8) | 预处理 | `#define CHASSIS_IMU_CAN_FRAME_BYTES 8U` |
 | [9](../modules/imu/chassis_imu_can_protocol.h#L9) | 预处理 | `#define CHASSIS_IMU_CAN_PAYLOAD_BYTES 54U` |

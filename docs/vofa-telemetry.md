@@ -23,7 +23,7 @@
 
 在 [config/90_board/board_config.h](../config/90_board/board_config.h) 中修改 `VOFA_TELEMETRY_MODE` 后，正常编译烧录即可切换协议。构建命令也可显式覆盖该宏。力控模式、裁判使用 UART7 或 UART7 接有辅助设备时，默认关闭 VOFA+ 输出。USB 遥测可同时开启，也可用 `USB_TELEMETRY_ENABLE=0` 单独运行无线遥测。[A 板串口接线](atype-integration.md#接线)
 
-当前使用 **双 A 板，默认 CAN2、ID `0x520`**：下方板专门采样、温控并以 50 Hz 发送 IMU，主板接收并进行只读卡尔曼观测。DM 模块接收与换算路径已移除。接线、两板构建与 116 mm 安装补偿见 [双 A 板说明](dual-a-imu-integration.md)。
+当前使用 **双 A 板，默认 CAN2、ID `0x180`**：下方板专门采样、温控并以 50 Hz 发送 IMU，主板接收并进行只读卡尔曼观测。DM 模块接收与换算路径已移除。接线、两板构建与 116 mm 安装补偿见 [双 A 板说明](dual-a-imu-integration.md)。
 
 日常构建使用 [`config/00_flash/board_flash_config.h`](../config/00_flash/board_flash_config.h)，主板为 `BOARD_FLASH_1_`，下方采集板为 `BOARD_FLASH_2_`。分别构建和烧录到对应物理板，采集板不运行整车任务。
 
@@ -70,7 +70,7 @@ make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-main ONE_BOARD=1 CHASSIS_C
 
 ## 双 A 板 CAN 接线与传输
 
-两板按 `CHASSIS_IMU_CAN_PORT` 选择 CAN1 或 CAN2（默认 CAN2），所选接口的 CAN_H 对 CAN_H、CAN_L 对 CAN_L，并连接参考地，速率 1 Mbps；按总线两端配置终端电阻。采集板使用 `IMU_CAPTURE_ONLY=1 IMU_CAPTURE_CAN_TX_ENABLE=1`，主板启用接收，标准 ID 为 `0x520`。
+两板按 `CHASSIS_IMU_CAN_PORT` 选择 CAN1 或 CAN2（默认 CAN2），所选接口的 CAN_H 对 CAN_H、CAN_L 对 CAN_L，并连接参考地，速率 1 Mbps；按总线两端配置终端电阻。采集板使用 `IMU_CAPTURE_ONLY=1 IMU_CAPTURE_CAN_TX_ENABLE=1`，主板启用接收，标准 ID 为 `0x180`。
 
 采集任务名义每 20 ms 尝试发送一组，共 9 个 8 字节分片，携带源序号、源时间和源年龄。主板校验顺序、同组 tag、CRC16 与 10 ms 组装期限，错序/缺片/过期组不刷新样本。源 INS 已输出去重力加速度，主板不再做 DM 重力换算；安装补偿只作用于融合输入。[接线与首次核对](dual-a-imu-integration.md)
 

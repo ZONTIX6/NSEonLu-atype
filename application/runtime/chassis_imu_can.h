@@ -5,7 +5,7 @@
 #include "chassis_imu_can_protocol.h"
 
 #if IMU_CAPTURE_CAN_TX_ENABLE || CHASSIS_IMU_CAN_RX_ENABLE
-/* Register one diagnostic-only 0x520 endpoint on CHASSIS_IMU_CAN_PORT before enabling IRQs. */
+/* Register one diagnostic-only IMU endpoint on CHASSIS_IMU_CAN_PORT before enabling IRQs. */
 void ChassisImuCanInit(void);
 #endif
 #if IMU_CAPTURE_CAN_TX_ENABLE

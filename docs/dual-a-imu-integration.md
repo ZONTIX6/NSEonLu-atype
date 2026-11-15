@@ -27,7 +27,9 @@
 
 ## 接线与构建
 
-两板通过所选 CAN 总线连接（默认 CAN2）：CAN_H 对 CAN_H、CAN_L 对 CAN_L、参考地相连，使用收发器后的总线接口。当前速率 1 Mbps，标准 ID `0x520`；按整条总线两端设置终端电阻。主板 UART7 接 VOFA+ 接收器，下方板无需单独串口记录。
+两板通过所选 CAN 总线连接（默认 CAN2）：CAN_H 对 CAN_H、CAN_L 对 CAN_L、参考地相连，使用收发器后的总线接口。当前速率 1 Mbps，标准 ID `0x180`；按整条总线两端设置终端电阻。主板 UART7 接 VOFA+ 接收器，下方板无需单独串口记录。
+
+IMU ID 由两板共用的 [`CHASSIS_IMU_CAN_DATA_ID`](../modules/imu/chassis_imu_can_protocol.h) 定义。`0x180` 的仲裁优先级高于 DJI 电机命令和反馈，会让同时等待的电机报文稍后发送；它不减少总线流量，也不改变 1 ms 发送邮箱等待、10 ms 组包期限或电调反馈频率。此前使用 `0x520` 的固件与当前版本不能混用，修改 ID 后需要重新构建并烧录两板，再检查 IMU 更新及电机控制、反馈是否正常。
 
 在 [`config/90_board/board_config.h`](../config/90_board/board_config.h) 中修改 `CHASSIS_IMU_CAN_PORT`：`1`=CAN1，`2`=CAN2（默认），其他值编译报错。`BOARD_CHASSIS_IMU_CAN` 由该宏派生，无需单独修改。两板的默认构建预设共用此头文件；切换后分别重新构建、烧录两板，并将两端接到对应的 CAN1 或 CAN2 接口。该宏只选择这条 IMU 链路，电机等设备保留各自绑定。
 

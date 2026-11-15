@@ -19,7 +19,7 @@ void TestEnterCritical(void) { ++critical; }
 void TestExitCritical(void) { assert(critical); --critical; }
 CANInstance *CANRegister(CAN_Init_Config_s *config)
 {
-    assert(config->can_handle==expected_can && config->tx_id==0x520 && config->rx_id==0x520);
+    assert(config->can_handle==expected_can && config->tx_id==0x180 && config->rx_id==0x180);
     registered=(CANInstance){.can_handle=config->can_handle,.tx_id=config->tx_id,
         .rx_id=config->rx_id,.can_module_callback=config->can_module_callback,.dlc=8};
     ++registrations;
@@ -38,10 +38,10 @@ static bool abort_stuck;
 bool INSGetMotionSnapshot(INSMotionSnapshot_s *out) { *out=imu;return imu.valid; }
 uint8_t CANTransmit(CANInstance *instance,float timeout)
 {
-    assert(instance==&registered && instance->can_handle==expected_can && instance->tx_id==0x520);
+    assert(instance==&registered && instance->can_handle==expected_can && instance->tx_id==0x180);
     assert(instance->dlc==8 && timeout>0 && timeout<=1.0f);
     ++calls;
-    /* Four high-priority motor feedback frames can occupy the bus for 0.5 ms. */
+    /* Model a 0.5 ms mailbox wait; this stub does not simulate bus arbitration. */
     if(timeout<.5f) return 0;
     if(calls==fail_at) return 0;
     assert(calls<=9);

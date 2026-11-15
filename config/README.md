@@ -58,7 +58,7 @@ F5 的 ST-Link / DAPlink / Jlink 跟随 `BOARD_FLASH_TARGET`：设为 `2` 并保
 4. 调功率/自旋：功率外环独立 PI 的 `kp`、`ki` 在 `20_chassis_power/chassis_power_config.c` 的 `chassis_outer_loop_config`；小陀螺参数在 `21_chassis_spin`。这些不是电机 PID 参数。
 5. 调底盘 IMU 融合：在 `30_velocity_observation/chassis_remote_imu_config.h` 配置安装、芯片偏移、滤波噪声与时间门槛。远端融合以底盘中心为原点，轴向直接采用 A 板原生 IMU：当前照片中 +X 向左、+Y 向下、+Z 离开板面。安装四元数为 `[1,0,0,0]`，中心到芯片的偏移为 `(0,+0.116,0) m`，116 mm 已确认量到芯片。现有前/右速度接口由融合边界换算，具体见 [双板坐标说明](../docs/dual-a-imu-integration.md#安装坐标)。完成实测、独立验证并冻结参数后，才把 `CHASSIS_REMOTE_IMU_CONFIG_VERIFIED` 改为 `1`；此标识只记录审核声明，不控制算法是否运行，也不代替验收。
 
-板间 CAN 由 [`90_board/board_config.h`](90_board/board_config.h) 中的 `CHASSIS_IMU_CAN_PORT` 选择：`1`=CAN1，`2`=CAN2（默认）。两板预设共用该头文件；改值后分别重新构建、烧录两板，并连接所选接口。手动 Make/CMake 可用同名构建参数覆盖，具体见 [接线与构建](../docs/dual-a-imu-integration.md#接线与构建)。速率仍为 1 Mbps，标准 ID 为 `0x520`，采集任务名义每 20 ms 尝试发送一组。主板使用源板 INS 已去重力的导航系加速度，只做安装与中心偏移补偿，不再使用 DM 模块的重力常量或协议换算。
+板间 CAN 由 [`90_board/board_config.h`](90_board/board_config.h) 中的 `CHASSIS_IMU_CAN_PORT` 选择：`1`=CAN1，`2`=CAN2（默认）。两板预设共用该头文件；改值后分别重新构建、烧录两板，并连接所选接口。手动 Make/CMake 可用同名构建参数覆盖，具体见 [接线与构建](../docs/dual-a-imu-integration.md#接线与构建)。速率仍为 1 Mbps，标准 ID 为 `0x180`，采集任务名义每 20 ms 尝试发送一组。主板使用源板 INS 已去重力的导航系加速度，只做安装与中心偏移补偿，不再使用 DM 模块的重力常量或协议换算。
 
 MPU6500 与旧 BMI088 温控 PID 在 `01_pid/pid_config.c` 中分别命名，当前 A 板使用 MPU6500；温度目标和 IMU 安装参数在 `92_imu/imu_config.h`。
 

@@ -188,7 +188,7 @@ Get-FileHash -Algorithm SHA256 -LiteralPath build/board-2-imu/basic_framework.bi
 
 ### 4.3 接线与 VOFA+
 
-断电接线：按两板固件的 `CHASSIS_IMU_CAN_PORT` 连接对应 CAN1 或 CAN2（默认 CAN2），H 对 H、L 对 L、参考地相连；切换与构建入口见 [双板说明](dual-a-imu-integration.md#接线与构建)。核对两端终端电阻，不因新增节点盲目增加第三只。当前速率 1 Mbps，远端 IMU 标准 ID 为 `0x520`。名义每 20 ms 尝试一组、每组 9 帧；接收组装期限 10 ms。
+断电接线：按两板固件的 `CHASSIS_IMU_CAN_PORT` 连接对应 CAN1 或 CAN2（默认 CAN2），H 对 H、L 对 L、参考地相连；切换与构建入口见 [双板说明](dual-a-imu-integration.md#接线与构建)。核对两端终端电阻，不因新增节点盲目增加第三只。当前速率 1 Mbps，远端 IMU 标准 ID 为 `0x180`。名义每 20 ms 尝试一组、每组 9 帧；接收组装期限 10 ms。
 
 只把**主板 UART7 TX（PE8）接接收器 RX，GND 接 GND**。接口针序和接收器供电按实际硬件核对。UART7 不得同时被裁判或辅助设备占用。第二板不需要再接第二个 VOFA 窗口。接线图入口见 [A 板接线](atype-integration.md#接线)。
 
