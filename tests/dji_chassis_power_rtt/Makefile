@@ -13,6 +13,7 @@ ifneq ($(strip $(POWER_METER_ENABLE)),)
 CFLAGS += -DPOWER_METER_ENABLE=$(POWER_METER_ENABLE)
 endif
 TARGET := test_dji_chassis_power_rtt.exe
+BYPASS_TARGET := test_dji_power_bypass.exe
 SOURCE := test_dji_chassis_power_rtt.c \
           ../../modules/algorithm/power_model.c \
           ../../modules/algorithm/chassis_power_transient.c \
@@ -30,16 +31,21 @@ INCLUDES += -I../../modules/vehicle_safety -I../../modules/power_meter -I../../a
 
 .PHONY: all test clean
 
-all: $(TARGET)
+all: $(TARGET) $(BYPASS_TARGET)
 
 $(TARGET): $(SOURCE) $(wildcard ../../modules/motor/DJImotor/*.[ch])
-	$(CC) $(CFLAGS) $(INCLUDES) $(SOURCE) $(LDFLAGS) -lm -o $(TARGET)
+	$(CC) $(CFLAGS) -DCHASSIS_POWER_CONTROL_ENABLE=1 $(INCLUDES) $(SOURCE) $(LDFLAGS) -lm -o $(TARGET)
 
-test: $(TARGET)
+$(BYPASS_TARGET): test_dji_power_bypass.c $(SOURCE) $(wildcard ../../modules/motor/DJImotor/*.[ch])
+	$(CC) $(CFLAGS) -DCHASSIS_POWER_CONTROL_ENABLE=0 $(INCLUDES) test_dji_power_bypass.c $(filter-out test_dji_chassis_power_rtt.c,$(SOURCE)) $(LDFLAGS) -lm -o $@
+
+test: $(TARGET) $(BYPASS_TARGET)
 	./$(TARGET)
+	./$(BYPASS_TARGET)
 
 clean:
 	-if exist $(TARGET) del /Q $(TARGET)
+	-if exist $(BYPASS_TARGET) del /Q $(BYPASS_TARGET)
 
 SOURCE += $(filter-out ../../modules/chassis_power/chassis_power.c,$(wildcard ../../modules/chassis_power/*.c)) ../../modules/algorithm/chassis_power_budget.c ../../modules/algorithm/chassis_power_outer_loop.c
 INCLUDES += -I../../modules/chassis_power -I../../modules/super_cap -I../../modules/referee

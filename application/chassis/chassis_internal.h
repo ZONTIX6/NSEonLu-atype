@@ -29,7 +29,7 @@ extern CANCommInstance *chasiss_can_comm;
 /* Control state owned by chassis.c, shared only for initialization/retuning. */
 extern Chassis_Ctrl_Cmd_s chassis_cmd_recv;
 extern uint32_t chassis_budget_dwt_count;
-#if CHASSIS_SPIN_DYNAMIC_ENABLED
+#if CHASSIS_POWER_CONTROL_ENABLE && CHASSIS_SPIN_DYNAMIC_ENABLED
 extern ChassisSpinState_s chassis_spin_state;
 #endif
 

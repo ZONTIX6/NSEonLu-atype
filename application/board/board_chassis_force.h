@@ -18,6 +18,9 @@ ChassisPower_Init_Config_s BoardChassisForcePowerConfig(void);
 #if CHASSIS_POWER_CONTROL_STAGE != 3
 #error Direct force control requires power stage 3
 #endif
+#if !CHASSIS_POWER_CONTROL_ENABLE
+#error Direct force control requires CHASSIS_POWER_CONTROL_ENABLE=1
+#endif
 #if CHASSIS_FORCE_SPIN_MODE == CHASSIS_FORCE_SPIN_POWER_ADAPTIVE && !POWER_METER_ENABLE
 #error Adaptive force spin requires load power feedback
 #endif

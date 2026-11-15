@@ -72,7 +72,23 @@ static void AdapterLimit(void *context,const DJIMotorCycle_s *cycle)
         if(cycle->stop[index]!=MOTOR_STOP) input->enabled_mask |= (uint8_t)(1U<<w);
     }
     (void)ChassisPowerLimit(input,&adapter_output);
+#if CHASSIS_POWER_CONTROL_ENABLE
     for(unsigned w=0;w<4;++w) cycle->current[adapter_group.motor_indices[w]]=adapter_output.current[w];
+#else
+    /* Keep power diagnostics, but only motion/data validity may gate PID output. */
+    bool valid=input->control.control_enabled && !input->control.zero_force &&
+        (uint32_t)(input->now_ms-input->control.tick_ms)<=10U &&
+        isfinite(input->dt_s) && input->dt_s>0 && input->dt_s<=.005f;
+    for(unsigned w=0;w<4;++w)
+        valid &= isfinite(input->raw_current[w]) && isfinite(input->actual_rpm[w]) &&
+            isfinite(input->target_rpm[w]) && isfinite(input->feedback_current[w]);
+    for(unsigned w=0;w<4;++w) {
+        const bool enabled=valid && (input->online_mask & input->enabled_mask & (1U<<w)) &&
+            input->feedback_sequence[w]!=0 && (uint32_t)(input->now_ms-input->feedback_tick_ms[w])<=20U;
+        cycle->current[adapter_group.motor_indices[w]]=enabled ?
+            fmaxf(-adapter_group.max_current_command,fminf(adapter_group.max_current_command,input->raw_current[w])) : 0;
+    }
+#endif
 #if CHASSIS_SPEED_CAPTURE_ENABLE
     limit_end_cycles=DWT_GetCycleCount();
 #endif

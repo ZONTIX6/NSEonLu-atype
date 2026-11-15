@@ -1,5 +1,6 @@
 #include "chassis_power_internal.h"
 #include "chassis_power_shadow.h"
+#include "chassis_power_config.h"
 
 bool ChassisPowerLimit(const ChassisPowerCycleInput_s *i, ChassisPowerCycleOutput_s *o)
 {
@@ -110,6 +111,14 @@ bool ChassisPowerRecordFinal(const ChassisPowerFinalInput_s *i)
     }
     (void)PowerModelRecomputeFinal(p->config.models,&p->input,current,&state->power);
     (void)ChassisPowerTelemetryBuild(&p->input,&state->power,enabled,&state->telemetry);
+#if !CHASSIS_POWER_CONTROL_ENABLE
+    /* A diagnostic/model failure must not hide commands sent in bypass mode. */
+    for(unsigned w=0;w<4;++w) {
+        state->power.limited_current[w]=current[w];
+        state->telemetry.current_command[w]=current[w];
+    }
+    state->telemetry.motor_enabled_mask=i->enabled_mask;
+#endif
     for(unsigned w=0;w<4;++w) {
         state->telemetry.target_speed_rpm[w]=target_rpm[w];
         state->telemetry.actual_speed_rpm[w]=actual_rpm[w];

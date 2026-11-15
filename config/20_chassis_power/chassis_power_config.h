@@ -2,12 +2,22 @@
 #define CHASSIS_POWER_CONFIG_H
 
 /* 此处数值是启动默认配置，不会自动覆盖已保存的在线调参值。
- * CONTROL_STAGE、CAPTURE_ENABLE、POWER_METER_ENABLE 可使用 Make NAME=value /
+ * CONTROL_ENABLE、CONTROL_STAGE、CAPTURE_ENABLE、POWER_METER_ENABLE 可使用 Make NAME=value /
  * CMake -DNAME=value 切换；其余直接编辑对应宏并重新构建。
  * 直接力控要求阶段 3；采集 USART2 和其它串口设备的冲突由板级配置检查。 */
 
 /* 底盘功率预算与输出分配共用的安全系数。 */
 #define CHASSIS_POWER_SAFETY_FACTOR 0.98f /* 无单位；用于功率预算与分配的共同安全折减系数。 */
+
+/* 临时关闭速度后端功控：0 仅观测功率，PID 电流只保留幅值及启停保护，
+ * 小陀螺使用已有 fixed_wz；改回 1 并重新构建、烧录即可恢复阶段 3 功控。
+ * 这是编译开关，不受已保存的在线调参值覆盖；直接力控必须设为 1。 */
+#ifndef CHASSIS_POWER_CONTROL_ENABLE
+#define CHASSIS_POWER_CONTROL_ENABLE 0
+#endif
+#if CHASSIS_POWER_CONTROL_ENABLE != 0 && CHASSIS_POWER_CONTROL_ENABLE != 1
+#error CHASSIS_POWER_CONTROL_ENABLE must be 0 or 1
+#endif
 
 /* 速度后端功率分配：误差 rpm、功率 W、电流 CAN 命令值。 */
 #define CHASSIS_POWER_SMALL_ERROR_RPM 500.0f /* 四轮转子速度误差绝对值之和的阈值，单位 rpm；不超过时平均分配功率。 */

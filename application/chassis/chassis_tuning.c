@@ -79,7 +79,7 @@ bool ChassisTuningApplySpin(const float *v)
     spin.wheel_hard_rpm=CHASSIS_SPIN_WHEEL_HARD_RPM;
     spin.extension_rise_wz_per_s=CHASSIS_SPIN_EXTENSION_RISE_RATE;
     if (!ChassisSpinConfigIsValid(&spin)) return false;
-#if CHASSIS_SPIN_DYNAMIC_ENABLED
+#if CHASSIS_POWER_CONTROL_ENABLE && CHASSIS_SPIN_DYNAMIC_ENABLED
     if (chassis_cmd_recv.chassis_mode == CHASSIS_ROTATE) {
         if (spin.sine_direction != chassis_spin_config.sine_direction ||
             !ChassisSpinRetune(&spin, &chassis_spin_state)) return false;

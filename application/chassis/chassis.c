@@ -87,7 +87,7 @@ bool ChassisGetTelemetrySnapshot(ChassisTelemetrySnapshot_s *snapshot)
     return snapshot->valid;
 }
 
-#if CHASSIS_SPIN_DYNAMIC_ENABLED
+#if CHASSIS_POWER_CONTROL_ENABLE && CHASSIS_SPIN_DYNAMIC_ENABLED
 ChassisSpinState_s chassis_spin_state;
 static ChassisSpinInput_s chassis_spin_input;
 static uint32_t chassis_spin_dwt_count;
@@ -172,7 +172,7 @@ static const ChassisVelocityConfig_s velocity_config={
         .wheel_base_m=WHEEL_BASE*.001f, .track_width_m=TRACK_WIDTH*.001f,
         .direction={OMNI_X_LF_DIRECTION,OMNI_X_RF_DIRECTION,OMNI_X_LB_DIRECTION,OMNI_X_RB_DIRECTION}};
 
-#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
+#if CHASSIS_POWER_CONTROL_ENABLE && CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
 static void PrepareSpinLimits(void)
 {
     ChassisSpinInput_s *i=&chassis_spin_input;
@@ -263,7 +263,7 @@ static void UpdateChassisPowerBudget(void)
 #endif
     input.previous_valid=ChassisPowerGetSnapshot(&input.previous);
     input.now_ms=HAL_GetTick(); /* Evaluate ages after acquiring all asynchronous snapshots. */
-#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
+#if CHASSIS_POWER_CONTROL_ENABLE && CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
     input.hold_positive_learning=chassis_cmd_recv.chassis_mode==CHASSIS_ROTATE;
     input.adaptive_spin=chassis_cmd_recv.chassis_mode==CHASSIS_ROTATE;
     input.spin_capability_limited=chassis_spin_state.limit_state==CHASSIS_SPIN_LIMIT_HARD ||
@@ -279,6 +279,13 @@ static void UpdateChassisPowerBudget(void)
     }
 #endif
     (void)ChassisPowerUpdatePolicy(&input,&output);
+#if !CHASSIS_POWER_CONTROL_ENABLE
+    /* Power calculations are observational; retain timing and referee stop permission.
+     * Apply this before the supercap submission gate so a failed command still stops drive. */
+    output.control.control_enabled=!input.zero_force &&
+        isfinite(input.dt_s) && input.dt_s>0 && input.dt_s<=.1f &&
+        (!input.referee.chassis_output_valid || input.referee.chassis_output_enabled);
+#endif
     if(output.cap_command_valid) {
         const bool submitted=SuperCapSendCommand(&output.cap_command);
         ChassisPowerCapCommandResult(&output.cap_command,submitted,HAL_GetTick(),
@@ -287,7 +294,7 @@ static void UpdateChassisPowerBudget(void)
     chassis_budget_output=output.budget;
     pending_power_control=output.control;
     pending_power_control.control_enabled &= chassis_power_ready;
-#if CHASSIS_SPIN_DYNAMIC_ENABLED && POWER_METER_ENABLE
+#if CHASSIS_POWER_CONTROL_ENABLE && CHASSIS_SPIN_DYNAMIC_ENABLED && POWER_METER_ENABLE
     static ChassisPowerSnapshot_s power_state;
     power_state=input.previous;
     const bool power_state_valid=input.previous_valid;
@@ -300,7 +307,7 @@ static void UpdateChassisPowerBudget(void)
         (uint32_t)(input.now_ms-meter_status.last_rx_tick_ms)<=20;
 #endif
     chassis_spin_input=(ChassisSpinInput_s){.spin_enabled=chassis_cmd_recv.chassis_mode==CHASSIS_ROTATE};
-#if CHASSIS_SPIN_DYNAMIC_ENABLED
+#if CHASSIS_POWER_CONTROL_ENABLE && CHASSIS_SPIN_DYNAMIC_ENABLED
     const uint32_t spin_now_ms = HAL_GetTick();
     bool feedback_valid = power_state_valid && power_state.registered &&
         power_state.power.status == POWER_MODEL_STATUS_OK && !power_state.numeric_error &&
@@ -340,7 +347,7 @@ static void UpdateChassisPowerBudget(void)
     chassis_spin_input.power_limited = current_limited;
     chassis_spin_input.increase_allowed = tracking && !current_limited &&
         ChassisSpinTransientAllowsIncrease(&power_state.transient);
-#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
+#if CHASSIS_POWER_CONTROL_ENABLE && CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
     chassis_spin_input.evaluate_tracking=true;
     chassis_spin_input.now_ms=spin_now_ms;
     chassis_spin_input.power_tick_ms=meter_status.last_rx_tick_ms;
@@ -372,11 +379,11 @@ static void UpdateChassisPowerBudget(void)
         abs(bench_remote.control.rc.dial)<=30 && !bench_remote.control.key[KEY_PRESS].keys &&
         !bench_remote.control.mouse.press_l && !bench_remote.control.mouse.press_r;
 #endif
-#if CHASSIS_SPIN_DYNAMIC_ENABLED
+#if CHASSIS_POWER_CONTROL_ENABLE && CHASSIS_SPIN_DYNAMIC_ENABLED
     chassis_spin_input.target_power_w = pending_power_control.target_power_w;
     chassis_spin_input.control_enabled = pending_power_control.control_enabled;
     chassis_spin_input.energy_recovering = chassis_budget_output.recovering;
-#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
+#if CHASSIS_POWER_CONTROL_ENABLE && CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
     chassis_spin_input.power_ceiling_w=pending_power_control.power_ceiling_w>0 ?
         pending_power_control.power_ceiling_w : pending_power_control.nominal_budget_w;
     PrepareSpinLimits();
@@ -426,7 +433,7 @@ void ChassisTask()
     ChassisResolveMotion(&chassis_cmd_recv, 0, &chassis_vx, &chassis_vy);
     UpdateChassisPowerBudget();
 
-#if CHASSIS_SPIN_DYNAMIC_ENABLED
+#if CHASSIS_POWER_CONTROL_ENABLE && CHASSIS_SPIN_DYNAMIC_ENABLED
     float spin_target_wz = 0;
     (void)ChassisSpinUpdate(&chassis_spin_config, &chassis_spin_input,
         DWT_GetDeltaT(&chassis_spin_dwt_count), &chassis_spin_state, &spin_target_wz);
@@ -477,7 +484,7 @@ void ChassisTask()
         .buffer_lower_j = chassis_budget_output.buffer_lower_j,
         .buffer_predicted_j = chassis_budget_output.buffer_predicted_j,
         .spin_phase=chassis_budget_output.spin_phase,
-#if CHASSIS_SPIN_DYNAMIC_ENABLED
+#if CHASSIS_POWER_CONTROL_ENABLE && CHASSIS_SPIN_DYNAMIC_ENABLED
         .spin_block_reasons=chassis_spin_state.block_reasons,
 #endif
         .spin_base_power_w=chassis_budget_output.spin_base_power_w,
@@ -499,7 +506,7 @@ void ChassisTask()
         .spin_extension_enabled=chassis_spin_config.extension_enabled,
         .spin_capability_latched=chassis_budget_output.spin_capability_latched,
         .spin_capability_release_s=chassis_budget_output.spin_capability_release_s,
-#if CHASSIS_SPIN_DYNAMIC_ENABLED
+#if CHASSIS_POWER_CONTROL_ENABLE && CHASSIS_SPIN_DYNAMIC_ENABLED
         .spin_effective_wz=chassis_spin_state.effective_max_wz,
         .spin_limit_state=chassis_spin_state.limit_state,
         .spin_extension_qualified=chassis_spin_state.extension_qualified,
