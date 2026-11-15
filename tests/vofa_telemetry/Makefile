@@ -10,7 +10,7 @@ MEASUREMENT_INCLUDES := -I../../modules/chassis_power -I../../modules/power_mete
 test: test_observation_power.exe test_observation_kalman.exe test_observation_remote.exe
 
 OBSERVATION_SOURCE := test_observation.c ../../application/runtime/vofa_observation.c
-OBSERVATION_HEADERS := ../../application/runtime/vofa_schema.h ../../application/runtime/vofa_observation.h ../../modules/algorithm/chassis_remote_fusion.h ../../modules/chassis_power/chassis_power_types.h ../../modules/super_cap/super_cap_types.h ../../modules/referee/referee_power.h
+OBSERVATION_HEADERS := stubs/FreeRTOS.h stubs/task.h ../../application/runtime/vofa_schema.h ../../application/runtime/vofa_observation.h ../../modules/algorithm/chassis_remote_fusion.h ../../modules/chassis_power/chassis_power_types.h ../../modules/super_cap/super_cap_types.h ../../modules/referee/referee_power.h
 test_observation_power.exe: $(OBSERVATION_SOURCE) $(OBSERVATION_HEADERS) $(HEADERS)
 	$(CC) $(CFLAGS) -fno-fast-math $(filter-out -DVOFA_OBSERVATION_PROFILE=0,$(INCLUDES)) $(MEASUREMENT_INCLUDES) -DVOFA_TELEMETRY_ENABLE=1 -DVOFA_TELEMETRY_MODE=2 -DVOFA_OBSERVATION_PROFILE=1 $(OBSERVATION_SOURCE) -o $@
 

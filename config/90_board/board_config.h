@@ -18,7 +18,7 @@
 #define LOG_OUTPUT 1 /* 日志输出：0=关闭，1=RTT，2=USART2，3=RTT与USART2同时输出。 */
 #endif
 #ifndef CHASSIS_IMU_CAN_PORT
-#define CHASSIS_IMU_CAN_PORT 2 /* 主板与IMU采集板通信：1=CAN1，2=CAN2（默认）；两板共用，修改后分别重新编译烧录。 */
+#define CHASSIS_IMU_CAN_PORT 1 /* 主板与IMU采集板通信：1=CAN1（默认），2=CAN2；两板共用，修改后分别重新编译烧录。 */
 #endif
 #ifndef VOFA_TELEMETRY_MODE
 #define VOFA_TELEMETRY_MODE 2 /* VOFA传输：0=旧19路JustFloat，1=旧FireWater，2=JustFloat用途观测。 */

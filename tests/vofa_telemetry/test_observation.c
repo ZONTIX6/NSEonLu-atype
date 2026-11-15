@@ -6,13 +6,50 @@
 #include <stdio.h>
 #include <string.h>
 #include "imu_capture_config.h"
+static uint32_t tick;
+static unsigned critical;
 #if CHASSIS_IMU_CAN_RX_ENABLE
 #include "chassis_imu_can.h"
 static ChassisImuCanSnapshot_s source_imu;
+static bool interrupt_on_tick, interrupt_pending;
+static void receive_interrupt(void)
+{
+    interrupt_pending = false;
+    tick += 2U;
+    source_imu.first_rx_tick_ms = source_imu.last_rx_tick_ms = tick;
+    ++source_imu.sample.sequence;
+}
+#endif
+uint32_t HAL_GetTick(void)
+{
+    const uint32_t sampled = tick;
+#if CHASSIS_IMU_CAN_RX_ENABLE
+    if (interrupt_on_tick) {
+        interrupt_on_tick = false;
+        interrupt_pending = true;
+        if (!critical) receive_interrupt();
+    }
+#endif
+    return sampled;
+}
+void TestEnterCritical(void) { ++critical; }
+void TestExitCritical(void)
+{
+    assert(critical);
+    --critical;
+#if CHASSIS_IMU_CAN_RX_ENABLE
+    if (!critical && interrupt_pending) receive_interrupt();
+#endif
+}
+#if CHASSIS_IMU_CAN_RX_ENABLE
 bool ChassisImuCanReadSnapshot(ChassisImuCanSnapshot_s *out, uint32_t now)
 {
+    TestEnterCritical();
     *out = source_imu;
-    return out->available && (uint32_t)(now - out->first_rx_tick_ms) <= 60U;
+    TestExitCritical();
+    const uint32_t age = now - out->first_rx_tick_ms;
+    return out->available && out->sample.valid && out->sample.source_age_ms <= 20U &&
+        age <= 60U && out->sample.source_age_ms <= 60U - age;
 }
 #endif
 
@@ -24,6 +61,7 @@ static bool fail_send;
 HAL_StatusTypeDef HAL_UART_Transmit_IT(UART_HandleTypeDef *uart, const uint8_t *data, uint16_t size)
 {
     assert(uart == &huart7);
+    assert(critical == 0); /* Encoding/transmission must not mask CAN interrupts. */
     if (fail_send) return HAL_ERROR;
     active = data; length = size; ++sent;
     uart->gState = HAL_UART_STATE_BUSY_TX;
@@ -34,6 +72,13 @@ static float field(unsigned index)
     float value;
     memcpy(&value, active + index * 4, 4);
     return value;
+}
+static void send_observation(const USBTelemetrySample_s *sample,
+    const ChassisPowerSnapshot_s *power, const ChassisFusedVelocitySnapshot_s *velocity,
+    const SuperCapSnapshot_s *cap, const RefereePowerSnapshot_s *referee, uint32_t now)
+{
+    tick = now;
+    VofaObservationSend(sample, power, velocity, cap, referee, now);
 }
 static void check_frame(void)
 {
@@ -58,6 +103,7 @@ int main(void)
     source_imu.first_rx_tick_ms = start - 5U;
     source_imu.last_rx_tick_ms = start - 3U;
     source_imu.sample.sequence = 27;
+    source_imu.sample.valid = true;
     source_imu.sample.source_age_ms = 2;
     source_imu.sample.quaternion[0] = 1.0f;
     source_imu.sample.accel_n_mps2[0] = 2.5f;
@@ -86,7 +132,7 @@ int main(void)
     power.measured_power_w = 12.75f;
     for (unsigned i = 0; i < 4; ++i) power.feedback_tick_ms[i] = start;
     power.policy.control.nominal_budget_w = 99.0f;
-    VofaObservationSend(&sample, &power, &velocity, &cap, &referee, start);
+    send_observation(&sample, &power, &velocity, &cap, &referee, start);
     assert(sent == 1);
     check_frame();
 #if VOFA_OBSERVATION_PROFILE == 1
@@ -115,24 +161,24 @@ int main(void)
 #if CHASSIS_IMU_CAN_RX_ENABLE
     source_imu.available = false;
 #endif
-    VofaObservationSend(NULL, NULL, NULL, NULL, NULL, start + 20U);
+    send_observation(NULL, NULL, NULL, NULL, NULL, start + 20U);
     assert(sent == 1 && memcmp(saved, active, sizeof saved) == 0);
     huart7.gState = HAL_UART_STATE_READY;
-    VofaObservationSend(NULL, NULL, NULL, NULL, NULL, start + 39U);
+    send_observation(NULL, NULL, NULL, NULL, NULL, start + 39U);
     assert(sent == 1);
-    VofaObservationSend(NULL, NULL, NULL, NULL, NULL, start + 40U);
+    send_observation(NULL, NULL, NULL, NULL, NULL, start + 40U);
     assert(sent == 2 && field(4) == 2 && field(5) == 0);
     check_frame();
     huart7.gState = HAL_UART_STATE_READY; fail_send = true;
-    VofaObservationSend(NULL, NULL, NULL, NULL, NULL, start + 60U);
+    send_observation(NULL, NULL, NULL, NULL, NULL, start + 60U);
     assert(sent == 2);
     fail_send = false;
-    VofaObservationSend(NULL, NULL, NULL, NULL, NULL, start + 80U);
+    send_observation(NULL, NULL, NULL, NULL, NULL, start + 80U);
     assert(sent == 3 && field(4) == 4);
     huart7.gState = HAL_UART_STATE_READY;
     power.measured_power_w = NAN;
     velocity.remote.attempt.input.wheel_n_mps[0] = NAN;
-    VofaObservationSend(&sample, &power, &velocity, &cap, &referee, start + 100U);
+    send_observation(&sample, &power, &velocity, &cap, &referee, start + 100U);
     check_frame();
 #if VOFA_OBSERVATION_PROFILE == 1
     assert(((unsigned)field(5) & (1U << 3)) == 0);
@@ -143,7 +189,7 @@ int main(void)
      * across float boundaries (not just positive-infinity scalar values). */
     for (uint32_t sequence = 6; sequence <= 65536U; ++sequence) {
         huart7.gState = HAL_UART_STATE_READY;
-        VofaObservationSend(NULL, NULL, NULL, NULL, NULL, start + sequence * 20U);
+        send_observation(NULL, NULL, NULL, NULL, NULL, start + sequence * 20U);
         check_frame();
         assert((uint32_t)lroundf(field(3)) * 65536U + (uint32_t)lroundf(field(4)) == sequence);
     }
@@ -152,15 +198,72 @@ int main(void)
     const unsigned before = sent;
     for (unsigned i = 0; i < sizeof offsets / sizeof offsets[0]; ++i) {
         huart7.gState = HAL_UART_STATE_READY;
-        VofaObservationSend(NULL, NULL, NULL, NULL, NULL, jitter + offsets[i]);
+        send_observation(NULL, NULL, NULL, NULL, NULL, jitter + offsets[i]);
         assert(sent == before + i + 1);
     }
     huart7.gState = HAL_UART_STATE_READY;
-    VofaObservationSend(NULL, NULL, NULL, NULL, NULL, jitter + 181U);
+    send_observation(NULL, NULL, NULL, NULL, NULL, jitter + 181U);
     assert(sent == before + 7);
     huart7.gState = HAL_UART_STATE_READY;
-    VofaObservationSend(NULL, NULL, NULL, NULL, NULL, jitter + 182U);
+    send_observation(NULL, NULL, NULL, NULL, NULL, jitter + 182U);
     assert(sent == before + 7);
+#if CHASSIS_IMU_CAN_RX_ENABLE && VOFA_OBSERVATION_PROFILE == 2
+    /* A complete group arrives after the caller sampled its scheduling clock. */
+    const uint32_t scheduled = jitter + 220U;
+    source_imu.available = source_imu.sample.valid = true;
+    source_imu.sample.source_age_ms = 0;
+    source_imu.first_rx_tick_ms = scheduled + 1U;
+    source_imu.last_rx_tick_ms = scheduled + 2U;
+    sample.chassis_tick_ms = sample.velocity_target_tick_ms = scheduled - 19U;
+    velocity.diagnostics.available = true;
+    velocity.diagnostics.wheel_online_mask = 1;
+    velocity.diagnostics.wheel_tick_ms[0] = scheduled - 3U;
+    tick = scheduled + 2U;
+    huart7.gState = HAL_UART_STATE_READY;
+    VofaObservationSend(&sample, NULL, &velocity, NULL, NULL, scheduled);
+    assert((unsigned)field(VOFA_KALMAN_VALID) & 8U);
+    assert(field(VOFA_KALMAN_IMU_AGE_MS) == 1);
+    assert(field(VOFA_KALMAN_IMU_RECEIVE_AGE_MS) == 0);
+    assert(field(VOFA_KALMAN_WHEEL_AGE_MS_LF) == 5);
+    assert(((unsigned)field(VOFA_KALMAN_VALID) & 2U) == 0); /* Target is now 21 ms old. */
+    assert((uint32_t)field(1) * 65536U + (uint32_t)field(2) == tick);
+
+    /* An IRQ between the fresh clock read and snapshot copy must be deferred.
+     * Once unmasked it publishes a newer sequence, but this frame stays coherent. */
+    tick = scheduled + 40U;
+    source_imu.first_rx_tick_ms = tick - 1U;
+    source_imu.last_rx_tick_ms = tick;
+    source_imu.sample.sequence = 100;
+    interrupt_on_tick = true;
+    huart7.gState = HAL_UART_STATE_READY;
+    VofaObservationSend(NULL, NULL, NULL, NULL, NULL, tick);
+    assert((unsigned)field(VOFA_KALMAN_VALID) & 8U);
+    assert(field(VOFA_KALMAN_IMU_SEQUENCE_LO) == 100);
+    assert(field(VOFA_KALMAN_IMU_AGE_MS) == 1);
+    assert(field(VOFA_KALMAN_IMU_RECEIVE_AGE_MS) == 0);
+    assert(source_imu.sample.sequence == 101 && !interrupt_pending);
+    assert((uint32_t)field(1) * 65536U + (uint32_t)field(2) == scheduled + 40U);
+
+    /* Refreshing the clock must preserve uint32 wrap and genuine invalidity. */
+    source_imu.first_rx_tick_ms = UINT32_MAX;
+    source_imu.last_rx_tick_ms = 0;
+    tick = 1;
+    huart7.gState = HAL_UART_STATE_READY;
+    VofaObservationSend(NULL, NULL, NULL, NULL, NULL, UINT32_MAX - 1U);
+    assert((unsigned)field(VOFA_KALMAN_VALID) & 8U);
+    assert(field(VOFA_KALMAN_IMU_AGE_MS) == 2);
+    assert(field(VOFA_KALMAN_IMU_RECEIVE_AGE_MS) == 1);
+    assert(field(1) == 0 && field(2) == 1);
+    const uint16_t source_ages[] = {UINT16_MAX, 21, 0, 0};
+    for (unsigned i = 0; i < 4; ++i) {
+        source_imu.sample.source_age_ms = source_ages[i];
+        source_imu.sample.valid = i != 2;
+        source_imu.first_rx_tick_ms = source_imu.last_rx_tick_ms = i == 3 ? 0 : 100U + i * 20U;
+        huart7.gState = HAL_UART_STATE_READY;
+        send_observation(NULL, NULL, NULL, NULL, NULL, 100U + i * 20U);
+        assert(((unsigned)field(VOFA_KALMAN_VALID) & 8U) == 0);
+    }
+#endif
     puts("PASS: dedicated profile units, evidence, finite data and asynchronous transport");
     return 0;
 }

@@ -12,7 +12,7 @@
 #define BOARD_FLASH_PROGRAMMER 1 /* 下载器：1=DAPLink/OpenOCD，2=J-Link/J-Flash；仅Flash动作使用。 */
 #define BOARD_FLASH_PROFILE "atype-vehicle" /* 两板共用编译profile，任务由各板采集开关区分。 */
 
-/* 板间CAN统一修改 ../90_board/board_config.h 中的 CHASSIS_IMU_CAN_PORT：1=CAN1，2=CAN2（默认）。 */
+/* 板间CAN统一修改 ../90_board/board_config.h 中的 CHASSIS_IMU_CAN_PORT：1=CAN1（默认），2=CAN2。 */
 /* 第一块：整车主板。通过所选CAN接收下方A板IMU，UART7统一记录；
  * 远端IMU参与只读速度融合观测，不进入控制；安装/噪声参数另见远端IMU配置。它不是CHASSIS_BOARD/GIMBAL_BOARD分板模式。 */
 #define BOARD_FLASH_1_NAME "第一块：整车主板" /* 命令执行前显示的板卡名称。 */

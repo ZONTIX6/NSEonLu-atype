@@ -1,5 +1,6 @@
 #include "chassis_imu_can.h"
 #include "bsp_can.h"
+#include "board_config.h"
 #include "ins_task.h"
 #include <assert.h>
 #include <math.h>
@@ -8,7 +9,7 @@
 
 CAN_HandleTypeDef hcan1={1},hcan2={2};
 #ifndef EXPECT_CAN_PORT
-#define EXPECT_CAN_PORT 2
+#define EXPECT_CAN_PORT CHASSIS_IMU_CAN_PORT
 #endif
 static CAN_HandleTypeDef *const expected_can=EXPECT_CAN_PORT==1 ? &hcan1 : &hcan2;
 static CANInstance registered;

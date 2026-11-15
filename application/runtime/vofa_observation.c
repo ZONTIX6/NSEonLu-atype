@@ -10,6 +10,10 @@
 #include "../../config/30_velocity_observation/chassis_remote_imu_config.h"
 #if CHASSIS_IMU_CAN_RX_ENABLE
 #include "chassis_imu_can.h"
+#if VOFA_OBSERVATION_PROFILE == 2
+#include "FreeRTOS.h"
+#include "task.h"
+#endif
 #endif
 
 static struct {
@@ -194,6 +198,18 @@ static uint32_t ConfigFingerprint(const ChassisRemoteFusionConfig_s *c)
 static void Kalman(float *f, const USBTelemetrySample_s *sample,
     const ChassisFusedVelocitySnapshot_s *v, uint32_t now)
 {
+#if CHASSIS_IMU_CAN_RX_ENABLE
+    static ChassisImuCanSnapshot_s remote;
+    /* CAN may have published a newer group since the caller sampled its clock.
+     * Match the observer's nested critical section; encode outside the lock. */
+    taskENTER_CRITICAL();
+    now = HAL_GetTick();
+    const bool remote_usable = ChassisImuCanReadSnapshot(&remote, now);
+    taskEXIT_CRITICAL();
+    /* Frame time and every age/validity check share this refreshed clock.
+     * The caller's original clock still governs the 20 ms transmit slots. */
+    U32(f, VOFA_KALMAN_TICK_MS_HI, now);
+#endif
     static const ChassisFusedVelocitySnapshot_s empty;
     if (!v) v = &empty;
     const ChassisVelocityDiagnostics_s *d = &v->diagnostics;
@@ -217,8 +233,7 @@ static void Kalman(float *f, const USBTelemetrySample_s *sample,
     uint32_t imu_tick = d->imu_tick_ms, imu_sequence = d->imu_sequence;
     float imu_age = Age(now, imu_tick, imu_known), receive_age = imu_age, source_age = -1;
 #if CHASSIS_IMU_CAN_RX_ENABLE
-    static ChassisImuCanSnapshot_s remote;
-    imu_usable = ChassisImuCanReadSnapshot(&remote, now);
+    imu_usable = remote_usable;
     imu_known = remote.available;
     quaternion = remote.sample.quaternion; accel = remote.sample.accel_n_mps2; gyro = remote.sample.gyro_sensor_radps;
     imu_sequence = remote.sample.sequence;

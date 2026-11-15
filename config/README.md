@@ -33,7 +33,7 @@
 
 `VOFA_OBSERVATION_PROFILE=0` 保留旧 schema 2/3；传输模式 `0/1` 忽略用途选项，继续使用旧 19 路 JustFloat/64 或 72 路 FireWater。烧录脚本和手动 Make/CMake 共用 `_vofa/vofa_config.h` 的默认档位。显式 `VOFA_OBSERVATION_PROFILE=1/2`、CMake 的 `-DVOFA_OBSERVATION_PROFILE=1/2`，或自定义 `-ConfigFile` 中的旧 `BOARD_FLASH_1_VOFA_OBSERVATION_PROFILE` 会覆盖默认值；日常无需添加这些覆盖。已有 CMake 缓存若设过该选项，须用 `-UVOFA_OBSERVATION_PROFILE` 重新配置才能恢复读取头文件默认值。新旧 schema 的布局和单位不同，不能混用解析表。
 
-主板预设 `CHASSIS_IMU_CAN_RX_ENABLE=1` 接收第二块 A 板的 CAN 数据（默认 CAN2），`CHASSIS_REMOTE_IMU_FUSION_ENABLE=1` 开启只读速度融合，不接管控制。第二板使用 `IMU_CAPTURE_ONLY=1 IMU_CAPTURE_CAN_TX_ENABLE=1`，仅采样、温控和发送，不运行整车任务。`CHASSIS_VELOCITY_FUSION_CALIBRATED=0` 表示未启用本地云台标定路径。需要轮速基线时只关闭主板远端融合，保留第二板发送和主板接收。
+主板预设 `CHASSIS_IMU_CAN_RX_ENABLE=1` 接收第二块 A 板的 CAN 数据（默认 CAN1），`CHASSIS_REMOTE_IMU_FUSION_ENABLE=1` 开启只读速度融合，不接管控制。第二板使用 `IMU_CAPTURE_ONLY=1 IMU_CAPTURE_CAN_TX_ENABLE=1`，仅采样、温控和发送，不运行整车任务。`CHASSIS_VELOCITY_FUSION_CALIBRATED=0` 表示未启用本地云台标定路径。需要轮速基线时只关闭主板远端融合，保留第二板发送和主板接收。
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Show -Board 1
@@ -48,7 +48,7 @@ F5 的 ST-Link / DAPlink / Jlink 跟随 `BOARD_FLASH_TARGET`：设为 `2` 并保
 
 `Jlink-attach` 通过 `-Action Symbols` 准备 `BOARD_FLASH_TARGET` 所选板卡已有 ELF；`DAP-attach` 固定加载第一块主板的 `build/board-1-main/basic_framework.elf`，不受 `BOARD_FLASH_TARGET` 影响。修改 `BOARD_FLASH_1_BUILD_DIR` 时需同步修改 `.vscode/launch.json` 中 `DAP-attach` 的 ELF 路径。两种 attach 均不构建、不烧录，已有 ELF 须与板上固件一致。F5 与 `Jlink-attach` 共用副本，切换板卡前结束使用该副本的调试会话。手动 Make/CMake 需显式传接收/融合等参数。两板接线与构建见 [集成说明](../docs/dual-a-imu-integration.md)。对第二板使用同样的 Show/Build/Flash 命令并改为 `-Board 2`。
 
-`IMU_CAPTURE_ONLY=1` 仅保留本板 IMU 采样与温控；搭配 `IMU_CAPTURE_CAN_TX_ENABLE=1` 通过所选 CAN 发送（默认 CAN2），搭配 UART 遥测则可做本地诊断。采集板不得同时启用整车 CAN 接收或远端融合。
+`IMU_CAPTURE_ONLY=1` 仅保留本板 IMU 采样与温控；搭配 `IMU_CAPTURE_CAN_TX_ENABLE=1` 通过所选 CAN 发送（默认 CAN1），搭配 UART 遥测则可做本地诊断。采集板不得同时启用整车 CAN 接收或远端融合。
 
 ## 常用调参步骤
 
@@ -58,7 +58,7 @@ F5 的 ST-Link / DAPlink / Jlink 跟随 `BOARD_FLASH_TARGET`：设为 `2` 并保
 4. 调功率/自旋：功率外环独立 PI 的 `kp`、`ki` 在 `20_chassis_power/chassis_power_config.c` 的 `chassis_outer_loop_config`；小陀螺参数在 `21_chassis_spin`。这些不是电机 PID 参数。
 5. 调底盘 IMU 融合：在 `30_velocity_observation/chassis_remote_imu_config.h` 配置安装、芯片偏移、滤波噪声与时间门槛。远端融合以底盘中心为原点，轴向直接采用 A 板原生 IMU：当前照片中 +X 向左、+Y 向下、+Z 离开板面。安装四元数为 `[1,0,0,0]`，中心到芯片的偏移为 `(0,+0.116,0) m`，116 mm 已确认量到芯片。现有前/右速度接口由融合边界换算，具体见 [双板坐标说明](../docs/dual-a-imu-integration.md#安装坐标)。完成实测、独立验证并冻结参数后，才把 `CHASSIS_REMOTE_IMU_CONFIG_VERIFIED` 改为 `1`；此标识只记录审核声明，不控制算法是否运行，也不代替验收。
 
-板间 CAN 由 [`90_board/board_config.h`](90_board/board_config.h) 中的 `CHASSIS_IMU_CAN_PORT` 选择：`1`=CAN1，`2`=CAN2（默认）。两板预设共用该头文件；改值后分别重新构建、烧录两板，并连接所选接口。手动 Make/CMake 可用同名构建参数覆盖，具体见 [接线与构建](../docs/dual-a-imu-integration.md#接线与构建)。速率仍为 1 Mbps，标准 ID 为 `0x180`，采集任务名义每 20 ms 尝试发送一组。主板使用源板 INS 已去重力的导航系加速度，只做安装与中心偏移补偿，不再使用 DM 模块的重力常量或协议换算。
+板间 CAN 由 [`90_board/board_config.h`](90_board/board_config.h) 中的 `CHASSIS_IMU_CAN_PORT` 选择：`1`=CAN1（默认），`2`=CAN2。两板预设共用该头文件；改值后分别重新构建、烧录两板，并连接所选接口。手动 Make/CMake 可用同名构建参数覆盖，具体见 [接线与构建](../docs/dual-a-imu-integration.md#接线与构建)。速率仍为 1 Mbps，标准 ID 为 `0x180`，采集任务名义每 20 ms 尝试发送一组。主板使用源板 INS 已去重力的导航系加速度，只做安装与中心偏移补偿，不再使用 DM 模块的重力常量或协议换算。
 
 MPU6500 与旧 BMI088 温控 PID 在 `01_pid/pid_config.c` 中分别命名，当前 A 板使用 MPU6500；温度目标和 IMU 安装参数在 `92_imu/imu_config.h`。
 
