@@ -15,6 +15,23 @@ DJIMotorInstance *motor_lb=&motors[2], *motor_rb=&motors[3];
 static ChassisImuCanSnapshot_s remote;
 static bool remote_usable;
 static unsigned local_imu_reads;
+static unsigned captured;
+static ChassisFusedVelocitySnapshot_s captured_snapshot;
+static const ChassisVelocityFeedback_s target_feedback = {
+    .target = {.valid = true, .vx_mps = .5f, .wz_rpm = 30.f},
+};
+const ChassisVelocityFeedback_s *const volatile chassis_velocity = &target_feedback;
+
+void VofaKalmanCapture(const ChassisFusedVelocitySnapshot_s *snapshot,
+    const ChassisImuCanSnapshot_s *imu, bool usable,
+    const ChassisVelocity_s *target, uint32_t now_ms)
+{
+    assert(now_ms == tick && snapshot->diagnostics.tick_ms == now_ms);
+    assert(imu->sample.sequence == remote.sample.sequence && usable == remote_usable);
+    assert(target->vx_mps == .5f && target->wz_rpm == 30.f);
+    captured_snapshot = *snapshot;
+    ++captured;
+}
 
 uint32_t HAL_GetTick(void) { return tick; }
 bool DaemonIsOnline(const bool *value) { return *value; }
@@ -33,6 +50,7 @@ static const ChassisVelocityConfig_s config={
 
 static ChassisFusedVelocitySnapshot_s Step(bool new_remote)
 {
+    const unsigned before_capture = captured;
     for(unsigned w=0;w<4;++w) {
         motors[w].daemon=&online[w];
         motors[w].measure.raw_rpm=0;
@@ -54,8 +72,11 @@ static ChassisFusedVelocitySnapshot_s Step(bool new_remote)
         remote_usable=true;
     }
     ChassisObserveFusedVelocity(&config);
+    assert(captured == before_capture + 1);
     ChassisFusedVelocitySnapshot_s out;
     (void)ChassisGetFusedVelocitySnapshot(&out);
+    assert(captured_snapshot.remote.attempt.sequence == out.remote.attempt.sequence);
+    assert(captured_snapshot.status == out.status);
     return out;
 }
 

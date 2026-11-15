@@ -7,7 +7,9 @@
 #include "super_cap_types.h"
 #include "referee_power.h"
 
-/* Snapshot pointers may be NULL. Called only by the telemetry task. */
+/* Snapshot pointers may be NULL. Called only by the telemetry task.
+ * Remote fusion profile 2 drains captured events; other profiles encode the
+ * supplied latest snapshots using their existing period/transport contract. */
 void VofaObservationSend(const USBTelemetrySample_s *sample,
     const ChassisPowerSnapshot_s *power, const ChassisFusedVelocitySnapshot_s *velocity,
     const SuperCapSnapshot_s *cap, const RefereePowerSnapshot_s *referee, uint32_t now_ms);

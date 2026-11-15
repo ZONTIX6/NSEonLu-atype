@@ -182,14 +182,14 @@ def read_capture(path):
 def quality_report(capture):
     counts = Counter(total_rows=len(capture['rows']))
     errors, bit_counts, ages, intervals, ranges = [], Counter(), {}, [], []
-    previous, first = None, None
+    previous, first, previous_attempt = None, None, None
     for row in capture['rows']:
         if 'error' in row:
             counts['invalid_rows'] += 1
             errors.append(dict(line=row['line'], reason=row['error']))
             if first is not None:
                 ranges.append(dict(first_line=first, last_line=previous['line']))
-            previous, first = None, None
+            previous, first, previous_attempt = None, None, None
             continue
         counts['valid_rows'] += 1
         boundary = False
@@ -199,6 +199,7 @@ def quality_report(capture):
             if dt >= HALF or ds >= HALF or (ds == 0 and dt != 0):
                 counts['restart_or_order_boundaries'] += 1
                 boundary = True
+                previous_attempt = None
             elif ds == 0:
                 counts['duplicate_frames'] += 1
             else:
@@ -212,6 +213,22 @@ def quality_report(capture):
         if first is None:
             first = row['line']
         previous = row
+        if capture['schema'] == 5:
+            fifo = bool(row['valid'] & 64)
+            counts['capture_fifo_rows'] += fifo
+            counts['capture_overflow_rows'] += fifo and bool(row['valid'] & 128)
+            if row['valid'] & 16 and row['attempt_flags'] & 1:
+                advance = ((row['attempt_sequence'] - previous_attempt) & UINT32
+                           if previous_attempt is not None else None)
+                if advance == 0:
+                    counts['duplicate_filter_calls'] += 1
+                else:
+                    counts['unique_filter_calls'] += 1
+                    if advance is not None and advance < HALF:
+                        counts['missing_filter_calls'] += advance - 1
+                    elif advance is not None:
+                        counts['filter_restart_or_order_boundaries'] += 1
+                previous_attempt = row['attempt_sequence']
         for bit in range(20):
             bit_counts[str(bit)] += bool(row['valid'] & (1 << bit))
         for name, value in row.items():
@@ -225,14 +242,28 @@ def quality_report(capture):
     if first is not None:
         ranges.append(dict(first_line=first, last_line=previous['line']))
     for key in ('valid_rows', 'invalid_rows', 'duplicate_frames', 'missing_attempts',
-                'restart_or_order_boundaries', 'clock_wraps'):
+                'restart_or_order_boundaries', 'clock_wraps', 'capture_fifo_rows',
+                'capture_overflow_rows', 'unique_filter_calls', 'duplicate_filter_calls',
+                'missing_filter_calls', 'filter_restart_or_order_boundaries'):
         counts.setdefault(key, 0)
-    limitations = ['50_hz_latest_snapshot_is_not_every_control_or_filter_update',
-                   'restart_and_out_of_order_cannot_always_be_distinguished',
+    fifo_rows = counts['capture_fifo_rows']
+    capture_mode = ('event_fifo' if fifo_rows and fifo_rows == counts['valid_rows'] else
+                    'mixed' if fifo_rows else 'latest_snapshot')
+    sequence_kind = {'event_fifo': 'capture_records', 'latest_snapshot': 'send_attempts',
+                     'mixed': 'mixed_capture_records_and_send_attempts'}[capture_mode]
+    limitations = ['restart_and_out_of_order_cannot_always_be_distinguished',
                    'hardware_validation_not_performed']
+    if capture_mode != 'event_fifo':
+        limitations.append('50_hz_latest_snapshot_is_not_every_control_or_filter_update')
+    if capture_mode == 'mixed':
+        limitations.append('mixed_capture_modes')
+    if counts['capture_overflow_rows']:
+        limitations.append('capture_fifo_overflow_observed_exact_drop_count_not_recorded')
     if capture['schema'] < 4:
         limitations += ['legacy_inputs_not_replayable', 'legacy_actual_configuration_unavailable']
     return dict(counts, schema=capture['schema'], profile=capture['profile'], errors=errors,
+                capture_mode=capture_mode, sequence_kind=sequence_kind,
+                capture_overflow_observed=bool(counts['capture_overflow_rows']),
                 valid_bit_counts=dict(bit_counts), ages=ages, contiguous_frame_ranges=ranges,
                 interval_ms=dict(min=min(intervals), max=max(intervals)) if intervals else None,
                 limitations=limitations)

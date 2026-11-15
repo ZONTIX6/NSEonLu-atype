@@ -78,6 +78,7 @@ void OSTaskInit(void)
 #include "chassis_speed_observation.h"
 #include "speed_observation_config.h"
 #include "shadow_jscope.h"
+#include "vofa_kalman_capture.h"
 
 static osThreadId insTaskHandle;
 static osThreadId robotTaskHandle;
@@ -98,7 +99,23 @@ static void StartTelemetryTask(void const *argument)
     (void)argument;
     RobotTelemetryInit();
     TickType_t previous_wake = xTaskGetTickCount();
+#if VOFA_KALMAN_CAPTURE_ENABLED
+    TickType_t previous_collection = previous_wake;
+    bool collected = false;
+#endif
     for (;;) {
+#if VOFA_KALMAN_CAPTURE_ENABLED
+        /* UART can clear a 388-byte frame in 16.84 ms. Poll cheaply at 1 ms so
+         * queued calls catch up after jitter; keep USB/collection at 20 ms. */
+        VofaKalmanCaptureDrain();
+        const TickType_t now = xTaskGetTickCount();
+        if (collected && (TickType_t)(now - previous_collection) < pdMS_TO_TICKS(USB_TELEMETRY_PERIOD_MS)) {
+            vTaskDelayUntil(&previous_wake, pdMS_TO_TICKS(1));
+            continue;
+        }
+        collected = true;
+        previous_collection = now;
+#endif
 #if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_FORCE
         static uint32_t force_stack_sample_tick;
         if((uint32_t)(HAL_GetTick()-force_stack_sample_tick)>=200) {
@@ -107,7 +124,11 @@ static void StartTelemetryTask(void const *argument)
         }
 #endif
         RobotTelemetryTask();
+#if VOFA_KALMAN_CAPTURE_ENABLED
+        vTaskDelayUntil(&previous_wake, pdMS_TO_TICKS(1));
+#else
         vTaskDelayUntil(&previous_wake, pdMS_TO_TICKS(USB_TELEMETRY_PERIOD_MS));
+#endif
     }
 }
 #endif

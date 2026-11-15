@@ -1,6 +1,7 @@
 #include "vofa_observation.h"
 #include "vofa_schema.h"
 #include "imu_capture_config.h"
+#include "vofa_kalman_capture.h"
 
 #if VOFA_TELEMETRY_ENABLE && VOFA_TELEMETRY_MODE == 2 && VOFA_OBSERVATION_PROFILE != 0
 #include "usart.h"
@@ -196,19 +197,30 @@ static uint32_t ConfigFingerprint(const ChassisRemoteFusionConfig_s *c)
     hash = HashWord(hash, c->max_wheel_skew_ms); return HashWord(hash, c->max_timing_jitter_ms);
 }
 static void Kalman(float *f, const USBTelemetrySample_s *sample,
-    const ChassisFusedVelocitySnapshot_s *v, uint32_t now)
+    const ChassisFusedVelocitySnapshot_s *v, uint32_t now,
+    const ChassisImuCanSnapshot_s *captured_remote, bool captured_usable,
+    const ChassisVelocity_s *captured_target)
 {
 #if CHASSIS_IMU_CAN_RX_ENABLE
     static ChassisImuCanSnapshot_s remote;
     /* CAN may have published a newer group since the caller sampled its clock.
      * Match the observer's nested critical section; encode outside the lock. */
-    taskENTER_CRITICAL();
-    now = HAL_GetTick();
-    const bool remote_usable = ChassisImuCanReadSnapshot(&remote, now);
-    taskEXIT_CRITICAL();
-    /* Frame time and every age/validity check share this refreshed clock.
-     * The caller's original clock still governs the 20 ms transmit slots. */
+    bool remote_usable;
+    if (captured_remote) {
+        remote = *captured_remote;
+        remote_usable = captured_usable;
+    } else {
+        taskENTER_CRITICAL();
+        now = HAL_GetTick();
+        remote_usable = ChassisImuCanReadSnapshot(&remote, now);
+        taskEXIT_CRITICAL();
+    }
+    /* FIFO records retain their capture clock. Legacy snapshots refresh the
+     * clock with the live IMU copy; all age/validity checks use that same clock. */
     U32(f, VOFA_KALMAN_TICK_MS_HI, now);
+#else
+    (void)captured_remote;
+    (void)captured_usable;
 #endif
     static const ChassisFusedVelocitySnapshot_s empty;
     if (!v) v = &empty;
@@ -223,7 +235,10 @@ static void Kalman(float *f, const USBTelemetrySample_s *sample,
     }
     const bool wheel = online == 15 && v->wheel.valid && (uint32_t)(now - v->wheel.tick_ms) <= 20U &&
         isfinite(v->wheel.vx_mps) && isfinite(v->wheel.vy_mps) && isfinite(v->wheel.wz_rpm);
-    const bool target = sample && sample->chassis_valid && sample->velocity_target_valid &&
+    const bool target = captured_target ? captured_target->valid &&
+        (uint32_t)(now - captured_target->tick_ms) <= 20U &&
+        isfinite(captured_target->vx_mps) && isfinite(captured_target->vy_mps) && isfinite(captured_target->wz_rpm) :
+        sample && sample->chassis_valid && sample->velocity_target_valid &&
         (uint32_t)(now - sample->chassis_tick_ms) <= 20U && (uint32_t)(now - sample->velocity_target_tick_ms) <= 20U;
     const bool estimate = wheel && v->valid && isfinite(v->vx_mps) && isfinite(v->vy_mps) &&
         (uint32_t)(now - v->tick_ms) <= (v->status == CHASSIS_VELOCITY_FUSED ? 60U : 20U);
@@ -258,7 +273,11 @@ static void Kalman(float *f, const USBTelemetrySample_s *sample,
     K(WHEEL_ONLINE_MASK) = online;
     K(WHEEL_VX_MPS) = v->wheel.vx_mps; K(WHEEL_VY_MPS) = v->wheel.vy_mps;
     K(WHEEL_WZ_RADPS) = v->wheel.wz_rpm * (6.283185307179586f / 60.0f);
-    if (sample) {
+    if (captured_target) {
+        K(TARGET_VX_MPS) = captured_target->vx_mps;
+        K(TARGET_VY_MPS) = captured_target->vy_mps;
+        K(TARGET_WZ_RADPS) = captured_target->wz_rpm * (6.283185307179586f / 60.0f);
+    } else if (sample) {
         K(TARGET_VX_MPS) = sample->velocity_target_vx_mmps * 0.001f;
         K(TARGET_VY_MPS) = sample->velocity_target_vy_mmps * 0.001f;
         K(TARGET_WZ_RADPS) = sample->velocity_target_wz_mrps * 0.006283185307179586f;
@@ -309,10 +328,133 @@ static void Kalman(float *f, const USBTelemetrySample_s *sample,
 #undef K
 #endif
 
+static void FinishFrame(void)
+{
+    float *f = frame.channels;
+    for (unsigned i = 0; i < 96; ++i) if (!isfinite(f[i])) f[i] = 0;
+    uint8_t *bytes = (uint8_t *)&frame;
+    for (size_t i = 0; i + 4 <= sizeof frame.channels; ++i) {
+        if (memcmp(bytes + i, frame.tail, 4) == 0) {
+            size_t last = i + 3;
+            bytes[last - last % 4] ^= 1U;
+        }
+    }
+}
+
+#if VOFA_KALMAN_CAPTURE_ENABLED
+typedef struct {
+    ChassisFusedVelocitySnapshot_s velocity;
+    ChassisImuCanSnapshot_s remote;
+    ChassisVelocity_s target;
+    uint32_t tick_ms, sequence;
+    bool remote_usable;
+} KalmanCaptureRecord_s;
+
+/* One chassis-task producer and one telemetry-task consumer. Only publish a
+ * fully copied slot. Never overwrite a pending slot, even on overflow. Static
+ * startup initialization keeps early filter calls if telemetry starts later. */
+static KalmanCaptureRecord_s capture_queue[VOFA_KALMAN_CAPTURE_CAPACITY];
+static uint32_t capture_write, capture_read, capture_sequence;
+static VofaKalmanCaptureStats_s capture_stats;
+
+static void Increment(uint32_t *value)
+{
+    if (*value != UINT32_MAX) ++*value;
+}
+
+void VofaKalmanCapture(const ChassisFusedVelocitySnapshot_s *velocity,
+    const ChassisImuCanSnapshot_s *remote, bool remote_usable,
+    const ChassisVelocity_s *target, uint32_t now_ms)
+{
+    static bool observed, have_attempt;
+    static uint32_t last_attempt, last_capture_ms;
+    static ChassisFusedVelocityStatus_e last_status;
+    if (!velocity || !remote || !target) return;
+    const ChassisRemoteFusionAttempt_s *attempt = &velocity->remote.attempt;
+    const bool new_attempt = attempt->available && (!have_attempt || attempt->sequence != last_attempt);
+    if (observed && !new_attempt && velocity->status == last_status &&
+        (uint32_t)(now_ms - last_capture_ms) < 100U) return;
+    observed = true;
+    last_capture_ms = now_ms;
+    last_status = velocity->status;
+    if (attempt->available) { have_attempt = true; last_attempt = attempt->sequence; }
+    const uint32_t sequence = capture_sequence++;
+
+    taskENTER_CRITICAL();
+    const uint32_t write = capture_write;
+    const bool full = (uint32_t)(write - capture_read) == VOFA_KALMAN_CAPTURE_CAPACITY;
+    if (full) Increment(&capture_stats.dropped);
+    taskEXIT_CRITICAL();
+    if (full) return;
+
+    /* Slot remains invisible to the consumer while copied, with IRQs enabled. */
+    KalmanCaptureRecord_s *record = &capture_queue[write % VOFA_KALMAN_CAPTURE_CAPACITY];
+    record->velocity = *velocity;
+    record->remote = *remote;
+    record->target = *target;
+    record->tick_ms = now_ms;
+    record->sequence = sequence;
+    record->remote_usable = remote_usable;
+    taskENTER_CRITICAL();
+    capture_write = write + 1U;
+    Increment(&capture_stats.captured);
+    const uint32_t pending = capture_write - capture_read;
+    if (pending > capture_stats.high_water) capture_stats.high_water = pending;
+    taskEXIT_CRITICAL();
+}
+
+void VofaKalmanCaptureDrain(void)
+{
+    UART_HandleTypeDef *uart = BOARD_VOFA_UART;
+    if (uart->gState != HAL_UART_STATE_READY) return;
+    taskENTER_CRITICAL();
+    const uint32_t read = capture_read;
+    const bool empty = read == capture_write;
+    const bool overflow = capture_stats.dropped != 0;
+    taskEXIT_CRITICAL();
+    if (empty) return;
+
+    /* Producer cannot reuse this slot until HAL accepts the independent buffer. */
+    const KalmanCaptureRecord_s *record = &capture_queue[read % VOFA_KALMAN_CAPTURE_CAPACITY];
+    float *f = frame.channels;
+    memset(f, 0, sizeof frame.channels);
+    U32(f, VOFA_KALMAN_TICK_MS_HI, record->tick_ms);
+    U32(f, VOFA_KALMAN_TX_SEQUENCE_HI, record->sequence);
+    Kalman(f, NULL, &record->velocity, record->tick_ms,
+        &record->remote, record->remote_usable, &record->target);
+    /* Transport diagnostics: FIFO format and overflow since MCU startup.
+     * Overflow is sticky even on older queued records, so trailing loss is visible. */
+    f[VOFA_KALMAN_VALID] = (float)((uint32_t)f[VOFA_KALMAN_VALID] | 64U | (overflow ? 128U : 0U));
+    FinishFrame();
+    const HAL_StatusTypeDef status = HAL_UART_Transmit_IT(uart, (uint8_t *)&frame, sizeof frame);
+    taskENTER_CRITICAL();
+    if (status == HAL_OK) {
+        capture_read = read + 1U;
+        Increment(&capture_stats.sent);
+    } else {
+        Increment(&capture_stats.send_errors);
+    }
+    taskEXIT_CRITICAL();
+}
+
+void VofaKalmanCaptureGetStats(VofaKalmanCaptureStats_s *out)
+{
+    if (!out) return;
+    taskENTER_CRITICAL();
+    *out = capture_stats;
+    out->pending = capture_write - capture_read;
+    taskEXIT_CRITICAL();
+}
+#endif
+
 void VofaObservationSend(const USBTelemetrySample_s *sample,
     const ChassisPowerSnapshot_s *power, const ChassisFusedVelocitySnapshot_s *velocity,
     const SuperCapSnapshot_s *cap, const RefereePowerSnapshot_s *referee, uint32_t now_ms)
 {
+#if VOFA_KALMAN_CAPTURE_ENABLED
+    (void)sample; (void)power; (void)velocity; (void)cap; (void)referee; (void)now_ms;
+    VofaKalmanCaptureDrain();
+#else
     static bool started;
     static uint32_t last_attempt_ms, next_sequence;
     uint32_t elapsed = now_ms - last_attempt_ms;
@@ -330,16 +472,10 @@ void VofaObservationSend(const USBTelemetrySample_s *sample,
     Power(f, sample, power, cap, referee, now_ms);
 #else
     (void)power; (void)cap; (void)referee;
-    Kalman(f, sample, velocity, now_ms);
+    Kalman(f, sample, velocity, now_ms, NULL, false, NULL);
 #endif
-    for (unsigned i = 0; i < 96; ++i) if (!isfinite(f[i])) f[i] = 0;
-    uint8_t *bytes = (uint8_t *)&frame;
-    for (size_t i = 0; i + 4 <= sizeof frame.channels; ++i) {
-        if (memcmp(bytes + i, frame.tail, 4) == 0) {
-            size_t last = i + 3;
-            bytes[last - last % 4] ^= 1U;
-        }
-    }
-    (void)HAL_UART_Transmit_IT(uart, bytes, sizeof frame);
+    FinishFrame();
+    (void)HAL_UART_Transmit_IT(uart, (uint8_t *)&frame, sizeof frame);
+#endif
 }
 #endif

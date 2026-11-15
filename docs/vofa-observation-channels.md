@@ -238,6 +238,8 @@
 - bit 3: `imu`
 - bit 4: `attempt`
 - bit 5: `verified`
+- bit 6: `capture_fifo`
+- bit 7: `capture_overflow`
 
 `attempt_flags`：
 

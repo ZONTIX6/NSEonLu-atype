@@ -995,7 +995,9 @@
       "estimate": 2,
       "imu": 3,
       "attempt": 4,
-      "verified": 5
+      "verified": 5,
+      "capture_fifo": 6,
+      "capture_overflow": 7
     },
     "attempt_flags": {
       "available": 0,

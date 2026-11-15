@@ -151,6 +151,81 @@ class CsvTests(unittest.TestCase):
         export(self.path, wire_rows([original]))
         self.assertEqual(read_capture(self.path)['rows'][0]['final_current_lf'], 1000)
 
+    def test_fifo_capture_is_identified_without_latest_snapshot_warning(self):
+        rows = [attempt(i, valid=31 | 64) for i in (1, 2, 3)]
+        export(self.path, wire_rows(rows))
+        capture = read_capture(self.path)
+        quality = quality_report(capture)
+        self.assertEqual(capture['channel_count'], 96)
+        self.assertEqual(quality['capture_mode'], 'event_fifo')
+        self.assertEqual(quality['sequence_kind'], 'capture_records')
+        self.assertEqual(quality['capture_fifo_rows'], 3)
+        self.assertEqual(quality['missing_filter_calls'], 0)
+        self.assertFalse(quality['capture_overflow_observed'])
+        self.assertNotIn('50_hz_latest_snapshot_is_not_every_control_or_filter_update',
+                         quality['limitations'])
+
+    def test_fifo_heartbeat_and_overflow_do_not_conflate_records_with_calls(self):
+        rows = [row(5, sequence=sequence, tick=tick, valid=valid,
+                    attempt_sequence=call, attempt_flags=63)
+                for sequence, tick, call, valid in
+                ((1, 20, 10, 95), (2, 120, 10, 223), (5, 180, 13, 223))]
+        export(self.path, wire_rows(rows))
+        quality = quality_report(read_capture(self.path))
+        self.assertEqual(quality['missing_attempts'], 2)
+        self.assertEqual(quality['missing_filter_calls'], 2)
+        self.assertEqual(quality['unique_filter_calls'], 2)
+        self.assertEqual(quality['duplicate_filter_calls'], 1)
+        self.assertTrue(quality['capture_overflow_observed'])
+        self.assertEqual(quality['capture_overflow_rows'], 2)
+        self.assertIn('capture_fifo_overflow_observed_exact_drop_count_not_recorded',
+                      quality['limitations'])
+
+    def test_missing_filter_calls_handles_wrap_and_does_not_count_reboots_as_gaps(self):
+        rows = [row(5, sequence=sequence, tick=tick, valid=95,
+                    attempt_sequence=call, attempt_flags=63)
+                for sequence, tick, call in
+                ((0xfffffffe, 0xfffffff0, 0xfffffffe),
+                 (0xffffffff, 4, 0), (0, 24, 0), (1, 44, 1), (0, 0, 0))]
+        export(self.path, wire_rows(rows))
+        quality = quality_report(read_capture(self.path))
+        self.assertEqual(quality['missing_filter_calls'], 1)
+        self.assertEqual(quality['unique_filter_calls'], 4)
+        self.assertEqual(quality['duplicate_filter_calls'], 1)
+        self.assertEqual(quality['restart_or_order_boundaries'], 1)
+
+    def test_legacy_snapshot_and_power_bits_keep_their_existing_meaning(self):
+        for schema, rows in ((5, [attempt(1), attempt(3)]),
+                             (4, [row(4, valid=64 | 128)])):
+            with self.subTest(schema=schema):
+                export(self.path, wire_rows(rows))
+                quality = quality_report(read_capture(self.path))
+                self.assertEqual(quality['capture_mode'], 'latest_snapshot')
+                self.assertEqual(quality['sequence_kind'], 'send_attempts')
+                self.assertFalse(quality['capture_overflow_observed'])
+                self.assertIn('50_hz_latest_snapshot_is_not_every_control_or_filter_update',
+                              quality['limitations'])
+                self.assertEqual(quality['missing_filter_calls'], 1 if schema == 5 else 0)
+
+    def test_mixed_capture_modes_keep_the_snapshot_limitation(self):
+        export(self.path, wire_rows([attempt(1), attempt(2, valid=95)]))
+        quality = quality_report(read_capture(self.path))
+        self.assertEqual(quality['capture_mode'], 'mixed')
+        self.assertEqual(quality['sequence_kind'], 'mixed_capture_records_and_send_attempts')
+        self.assertIn('mixed_capture_modes', quality['limitations'])
+        self.assertIn('50_hz_latest_snapshot_is_not_every_control_or_filter_update',
+                      quality['limitations'])
+
+    def test_fifo_startup_without_an_attempt_does_not_invent_filter_calls(self):
+        rows = [row(5, sequence=1, tick=0, valid=64),
+                row(5, sequence=2, tick=20, valid=95, attempt_sequence=1, attempt_flags=55),
+                row(5, sequence=3, tick=40, valid=95, attempt_sequence=2, attempt_flags=63)]
+        export(self.path, wire_rows(rows))
+        quality = quality_report(read_capture(self.path))
+        self.assertEqual(quality['capture_fifo_rows'], 3)
+        self.assertEqual(quality['unique_filter_calls'], 2)
+        self.assertEqual(quality['missing_filter_calls'], 0)
+
 
 if __name__ == '__main__':
     unittest.main()

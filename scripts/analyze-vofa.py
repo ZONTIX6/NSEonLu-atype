@@ -19,10 +19,18 @@ def markdown_report(report):
         lines += ['Analysis stopped: ' + report['error'], '']
     if 'quality' in report:
         q = report['quality']
+        sequence_label = {'capture_records': 'capture records', 'send_attempts': 'send attempts',
+                          'mixed_capture_records_and_send_attempts': 'mixed sequence records'}[q['sequence_kind']]
         lines += [f"Profile: {q['profile']} (schema {q['schema']}).",
+            f"Capture mode: {q['capture_mode']}.",
             f"Rows: {q['total_rows']}; numeric-valid: {q['valid_rows']}; invalid: {q['invalid_rows']}.",
-            f"Duplicate frames: {q['duplicate_frames']}; missed send attempts: {q['missing_attempts']}; "
+            f"Duplicate frames: {q['duplicate_frames']}; missing {sequence_label}: {q['missing_attempts']}; "
             f"restart/order boundaries: {q['restart_or_order_boundaries']}.", '']
+        if q['schema'] == 5:
+            lines += [f"Unique recorded filter calls: {q['unique_filter_calls']}; missing filter calls "
+                      f"between comparable recorded endpoints: {q['missing_filter_calls']}.",
+                      f"FIFO overflow observed: {q['capture_overflow_observed']}. "
+                      "The sticky flag does not encode the exact number of dropped records.", '']
     analysis = report.get('analysis', {})
     if 'steady' in analysis:
         q = analysis['steady']

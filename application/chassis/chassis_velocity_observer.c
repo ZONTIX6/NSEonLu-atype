@@ -202,6 +202,10 @@ static ChassisFusedVelocityStatus_e UpdateFused(ChassisFusedVelocitySnapshot_s *
 
 #if CHASSIS_REMOTE_IMU_FUSION_ENABLE
 #include "../runtime/chassis_imu_can.h"
+#include "../runtime/vofa_kalman_capture.h"
+#if VOFA_KALMAN_CAPTURE_ENABLED
+#include "chassis.h"
+#endif
 #include "../../config/30_velocity_observation/chassis_remote_imu_config.h"
 static ChassisRemoteFusion_s remote_state;
 static const ChassisRemoteFusionConfig_s remote_config = CHASSIS_REMOTE_IMU_CONFIG_INITIALIZER;
@@ -327,6 +331,9 @@ void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config)
 #endif
 #if CHASSIS_REMOTE_IMU_FUSION_ENABLE
     UpdateRemote(&snapshot,&wheels,&remote,remote_usable);
+#if VOFA_KALMAN_CAPTURE_ENABLED
+    VofaKalmanCapture(&snapshot,&remote,remote_usable,&chassis_velocity->target,wheels.now_ms);
+#endif
 #endif
     taskENTER_CRITICAL();
     chassis_fused_velocity=snapshot;
