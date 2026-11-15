@@ -161,8 +161,12 @@ static void RemoteControlSet()
     // 视觉控制尚未实现，中/下档均保留人工摇杆控制，不让目标标志屏蔽输入。
     if (switch_is_down(rc_data[TEMP].rc.switch_left) || switch_is_mid(rc_data[TEMP].rc.switch_left))
     { // 按照摇杆的输出大小进行角度增量,增益系数需调整
-        gimbal_cmd_send.yaw -= REMOTE_STICK_YAW_GAIN * (float)rc_data[TEMP].rc.rocker_l_;
-        gimbal_cmd_send.pitch += REMOTE_STICK_PITCH_GAIN * (float)rc_data[TEMP].rc.rocker_l1;
+        const int16_t yaw_stick = abs((int)rc_data[TEMP].rc.rocker_l_) <= REMOTE_NEUTRAL_THRESHOLD ?
+            0 : rc_data[TEMP].rc.rocker_l_;
+        const int16_t pitch_stick = abs((int)rc_data[TEMP].rc.rocker_l1) <= REMOTE_NEUTRAL_THRESHOLD ?
+            0 : rc_data[TEMP].rc.rocker_l1;
+        gimbal_cmd_send.yaw -= REMOTE_STICK_YAW_GAIN * (float)yaw_stick;
+        gimbal_cmd_send.pitch += REMOTE_STICK_PITCH_GAIN * (float)pitch_stick;
     }
     // 云台软件限位
 

@@ -109,6 +109,17 @@ int main(int argc,char **argv) {
     } else if(!strcmp(argv[1],"manual")) {
         rc_snapshot[0].rc.switch_left=RC_SW_MID; rc_snapshot[0].rc.rocker_l_=100;
         vision.target_state=READY_TO_FIRE; RemoteControlSet(); assert(gimbal_cmd_send.yaw<0);
+    } else if(!strcmp(argv[1],"gimbal_deadband")) {
+        rc_snapshot[0].rc.switch_left=RC_SW_MID;
+        gimbal_cmd_send.yaw=12.0f; gimbal_cmd_send.pitch=8.0f;
+        rc_snapshot[0].rc.rocker_l_=30; rc_snapshot[0].rc.rocker_l1=-30;
+        RemoteControlSet();
+        assert(fabsf(gimbal_cmd_send.yaw-12.0f)<.0001f);
+        assert(fabsf(gimbal_cmd_send.pitch-8.0f)<.0001f);
+        rc_snapshot[0].rc.rocker_l_=31; rc_snapshot[0].rc.rocker_l1=-31;
+        RemoteControlSet();
+        assert(fabsf(gimbal_cmd_send.yaw-11.845f)<.0001f);
+        assert(fabsf(gimbal_cmd_send.pitch-7.969f)<.0001f);
     } else if(!strcmp(argv[1],"yaw")) {
         remote_input=(RemoteControlSnapshot_s){.online=1,.has_sample=1,.last_rx_tick_ms=now};
         remote_input.control.rc.switch_left=RC_SW_DOWN; remote_input.control.rc.switch_right=RC_SW_UP;

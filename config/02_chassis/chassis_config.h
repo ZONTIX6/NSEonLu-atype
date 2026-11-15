@@ -87,8 +87,8 @@
 #define CENTER_GIMBAL_OFFSET_Y 0    // 云台旋转中心距底盘几何中心的距离,左右方向,云台位于正中心时默认设为0
 #endif
 #ifndef RADIUS_WHEEL
-/* 车轮半径，单位 mm；默认 60，用于轮速与车身速度换算。 */
-#define RADIUS_WHEEL 60             // 轮子半径
+/* 车轮半径，单位 mm；实测轮径 76 mm 对应半径 38 mm，用于轮速与车身速度换算。 */
+#define RADIUS_WHEEL 38             // 轮子半径
 #endif
 #ifndef REDUCTION_RATIO_WHEEL
 /* 轮电机转子转速/轮轴转速，无量纲减速比；默认 19.0，换电机或减速箱时按实物修改。 */

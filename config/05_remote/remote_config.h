@@ -23,7 +23,7 @@
 #define REMOTE_DIAL_SHOOT_THRESHOLD (-200)
 /* 拨轮值大于该阈值时触发急停，单位遥控器计数；默认 +300，与负方向的发射拨轮阈值区分。 */
 #define REMOTE_DIAL_EMERGENCY_THRESHOLD 300
-/* 安全复位时各摇杆/拨轮绝对值允许的回中范围，单位遥控器计数；默认 30，还须满足键鼠释放与开关状态条件。 */
+/* 摇杆云台输入死区及安全复位回中范围，单位遥控器计数；默认 ±30，还须满足键鼠释放与开关状态条件。 */
 #define REMOTE_NEUTRAL_THRESHOLD 30
 
 /* DBUS 键鼠与图传键鼠的底盘速度、云台鼠标灵敏度。 */

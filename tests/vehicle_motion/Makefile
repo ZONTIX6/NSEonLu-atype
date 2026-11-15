@@ -18,6 +18,7 @@ test_vehicle_motion.exe: $(SOURCES) $(wildcard ../../config/*/*.h) $(wildcard ..
 test: test_vehicle_motion.exe
 	./test_vehicle_motion.exe speed
 	./test_vehicle_motion.exe manual
+	./test_vehicle_motion.exe gimbal_deadband
 	./test_vehicle_motion.exe yaw
 	./test_vehicle_motion.exe heat
 	./test_vehicle_motion.exe friction

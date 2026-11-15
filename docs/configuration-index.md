@@ -1324,7 +1324,7 @@
 | [87](../config/02_chassis/chassis_config.h#L87) | 预处理 | `#define CENTER_GIMBAL_OFFSET_Y 0    // 云台旋转中心距底盘几何中心的距离,左右方向,云台位于正中心时默认设为0` |
 | [88](../config/02_chassis/chassis_config.h#L88) | 预处理 | `#endif` |
 | [89](../config/02_chassis/chassis_config.h#L89) | 预处理 | `#ifndef RADIUS_WHEEL` |
-| [91](../config/02_chassis/chassis_config.h#L91) | 预处理 | `#define RADIUS_WHEEL 60             // 轮子半径` |
+| [91](../config/02_chassis/chassis_config.h#L91) | 预处理 | `#define RADIUS_WHEEL 38             // 轮子半径` |
 | [92](../config/02_chassis/chassis_config.h#L92) | 预处理 | `#endif` |
 | [93](../config/02_chassis/chassis_config.h#L93) | 预处理 | `#ifndef REDUCTION_RATIO_WHEEL` |
 | [95](../config/02_chassis/chassis_config.h#L95) | 预处理 | `#define REDUCTION_RATIO_WHEEL 19.0f // 电机减速比,因为编码器量测的是转子的速度而不是输出轴的速度故需进行转换` |
