@@ -23,7 +23,7 @@
 
 轴向依据来自 [RoboMaster 官方 A 板原理图与位号图](https://cdn-hz.robomaster.com/tem/RoboMaster%20%E5%BC%80%E5%8F%91%E6%9D%BF%E5%8E%9F%E7%90%86%E5%9B%BE%26%E4%BD%8D%E5%8F%B7%E5%9B%BE.zip) 和 [TDK MPU-6500 数据手册第 36 页图 14](https://product.tdk.cn/system/files/dam/doc/product/sensor/mortion-inertial/imu/data_sheet/mpu-6500-datasheet2.pdf)：官方板图中 J10（XT30）在左、J14（USB）在右，U3 的 1 脚位于芯片左下角；芯片 1 脚角对应 `(-X,+Y)`，+Z 离开封装上表面。因此官方板图中原生 +X 向上、+Y 向左，转到当前照片方向后得到上表。
 
-现有轮速、控制与 VOFA 速度公共接口继续使用前/右定义。为兼容该接口，远端融合仅在边界换算：公共 `(vx,vy)` 进入融合时变为 A 板 `(-vx,+vy)`；导航系结果转回 A 板后，再变为公共 `(-vA_x,+vA_y)`。配对轮速输出、失效时的轮速回退同样遵循公共接口。这个边界换算不改变原生 IMU 数据和 +Y 116 mm 配置。
+轮速、控制与 VOFA 速度公共接口保留原来的符号。240 cm、320 cm 前进实测中，旧 `(-vx,+vy)` 映射使导航系轮速的变化与 IMU 加速度相反，因此远端融合入口改为 `(vx,vy)` 同号进入 A 板机体系；导航系结果逆旋转回机体系后，直接输出 `(vA_x,vA_y)`。配对轮速输出与轮速回退使用相同的公共符号。这两次“向前”在日志中为负 X，不能据此修改整车控制方向。Y 映射、原始 IMU 数据、安装四元数与 +Y 116 mm 偏移保持原值，横向及旋转仍需实车验收。详见[纵向实测修正验证](remote-imu-longitudinal-validation.md)。
 
 ## 接线与构建
 

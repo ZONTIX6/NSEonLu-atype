@@ -81,7 +81,7 @@ static void HistoricalInterpolationAndAcceleration(void)
     for(uint32_t t=100;t<=185;t+=5) {
         if(t>=125 && (t-125)%20==0) {
             packet=Packet(500000+t-3,t-1,t);
-            packet.sample.accel_n_mps2[0]=-10; /* Public forward is native A-board -X. */
+            packet.sample.accel_n_mps2[0]=10; /* Wheel +X and board +X must agree. */
         }
         out=Run(&state,&config,packet.available?&packet:NULL,t,(float)(t-100)*.01f,0);
     }
@@ -209,7 +209,7 @@ static void NativeABoardUsesProductionOffset(void)
                 packet.sample.accel_n_mps2[1]=ay-.116f*(alpha*s+omega*omega*c);
                 packet.sample.gyro_sensor_radps[2]=omega;
             }
-            const float vx=-seconds*(c*ax+s*ay); /* Public forward is native -X. */
+            const float vx=seconds*(c*ax+s*ay);
             const float vy=seconds*(-s*ax+c*ay); /* Public right is native +Y. */
             out=Run(&state,&config,packet.available?&packet:NULL,t,vx,vy);
         }
@@ -248,7 +248,7 @@ static void NativeABoardTranslationPreservesPublicVelocity(void)
                 }
                 const float seconds=(float)(t-100)*.001f;
                 out=Run(&state,&config,packet.available?&packet:NULL,t,
-                    -ax*(.3f+seconds),ay*(.3f+seconds));
+                    ax*(.3f+seconds),ay*(.3f+seconds));
             }
             assert(out.valid && out.status==CHASSIS_REMOTE_FUSED && out.updates==4);
             const float seconds=(float)(out.tick_ms-100)*.001f;
@@ -257,15 +257,15 @@ static void NativeABoardTranslationPreservesPublicVelocity(void)
             Near(out.attempt.input.wheel_n_mps[1],s*x+c*y,.0001f);
             Near(out.attempt.input.accel_n_mps2[0],c*ax-s*ay,.0001f);
             Near(out.attempt.input.accel_n_mps2[1],s*ax+c*ay,.0001f);
-            Near(out.vx_mps,-x,.0001f); Near(out.vy_mps,y,.0001f);
-            Near(out.paired_wheel_mps[0],-x,.0001f);
+            Near(out.vx_mps,x,.0001f); Near(out.vy_mps,y,.0001f);
+            Near(out.paired_wheel_mps[0],x,.0001f);
             Near(out.paired_wheel_mps[1],y,.0001f);
             /* Repeated packets hold public-axis results; loss returns public
              * wheel velocities without an extra sign change. */
             const uint32_t held_tick=out.tick_ms;
             out=Run(&state,&config,&packet,230,.8f,-.6f);
             assert(out.status==CHASSIS_REMOTE_FUSED && out.tick_ms==held_tick);
-            Near(out.vx_mps,-x,.0001f); Near(out.vy_mps,y,.0001f);
+            Near(out.vx_mps,x,.0001f); Near(out.vy_mps,y,.0001f);
             out=Run(&state,&config,NULL,235,.8f,-.6f);
             assert(out.valid && out.status==CHASSIS_REMOTE_IMU_UNAVAILABLE);
             Near(out.vx_mps,.8f,.00001f); Near(out.vy_mps,-.6f,.00001f);
@@ -424,7 +424,7 @@ static void AttemptRecordsMiddleNavigationInputAndEffectiveConfig(void)
     assert(attempt->input.imu_us==900142000);
     assert(attempt->input.wheel_valid && attempt->input.imu_valid);
     Near(attempt->input.wheel_n_mps[0],-2,.00001f);
-    Near(attempt->input.wheel_n_mps[1],-1,.00001f);
+    Near(attempt->input.wheel_n_mps[1],1,.00001f);
     Near(attempt->input.accel_n_mps2[0],5,.00001f);
     Near(attempt->input.accel_n_mps2[1],.25f,.00001f);
     assert(attempt->output.valid && attempt->output.fused);
@@ -462,13 +462,13 @@ static void RejectedAttemptSurvivesResetAndReacquiresWithNewIdentity(void)
     assert(out.status==CHASSIS_REMOTE_REJECTED && out.resets==1);
     assert(out.attempt.available && out.attempt.sequence==3);
     assert(out.attempt.initialized_before && out.attempt.resets_before==0);
-    assert(out.attempt.input.wheel_n_mps[0]==-100);
+    assert(out.attempt.input.wheel_n_mps[0]==100);
     assert(out.attempt.output.valid && !out.attempt.output.fused);
     assert(out.attempt.receiver_call_ms==205 && out.attempt.middle_receiver_ms==182);
     ChassisVelocity_s wheel={.valid=false};
     ChassisRemoteFusionUpdate(&state,&config,&wheel,0,&packet,true,210,&out);
     assert(out.status==CHASSIS_REMOTE_WHEEL_UNAVAILABLE);
-    assert(out.attempt.sequence==3 && out.attempt.input.wheel_n_mps[0]==-100);
+    assert(out.attempt.sequence==3 && out.attempt.input.wheel_n_mps[0]==100);
     assert(out.attempt.receiver_call_ms==205 && !out.attempt.output.fused);
     for(uint32_t t=215;t<=265;t+=5) {
         if(t>=225 && (t-225)%20==0) packet=Packet(900000+t-3,t-1,t);
@@ -476,7 +476,7 @@ static void RejectedAttemptSurvivesResetAndReacquiresWithNewIdentity(void)
     }
     assert(out.status==CHASSIS_REMOTE_FUSED && out.attempt.sequence==4);
     assert(!out.attempt.initialized_before && out.attempt.resets_before==1);
-    assert(out.attempt.input.wheel_n_mps[0]==-100);
+    assert(out.attempt.input.wheel_n_mps[0]==100);
 }
 
 static void AttemptSequenceWrapIsNotUnavailable(void)

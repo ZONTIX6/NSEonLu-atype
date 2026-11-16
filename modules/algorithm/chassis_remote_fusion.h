@@ -21,7 +21,9 @@ typedef enum {
 
 typedef struct {
     /* Fixed body frame follows native A-board axes, centered on the chassis.
-     * For this installation: +X = public backward, +Y = public right, +Z = up. */
+     * Wheel X/Y enter this frame with their public signs (no X reflection).
+     * Longitudinal mapping checked against the 2.4 m and 3.2 m captures;
+     * full installation/axis acceptance remains pending. */
     float sensor_to_body_quaternion[4]; /* Hamilton wxyz, sensor to A-board body. */
     float imu_offset_body_m[3]; /* Chassis center to sensor in A-board body axes, m. */
     ChassisVelocityFusionConfig_s filter;
@@ -73,8 +75,8 @@ typedef struct {
 } ChassisRemoteFusion_s;
 
 void ChassisRemoteFusionReset(ChassisRemoteFusion_s *state);
-/* Wheel input and velocity output retain the public forward/right convention;
- * conversion to/from native A-board body axes happens inside this adapter.
+/* Wheel input and velocity output retain the public wheel convention;
+ * rotation to/from navigation axes happens inside this adapter.
  * Source age <=20 ms, known total age <=60 ms, wheel age <=20 ms.
  * Source-board intervals supply the physical dt. first_rx-source_age pairs
  * wheel history and labels the output on the receiver clock; transport delay
