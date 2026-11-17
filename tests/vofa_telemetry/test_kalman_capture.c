@@ -65,6 +65,9 @@ static void sample(uint32_t now, uint32_t attempt)
     a->config.filter = (ChassisVelocityFusionConfig_s){.wheel_variance = .01f,
         .accel_variance = .25f, .jerk_density = 1.f, .max_velocity_residual_mps = 1.5f,
         .max_age_us = 60000, .max_skew_us = 0, .max_gap_us = 60000};
+    a->effective_accel_variance = 1.75f;
+    a->config.spin_accel_uncertainty_fraction = .25f;
+    a->config.max_accel_variance = 4.f;
     a->config.max_pair_span_ms = 15;
     a->config.max_wheel_skew_ms = 3;
     a->config.max_timing_jitter_ms = 10;
@@ -167,6 +170,7 @@ static void startup_preserves_frozen_records(void)
     assert(field(active, VOFA_KALMAN_IMU_SOURCE_AGE_MS) == 1);
     assert(field(active, VOFA_KALMAN_VELOCITY_AGE_MS) == 20);
     assert(field(active, VOFA_KALMAN_IMU_AX_MPS2) == 2.5f);
+    assert(field(active, VOFA_KALMAN_FUSION_ACCEL_VARIANCE) == 1.75f);
     assert(fabsf(field(active, VOFA_KALMAN_TARGET_VX_MPS) - 1.2345f) < 1e-6f);
     assert(fabsf(field(active, VOFA_KALMAN_TARGET_WZ_RADPS) - 1.5707963f) < 1e-6f);
     finish_uart();

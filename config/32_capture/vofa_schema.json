@@ -896,7 +896,8 @@
       {
         "name": "fusion_accel_variance",
         "type": "f32",
-        "unit": "(m/s^2)^2"
+        "unit": "(m/s^2)^2",
+        "description": "Effective per-attempt IMU acceleration variance; may increase with predicted rotational lever-arm acceleration."
       },
       {
         "name": "fusion_jerk_density",

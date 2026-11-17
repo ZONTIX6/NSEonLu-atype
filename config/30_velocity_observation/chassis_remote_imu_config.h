@@ -27,6 +27,9 @@
  * 无实测证据时不把这些数值或VERIFIED=1当作验收结果。 */
 #define CHASSIS_REMOTE_IMU_WHEEL_VARIANCE 0.01f
 #define CHASSIS_REMOTE_IMU_ACCEL_VARIANCE 0.25f
+/* Initial offline-replay policy; effective per-sample R remains hardware-unvalidated. */
+#define CHASSIS_REMOTE_IMU_SPIN_ACCEL_UNCERTAINTY_FRACTION 0.25f
+#define CHASSIS_REMOTE_IMU_MAX_ACCEL_VARIANCE 4.0f
 #define CHASSIS_REMOTE_IMU_JERK_DENSITY 1.0f
 #define CHASSIS_REMOTE_IMU_MAX_RESIDUAL_MPS 1.5f
 
@@ -42,6 +45,8 @@
 #define CHASSIS_REMOTE_IMU_CONFIG_INITIALIZER { \
     .sensor_to_body_quaternion = CHASSIS_REMOTE_IMU_SENSOR_TO_BODY, \
     .imu_offset_body_m = CHASSIS_REMOTE_IMU_OFFSET_BODY_M, \
+    .spin_accel_uncertainty_fraction = CHASSIS_REMOTE_IMU_SPIN_ACCEL_UNCERTAINTY_FRACTION, \
+    .max_accel_variance = CHASSIS_REMOTE_IMU_MAX_ACCEL_VARIANCE, \
     .filter = { .wheel_variance = CHASSIS_REMOTE_IMU_WHEEL_VARIANCE, \
         .accel_variance = CHASSIS_REMOTE_IMU_ACCEL_VARIANCE, \
         .jerk_density = CHASSIS_REMOTE_IMU_JERK_DENSITY, \

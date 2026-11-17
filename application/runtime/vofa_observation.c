@@ -187,6 +187,7 @@ static uint32_t ConfigFingerprint(const ChassisRemoteFusionConfig_s *c)
     const float values[] = {c->sensor_to_body_quaternion[0], c->sensor_to_body_quaternion[1],
         c->sensor_to_body_quaternion[2], c->sensor_to_body_quaternion[3],
         c->imu_offset_body_m[0], c->imu_offset_body_m[1], c->imu_offset_body_m[2],
+        c->spin_accel_uncertainty_fraction, c->max_accel_variance,
         c->filter.wheel_variance, c->filter.accel_variance, c->filter.jerk_density,
         c->filter.max_velocity_residual_mps};
     for (unsigned i = 0; i < sizeof values / sizeof values[0]; ++i) {
@@ -261,6 +262,7 @@ static void Kalman(float *f, const USBTelemetrySample_s *sample,
         Finite(quaternion, 4) && Finite(accel, 3) && Finite(gyro, 3);
     const bool attempt = a->available && Finite(a->input.wheel_n_mps, 2) && Finite(a->input.accel_n_mps2, 2) &&
         Finite(a->output.velocity_n_mps, 2) && Finite(c->sensor_to_body_quaternion, 4) && Finite(c->imu_offset_body_m, 3) &&
+        isfinite(a->effective_accel_variance) && a->effective_accel_variance > 0 &&
         isfinite(c->filter.wheel_variance) && isfinite(c->filter.accel_variance) &&
         isfinite(c->filter.jerk_density) && isfinite(c->filter.max_velocity_residual_mps);
     K(SCHEMA) = VOFA_KALMAN_SCHEMA_ID;
@@ -314,7 +316,7 @@ static void Kalman(float *f, const USBTelemetrySample_s *sample,
     U32(f, VOFA_KALMAN_RESETS_BEFORE_HI, a->resets_before);
     K(PAIR_SPAN_MS) = a->pair_span_ms; K(SOURCE_STEP_MS) = a->source_step_ms; K(RECEIVE_STEP_MS) = a->receive_step_ms;
     K(FUSION_WHEEL_VARIANCE) = c->filter.wheel_variance;
-    K(FUSION_ACCEL_VARIANCE) = c->filter.accel_variance;
+    K(FUSION_ACCEL_VARIANCE) = a->effective_accel_variance;
     K(FUSION_JERK_DENSITY) = c->filter.jerk_density;
     K(FUSION_MAX_RESIDUAL_MPS) = c->filter.max_velocity_residual_mps;
     U32(f, VOFA_KALMAN_FUSION_MAX_AGE_US_HI, c->filter.max_age_us);

@@ -28,6 +28,12 @@ class SegmentsTests(unittest.TestCase):
         segments = continuous_attempt_segments(dict(schema=5, rows=rows))
         self.assertEqual([len(s) for s in segments], [2, 1, 1, 1, 1])
 
+    def test_effective_accel_variance_can_change_within_one_static_config(self):
+        rows = [attempt(1), attempt(2), attempt(3)]
+        rows[1]['fusion_accel_variance'] = 1.5
+        rows[2]['fusion_accel_variance'] = 3.0
+        self.assertEqual([len(s) for s in continuous_attempt_segments(dict(schema=5, rows=rows))], [3])
+
     def test_same_attempt_with_changed_input_is_rejected(self):
         with self.assertRaisesRegex(ValueError, 'duplicate attempt'):
             continuous_attempt_segments(dict(schema=5, rows=[attempt(1), attempt(1, wheel_n_x_mps=5)]))

@@ -271,6 +271,7 @@ def quality_report(capture):
 
 FILTER_CONFIG_FIELDS = ('fusion_wheel_variance', 'fusion_accel_variance', 'fusion_jerk_density',
     'fusion_max_residual_mps', 'fusion_max_age_us', 'fusion_max_skew_us', 'fusion_max_gap_us')
+STATIC_FILTER_CONFIG_FIELDS = tuple(key for key in FILTER_CONFIG_FIELDS if key != 'fusion_accel_variance')
 ATTEMPT_FIELDS = ('attempt_sequence', 'attempt_flags', 'call_receiver_ms', 'call_us',
     'wheel_us', 'imu_us', 'middle_receiver_ms', 'wheel_n_x_mps', 'wheel_n_y_mps',
     'accel_n_x_mps2', 'accel_n_y_mps2', 'output_n_x_mps', 'output_n_y_mps',
@@ -282,6 +283,8 @@ def continuous_attempt_segments(capture):
 
 Current pipeline status/reset counters may change while the last attempt is
 held. Only the reset count captured BEFORE that call describes its filter state.
+The acceleration variance is an effective per-attempt input and may vary while
+the static config fingerprint stays unchanged.
 """
     if capture['schema'] != 5:
         return []
@@ -303,7 +306,7 @@ held. Only the reset count captured BEFORE that call describes its filter state.
                 continue
             boundary |= advance != 1 or row['resets_before'] != previous['resets_before']
             boundary |= any(row.get(key) != previous.get(key)
-                for key in ('config_fingerprint', 'config_source') + FILTER_CONFIG_FIELDS)
+                for key in ('config_fingerprint', 'config_source') + STATIC_FILTER_CONFIG_FIELDS)
             boundary |= ((row['call_us'] - previous['call_us']) & UINT32) >= HALF
         if boundary and segment:
             segments.append(segment)

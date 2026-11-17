@@ -23,6 +23,8 @@ static bool ValidConfig(const ChassisRemoteFusionConfig_s *c)
 {
     if(!c || !c->max_pair_span_ms || c->max_pair_span_ms>REMOTE_MAX_KNOWN_AGE_MS ||
        c->max_wheel_skew_ms>CHASSIS_VELOCITY_MAX_AGE_MS ||
+       !isfinite(c->spin_accel_uncertainty_fraction) || c->spin_accel_uncertainty_fraction<0 ||
+       !isfinite(c->max_accel_variance) || c->max_accel_variance<c->filter.accel_variance ||
        c->max_timing_jitter_ms>REMOTE_MAX_KNOWN_AGE_MS) return false;
     const ChassisVelocityFusionConfig_s *f=&c->filter;
     if(!isfinite(f->wheel_variance) || f->wheel_variance<=0 ||
@@ -36,6 +38,38 @@ static bool ValidConfig(const ChassisRemoteFusionConfig_s *c)
     if(!isfinite(norm) || norm<.98f || norm>1.02f) return false;
     for(unsigned i=0;i<3;++i) if(!isfinite(c->imu_offset_body_m[i])) return false;
     return true;
+}
+
+static void RotateSensorVectorToBody(const float q[4],const float sensor[3],float body[3])
+{
+    const float w=q[0],x=q[1],y=q[2],z=q[3];
+    const float scale=2.0f/(w*w+x*x+y*y+z*z);
+    body[0]=(1.0f-scale*(y*y+z*z))*sensor[0]+scale*(x*y-w*z)*sensor[1]+
+        scale*(x*z+w*y)*sensor[2];
+    body[1]=scale*(x*y+w*z)*sensor[0]+(1.0f-scale*(x*x+z*z))*sensor[1]+
+        scale*(y*z-w*x)*sensor[2];
+    body[2]=scale*(x*z-w*y)*sensor[0]+scale*(y*z+w*x)*sensor[1]+
+        (1.0f-scale*(x*x+y*y))*sensor[2];
+}
+
+static float EffectiveAccelVariance(const ChassisRemoteFusionConfig_s *config,
+                                    const float angular_velocity_body_radps[3])
+{
+    const float base=config->filter.accel_variance;
+    const float fraction=config->spin_accel_uncertainty_fraction;
+    if(fraction==0.0f) return base;
+
+    const float *r=config->imu_offset_body_m;
+    const float *w=angular_velocity_body_radps;
+    /* Bound the residual from the modeled centripetal lever-arm acceleration. */
+    const float wxr[3]={w[1]*r[2]-w[2]*r[1],w[2]*r[0]-w[0]*r[2],w[0]*r[1]-w[1]*r[0]};
+    const float rotational_accel[3]={w[1]*wxr[2]-w[2]*wxr[1],
+        w[2]*wxr[0]-w[0]*wxr[2],w[0]*wxr[1]-w[1]*wxr[0]};
+    const float sigma=fraction*hypotf(hypotf(rotational_accel[0],rotational_accel[1]),
+        rotational_accel[2]);
+    const float max_sigma=sqrtf(config->max_accel_variance-base);
+    if(!isfinite(sigma) || sigma>=max_sigma) return config->max_accel_variance;
+    return base+sigma*sigma;
 }
 
 static bool PushWheel(ChassisRemoteFusion_s *s,const ChassisVelocity_s *wheel)
@@ -217,6 +251,8 @@ void ChassisRemoteFusionUpdate(ChassisRemoteFusion_s *state,
      * native board +X. Keep Y and raw IMU/nav data unchanged. */
     ChassisVelocityCenterSample_s sample={.imu_us=remote->sample.tick_ms*1000U,
         .wheel_us=remote->sample.tick_ms*1000U,.wheel_b_mps={paired[0],paired[1]}};
+    RotateSensorVectorToBody(config->sensor_to_body_quaternion,
+        remote->sample.gyro_sensor_radps,sample.angular_velocity_body_radps);
     for(unsigned i=0;i<3;++i) {
         sample.imu_offset_n_m[i]=pose.imu_offset_nav_m[i];
         sample.accel_n_mps2[i]=remote->sample.accel_n_mps2[i];
@@ -248,6 +284,8 @@ void ChassisRemoteFusionUpdate(ChassisRemoteFusion_s *state,
             center.body_to_nav_xy[i][1]*center.wheel_b_mps[1];
         input.accel_n_mps2[i]=center.accel_n_mps2[i];
     }
+    ChassisVelocityFusionConfig_s effective_filter=config->filter;
+    effective_filter.accel_variance=EffectiveAccelVariance(config,center.angular_velocity_body_radps);
     ChassisVelocityFusionOutput_s filtered;
     s->attempt=(ChassisRemoteFusionAttempt_s){
         .sequence=s->attempt.sequence+1U,
@@ -255,8 +293,9 @@ void ChassisRemoteFusionUpdate(ChassisRemoteFusion_s *state,
         .resets_before=s->resets,.pair_span_ms=middle_span,
         .source_step_ms=out->source_step_ms,.receive_step_ms=out->receive_step_ms,
         .input=input,.config=*config,.available=true,
+        .effective_accel_variance=effective_filter.accel_variance,
         .initialized_before=s->filter.initialized};
-    ChassisVelocityFusionUpdate(&s->filter,&config->filter,&input,&filtered);
+    ChassisVelocityFusionUpdate(&s->filter,&effective_filter,&input,&filtered);
     s->attempt.output=filtered;
     const float a=center.body_to_nav_xy[0][0],b=center.body_to_nav_xy[0][1];
     const float c=center.body_to_nav_xy[1][0],d=center.body_to_nav_xy[1][1];

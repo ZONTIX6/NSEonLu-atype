@@ -26,12 +26,15 @@ typedef struct {
      * full installation/axis acceptance remains pending. */
     float sensor_to_body_quaternion[4]; /* Hamilton wxyz, sensor to A-board body. */
     float imu_offset_body_m[3]; /* Chassis center to sensor in A-board body axes, m. */
+    float spin_accel_uncertainty_fraction; /* Fraction of predicted centripetal acceleration treated as uncertainty. */
+    float max_accel_variance; /* Per-axis IMU variance ceiling, (m/s^2)^2. */
     ChassisVelocityFusionConfig_s filter;
     uint32_t max_pair_span_ms, max_wheel_skew_ms, max_timing_jitter_ms;
 } ChassisRemoteFusionConfig_s;
 
-/* Last actual production-filter call, including rejected calls. The input and
- * effective config are copied BEFORE the filter runs. Pipeline resets and
+/* Last actual production-filter call, including rejected calls. The input,
+ * static config and per-call effective acceleration variance are copied before
+ * the filter runs. Pipeline resets and
  * repeated source samples preserve this record; only a new call replaces it.
  * All us times are the filter's wrapping uint32 clock, not receiver uptime.
  * source/receive steps describe the newest source that completed this attempt;
@@ -43,6 +46,7 @@ typedef struct {
     ChassisVelocityFusionInput_s input;
     ChassisVelocityFusionOutput_s output;
     ChassisRemoteFusionConfig_s config;
+    float effective_accel_variance; /* Actual measurement variance used for this attempt. */
     bool available, initialized_before;
 } ChassisRemoteFusionAttempt_s;
 

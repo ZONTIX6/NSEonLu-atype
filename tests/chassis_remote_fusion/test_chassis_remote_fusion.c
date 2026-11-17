@@ -11,6 +11,7 @@ static ChassisRemoteFusionConfig_s Config(void)
         .filter = {.wheel_variance=.01f, .accel_variance=.04f, .jerk_density=.25f,
             .max_velocity_residual_mps=2, .max_age_us=60000, .max_skew_us=0,
             .max_gap_us=30000},
+        .spin_accel_uncertainty_fraction=.25f, .max_accel_variance=4.0f,
         .max_pair_span_ms=15, .max_wheel_skew_ms=3, .max_timing_jitter_ms=10};
 }
 
@@ -364,6 +365,12 @@ static void InvalidDataCannotPublishFusion(void)
     config=Config(); config.imu_offset_body_m[0]=INFINITY;
     out=Run(&state,&config,&packet,175,1,0);
     assert(out.status==CHASSIS_REMOTE_CONFIG_INVALID);
+    config=Config(); config.spin_accel_uncertainty_fraction=NAN;
+    out=Run(&state,&config,&packet,176,1,0);
+    assert(out.status==CHASSIS_REMOTE_CONFIG_INVALID);
+    config=Config(); config.max_accel_variance=.01f;
+    out=Run(&state,&config,&packet,177,1,0);
+    assert(out.status==CHASSIS_REMOTE_CONFIG_INVALID);
     config=Config(); config.sensor_to_body_quaternion[0]=2;
     out=Run(&state,&config,&packet,180,1,0);
     assert(out.status==CHASSIS_REMOTE_CONFIG_INVALID);
@@ -440,11 +447,83 @@ static void AttemptRecordsMiddleNavigationInputAndEffectiveConfig(void)
     assert(attempt->config.filter.max_skew_us==0 && attempt->config.filter.max_gap_us==30000);
     assert(attempt->config.sensor_to_body_quaternion[0]==1);
     assert(attempt->config.imu_offset_body_m[0]==0);
+    assert(attempt->effective_accel_variance==.04f);
+    assert(attempt->config.spin_accel_uncertainty_fraction==.25f);
+    assert(attempt->config.max_accel_variance==4.0f);
     assert(attempt->config.max_pair_span_ms==15 && attempt->config.max_wheel_skew_ms==3);
     assert(attempt->config.max_timing_jitter_ms==10);
     out=Run(&state,&config,&packet,170,4,6);
     assert(out.attempt.sequence==1 && out.attempt.receiver_call_ms==165);
     Near(out.attempt.input.accel_n_mps2[0],5,.00001f);
+}
+
+static void SpinInflatesOnlyTheEffectiveAccelerationVariance(void)
+{
+    ChassisRemoteFusion_s state={0};
+    ChassisRemoteFusionConfig_s config=Config();
+    config.imu_offset_body_m[1]=.116f;
+    ChassisImuCanSnapshot_s packet={0};
+    ChassisRemoteFusionOutput_s out={0};
+    for(uint32_t t=100;t<=165;t+=5) {
+        if(t>=125 && (t-125)%20==0) {
+            packet=Packet(900000+t-3,t-1,t);
+            packet.sample.gyro_sensor_radps[2]=6.7f;
+        }
+        out=Run(&state,&config,packet.available?&packet:NULL,t,1,0);
+    }
+    assert(out.status==CHASSIS_REMOTE_FUSED && out.attempt.available);
+    const float rotational_accel=6.7f*6.7f*.116f;
+    Near(out.attempt.effective_accel_variance,
+        .04f+(.25f*rotational_accel)*(.25f*rotational_accel),.01f);
+    assert(out.attempt.effective_accel_variance<config.max_accel_variance);
+
+    config.max_accel_variance=1.0f;
+    ChassisRemoteFusionReset(&state);
+    out=(ChassisRemoteFusionOutput_s){0};
+    packet=(ChassisImuCanSnapshot_s){0};
+    for(uint32_t t=100;t<=165;t+=5) {
+        if(t>=125 && (t-125)%20==0) {
+            packet=Packet(900000+t-3,t-1,t);
+            packet.sample.gyro_sensor_radps[2]=6.7f;
+        }
+        out=Run(&state,&config,packet.available?&packet:NULL,t,1,0);
+    }
+    Near(out.attempt.effective_accel_variance,1.0f,.00001f);
+
+    config.spin_accel_uncertainty_fraction=0;
+    ChassisRemoteFusionReset(&state);
+    out=(ChassisRemoteFusionOutput_s){0};
+    packet=(ChassisImuCanSnapshot_s){0};
+    for(uint32_t t=100;t<=165;t+=5) {
+        if(t>=125 && (t-125)%20==0) {
+            packet=Packet(900000+t-3,t-1,t);
+            packet.sample.gyro_sensor_radps[2]=6.7f;
+        }
+        out=Run(&state,&config,packet.available?&packet:NULL,t,1,0);
+    }
+    Near(out.attempt.effective_accel_variance,config.filter.accel_variance,.00001f);
+}
+
+static void SpinNoiseUsesTheMountedBodyAxes(void)
+{
+    ChassisRemoteFusion_s state={0};
+    ChassisRemoteFusionConfig_s config=Config();
+    const float half_angle=10.0f*3.14159265358979323846f/180.0f;
+    config.sensor_to_body_quaternion[0]=cosf(half_angle);
+    config.sensor_to_body_quaternion[1]=sinf(half_angle);
+    config.imu_offset_body_m[1]=-.116f*sinf(2.0f*half_angle);
+    config.imu_offset_body_m[2]=.116f*cosf(2.0f*half_angle);
+    ChassisImuCanSnapshot_s packet={0};
+    ChassisRemoteFusionOutput_s out={0};
+    for(uint32_t t=100;t<=165;t+=5) {
+        if(t>=125 && (t-125)%20==0) {
+            packet=Packet(900000+t-3,t-1,t);
+            packet.sample.gyro_sensor_radps[2]=6.7f;
+        }
+        out=Run(&state,&config,packet.available?&packet:NULL,t,1,0);
+    }
+    assert(out.status==CHASSIS_REMOTE_FUSED && out.attempt.available);
+    Near(out.attempt.effective_accel_variance,config.filter.accel_variance,.00001f);
 }
 
 /* Catch dropping rejected inputs when ResetPipeline clears the held result,
@@ -510,6 +589,8 @@ int main(void)
     InvalidDataCannotPublishFusion();
     BothClocksAndSequenceCanWrap();
     AttemptRecordsMiddleNavigationInputAndEffectiveConfig();
+    SpinInflatesOnlyTheEffectiveAccelerationVariance();
+    SpinNoiseUsesTheMountedBodyAxes();
     RejectedAttemptSurvivesResetAndReacquiresWithNewIdentity();
     AttemptSequenceWrapIsNotUnavailable();
     puts("PASS: remote chassis velocity fusion");
