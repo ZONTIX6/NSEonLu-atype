@@ -1,6 +1,8 @@
 #ifndef TEST_CONTROLLER_H
 #define TEST_CONTROLLER_H
 
+enum { PID_Integral_Limit = 1U };
+
 typedef struct
 {
     float value;

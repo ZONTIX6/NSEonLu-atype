@@ -30,6 +30,13 @@ uint32_t DWT_GetFrequencyHz(void) { return 168000000; }
 bool INSGetMotionSnapshot(INSMotionSnapshot_s *out) { *out = imu; return imu.valid; }
 bool INSGetSnapshot(INSSnapshot_s *out)
 { *out=(INSSnapshot_s){.attitude={.YawTotalAngle=721.25f},.tick_ms=999,.valid=true,.has_sample=true}; return true; }
+bool GimbalGetYawControlSnapshot(DJIMotorControlSnapshot_s *out)
+{
+    *out=(DJIMotorControlSnapshot_s){.available=true,.tick_ms=998,.reference=731.5f,
+        .speed_dps=-12.5f,.speed_iout=3000,.command=7000,
+        .flags=DJI_CONTROL_ENABLED | DJI_CONTROL_SPEED_CALCULATED | DJI_CONTROL_INTEGRAL_AT_LIMIT};
+    return true;
+}
 bool GimbalGetEncoderSnapshot(GimbalEncoderSample_s out[2])
 {
     if (!joints_valid) return false;
@@ -80,6 +87,10 @@ int main(void)
     assert(d->yaw_encoder_valid && d->chassis_mode == 1);
     assert(d->gimbal_imu_known && d->gimbal_imu_valid && d->gimbal_imu_tick_ms == 999);
     assert(d->gimbal_yaw_total_deg == 721.25f);
+    assert(d->yaw_control.available && d->yaw_control.tick_ms == 998);
+    assert(d->yaw_control.reference == 731.5f && d->yaw_control.speed_dps == -12.5f);
+    assert(d->yaw_control.speed_iout == 3000 && d->yaw_control.command == 7000);
+    assert(d->yaw_control.flags & DJI_CONTROL_INTEGRAL_AT_LIMIT);
 
     /* A late getter invalidates velocity, but preserves the diagnostic epoch
        and values so the CSV consumer can identify stale observations. */

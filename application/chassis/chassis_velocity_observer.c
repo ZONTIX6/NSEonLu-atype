@@ -273,6 +273,7 @@ void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config, uint8_t 
     (void)INSGetMotionSnapshot(&imu);
 #endif
     const bool joints_valid=GimbalGetEncoderSnapshot(joints);
+    (void)GimbalGetYawControlSnapshot(&snapshot.diagnostics.yaw_control);
     (void)INSGetSnapshot(&gimbal_imu);
 #if CHASSIS_VELOCITY_FUSION_CALIBRATED
     const uint32_t cycles=DWT_GetCycleCount();

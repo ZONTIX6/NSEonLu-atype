@@ -395,6 +395,15 @@ bool DJIMotorFindIndex(const DJIMotorInstance *motor, uint8_t *motor_index)
     return false;
 }
 
+bool DJIMotorGetControlSnapshot(const DJIMotorInstance *motor, DJIMotorControlSnapshot_s *out)
+{
+    if (!out) return false;
+    taskENTER_CRITICAL();
+    *out = motor ? motor->control_snapshot : (DJIMotorControlSnapshot_s){0};
+    taskEXIT_CRITICAL();
+    return out->available;
+}
+
 bool DJIMotorRegisterOutputGroup(DJIMotorOutputGroup_s *group, const DJIMotorOutputHooks_s *hooks)
 {
     if (group==NULL || hooks==NULL || output_group!=NULL || hooks->read_control==NULL ||
@@ -456,6 +465,8 @@ void DJIMotorControl()
     DJI_Motor_Measure_s *measure;
     float pid_measure, pid_ref;
     ReadMotorCycle();
+    const uint32_t control_tick_ms = HAL_GetTick();
+    bool speed_calculated[DJI_MOTOR_CNT] = {false};
     const DJIMotorCycle_s cycle={.count=idx,.motors=dji_motor_instance,.measure=cycle_measure,
         .current=motor_output,.actual_aps=speed_feedback_aps,.target_aps=speed_reference_aps,
         .stop=cycle_stop,.online=cycle_online,.submission=&cycle_submission};
@@ -509,6 +520,7 @@ void DJIMotorControl()
             speed_reference_aps[i] = pid_ref;
             speed_feedback_aps[i] = pid_measure;
             pid_ref = PIDCalculate(&motor_controller->speed_PID, pid_measure, pid_ref);
+            speed_calculated[i] = true;
         }
 
         if (motor_setting->feedforward_flag & CURRENT_FEEDFORWARD)
@@ -601,6 +613,34 @@ void DJIMotorControl()
     }
     if (output_group != NULL) output_hooks.record_final(output_hooks.context,&cycle,final_commands,
         final_enabled,submitted_groups,successful_groups);
+    for (unsigned i = 0; i < idx; ++i) {
+        motor = dji_motor_instance[i];
+        const PIDInstance *speed = &motor->motor_controller.speed_PID;
+        const PIDInstance *angle = &motor->motor_controller.angle_PID;
+        const unsigned group_bit = 1U << motor->sender_group;
+        DJIMotorControlSnapshot_s snapshot = {.available = true, .tick_ms = control_tick_ms,
+            .reference = cycle_reference[i], .command = final_commands[i],
+            .flags = (final_enabled[i] ? DJI_CONTROL_ENABLED : 0U) |
+                (submitted_groups & group_bit ? DJI_CONTROL_CAN_ATTEMPTED : 0U) |
+                (successful_groups & group_bit ? DJI_CONTROL_CAN_ACCEPTED : 0U)};
+        if (speed_calculated[i]) {
+            snapshot.speed_dps = speed_feedback_aps[i];
+            snapshot.speed_iout = speed->Iout;
+            snapshot.flags |= DJI_CONTROL_SPEED_CALCULATED;
+            if ((speed->Improve & PID_Integral_Limit) && speed->IntegralLimit > 0 &&
+                fabsf(speed->Iout) >= speed->IntegralLimit)
+                snapshot.flags |= DJI_CONTROL_INTEGRAL_AT_LIMIT;
+            if (speed->MaxOut > 0 && fabsf(speed->Output) >= speed->MaxOut)
+                snapshot.flags |= DJI_CONTROL_SPEED_AT_LIMIT;
+            if ((motor->motor_settings.close_loop_type & ANGLE_LOOP) &&
+                motor->motor_settings.outer_loop_type == ANGLE_LOOP &&
+                angle->MaxOut > 0 && fabsf(angle->Output) >= angle->MaxOut)
+                snapshot.flags |= DJI_CONTROL_ANGLE_AT_LIMIT;
+        }
+        taskENTER_CRITICAL();
+        motor->control_snapshot = snapshot;
+        taskEXIT_CRITICAL();
+    }
     UpdateTuningStopState(HAL_GetTick(),transmitted);
     if(output_hooks.policy && output_hooks.policy->record)
         output_hooks.policy->record(&cycle,raw_output,transmitted);

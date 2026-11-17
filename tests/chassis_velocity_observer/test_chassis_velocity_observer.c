@@ -40,6 +40,8 @@ bool INSGetMotionSnapshot(INSMotionSnapshot_s *snapshot)
 
 bool INSGetSnapshot(INSSnapshot_s *out)
 { *out=(INSSnapshot_s){0}; return false; }
+bool GimbalGetYawControlSnapshot(DJIMotorControlSnapshot_s *out)
+{ *out=(DJIMotorControlSnapshot_s){0}; return false; }
 bool GimbalGetEncoderSnapshot(GimbalEncoderSample_s samples[2])
 {
     if (!gimbal_valid) return false;

@@ -40,6 +40,8 @@ bool INSGetMotionSnapshot(INSMotionSnapshot_s *out)
 { ++local_imu_reads; memset(out,0,sizeof *out); return false; }
 bool INSGetSnapshot(INSSnapshot_s *out)
 { *out=(INSSnapshot_s){0}; return false; }
+bool GimbalGetYawControlSnapshot(DJIMotorControlSnapshot_s *out)
+{ *out=(DJIMotorControlSnapshot_s){0}; return false; }
 bool GimbalGetEncoderSnapshot(GimbalEncoderSample_s out[2])
 { memset(out,0,2*sizeof *out); return false; }
 bool ChassisImuCanReadSnapshot(ChassisImuCanSnapshot_s *out,uint32_t now_ms)

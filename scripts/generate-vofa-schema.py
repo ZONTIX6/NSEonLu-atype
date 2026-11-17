@@ -13,7 +13,7 @@ def render():
     for number, schema in schemas.items():
         prefix = "VOFA_" + schema["name"].upper()
         names = [item["name"] for item in schema["channels"]]
-        if len(names) > 102 or len(names) != len(set(names)):
+        if len(names) > 108 or len(names) != len(set(names)):
             raise ValueError("Invalid channel contract")
         lines += [f"#define {prefix}_SCHEMA_ID {number}U", "enum {"]
         lines += [f"    {prefix}_{name.upper()} = {index}," for index, name in enumerate(names)]
@@ -34,10 +34,11 @@ def render_markdown():
         for name in ('state_encoding', 'provenance_encoding', 'wheel_masks_encoding'):
             if name in schema:
                 lines += [f"`{name}`: {schema[name]}", ""]
-        if 'attempt_flags' in schema:
-            lines += ["`attempt_flags`：", ""]
-            lines += [f"- bit {bit}: `{name}`" for name, bit in schema['attempt_flags'].items()]
-            lines += [""]
+        for flag_field in ('attempt_flags', 'yaw_control_flags'):
+            if flag_field in schema:
+                lines += [f"`{flag_field}`：", ""]
+                lines += [f"- bit {bit}: `{name}`" for name, bit in schema[flag_field].items()]
+                lines += [""]
     return "\n".join(lines)
 
 

@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 class CliTests(unittest.TestCase):
     def test_original_exports_produce_quality_and_analysis_without_csv_conversion(self):
-        for schema in (2, 4, 5, 6):
+        for schema in (2, 4, 5, 6, 7):
             with self.subTest(schema=schema), tempfile.TemporaryDirectory() as directory:
                 d = Path(directory)
                 capture = d / 'raw.csv'

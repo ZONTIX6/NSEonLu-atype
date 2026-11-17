@@ -177,7 +177,7 @@ void PIDInit(PIDInstance *pid, PID_Init_Config_s *config)
 float PIDCalculate(PIDInstance *pid, float measure, float ref)
 {
     ++test_pid_calls;
-    (void)pid;
+    pid->Output = ref;
     (void)measure;
     if (publish_stop_during_pid) {
         publish_stop_during_pid = false;
@@ -1013,6 +1013,63 @@ static void TestSecondGroupStopPreservesFirstSubmission(void)
     PreparePowerGroup();
 }
 
+static void TestYawControlSnapshot(void)
+{
+    PreparePowerGroup();
+    AddVehicleMotors();
+    DJIMotorInstance *yaw = dji_motor_instance[4];
+    DJIMotorControlSnapshot_s snapshot;
+    ASSERT_TRUE(!DJIMotorGetControlSnapshot(yaw, &snapshot));
+    ASSERT_TRUE(!DJIMotorGetControlSnapshot(NULL, &snapshot) && !snapshot.available);
+    ASSERT_TRUE(!DJIMotorGetControlSnapshot(yaw, NULL));
+    float angle = 490, gyro = -12.5f;
+    yaw->motor_settings = (Motor_Control_Setting_s){.close_loop_type=ANGLE_LOOP | SPEED_LOOP,
+        .outer_loop_type=ANGLE_LOOP,.angle_feedback_source=OTHER_FEED,.speed_feedback_source=OTHER_FEED};
+    yaw->motor_controller.other_angle_feedback_ptr = &angle;
+    yaw->motor_controller.other_speed_feedback_ptr = &gyro;
+    yaw->motor_controller.angle_PID.MaxOut = 500;
+    yaw->motor_controller.speed_PID.MaxOut = 500;
+    yaw->motor_controller.speed_PID.Improve = PID_Integral_Limit;
+    yaw->motor_controller.speed_PID.IntegralLimit = 3000;
+    yaw->motor_controller.speed_PID.Iout = 3000;
+    DJIMotorSetRef(yaw, 500);
+    DJIMotorEnable(yaw);
+    DJIMotorControl();
+    DJIMotorSetRef(yaw, 600); /* Pending reference must not replace the completed cycle. */
+    ASSERT_TRUE(DJIMotorGetControlSnapshot(yaw, &snapshot));
+    ASSERT_TRUE(snapshot.tick_ms == test_tick && snapshot.reference == 500);
+    ASSERT_TRUE(snapshot.speed_dps == -12.5f && snapshot.speed_iout == 3000);
+    ASSERT_TRUE(snapshot.command == 500 && snapshot.flags == 127);
+    ASSERT_TRUE(submitted_bytes[3][0] == 1 && submitted_bytes[3][1] == 244);
+    gyro = 42;
+    ASSERT_TRUE(snapshot.speed_dps == -12.5f); /* Captured feedback remains frozen. */
+
+    fail_can_groups = 1U << 3;
+    yaw->motor_settings.feedback_reverse_flag = FEEDBACK_DIRECTION_REVERSE;
+    DJIMotorControl();
+    ASSERT_TRUE(DJIMotorGetControlSnapshot(yaw, &snapshot));
+    ASSERT_TRUE(snapshot.reference == 600 && snapshot.command == -600 && snapshot.speed_dps == 42);
+    ASSERT_TRUE(snapshot.flags & DJI_CONTROL_CAN_ATTEMPTED);
+    ASSERT_TRUE(!(snapshot.flags & DJI_CONTROL_CAN_ACCEPTED));
+    fail_can_groups = 0;
+    DJIMotorStop(yaw);
+    DJIMotorControl();
+    ASSERT_TRUE(DJIMotorGetControlSnapshot(yaw, &snapshot));
+    ASSERT_TRUE(snapshot.command == 0 && !(snapshot.flags & DJI_CONTROL_ENABLED));
+    ASSERT_TRUE(!(snapshot.flags & DJI_CONTROL_SPEED_CALCULATED) && snapshot.speed_iout == 0);
+    DJIMotorEnable(yaw);
+    yaw->measure.rx_tick_ms = test_tick - 21;
+    DJIMotorControl();
+    ASSERT_TRUE(DJIMotorGetControlSnapshot(yaw, &snapshot));
+    ASSERT_TRUE(snapshot.command == 0 && !(snapshot.flags & DJI_CONTROL_SPEED_CALCULATED));
+    yaw->measure.rx_tick_ms = test_tick;
+    safety_drive = false;
+    DJIMotorControl();
+    ASSERT_TRUE(DJIMotorGetControlSnapshot(yaw, &snapshot));
+    ASSERT_TRUE(snapshot.command == 0 && !(snapshot.flags & DJI_CONTROL_ENABLED));
+    PreparePowerGroup();
+}
+
 int main(int argc, char **argv)
 {
     TestBaselineScenarioStream(argc > 1 && strcmp(argv[1], "--record-baseline") == 0);
@@ -1095,6 +1152,7 @@ int main(int argc, char **argv)
     TestAtomicPublicationAndFinalIntegerCommands();
     TestAutotuneIsolationAndExplicitZeroForceRearm();
     TestNineMotorPowerAndStopIsolation();
+    TestYawControlSnapshot();
     TestDirectCurrentOwnership();
     TestSpeedStopDuringMailboxWait();
     TestSecondGroupStopPreservesFirstSubmission();

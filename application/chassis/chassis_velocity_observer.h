@@ -3,6 +3,7 @@
 
 #include "chassis_velocity.h"
 #include "chassis_remote_fusion.h"
+#include "../../modules/motor/DJImotor/dji_motor_diagnostics.h"
 
 typedef enum {
     CHASSIS_VELOCITY_NO_SAMPLE,
@@ -40,6 +41,7 @@ typedef struct {
     float gimbal_yaw_total_deg; /* Local head INS, independent of the remote chassis IMU. */
     uint32_t gimbal_imu_tick_ms;
     bool gimbal_imu_valid, gimbal_imu_known;
+    DJIMotorControlSnapshot_s yaw_control;
 } ChassisVelocityDiagnostics_s;
 
 typedef struct {

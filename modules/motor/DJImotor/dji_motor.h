@@ -20,6 +20,7 @@
 #include "motor_def.h"
 #include "stdint.h"
 #include "daemon.h"
+#include "dji_motor_diagnostics.h"
 #include <stdbool.h>
 #include "../../chassis_force_calibration/force_calibration_config.h"
 #include "../../predictive_power/speed_observation_config.h"
@@ -77,6 +78,7 @@ typedef struct
     DaemonInstance* daemon;
     uint32_t feed_cnt;
     float dt;
+    DJIMotorControlSnapshot_s control_snapshot;
 } DJIMotorInstance;
 #if CHASSIS_FORCE_CALIBRATION_ENABLE
 bool DJIMotorRegisterFeedbackObserver(void (*observer)(const DJIMotorInstance *,int16_t,int16_t,uint32_t));
@@ -149,6 +151,7 @@ typedef struct
 } DJIMotorOutputHooks_s;
 
 bool DJIMotorFindIndex(const DJIMotorInstance *motor, uint8_t *motor_index);
+bool DJIMotorGetControlSnapshot(const DJIMotorInstance *motor, DJIMotorControlSnapshot_s *out);
 bool DJIMotorRegisterOutputGroup(DJIMotorOutputGroup_s *group, const DJIMotorOutputHooks_s *hooks);
 /* Reset PID history at the current measurement without changing its gains. */
 void DJIMotorResetPID(PIDInstance *pid, float measured);

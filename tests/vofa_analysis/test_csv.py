@@ -137,6 +137,24 @@ class CsvTests(unittest.TestCase):
         self.assertEqual(quality['capture_mode'], 'event_fifo')
         self.assertEqual(quality['unique_filter_calls'], 3)
 
+    def test_yaw_control_extension_preserves_signed_command_and_fifo_replay(self):
+        rows = [attempt(i, schema=7, valid=31 | 64 | 1024, yaw_ref_deg=731.5,
+                        yaw_speed_dps=-12.5, yaw_speed_iout=3000, yaw_command=-7000,
+                        yaw_control_flags=79, yaw_control_age_ms=1) for i in (1, 2, 3)]
+        export(self.path, wire_rows(rows), time_at=0, renamed=True)
+        capture = read_capture(self.path)
+        self.assertEqual(capture['channel_count'], 108)
+        decoded = capture['rows'][0]
+        self.assertEqual(decoded['yaw_ref_deg'], 731.5)
+        self.assertEqual(decoded['yaw_speed_dps'], -12.5)
+        self.assertEqual(decoded['yaw_speed_iout'], 3000)
+        self.assertEqual(decoded['yaw_command'], -7000)
+        self.assertEqual(decoded['yaw_control_flags'], 79)
+        self.assertEqual(decoded['yaw_control_age_ms'], 1)
+        quality = quality_report(capture)
+        self.assertEqual(quality['capture_mode'], 'event_fifo')
+        self.assertEqual(quality['unique_filter_calls'], 3)
+
     def test_renamed_numeric_extra_column_cannot_ambiguously_shift_layout(self):
         rows = legacy_rows(count=2)
         for r in rows:

@@ -20,6 +20,11 @@ static Gimbal_Upload_Data_s gimbal_feedback_data; // 回传给cmd的云台状态
 static Gimbal_Ctrl_Cmd_s gimbal_cmd_recv;         // 来自cmd的控制信息
 
 #if CHASSIS_VELOCITY_FUSION_ENABLE
+bool GimbalGetYawControlSnapshot(DJIMotorControlSnapshot_s *out)
+{
+    return DJIMotorGetControlSnapshot(yaw_motor, out);
+}
+
 bool GimbalGetEncoderSnapshot(GimbalEncoderSample_s samples[2])
 {
     if (!samples || !yaw_motor || !pitch_motor) return false;
