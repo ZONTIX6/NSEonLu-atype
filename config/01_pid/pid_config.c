@@ -40,7 +40,7 @@ const PID_Init_Config_s pid_gimbal_yaw_speed_config = {
     .Ki = 200, /* 积分增益，单位 U/(E·s)；设为 0 时不累积新的积分输出。 */
     .Kd = 0, /* 微分增益，单位 U·s/E；当前默认 0，不产生微分输出。 */
     .Improve = PID_Trapezoid_Intergral | PID_Integral_Limit | PID_Derivative_On_Measurement, /* 默认 0x07：梯形积分、积分限幅、微分先行；用 | 增删标志切换，0 关闭全部。 */
-    .IntegralLimit = 3000, /* 积分输出限幅参数，单位 U；需 Improve 含 PID_Integral_Limit 才参与限幅。 */
+    .IntegralLimit = 9000, /* 抗扰积分上限，单位 U；8 次小陀螺复测原 3000 饱和、持续命令约 7200，本轮单独放宽。 */
     .MaxOut = 20000, /* 总输出绝对值上限，单位 U；控制器将输出限制在正负此值。 */
 };
 
