@@ -13,7 +13,7 @@ def render():
     for number, schema in schemas.items():
         prefix = "VOFA_" + schema["name"].upper()
         names = [item["name"] for item in schema["channels"]]
-        if len(names) > 96 or len(names) != len(set(names)):
+        if len(names) > 102 or len(names) != len(set(names)):
             raise ValueError("Invalid channel contract")
         lines += [f"#define {prefix}_SCHEMA_ID {number}U", "enum {"]
         lines += [f"    {prefix}_{name.upper()} = {index}," for index, name in enumerate(names)]

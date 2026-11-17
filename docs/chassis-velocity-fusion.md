@@ -10,7 +10,7 @@
 
 每组 9 个 8 字节分片，包含源 INS 四元数、去重力的导航系加速度、传感器系角速度、源样本序号/毫秒时间/发送时年龄。接收校验同组 tag、顺序、CRC16 和 10 ms 组装期限。DM 模块解析与接收端重力换算已移除；主板不重复扣除重力。
 
-日常 `config/_vofa/vofa_config.h` 的 `VOFA_OBSERVATION_PROFILE=2` 输出 schema 5、96 通道，`imu_source=1` 表示第二 A 板，单位直接为 SI。下文旧 `Ixx` 索引仅适用于 `VOFA_OBSERVATION_PROFILE=0` 的 schema 3/72 通道：`I64=2` 仍代表外部 CAN，原 DM bit 19 不再设置。新档使用 [通道表](vofa-observation-channels.md) 中的字段名，不套用旧列号与缩放。
+日常 `config/_vofa/vofa_config.h` 的 `VOFA_OBSERVATION_PROFILE=2` 输出 schema 6、102 通道，`imu_source=1` 表示第二 A 板。原卡尔曼字段单位直接为 SI，新增云台角度使用度；`I96`–`I101` 为 yaw 编码器、对齐偏角、年龄、底盘模式、云台连续航向及其年龄。下文旧 `Ixx` 索引仅适用于 `VOFA_OBSERVATION_PROFILE=0` 的 schema 3/72 通道：`I64=2` 仍代表外部 CAN，原 DM bit 19 不再设置。新档使用 [通道表](vofa-observation-channels.md) 中的字段名，不套用旧列号与缩放。
 
 需要轮速基线时只关闭主板 `CHASSIS_REMOTE_IMU_FUSION_ENABLE`，保留第二板发送与同样遥测。失去远端 IMU 时四轮有效则回退轮速；不自动切换本地云台 IMU。
 
@@ -64,7 +64,7 @@
 
 两板上电后保持静止，等待姿态与远端有效位稳定，并先完成轴向和倾斜静止核对。每个工况保存一份 CSV：静止 30–60 s、低速前后起停/换向 30–60 s、低速左右起停/换向 30–60 s，以及两个方向旋转各 20–30 s。旋转按 [手册 T7](kalman-chassis-test-and-acceptance.md#6-t1t8按表执行实测) 先零输出手推，有动力时仅用已验证的受限配置；默认自旋档不能直接当作低速档。各动作前后保留约 5 s 静止，重复 3–5 次，保留起停与换向过程。
 
-日常 schema 5 提交完整 `I0`–`I95`；旧 schema 3 提交完整 `I0`–`I71`，保留表头与 VOFA 时间列。附两板固件身份、构建命令、安装照片、A 板原生轴向及 +Y 116 mm 芯片偏移、实际动作、地面与载荷。不要混用两个 schema 的字段和单位。
+日常 schema 6 提交完整 `I0`–`I101`；旧 schema 5 的 `I0`–`I95` 仍可解析，旧 schema 3 提交完整 `I0`–`I71`，保留表头与 VOFA 时间列。附两板固件身份、构建命令、安装照片、A 板原生轴向及 +Y 116 mm 芯片偏移、实际动作、地面与载荷。不要混用各 schema 的字段和单位。
 
 旧 schema 3 的平移速度使用 mm/s，加速度使用 mm/s²，IMU 角速度使用 mrad/s。`I23`、`I26` 的车体旋转速度为 mrev/s（`1000×转/秒`），由 `wz_rpm×1000/60` 得到。模式 `2` 的 20 ms CSV 记录最新快照（旧模式 `1` 为 80 ms），不会提高 IMU 或融合器的内部更新率，也不能保证捕获每个输入样本、逐次重放高频滤波器或完整辨识 Q/R；实际速度误差和打滑表现还需独立速度参考。
 

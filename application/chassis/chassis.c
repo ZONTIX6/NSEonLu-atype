@@ -453,7 +453,7 @@ void ChassisTask()
     // 从四轮 CAN 反馈估算底盘几何中心速度。
     EstimateSpeed();
 #if CHASSIS_VELOCITY_FUSION_ENABLE
-    ChassisObserveFusedVelocity(&velocity_config);
+    ChassisObserveFusedVelocity(&velocity_config, (uint8_t)chassis_cmd_recv.chassis_mode);
 #endif
 
     // // 获取裁判系统数据   建议将裁判系统与底盘分离，所以此处数据应使用消息中心发送

@@ -24,7 +24,7 @@ def wire_rows(rows):
     return [[r[field['name']] for field in schemas()[r['schema']]['channels']] for r in rows]
 
 
-def attempt(sequence, tick=None, initialized=True, resets=0, **changes):
+def attempt(sequence, tick=None, initialized=True, resets=0, schema=5, **changes):
     tick = sequence * 20 if tick is None else tick
     values = dict(valid=31, config_source=1, config_fingerprint=12345,
         attempt_sequence=sequence, attempt_flags=55 | (8 if initialized else 0),
@@ -34,4 +34,4 @@ def attempt(sequence, tick=None, initialized=True, resets=0, **changes):
         fusion_jerk_density=1., fusion_max_residual_mps=1.5,
         fusion_max_age_us=60000, fusion_max_skew_us=0, fusion_max_gap_us=60000)
     values.update(changes)
-    return row(5, sequence=sequence, tick=tick & 0xffffffff, **values)
+    return row(schema, sequence=sequence, tick=tick & 0xffffffff, **values)

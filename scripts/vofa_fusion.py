@@ -110,7 +110,7 @@ def analyze_fusion(capture, bridge, stationary=False, candidate=None):
         maximum_output_change_mps=0., baseline_posterior_discrepancy_squared=0.,
         candidate_posterior_discrepancy_squared=0., filter_deinitializations=0,
         filter_initializations=0, parameter_changes=[]) if candidate else None
-    if capture['schema'] != 5:
+    if capture['schema'] not in (5, 6):
         limitations.append('legacy_inputs_not_replayable')
     for segment in segments:
         if not all(_config_valid(row) for row in segment):

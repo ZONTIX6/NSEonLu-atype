@@ -29,7 +29,7 @@
 
 打开 [`00_flash/board_flash_config.h`](00_flash/board_flash_config.h)，`BOARD_FLASH_1_` 为整车主板，`BOARD_FLASH_2_` 为下方 IMU 采集板。`BOARD_FLASH_TARGET` 或 `-Board 1/2` 选择目标，两板使用独立构建目录。`BOARD_FLASH_PROGRAMMER` 选 `1` 使用 DAP/OpenOCD，选 `2` 使用 J-Link/J-Flash；脚本不会识别实际连接的物理板。
 
-日常只修改 [`_vofa/vofa_config.h`](_vofa/vofa_config.h) 中的 `VOFA_OBSERVATION_PROFILE`：**`1`=功率/超电，`2`=卡尔曼（默认）**，保持 `00_flash/board_flash_config.h` 中的 `BOARD_FLASH_1_VOFA_TELEMETRY_MODE=2`。两档分别输出新 schema 4/5，各 96 路，UART7 JustFloat、230400 / 8N1、20 ms 目标周期。切换后重新构建和烧录，VOFA+ 直接导出完整原始 CSV，不需要手动列名映射或单位换算。通道顺序和单位以 [`32_capture/vofa_schema.json`](32_capture/vofa_schema.json) 为准；[操作说明与两套采集动作](../docs/vofa-telemetry.md#csv-采集与交付)列出简短步骤。
+日常只修改 [`_vofa/vofa_config.h`](_vofa/vofa_config.h) 中的 `VOFA_OBSERVATION_PROFILE`：**`1`=功率/超电，`2`=卡尔曼（默认）**，保持 `00_flash/board_flash_config.h` 中的 `BOARD_FLASH_1_VOFA_TELEMETRY_MODE=2`。功率档输出 schema 4、96 路，卡尔曼档输出 schema 6、102 路（含 yaw 编码器、底盘模式和云台航向），UART7 JustFloat、230400 / 8N1、20 ms 目标周期。切换后重新构建和烧录，VOFA+ 直接导出完整原始 CSV，不需要手动列名映射或单位换算。通道顺序和单位以 [`32_capture/vofa_schema.json`](32_capture/vofa_schema.json) 为准；[操作说明与两套采集动作](../docs/vofa-telemetry.md#csv-采集与交付)列出简短步骤，[小陀螺切换偏差采集](../docs/vofa-telemetry.md#小陀螺切换偏差采集)说明新增通道的用途。
 
 `VOFA_OBSERVATION_PROFILE=0` 保留旧 schema 2/3；传输模式 `0/1` 忽略用途选项，继续使用旧 19 路 JustFloat/64 或 72 路 FireWater。烧录脚本和手动 Make/CMake 共用 `_vofa/vofa_config.h` 的默认档位。显式 `VOFA_OBSERVATION_PROFILE=1/2`、CMake 的 `-DVOFA_OBSERVATION_PROFILE=1/2`，或自定义 `-ConfigFile` 中的旧 `BOARD_FLASH_1_VOFA_OBSERVATION_PROFILE` 会覆盖默认值；日常无需添加这些覆盖。已有 CMake 缓存若设过该选项，须用 `-UVOFA_OBSERVATION_PROFILE` 重新配置才能恢复读取头文件默认值。新旧 schema 的布局和单位不同，不能混用解析表。
 

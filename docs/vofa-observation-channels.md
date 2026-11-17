@@ -249,3 +249,132 @@
 - bit 3: `initialized_before`
 - bit 4: `output_valid`
 - bit 5: `output_fused`
+
+## Schema 6: kalman_gimbal
+
+| 通道 | 字段 | 单位 |
+| --- | --- | --- |
+| I0 | `schema` | 1 |
+| I1 | `tick_ms_hi` | ms |
+| I2 | `tick_ms_lo` | ms |
+| I3 | `tx_sequence_hi` | 1 |
+| I4 | `tx_sequence_lo` | 1 |
+| I5 | `valid` | 1 |
+| I6 | `observer_status` | 1 |
+| I7 | `config_source` | 1 |
+| I8 | `config_fingerprint_hi` | 1 |
+| I9 | `config_fingerprint_lo` | 1 |
+| I10 | `imu_source` | 1 |
+| I11 | `wheel_online_mask` | 1 |
+| I12 | `raw_rpm_lf` | rotor rpm |
+| I13 | `raw_rpm_rf` | rotor rpm |
+| I14 | `raw_rpm_lb` | rotor rpm |
+| I15 | `raw_rpm_rb` | rotor rpm |
+| I16 | `wheel_age_ms_lf` | ms |
+| I17 | `wheel_age_ms_rf` | ms |
+| I18 | `wheel_age_ms_lb` | ms |
+| I19 | `wheel_age_ms_rb` | ms |
+| I20 | `wheel_vx_mps` | m/s |
+| I21 | `wheel_vy_mps` | m/s |
+| I22 | `wheel_wz_radps` | rad/s |
+| I23 | `target_vx_mps` | m/s |
+| I24 | `target_vy_mps` | m/s |
+| I25 | `target_wz_radps` | rad/s |
+| I26 | `velocity_vx_mps` | m/s |
+| I27 | `velocity_vy_mps` | m/s |
+| I28 | `velocity_age_ms` | ms |
+| I29 | `imu_qw` | 1 |
+| I30 | `imu_qx` | 1 |
+| I31 | `imu_qy` | 1 |
+| I32 | `imu_qz` | 1 |
+| I33 | `imu_ax_mps2` | m/s^2 |
+| I34 | `imu_ay_mps2` | m/s^2 |
+| I35 | `imu_az_mps2` | m/s^2 |
+| I36 | `imu_gx_radps` | rad/s |
+| I37 | `imu_gy_radps` | rad/s |
+| I38 | `imu_gz_radps` | rad/s |
+| I39 | `imu_age_ms` | ms |
+| I40 | `imu_receive_age_ms` | ms |
+| I41 | `imu_source_age_ms` | ms |
+| I42 | `imu_sequence_hi` | 1 |
+| I43 | `imu_sequence_lo` | 1 |
+| I44 | `imu_tick_ms_hi` | ms |
+| I45 | `imu_tick_ms_lo` | ms |
+| I46 | `attempt_sequence_hi` | 1 |
+| I47 | `attempt_sequence_lo` | 1 |
+| I48 | `attempt_flags` | 1 |
+| I49 | `call_receiver_ms_hi` | ms |
+| I50 | `call_receiver_ms_lo` | ms |
+| I51 | `call_us_hi` | us |
+| I52 | `call_us_lo` | us |
+| I53 | `wheel_us_hi` | us |
+| I54 | `wheel_us_lo` | us |
+| I55 | `imu_us_hi` | us |
+| I56 | `imu_us_lo` | us |
+| I57 | `middle_receiver_ms_hi` | ms |
+| I58 | `middle_receiver_ms_lo` | ms |
+| I59 | `wheel_n_x_mps` | m/s |
+| I60 | `wheel_n_y_mps` | m/s |
+| I61 | `accel_n_x_mps2` | m/s^2 |
+| I62 | `accel_n_y_mps2` | m/s^2 |
+| I63 | `output_n_x_mps` | m/s |
+| I64 | `output_n_y_mps` | m/s |
+| I65 | `output_sample_us_hi` | us |
+| I66 | `output_sample_us_lo` | us |
+| I67 | `update_count_hi` | 1 |
+| I68 | `update_count_lo` | 1 |
+| I69 | `reset_count_hi` | 1 |
+| I70 | `reset_count_lo` | 1 |
+| I71 | `resets_before_hi` | 1 |
+| I72 | `resets_before_lo` | 1 |
+| I73 | `pair_span_ms` | ms |
+| I74 | `source_step_ms` | ms |
+| I75 | `receive_step_ms` | ms |
+| I76 | `fusion_wheel_variance` | (m/s)^2 |
+| I77 | `fusion_accel_variance` | (m/s^2)^2 |
+| I78 | `fusion_jerk_density` | m^2/s^5 |
+| I79 | `fusion_max_residual_mps` | m/s |
+| I80 | `fusion_max_age_us_hi` | us |
+| I81 | `fusion_max_age_us_lo` | us |
+| I82 | `fusion_max_skew_us_hi` | us |
+| I83 | `fusion_max_skew_us_lo` | us |
+| I84 | `fusion_max_gap_us_hi` | us |
+| I85 | `fusion_max_gap_us_lo` | us |
+| I86 | `mount_qw` | 1 |
+| I87 | `mount_qx` | 1 |
+| I88 | `mount_qy` | 1 |
+| I89 | `mount_qz` | 1 |
+| I90 | `offset_x_m` | m |
+| I91 | `offset_y_m` | m |
+| I92 | `offset_z_m` | m |
+| I93 | `max_pair_span_ms` | ms |
+| I94 | `max_wheel_skew_ms` | ms |
+| I95 | `max_timing_jitter_ms` | ms |
+| I96 | `yaw_ecd` | encoder count |
+| I97 | `yaw_offset_deg` | deg |
+| I98 | `yaw_age_ms` | ms |
+| I99 | `chassis_mode` | 1 |
+| I100 | `gimbal_yaw_total_deg` | deg |
+| I101 | `gimbal_imu_age_ms` | ms |
+
+有效位（I5）：
+
+- bit 0: `wheels`
+- bit 1: `target`
+- bit 2: `estimate`
+- bit 3: `imu`
+- bit 4: `attempt`
+- bit 5: `verified`
+- bit 6: `capture_fifo`
+- bit 7: `capture_overflow`
+- bit 8: `yaw_encoder`
+- bit 9: `gimbal_imu`
+
+`attempt_flags`：
+
+- bit 0: `available`
+- bit 1: `wheel_valid`
+- bit 2: `imu_valid`
+- bit 3: `initialized_before`
+- bit 4: `output_valid`
+- bit 5: `output_fused`

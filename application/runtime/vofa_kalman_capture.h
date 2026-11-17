@@ -18,7 +18,8 @@ typedef struct {
 } VofaKalmanCaptureStats_s;
 
 /* Single producer: the chassis observer, after each observation. Copies a new
- * actual filter call (including rejection), status changes and 100 ms heartbeats.
+ * actual filter call (including rejection), status/chassis mode changes and
+ * 100 ms heartbeats.
  * Bounded, nonblocking, no allocation or encoding. Never resets the queue. */
 void VofaKalmanCapture(const ChassisFusedVelocitySnapshot_s *velocity,
     const ChassisImuCanSnapshot_s *remote, bool remote_usable,

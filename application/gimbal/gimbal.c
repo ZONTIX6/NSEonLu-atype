@@ -28,9 +28,10 @@ bool GimbalGetEncoderSnapshot(GimbalEncoderSample_s samples[2])
     taskENTER_CRITICAL();
     for (unsigned i=0;i<2;++i) {
         const DJI_Motor_Measure_s *measure=&motors[i]->measure;
-        valid &= measure->rx_sequence!=0 && DaemonIsOnline(motors[i]->daemon) && measure->ecd<8192U;
+        const bool online=measure->rx_sequence!=0 && DaemonIsOnline(motors[i]->daemon) && measure->ecd<8192U;
+        valid &= online;
         samples[i]=(GimbalEncoderSample_s){.tick_ms=measure->rx_tick_ms,
-            .cycles=measure->rx_cycles,.ecd=measure->ecd,.rpm=measure->raw_rpm};
+            .cycles=measure->rx_cycles,.ecd=measure->ecd,.rpm=measure->raw_rpm,.valid=online};
     }
     taskEXIT_CRITICAL();
     return valid;

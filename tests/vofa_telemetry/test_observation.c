@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 #include "imu_capture_config.h"
+enum { CHANNELS = VOFA_OBSERVATION_PROFILE == 1 ? VOFA_POWER_CHANNELS : VOFA_KALMAN_GIMBAL_CHANNELS,
+       FRAME_BYTES = (CHANNELS + 1) * 4 };
 static uint32_t tick;
 static unsigned critical;
 #if CHASSIS_IMU_CAN_RX_ENABLE
@@ -83,10 +85,10 @@ static void send_observation(const USBTelemetrySample_s *sample,
 static void check_frame(void)
 {
     const uint8_t tail[] = {0, 0, 128, 127};
-    assert(length == 388);
-    assert(memcmp(active + 384, tail, 4) == 0);
-    for (unsigned i = 0; i < 96; ++i) assert(isfinite(field(i)));
-    for (unsigned i = 0; i + 4 <= 384; ++i) assert(memcmp(active + i, tail, 4) != 0);
+    assert(length == FRAME_BYTES);
+    assert(memcmp(active + CHANNELS * 4, tail, 4) == 0);
+    for (unsigned i = 0; i < CHANNELS; ++i) assert(isfinite(field(i)));
+    for (unsigned i = 0; i + 4 <= CHANNELS * 4; ++i) assert(memcmp(active + i, tail, 4) != 0);
 }
 int main(void)
 {
@@ -143,21 +145,21 @@ int main(void)
     assert(field(VOFA_POWER_METER_POWER_W) == 12.75f);
     assert(field(VOFA_POWER_METER_SEQUENCE_HI) == 1);
 #else
-    assert(field(0) == 5);
-    assert(field(VOFA_KALMAN_WHEEL_N_X_MPS) == 1.25f);
-    assert(field(VOFA_KALMAN_ACCEL_N_Y_MPS2) == -0.5f);
-    assert(fabsf(field(VOFA_KALMAN_TARGET_VX_MPS) - 1.234f) < 1e-6f);
-    assert(fabsf(field(VOFA_KALMAN_TARGET_WZ_RADPS) - 1.5707963f) < 1e-6f);
-    assert(field(VOFA_KALMAN_ATTEMPT_FLAGS) == 7);
+    assert(field(0) == 6);
+    assert(field(VOFA_KALMAN_GIMBAL_WHEEL_N_X_MPS) == 1.25f);
+    assert(field(VOFA_KALMAN_GIMBAL_ACCEL_N_Y_MPS2) == -0.5f);
+    assert(fabsf(field(VOFA_KALMAN_GIMBAL_TARGET_VX_MPS) - 1.234f) < 1e-6f);
+    assert(fabsf(field(VOFA_KALMAN_GIMBAL_TARGET_WZ_RADPS) - 1.5707963f) < 1e-6f);
+    assert(field(VOFA_KALMAN_GIMBAL_ATTEMPT_FLAGS) == 7);
 #if CHASSIS_IMU_CAN_RX_ENABLE
-    assert(field(VOFA_KALMAN_IMU_SOURCE) == 1);
-    assert(field(VOFA_KALMAN_IMU_AX_MPS2) == 2.5f);
-    assert(field(VOFA_KALMAN_IMU_AGE_MS) == 7);
-    assert(field(VOFA_KALMAN_IMU_RECEIVE_AGE_MS) == 3);
-    assert(field(VOFA_KALMAN_IMU_SOURCE_AGE_MS) == 2);
+    assert(field(VOFA_KALMAN_GIMBAL_IMU_SOURCE) == 1);
+    assert(field(VOFA_KALMAN_GIMBAL_IMU_AX_MPS2) == 2.5f);
+    assert(field(VOFA_KALMAN_GIMBAL_IMU_AGE_MS) == 7);
+    assert(field(VOFA_KALMAN_GIMBAL_IMU_RECEIVE_AGE_MS) == 3);
+    assert(field(VOFA_KALMAN_GIMBAL_IMU_SOURCE_AGE_MS) == 2);
 #endif
 #endif
-    uint8_t saved[388]; memcpy(saved, active, sizeof saved);
+    uint8_t saved[FRAME_BYTES]; memcpy(saved, active, sizeof saved);
 #if CHASSIS_IMU_CAN_RX_ENABLE
     source_imu.available = false;
 #endif
@@ -170,6 +172,11 @@ int main(void)
     assert(sent == 2 && field(4) == 2 && field(5) == 0);
     check_frame();
     huart7.gState = HAL_UART_STATE_READY; fail_send = true;
+#if VOFA_OBSERVATION_PROFILE == 2
+    assert(field(VOFA_KALMAN_GIMBAL_YAW_AGE_MS) == -1);
+    assert(field(VOFA_KALMAN_GIMBAL_CHASSIS_MODE) == -1);
+    assert(field(VOFA_KALMAN_GIMBAL_GIMBAL_IMU_AGE_MS) == -1);
+#endif
     send_observation(NULL, NULL, NULL, NULL, NULL, start + 60U);
     assert(sent == 2);
     fail_send = false;
@@ -221,11 +228,11 @@ int main(void)
     tick = scheduled + 2U;
     huart7.gState = HAL_UART_STATE_READY;
     VofaObservationSend(&sample, NULL, &velocity, NULL, NULL, scheduled);
-    assert((unsigned)field(VOFA_KALMAN_VALID) & 8U);
-    assert(field(VOFA_KALMAN_IMU_AGE_MS) == 1);
-    assert(field(VOFA_KALMAN_IMU_RECEIVE_AGE_MS) == 0);
-    assert(field(VOFA_KALMAN_WHEEL_AGE_MS_LF) == 5);
-    assert(((unsigned)field(VOFA_KALMAN_VALID) & 2U) == 0); /* Target is now 21 ms old. */
+    assert((unsigned)field(VOFA_KALMAN_GIMBAL_VALID) & 8U);
+    assert(field(VOFA_KALMAN_GIMBAL_IMU_AGE_MS) == 1);
+    assert(field(VOFA_KALMAN_GIMBAL_IMU_RECEIVE_AGE_MS) == 0);
+    assert(field(VOFA_KALMAN_GIMBAL_WHEEL_AGE_MS_LF) == 5);
+    assert(((unsigned)field(VOFA_KALMAN_GIMBAL_VALID) & 2U) == 0); /* Target is now 21 ms old. */
     assert((uint32_t)field(1) * 65536U + (uint32_t)field(2) == tick);
 
     /* An IRQ between the fresh clock read and snapshot copy must be deferred.
@@ -237,10 +244,10 @@ int main(void)
     interrupt_on_tick = true;
     huart7.gState = HAL_UART_STATE_READY;
     VofaObservationSend(NULL, NULL, NULL, NULL, NULL, tick);
-    assert((unsigned)field(VOFA_KALMAN_VALID) & 8U);
-    assert(field(VOFA_KALMAN_IMU_SEQUENCE_LO) == 100);
-    assert(field(VOFA_KALMAN_IMU_AGE_MS) == 1);
-    assert(field(VOFA_KALMAN_IMU_RECEIVE_AGE_MS) == 0);
+    assert((unsigned)field(VOFA_KALMAN_GIMBAL_VALID) & 8U);
+    assert(field(VOFA_KALMAN_GIMBAL_IMU_SEQUENCE_LO) == 100);
+    assert(field(VOFA_KALMAN_GIMBAL_IMU_AGE_MS) == 1);
+    assert(field(VOFA_KALMAN_GIMBAL_IMU_RECEIVE_AGE_MS) == 0);
     assert(source_imu.sample.sequence == 101 && !interrupt_pending);
     assert((uint32_t)field(1) * 65536U + (uint32_t)field(2) == scheduled + 40U);
 
@@ -250,9 +257,9 @@ int main(void)
     tick = 1;
     huart7.gState = HAL_UART_STATE_READY;
     VofaObservationSend(NULL, NULL, NULL, NULL, NULL, UINT32_MAX - 1U);
-    assert((unsigned)field(VOFA_KALMAN_VALID) & 8U);
-    assert(field(VOFA_KALMAN_IMU_AGE_MS) == 2);
-    assert(field(VOFA_KALMAN_IMU_RECEIVE_AGE_MS) == 1);
+    assert((unsigned)field(VOFA_KALMAN_GIMBAL_VALID) & 8U);
+    assert(field(VOFA_KALMAN_GIMBAL_IMU_AGE_MS) == 2);
+    assert(field(VOFA_KALMAN_GIMBAL_IMU_RECEIVE_AGE_MS) == 1);
     assert(field(1) == 0 && field(2) == 1);
     const uint16_t source_ages[] = {UINT16_MAX, 21, 0, 0};
     for (unsigned i = 0; i < 4; ++i) {
@@ -261,7 +268,32 @@ int main(void)
         source_imu.first_rx_tick_ms = source_imu.last_rx_tick_ms = i == 3 ? 0 : 100U + i * 20U;
         huart7.gState = HAL_UART_STATE_READY;
         send_observation(NULL, NULL, NULL, NULL, NULL, 100U + i * 20U);
-        assert(((unsigned)field(VOFA_KALMAN_VALID) & 8U) == 0);
+        assert(((unsigned)field(VOFA_KALMAN_GIMBAL_VALID) & 8U) == 0);
+    }
+#endif
+#if VOFA_OBSERVATION_PROFILE == 2
+    /* Raw encoder counts, circular offsets and independent local-head IMU.
+     * Pitch validity must not gate yaw-only diagnostics. */
+    const uint16_t encoders[] = {350, 2398, 6494, 8191, 350, 8192, 350, 350, 350};
+    const float offsets_deg[] = {0, 90, -90, -15.4248046875f, 0, 0, 0, 0, 0};
+    for (unsigned i = 0; i < sizeof encoders / sizeof encoders[0]; ++i) {
+        const uint32_t now = 2000U + i * 20U;
+        velocity.diagnostics = (ChassisVelocityDiagnostics_s){.available = true, .tick_ms = now,
+            .yaw_encoder_valid = i != 6, .joint_ecd = {encoders[i], 8192},
+            .joint_tick_ms = {now - (i == 4 ? 21U : 2U), 0}, .chassis_mode = i ? 1 : 3,
+            .gimbal_imu_known = true, .gimbal_imu_valid = true,
+            .gimbal_imu_tick_ms = now - (i == 8 ? 21U : 1U),
+            .gimbal_yaw_total_deg = i == 7 ? NAN : 721.25f};
+        huart7.gState = HAL_UART_STATE_READY;
+        send_observation(NULL, NULL, &velocity, NULL, NULL, now);
+        check_frame();
+        assert(((unsigned)field(VOFA_KALMAN_GIMBAL_VALID) & 256U) == (i < 4 || i > 6 ? 256U : 0U));
+        assert(field(VOFA_KALMAN_GIMBAL_YAW_ECD) == (i < 4 || i > 6 ? encoders[i] : 0));
+        assert(fabsf(field(VOFA_KALMAN_GIMBAL_YAW_OFFSET_DEG) - offsets_deg[i]) < 1e-5f);
+        assert(field(VOFA_KALMAN_GIMBAL_YAW_AGE_MS) == (i == 6 ? -1 : i == 4 ? 21 : 2));
+        assert(field(VOFA_KALMAN_GIMBAL_CHASSIS_MODE) == (i ? 1 : 3));
+        assert(((unsigned)field(VOFA_KALMAN_GIMBAL_VALID) & 512U) == (i < 7 ? 512U : 0U));
+        assert(field(VOFA_KALMAN_GIMBAL_GIMBAL_YAW_TOTAL_DEG) == (i < 7 ? 721.25f : 0));
     }
 #endif
     puts("PASS: dedicated profile units, evidence, finite data and asynchronous transport");

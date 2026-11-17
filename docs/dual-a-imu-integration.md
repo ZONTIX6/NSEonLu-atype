@@ -55,7 +55,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Act
 
 两板时钟独立。主板用“首片接收时间 − 发送时源年龄”估计轮速配对时刻，中心补偿和滤波 dt 使用源板样本间隔。源年龄应 ≤20 ms，已知年龄下界应 ≤60 ms；首片仲裁等待和传感器内部延迟仍未测量。断流后四轮有效则回退轮速，恢复后重新预热；融合只用于观测。
 
-日常 `config/_vofa/vofa_config.h` 保持 `VOFA_OBSERVATION_PROFILE=2`：主板 UART7、JustFloat、230400 / 8N1、20 ms 目标周期，schema 5 的 96 通道，`imu_source=1` 表示第二块 A 板。保存完整 `I0`–`I95` 与原表头。旧 profile 0/schema 3 保留 `I64=2` 的外部来源编码，bit 19 不再设置；两个 schema 的列号、来源编码和单位不同。
+日常 `config/_vofa/vofa_config.h` 保持 `VOFA_OBSERVATION_PROFILE=2`：主板 UART7、JustFloat、230400 / 8N1、20 ms 目标周期，schema 6 的 102 通道，`imu_source=1` 表示第二块 A 板；新增 `I100` 为主板云台 IMU 连续航向（°），与底盘 IMU 分开。保存完整 `I0`–`I101` 与原表头。旧 profile 0/schema 3 保留 `I64=2` 的外部来源编码，bit 19 不再设置；两个 schema 的列号、来源编码和单位不同。
 
 ## 轴向与补偿检查
 

@@ -244,12 +244,13 @@ static void UpdateRemote(ChassisFusedVelocitySnapshot_s *snapshot,
 }
 #endif
 
-void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config)
+void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config, uint8_t chassis_mode)
 {
     DJIMotorInstance *const motors[4]={motor_lf,motor_rf,motor_lb,motor_rb};
     ChassisVelocityInput_s wheels={0};
     ChassisFusedVelocitySnapshot_s snapshot={0};
     INSMotionSnapshot_s imu={0};
+    INSSnapshot_s gimbal_imu={0};
     GimbalEncoderSample_s joints[2]={0};
 #if CHASSIS_REMOTE_IMU_FUSION_ENABLE
     ChassisImuCanSnapshot_s remote={0};
@@ -272,6 +273,7 @@ void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config)
     (void)INSGetMotionSnapshot(&imu);
 #endif
     const bool joints_valid=GimbalGetEncoderSnapshot(joints);
+    (void)INSGetSnapshot(&gimbal_imu);
 #if CHASSIS_VELOCITY_FUSION_CALIBRATED
     const uint32_t cycles=DWT_GetCycleCount();
 #endif
@@ -310,6 +312,12 @@ void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config)
     diagnostics->imu_sequence=imu.sequence;
     diagnostics->imu_valid=imu.valid;
     diagnostics->joints_valid=joints_valid;
+    diagnostics->yaw_encoder_valid=joints[0].valid;
+    diagnostics->chassis_mode=chassis_mode;
+    diagnostics->gimbal_yaw_total_deg=gimbal_imu.attitude.YawTotalAngle;
+    diagnostics->gimbal_imu_tick_ms=gimbal_imu.tick_ms;
+    diagnostics->gimbal_imu_valid=gimbal_imu.valid;
+    diagnostics->gimbal_imu_known=gimbal_imu.has_sample;
     for (unsigned i=0;i<2;++i) {
         diagnostics->joint_ecd[i]=joints[i].ecd;
         diagnostics->joint_rpm[i]=joints[i].rpm;

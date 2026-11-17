@@ -35,6 +35,11 @@ typedef struct {
     int16_t joint_rpm[2];
     uint32_t joint_tick_ms[2];
     bool joints_valid, available;
+    bool yaw_encoder_valid;
+    uint8_t chassis_mode;
+    float gimbal_yaw_total_deg; /* Local head INS, independent of the remote chassis IMU. */
+    uint32_t gimbal_imu_tick_ms;
+    bool gimbal_imu_valid, gimbal_imu_known;
 } ChassisVelocityDiagnostics_s;
 
 typedef struct {

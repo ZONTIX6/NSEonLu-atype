@@ -38,6 +38,8 @@ bool DaemonIsOnline(const bool *value) { return *value; }
 /* The remote observer must work without a local IMU or gimbal measurement. */
 bool INSGetMotionSnapshot(INSMotionSnapshot_s *out)
 { ++local_imu_reads; memset(out,0,sizeof *out); return false; }
+bool INSGetSnapshot(INSSnapshot_s *out)
+{ *out=(INSSnapshot_s){0}; return false; }
 bool GimbalGetEncoderSnapshot(GimbalEncoderSample_s out[2])
 { memset(out,0,2*sizeof *out); return false; }
 bool ChassisImuCanReadSnapshot(ChassisImuCanSnapshot_s *out,uint32_t now_ms)
@@ -71,7 +73,7 @@ static ChassisFusedVelocitySnapshot_s Step(bool new_remote)
         remote.last_rx_tick_ms=tick;
         remote_usable=true;
     }
-    ChassisObserveFusedVelocity(&config);
+    ChassisObserveFusedVelocity(&config, 1);
     assert(captured == before_capture + 1);
     ChassisFusedVelocitySnapshot_s out;
     (void)ChassisGetFusedVelocitySnapshot(&out);

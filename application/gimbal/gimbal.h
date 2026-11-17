@@ -9,6 +9,7 @@ typedef struct {
     uint32_t tick_ms, cycles;
     uint16_t ecd;
     int16_t rpm;
+    bool valid;
 } GimbalEncoderSample_s;
 
 /* Raw mechanical yaw and pitch, in that order. */

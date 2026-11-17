@@ -105,7 +105,7 @@ static void StartTelemetryTask(void const *argument)
 #endif
     for (;;) {
 #if VOFA_KALMAN_CAPTURE_ENABLED
-        /* UART can clear a 388-byte frame in 16.84 ms. Poll cheaply at 1 ms so
+        /* UART can clear a 412-byte frame in 17.88 ms. Poll cheaply at 1 ms so
          * queued calls catch up after jitter; keep USB/collection at 20 ms. */
         VofaKalmanCaptureDrain();
         const TickType_t now = xTaskGetTickCount();

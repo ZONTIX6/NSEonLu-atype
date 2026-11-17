@@ -18,7 +18,7 @@ static INSMotionSnapshot_s imu = {
     .tick_ms = 999, .cycles = 999U * 168000U, .sequence = 37, .valid = true,
 };
 static GimbalEncoderSample_s joints[2] = {
-    {.tick_ms = 998, .cycles = 998U * 168000U, .ecd = 1234, .rpm = -42},
+    {.tick_ms = 998, .cycles = 998U * 168000U, .ecd = 1234, .rpm = -42, .valid = true},
     {.tick_ms = 997, .cycles = 997U * 168000U, .ecd = 5678, .rpm = 17},
 };
 static bool joints_valid = true;
@@ -28,6 +28,8 @@ uint32_t HAL_GetTick(void) { return now_ms; }
 uint32_t DWT_GetCycleCount(void) { return now_ms * 168000U; }
 uint32_t DWT_GetFrequencyHz(void) { return 168000000; }
 bool INSGetMotionSnapshot(INSMotionSnapshot_s *out) { *out = imu; return imu.valid; }
+bool INSGetSnapshot(INSSnapshot_s *out)
+{ *out=(INSSnapshot_s){.attitude={.YawTotalAngle=721.25f},.tick_ms=999,.valid=true,.has_sample=true}; return true; }
 bool GimbalGetEncoderSnapshot(GimbalEncoderSample_s out[2])
 {
     if (!joints_valid) return false;
@@ -54,7 +56,7 @@ int main(void)
         motors[w].measure.rx_cycles = (998 - w) * 168000U;
     }
 
-    ChassisObserveFusedVelocity(&config);
+    ChassisObserveFusedVelocity(&config, 1);
     assert(ChassisGetFusedVelocitySnapshot(&out));
 #if !CHASSIS_VELOCITY_FUSION_CALIBRATED
     assert(out.status == CHASSIS_VELOCITY_UNCALIBRATED);
@@ -75,6 +77,9 @@ int main(void)
     assert(d->joints_valid && d->joint_ecd[0] == 1234 && d->joint_ecd[1] == 5678);
     assert(d->joint_rpm[0] == -42 && d->joint_rpm[1] == 17);
     assert(d->joint_tick_ms[0] == 998 && d->joint_tick_ms[1] == 997);
+    assert(d->yaw_encoder_valid && d->chassis_mode == 1);
+    assert(d->gimbal_imu_known && d->gimbal_imu_valid && d->gimbal_imu_tick_ms == 999);
+    assert(d->gimbal_yaw_total_deg == 721.25f);
 
     /* A late getter invalidates velocity, but preserves the diagnostic epoch
        and values so the CSV consumer can identify stale observations. */
@@ -88,7 +93,7 @@ int main(void)
     online[1] = false;
     motors[2].measure.rx_sequence = 0;
     motor_rb = NULL;
-    ChassisObserveFusedVelocity(&config);
+    ChassisObserveFusedVelocity(&config, 1);
     assert(!ChassisGetFusedVelocitySnapshot(&out));
     assert(out.status == CHASSIS_VELOCITY_WHEEL_UNAVAILABLE);
     assert(d->available && d->tick_ms == 1021 && d->wheel_online_mask == 1);

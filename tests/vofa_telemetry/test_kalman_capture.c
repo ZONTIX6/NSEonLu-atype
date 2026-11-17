@@ -8,7 +8,7 @@
 #include <string.h>
 
 /* Each scenario runs in a fresh process: production has no test-only reset. */
-enum { FRAME_BYTES = 388, LOG_CAPACITY = 512 };
+enum { FRAME_BYTES = (VOFA_KALMAN_GIMBAL_CHANNELS + 1) * 4, LOG_CAPACITY = 512 };
 UART_HandleTypeDef huart7 = {.gState = HAL_UART_STATE_READY};
 static uint32_t tick, send_started;
 static unsigned critical, sent, read_imu_calls, clock_reads;
@@ -45,6 +45,13 @@ static void sample(uint32_t now, uint32_t attempt)
     velocity.diagnostics.available = true;
     velocity.diagnostics.tick_ms = now;
     velocity.diagnostics.wheel_online_mask = 15;
+    velocity.diagnostics.yaw_encoder_valid = true;
+    velocity.diagnostics.joint_ecd[0] = 350U + attempt % 2048U;
+    velocity.diagnostics.joint_tick_ms[0] = now - 1U;
+    velocity.diagnostics.chassis_mode = 1;
+    velocity.diagnostics.gimbal_imu_known = velocity.diagnostics.gimbal_imu_valid = true;
+    velocity.diagnostics.gimbal_imu_tick_ms = now - 2U;
+    velocity.diagnostics.gimbal_yaw_total_deg = 721.25f;
     for (unsigned i = 0; i < 4; ++i) {
         velocity.diagnostics.raw_rpm[i] = 100.f + (float)i;
         velocity.diagnostics.wheel_tick_ms[i] = now - 2U;
@@ -128,10 +135,10 @@ static uint32_t word(const uint8_t *frame, unsigned index)
 static void check_frame(const uint8_t *frame)
 {
     const uint8_t tail[] = {0, 0, 128, 127};
-    assert(field(frame, 0) == 5 && memcmp(frame + 384, tail, 4) == 0);
-    for (unsigned i = 0; i < 96; ++i) assert(isfinite(field(frame, i)));
-    for (unsigned i = 0; i + 4 <= 384; ++i) assert(memcmp(frame + i, tail, 4) != 0);
-    assert((unsigned)lroundf(field(frame, VOFA_KALMAN_VALID)) & 64U);
+    assert(field(frame, 0) == 6 && memcmp(frame + FRAME_BYTES - 4, tail, 4) == 0);
+    for (unsigned i = 0; i < VOFA_KALMAN_GIMBAL_CHANNELS; ++i) assert(isfinite(field(frame, i)));
+    for (unsigned i = 0; i + 4 <= FRAME_BYTES - 4; ++i) assert(memcmp(frame + i, tail, 4) != 0);
+    assert((unsigned)lroundf(field(frame, VOFA_KALMAN_GIMBAL_VALID)) & 64U);
 }
 
 static VofaKalmanCaptureStats_s stats(void)
@@ -160,25 +167,30 @@ static void startup_preserves_frozen_records(void)
     VofaObservationSend(NULL, NULL, NULL, NULL, NULL, tick);
     assert(sent == 1 && stats().pending == 1);
     check_frame(active);
-    assert(word(active, VOFA_KALMAN_TICK_MS_HI) == 1000);
-    assert(word(active, VOFA_KALMAN_TX_SEQUENCE_HI) == 0);
-    assert(word(active, VOFA_KALMAN_ATTEMPT_SEQUENCE_HI) == 1);
-    assert((unsigned)field(active, VOFA_KALMAN_VALID) == 95U);
-    assert(field(active, VOFA_KALMAN_ATTEMPT_FLAGS) == 55U); /* Known initial state. */
-    assert(field(active, VOFA_KALMAN_IMU_AGE_MS) == 5);
-    assert(field(active, VOFA_KALMAN_IMU_RECEIVE_AGE_MS) == 2);
-    assert(field(active, VOFA_KALMAN_IMU_SOURCE_AGE_MS) == 1);
-    assert(field(active, VOFA_KALMAN_VELOCITY_AGE_MS) == 20);
-    assert(field(active, VOFA_KALMAN_IMU_AX_MPS2) == 2.5f);
-    assert(field(active, VOFA_KALMAN_FUSION_ACCEL_VARIANCE) == 1.75f);
-    assert(fabsf(field(active, VOFA_KALMAN_TARGET_VX_MPS) - 1.2345f) < 1e-6f);
-    assert(fabsf(field(active, VOFA_KALMAN_TARGET_WZ_RADPS) - 1.5707963f) < 1e-6f);
+    assert(word(active, VOFA_KALMAN_GIMBAL_TICK_MS_HI) == 1000);
+    assert(word(active, VOFA_KALMAN_GIMBAL_TX_SEQUENCE_HI) == 0);
+    assert(word(active, VOFA_KALMAN_GIMBAL_ATTEMPT_SEQUENCE_HI) == 1);
+    assert((unsigned)field(active, VOFA_KALMAN_GIMBAL_VALID) == (95U | 256U | 512U));
+    assert(field(active, VOFA_KALMAN_GIMBAL_ATTEMPT_FLAGS) == 55U); /* Known initial state. */
+    assert(field(active, VOFA_KALMAN_GIMBAL_IMU_AGE_MS) == 5);
+    assert(field(active, VOFA_KALMAN_GIMBAL_IMU_RECEIVE_AGE_MS) == 2);
+    assert(field(active, VOFA_KALMAN_GIMBAL_IMU_SOURCE_AGE_MS) == 1);
+    assert(field(active, VOFA_KALMAN_GIMBAL_VELOCITY_AGE_MS) == 20);
+    assert(field(active, VOFA_KALMAN_GIMBAL_IMU_AX_MPS2) == 2.5f);
+    assert(field(active, VOFA_KALMAN_GIMBAL_FUSION_ACCEL_VARIANCE) == 1.75f);
+    assert(fabsf(field(active, VOFA_KALMAN_GIMBAL_TARGET_VX_MPS) - 1.2345f) < 1e-6f);
+    assert(fabsf(field(active, VOFA_KALMAN_GIMBAL_TARGET_WZ_RADPS) - 1.5707963f) < 1e-6f);
+    assert(field(active, VOFA_KALMAN_GIMBAL_YAW_ECD) == 351);
+    assert(field(active, VOFA_KALMAN_GIMBAL_YAW_AGE_MS) == 1);
+    assert(field(active, VOFA_KALMAN_GIMBAL_GIMBAL_YAW_TOTAL_DEG) == 721.25f);
+    assert(field(active, VOFA_KALMAN_GIMBAL_GIMBAL_IMU_AGE_MS) == 2);
     finish_uart();
     VofaKalmanCaptureDrain();
     assert(sent == 2 && stats().pending == 0);
-    assert(word(active, VOFA_KALMAN_TICK_MS_HI) == 1020);
-    assert(word(active, VOFA_KALMAN_TX_SEQUENCE_HI) == 1);
-    assert(word(active, VOFA_KALMAN_ATTEMPT_SEQUENCE_HI) == 2);
+    assert(field(active, VOFA_KALMAN_GIMBAL_YAW_ECD) == 352);
+    assert(word(active, VOFA_KALMAN_GIMBAL_TICK_MS_HI) == 1020);
+    assert(word(active, VOFA_KALMAN_GIMBAL_TX_SEQUENCE_HI) == 1);
+    assert(word(active, VOFA_KALMAN_GIMBAL_ATTEMPT_SEQUENCE_HI) == 2);
     finish_uart();
     VofaKalmanCaptureDrain();
     assert(sent == 2 && read_imu_calls == 0 && clock_reads == 0);
@@ -197,7 +209,7 @@ static void retry_and_preemption_preserve_the_queue(void)
     capture_during_send = true;
     VofaKalmanCaptureDrain();
     assert(sent == 1 && stats().pending == 1);
-    assert(word(active, VOFA_KALMAN_TX_SEQUENCE_HI) == 0);
+    assert(word(active, VOFA_KALMAN_GIMBAL_TX_SEQUENCE_HI) == 0);
     uint8_t saved[FRAME_BYTES];
     memcpy(saved, active, sizeof saved);
     for (unsigned i = 0; i < 25; ++i) VofaKalmanCaptureDrain();
@@ -205,8 +217,8 @@ static void retry_and_preemption_preserve_the_queue(void)
     finish_uart();
     VofaKalmanCaptureDrain();
     assert(sent == 2 && stats().pending == 0);
-    assert(word(active, VOFA_KALMAN_TX_SEQUENCE_HI) == 1);
-    assert(word(active, VOFA_KALMAN_ATTEMPT_SEQUENCE_HI) == 2);
+    assert(word(active, VOFA_KALMAN_GIMBAL_TX_SEQUENCE_HI) == 1);
+    assert(word(active, VOFA_KALMAN_GIMBAL_ATTEMPT_SEQUENCE_HI) == 2);
     assert(read_imu_calls == 0);
 }
 
@@ -219,17 +231,17 @@ static void overflow_is_counted_without_overwriting_pending_records(void)
     for (uint32_t i = 0; i < 16; ++i) {
         finish_uart();
         VofaKalmanCaptureDrain();
-        assert(word(active, VOFA_KALMAN_TX_SEQUENCE_HI) == i);
-        assert(word(active, VOFA_KALMAN_ATTEMPT_SEQUENCE_HI) == i + 1U);
+        assert(word(active, VOFA_KALMAN_GIMBAL_TX_SEQUENCE_HI) == i);
+        assert(word(active, VOFA_KALMAN_GIMBAL_ATTEMPT_SEQUENCE_HI) == i + 1U);
         check_frame(active);
     }
     assert(stats().pending == 0);
     capture(1361, 19);
     finish_uart();
     VofaKalmanCaptureDrain();
-    assert(word(active, VOFA_KALMAN_TX_SEQUENCE_HI) == 18); /* Dropped 16 and 17. */
-    assert(word(active, VOFA_KALMAN_ATTEMPT_SEQUENCE_HI) == 19);
-    assert((unsigned)lroundf(field(active, VOFA_KALMAN_VALID)) & 128U);
+    assert(word(active, VOFA_KALMAN_GIMBAL_TX_SEQUENCE_HI) == 18); /* Dropped 16 and 17. */
+    assert(word(active, VOFA_KALMAN_GIMBAL_ATTEMPT_SEQUENCE_HI) == 19);
+    assert((unsigned)lroundf(field(active, VOFA_KALMAN_GIMBAL_VALID)) & 128U);
     assert(stats().sent == 17 && stats().dropped == 2);
 }
 
@@ -242,7 +254,7 @@ static void jitter_and_consumer_stall_do_not_skip_calls(void)
         event_times[i] = event_times[i-1] + (i & 1U ? 19U : 21U);
     unsigned next = 0;
     for (tick = 1000; tick <= event_times[EVENTS-1] + 200U; ++tick) {
-        if (huart7.gState == HAL_UART_STATE_BUSY_TX && tick - send_started >= 17U)
+        if (huart7.gState == HAL_UART_STATE_BUSY_TX && tick - send_started >= 18U)
             finish_uart();
         if (next < EVENTS && tick == event_times[next]) {
             capture(tick, 100U + next);
@@ -258,9 +270,9 @@ static void jitter_and_consumer_stall_do_not_skip_calls(void)
     assert(stats().high_water >= 3);
     for (unsigned i = 0; i < EVENTS; ++i) {
         check_frame(frames[i]);
-        assert(word(frames[i], VOFA_KALMAN_TX_SEQUENCE_HI) == i);
-        assert(word(frames[i], VOFA_KALMAN_ATTEMPT_SEQUENCE_HI) == 100U + i);
-        assert(word(frames[i], VOFA_KALMAN_TICK_MS_HI) == event_times[i]);
+        assert(word(frames[i], VOFA_KALMAN_GIMBAL_TX_SEQUENCE_HI) == i);
+        assert(word(frames[i], VOFA_KALMAN_GIMBAL_ATTEMPT_SEQUENCE_HI) == 100U + i);
+        assert(word(frames[i], VOFA_KALMAN_GIMBAL_TICK_MS_HI) == event_times[i]);
     }
     assert(read_imu_calls == 0);
 }
@@ -290,15 +302,15 @@ static void heartbeat_and_rejected_calls_remain_visible(void)
     for (unsigned i = 0; i < 6; ++i) {
         finish_uart();
         VofaKalmanCaptureDrain();
-        assert(word(active, VOFA_KALMAN_TX_SEQUENCE_HI) == i);
+        assert(word(active, VOFA_KALMAN_GIMBAL_TX_SEQUENCE_HI) == i);
     }
-    assert(field(frames[0], VOFA_KALMAN_OBSERVER_STATUS) == CHASSIS_VELOCITY_NO_SAMPLE);
-    assert(field(frames[1], VOFA_KALMAN_OBSERVER_STATUS) == CHASSIS_VELOCITY_WARMUP);
-    assert(word(frames[2], VOFA_KALMAN_TICK_MS_HI) == 1102);
-    assert(word(frames[4], VOFA_KALMAN_ATTEMPT_SEQUENCE_HI) == 2);
-    assert(word(frames[5], VOFA_KALMAN_ATTEMPT_SEQUENCE_HI) == 3);
-    assert(((unsigned)field(frames[4], VOFA_KALMAN_ATTEMPT_FLAGS) & 32U) == 0);
-    assert(((unsigned)field(frames[5], VOFA_KALMAN_ATTEMPT_FLAGS) & 32U) == 0);
+    assert(field(frames[0], VOFA_KALMAN_GIMBAL_OBSERVER_STATUS) == CHASSIS_VELOCITY_NO_SAMPLE);
+    assert(field(frames[1], VOFA_KALMAN_GIMBAL_OBSERVER_STATUS) == CHASSIS_VELOCITY_WARMUP);
+    assert(word(frames[2], VOFA_KALMAN_GIMBAL_TICK_MS_HI) == 1102);
+    assert(word(frames[4], VOFA_KALMAN_GIMBAL_ATTEMPT_SEQUENCE_HI) == 2);
+    assert(word(frames[5], VOFA_KALMAN_GIMBAL_ATTEMPT_SEQUENCE_HI) == 3);
+    assert(((unsigned)field(frames[4], VOFA_KALMAN_GIMBAL_ATTEMPT_FLAGS) & 32U) == 0);
+    assert(((unsigned)field(frames[5], VOFA_KALMAN_GIMBAL_ATTEMPT_FLAGS) & 32U) == 0);
     assert(stats().pending == 0);
 }
 
@@ -306,23 +318,42 @@ static void clock_attempt_and_wire_sequence_rollovers(void)
 {
     capture(UINT32_MAX - 10U, UINT32_MAX);
     VofaKalmanCaptureDrain();
-    assert(word(active, VOFA_KALMAN_TICK_MS_HI) == UINT32_MAX - 10U);
-    assert(word(active, VOFA_KALMAN_ATTEMPT_SEQUENCE_HI) == UINT32_MAX);
+    assert(word(active, VOFA_KALMAN_GIMBAL_TICK_MS_HI) == UINT32_MAX - 10U);
+    assert(word(active, VOFA_KALMAN_GIMBAL_ATTEMPT_SEQUENCE_HI) == UINT32_MAX);
     capture(9, 0);
     finish_uart();
     VofaKalmanCaptureDrain();
-    assert(word(active, VOFA_KALMAN_TICK_MS_HI) == 9);
-    assert(word(active, VOFA_KALMAN_ATTEMPT_SEQUENCE_HI) == 0);
+    assert(word(active, VOFA_KALMAN_GIMBAL_TICK_MS_HI) == 9);
+    assert(word(active, VOFA_KALMAN_GIMBAL_ATTEMPT_SEQUENCE_HI) == 0);
     for (uint32_t i = 2; i <= 65536U; ++i) {
         capture(9U + (i - 1U) * 20U, i - 1U);
         finish_uart();
         VofaKalmanCaptureDrain();
         check_frame(active);
-        assert(word(active, VOFA_KALMAN_TX_SEQUENCE_HI) == i);
+        assert(word(active, VOFA_KALMAN_GIMBAL_TX_SEQUENCE_HI) == i);
     }
     assert(stats().sent == 65537U && stats().dropped == 0);
-    assert(field(active, VOFA_KALMAN_TX_SEQUENCE_HI) == 1);
-    assert(field(active, VOFA_KALMAN_TX_SEQUENCE_LO) == 0);
+    assert(field(active, VOFA_KALMAN_GIMBAL_TX_SEQUENCE_HI) == 1);
+    assert(field(active, VOFA_KALMAN_GIMBAL_TX_SEQUENCE_LO) == 0);
+}
+
+static void mode_switch_is_captured_without_a_new_filter_call(void)
+{
+    sample(1000, 1);
+    velocity.diagnostics.chassis_mode = 3;
+    VofaKalmanCapture(&velocity, &imu, true, &target, 1000);
+    velocity.diagnostics.chassis_mode = 1;
+    velocity.diagnostics.tick_ms = 1005;
+    VofaKalmanCapture(&velocity, &imu, true, &target, 1005);
+    VofaKalmanCapture(&velocity, &imu, true, &target, 1006);
+    assert(stats().pending == 2);
+    VofaKalmanCaptureDrain();
+    assert(field(active, VOFA_KALMAN_GIMBAL_CHASSIS_MODE) == 3);
+    finish_uart();
+    VofaKalmanCaptureDrain();
+    assert(field(active, VOFA_KALMAN_GIMBAL_CHASSIS_MODE) == 1);
+    assert(word(active, VOFA_KALMAN_GIMBAL_TICK_MS_HI) == 1005);
+    assert(word(active, VOFA_KALMAN_GIMBAL_ATTEMPT_SEQUENCE_HI) == 1);
 }
 
 int main(int argc, char **argv)
@@ -334,6 +365,7 @@ int main(int argc, char **argv)
     else if (!strcmp(argv[1], "jitter")) jitter_and_consumer_stall_do_not_skip_calls();
     else if (!strcmp(argv[1], "heartbeat")) heartbeat_and_rejected_calls_remain_visible();
     else if (!strcmp(argv[1], "wrap")) clock_attempt_and_wire_sequence_rollovers();
+    else if (!strcmp(argv[1], "mode")) mode_switch_is_captured_without_a_new_filter_call();
     else assert(!"unknown scenario");
     assert(critical == 0);
     printf("PASS: Kalman capture %s\n", argv[1]);

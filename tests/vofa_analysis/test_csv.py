@@ -111,7 +111,8 @@ class CsvTests(unittest.TestCase):
 
     def test_new_profiles_preserve_si_floats_and_split_clock(self):
         for schema, first in ((4, row(4, tick=0xfedcba98, meter_power_w=12.345)),
-                              (5, attempt(1, tick=0xfedcba98, wheel_n_x_mps=1.2345))):
+                              (5, attempt(1, tick=0xfedcba98, wheel_n_x_mps=1.2345)),
+                              (6, attempt(1, schema=6, tick=0xfedcba98, wheel_n_x_mps=1.2345))):
             with self.subTest(schema=schema):
                 export(self.path, wire_rows([first]), time_at=0, renamed=True)
                 capture = read_capture(self.path)
@@ -119,6 +120,22 @@ class CsvTests(unittest.TestCase):
                 self.assertEqual(capture['rows'][0]['tick_ms'], 0xfedcba98)
                 key, value = ('meter_power_w', 12.345) if schema == 4 else ('wheel_n_x_mps', 1.2345)
                 self.assertEqual(capture['rows'][0][key], value)
+
+    def test_yaw_extension_keeps_fifo_replay_and_signed_degrees(self):
+        rows = [attempt(i, schema=6, valid=31 | 64 | 256 | 512, yaw_ecd=8191,
+                        yaw_offset_deg=-15.4248046875, yaw_age_ms=2, chassis_mode=1,
+                        gimbal_yaw_total_deg=721.25, gimbal_imu_age_ms=1) for i in (1, 2, 3)]
+        export(self.path, wire_rows(rows), time_at=0, renamed=True)
+        capture = read_capture(self.path)
+        self.assertEqual(capture['channel_count'], 102)
+        decoded = capture['rows'][0]
+        self.assertEqual(decoded['yaw_ecd'], 8191)
+        self.assertEqual(decoded['yaw_offset_deg'], -15.4248046875)
+        self.assertEqual(decoded['chassis_mode'], 1)
+        self.assertEqual(decoded['gimbal_yaw_total_deg'], 721.25)
+        quality = quality_report(capture)
+        self.assertEqual(quality['capture_mode'], 'event_fifo')
+        self.assertEqual(quality['unique_filter_calls'], 3)
 
     def test_renamed_numeric_extra_column_cannot_ambiguously_shift_layout(self):
         rows = legacy_rows(count=2)

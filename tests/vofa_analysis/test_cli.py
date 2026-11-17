@@ -14,12 +14,12 @@ ROOT = Path(__file__).resolve().parents[2]
 
 class CliTests(unittest.TestCase):
     def test_original_exports_produce_quality_and_analysis_without_csv_conversion(self):
-        for schema in (2, 4, 5):
+        for schema in (2, 4, 5, 6):
             with self.subTest(schema=schema), tempfile.TemporaryDirectory() as directory:
                 d = Path(directory)
                 capture = d / 'raw.csv'
                 rows = legacy_rows() if schema == 2 else wire_rows(power_rows() if schema == 4 else
-                    [attempt(i, initialized=i != 1, config_source=0) for i in range(1, 61)])
+                    [attempt(i, initialized=i != 1, config_source=0, schema=schema) for i in range(1, 61)])
                 export(capture, rows, time_at=0, renamed=True)
                 command = [sys.executable, '-B', str(ROOT / 'scripts/analyze-vofa.py'), str(capture),
                            '--output-dir', str(d / 'report'), '--build-dir', str(d / 'build'), '--stationary']

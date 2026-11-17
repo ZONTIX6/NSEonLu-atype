@@ -38,6 +38,8 @@ bool INSGetMotionSnapshot(INSMotionSnapshot_s *snapshot)
     return imu.valid;
 }
 
+bool INSGetSnapshot(INSSnapshot_s *out)
+{ *out=(INSSnapshot_s){0}; return false; }
 bool GimbalGetEncoderSnapshot(GimbalEncoderSample_s samples[2])
 {
     if (!gimbal_valid) return false;
@@ -95,7 +97,7 @@ static ChassisFusedVelocitySnapshot_s Observe(bool expected_valid,
                                               ChassisFusedVelocityStatus_e status)
 {
     ChassisFusedVelocitySnapshot_s out;
-    ChassisObserveFusedVelocity(&wheel_config);
+    ChassisObserveFusedVelocity(&wheel_config, 3);
     assert(ChassisGetFusedVelocitySnapshot(&out) == expected_valid);
     assert(out.valid == expected_valid);
     assert(out.status == status);

@@ -8,6 +8,7 @@
 #include <limits.h>
 #include <math.h>
 #include <string.h>
+#include "../../config/03_gimbal/gimbal_config.h"
 #include "../../config/30_velocity_observation/chassis_remote_imu_config.h"
 #if CHASSIS_IMU_CAN_RX_ENABLE
 #include "chassis_imu_can.h"
@@ -17,12 +18,12 @@
 #endif
 #endif
 
+enum { OBSERVATION_CHANNELS = VOFA_OBSERVATION_PROFILE == 1 ? VOFA_POWER_CHANNELS : VOFA_KALMAN_GIMBAL_CHANNELS };
 static struct {
-    float channels[96];
+    float channels[OBSERVATION_CHANNELS];
     uint8_t tail[4];
 } frame = {.tail = {0, 0, 128, 127}};
-_Static_assert(sizeof(float) == 4 && sizeof(frame) == 388, "Observation frame layout");
-_Static_assert(VOFA_POWER_CHANNELS == 96 && VOFA_KALMAN_CHANNELS == 96, "Channel contract");
+_Static_assert(sizeof(float) == 4 && sizeof(frame) == (OBSERVATION_CHANNELS + 1U) * 4U, "Observation frame layout");
 _Static_assert(sizeof(frame) * 10U * 1000U < BOARD_UART7_BAUDRATE * 20U, "Observation wire budget");
 
 static float Age(uint32_t now, uint32_t tick, bool known)
@@ -175,7 +176,7 @@ static void Power(float *f, const USBTelemetrySample_s *sample,
 }
 #undef P
 #else
-#define K(name) f[VOFA_KALMAN_##name]
+#define K(name) f[VOFA_KALMAN_GIMBAL_##name]
 static uint32_t HashWord(uint32_t hash, uint32_t word)
 {
     for (unsigned i = 0; i < 4; ++i) { hash ^= (word >> (i * 8)) & 255U; hash *= 16777619U; }
@@ -218,7 +219,7 @@ static void Kalman(float *f, const USBTelemetrySample_s *sample,
     }
     /* FIFO records retain their capture clock. Legacy snapshots refresh the
      * clock with the live IMU copy; all age/validity checks use that same clock. */
-    U32(f, VOFA_KALMAN_TICK_MS_HI, now);
+    U32(f, VOFA_KALMAN_GIMBAL_TICK_MS_HI, now);
 #else
     (void)captured_remote;
     (void)captured_usable;
@@ -231,8 +232,8 @@ static void Kalman(float *f, const USBTelemetrySample_s *sample,
     uint32_t online = d->available ? d->wheel_online_mask & 15U : 0U;
     for (unsigned i = 0; i < 4; ++i) {
         if ((uint32_t)(now - d->wheel_tick_ms[i]) > 20U || !isfinite(d->raw_rpm[i])) online &= ~(1U << i);
-        f[VOFA_KALMAN_RAW_RPM_LF + i] = d->raw_rpm[i];
-        f[VOFA_KALMAN_WHEEL_AGE_MS_LF + i] = Age(now, d->wheel_tick_ms[i], d->available && (d->wheel_online_mask & (1U << i)));
+        f[VOFA_KALMAN_GIMBAL_RAW_RPM_LF + i] = d->raw_rpm[i];
+        f[VOFA_KALMAN_GIMBAL_WHEEL_AGE_MS_LF + i] = Age(now, d->wheel_tick_ms[i], d->available && (d->wheel_online_mask & (1U << i)));
     }
     const bool wheel = online == 15 && v->wheel.valid && (uint32_t)(now - v->wheel.tick_ms) <= 20U &&
         isfinite(v->wheel.vx_mps) && isfinite(v->wheel.vy_mps) && isfinite(v->wheel.wz_rpm);
@@ -265,12 +266,20 @@ static void Kalman(float *f, const USBTelemetrySample_s *sample,
         isfinite(a->effective_accel_variance) && a->effective_accel_variance > 0 &&
         isfinite(c->filter.wheel_variance) && isfinite(c->filter.accel_variance) &&
         isfinite(c->filter.jerk_density) && isfinite(c->filter.max_velocity_residual_mps);
-    K(SCHEMA) = VOFA_KALMAN_SCHEMA_ID;
+    const bool yaw_known = d->available && d->yaw_encoder_valid;
+    const bool yaw = yaw_known && d->joint_ecd[0] < 8192U &&
+        (uint32_t)(now - d->tick_ms) <= 20U && (uint32_t)(now - d->joint_tick_ms[0]) <= 20U;
+    const bool gimbal_imu_known = d->available && d->gimbal_imu_known;
+    const bool gimbal_imu = gimbal_imu_known && d->gimbal_imu_valid &&
+        (uint32_t)(now - d->tick_ms) <= 20U &&
+        (uint32_t)(now - d->gimbal_imu_tick_ms) <= 20U && isfinite(d->gimbal_yaw_total_deg);
+    K(SCHEMA) = VOFA_KALMAN_GIMBAL_SCHEMA_ID;
     K(VALID) = (wheel ? 1U : 0U) | (target ? 2U : 0U) | (estimate ? 4U : 0U) | (imu ? 8U : 0U) |
-        (attempt ? 16U : 0U) | (CHASSIS_REMOTE_IMU_CONFIG_VERIFIED ? 32U : 0U);
+        (attempt ? 16U : 0U) | (CHASSIS_REMOTE_IMU_CONFIG_VERIFIED ? 32U : 0U) |
+        (yaw ? 256U : 0U) | (gimbal_imu ? 512U : 0U);
     K(OBSERVER_STATUS) = v == &empty ? -1.0f : (float)v->status;
     K(CONFIG_SOURCE) = 0; /* Fixed A-board configuration; no runtime filter override. */
-    if (a->available) U32(f, VOFA_KALMAN_CONFIG_FINGERPRINT_HI, ConfigFingerprint(c));
+    if (a->available) U32(f, VOFA_KALMAN_GIMBAL_CONFIG_FINGERPRINT_HI, ConfigFingerprint(c));
     K(IMU_SOURCE) = CHASSIS_IMU_CAN_RX_ENABLE ? 1 : 0; /* 1=remote A board; legacy 2=DM. */
     K(WHEEL_ONLINE_MASK) = online;
     K(WHEEL_VX_MPS) = v->wheel.vx_mps; K(WHEEL_VY_MPS) = v->wheel.vy_mps;
@@ -286,46 +295,57 @@ static void Kalman(float *f, const USBTelemetrySample_s *sample,
     }
     K(VELOCITY_VX_MPS) = v->vx_mps; K(VELOCITY_VY_MPS) = v->vy_mps;
     K(VELOCITY_AGE_MS) = Age(now, v->tick_ms, v->valid);
-    for (unsigned i = 0; i < 4; ++i) f[VOFA_KALMAN_IMU_QW + i] = quaternion[i];
+    for (unsigned i = 0; i < 4; ++i) f[VOFA_KALMAN_GIMBAL_IMU_QW + i] = quaternion[i];
     for (unsigned i = 0; i < 3; ++i) {
-        f[VOFA_KALMAN_IMU_AX_MPS2 + i] = accel[i];
-        f[VOFA_KALMAN_IMU_GX_RADPS + i] = gyro[i];
+        f[VOFA_KALMAN_GIMBAL_IMU_AX_MPS2 + i] = accel[i];
+        f[VOFA_KALMAN_GIMBAL_IMU_GX_RADPS + i] = gyro[i];
     }
     K(IMU_AGE_MS) = imu_age;
     /* A-board source age plus first reception estimates the receiver epoch;
      * the boards' absolute clocks are not synchronized. */
     K(IMU_RECEIVE_AGE_MS) = receive_age;
     K(IMU_SOURCE_AGE_MS) = source_age;
-    U32(f, VOFA_KALMAN_IMU_SEQUENCE_HI, imu_sequence);
-    U32(f, VOFA_KALMAN_IMU_TICK_MS_HI, imu_tick);
-    U32(f, VOFA_KALMAN_ATTEMPT_SEQUENCE_HI, a->sequence);
+    U32(f, VOFA_KALMAN_GIMBAL_IMU_SEQUENCE_HI, imu_sequence);
+    U32(f, VOFA_KALMAN_GIMBAL_IMU_TICK_MS_HI, imu_tick);
+    U32(f, VOFA_KALMAN_GIMBAL_ATTEMPT_SEQUENCE_HI, a->sequence);
     K(ATTEMPT_FLAGS) = (a->available ? 1U : 0U) | (a->input.wheel_valid ? 2U : 0U) |
         (a->input.imu_valid ? 4U : 0U) | (a->initialized_before ? 8U : 0U) |
         (a->output.valid ? 16U : 0U) | (a->output.fused ? 32U : 0U);
-    U32(f, VOFA_KALMAN_CALL_RECEIVER_MS_HI, a->receiver_call_ms);
-    U32(f, VOFA_KALMAN_CALL_US_HI, a->input.now_us);
-    U32(f, VOFA_KALMAN_WHEEL_US_HI, a->input.wheel_us);
-    U32(f, VOFA_KALMAN_IMU_US_HI, a->input.imu_us);
-    U32(f, VOFA_KALMAN_MIDDLE_RECEIVER_MS_HI, a->middle_receiver_ms);
+    U32(f, VOFA_KALMAN_GIMBAL_CALL_RECEIVER_MS_HI, a->receiver_call_ms);
+    U32(f, VOFA_KALMAN_GIMBAL_CALL_US_HI, a->input.now_us);
+    U32(f, VOFA_KALMAN_GIMBAL_WHEEL_US_HI, a->input.wheel_us);
+    U32(f, VOFA_KALMAN_GIMBAL_IMU_US_HI, a->input.imu_us);
+    U32(f, VOFA_KALMAN_GIMBAL_MIDDLE_RECEIVER_MS_HI, a->middle_receiver_ms);
     K(WHEEL_N_X_MPS) = a->input.wheel_n_mps[0]; K(WHEEL_N_Y_MPS) = a->input.wheel_n_mps[1];
     K(ACCEL_N_X_MPS2) = a->input.accel_n_mps2[0]; K(ACCEL_N_Y_MPS2) = a->input.accel_n_mps2[1];
     K(OUTPUT_N_X_MPS) = a->output.velocity_n_mps[0]; K(OUTPUT_N_Y_MPS) = a->output.velocity_n_mps[1];
-    U32(f, VOFA_KALMAN_OUTPUT_SAMPLE_US_HI, a->output.sample_us);
-    U32(f, VOFA_KALMAN_UPDATE_COUNT_HI, v->remote.updates);
-    U32(f, VOFA_KALMAN_RESET_COUNT_HI, v->remote.resets);
-    U32(f, VOFA_KALMAN_RESETS_BEFORE_HI, a->resets_before);
+    U32(f, VOFA_KALMAN_GIMBAL_OUTPUT_SAMPLE_US_HI, a->output.sample_us);
+    U32(f, VOFA_KALMAN_GIMBAL_UPDATE_COUNT_HI, v->remote.updates);
+    U32(f, VOFA_KALMAN_GIMBAL_RESET_COUNT_HI, v->remote.resets);
+    U32(f, VOFA_KALMAN_GIMBAL_RESETS_BEFORE_HI, a->resets_before);
     K(PAIR_SPAN_MS) = a->pair_span_ms; K(SOURCE_STEP_MS) = a->source_step_ms; K(RECEIVE_STEP_MS) = a->receive_step_ms;
     K(FUSION_WHEEL_VARIANCE) = c->filter.wheel_variance;
     K(FUSION_ACCEL_VARIANCE) = a->effective_accel_variance;
     K(FUSION_JERK_DENSITY) = c->filter.jerk_density;
     K(FUSION_MAX_RESIDUAL_MPS) = c->filter.max_velocity_residual_mps;
-    U32(f, VOFA_KALMAN_FUSION_MAX_AGE_US_HI, c->filter.max_age_us);
-    U32(f, VOFA_KALMAN_FUSION_MAX_SKEW_US_HI, c->filter.max_skew_us);
-    U32(f, VOFA_KALMAN_FUSION_MAX_GAP_US_HI, c->filter.max_gap_us);
-    for (unsigned i = 0; i < 4; ++i) f[VOFA_KALMAN_MOUNT_QW + i] = c->sensor_to_body_quaternion[i];
-    for (unsigned i = 0; i < 3; ++i) f[VOFA_KALMAN_OFFSET_X_M + i] = c->imu_offset_body_m[i];
+    U32(f, VOFA_KALMAN_GIMBAL_FUSION_MAX_AGE_US_HI, c->filter.max_age_us);
+    U32(f, VOFA_KALMAN_GIMBAL_FUSION_MAX_SKEW_US_HI, c->filter.max_skew_us);
+    U32(f, VOFA_KALMAN_GIMBAL_FUSION_MAX_GAP_US_HI, c->filter.max_gap_us);
+    for (unsigned i = 0; i < 4; ++i) f[VOFA_KALMAN_GIMBAL_MOUNT_QW + i] = c->sensor_to_body_quaternion[i];
+    for (unsigned i = 0; i < 3; ++i) f[VOFA_KALMAN_GIMBAL_OFFSET_X_M + i] = c->imu_offset_body_m[i];
     K(MAX_PAIR_SPAN_MS) = c->max_pair_span_ms; K(MAX_WHEEL_SKEW_MS) = c->max_wheel_skew_ms;
     K(MAX_TIMING_JITTER_MS) = c->max_timing_jitter_ms;
+    K(YAW_ECD) = yaw ? d->joint_ecd[0] : 0;
+    if (yaw) {
+        float offset = ((int32_t)d->joint_ecd[0] - YAW_CHASSIS_ALIGN_ECD) * (360.0f / 8192.0f);
+        if (offset > 180.0f) offset -= 360.0f;
+        if (offset < -180.0f) offset += 360.0f;
+        K(YAW_OFFSET_DEG) = offset;
+    }
+    K(YAW_AGE_MS) = Age(now, d->joint_tick_ms[0], yaw_known);
+    K(CHASSIS_MODE) = d->available && (uint32_t)(now - d->tick_ms) <= 20U ? (float)d->chassis_mode : -1.0f;
+    K(GIMBAL_YAW_TOTAL_DEG) = gimbal_imu ? d->gimbal_yaw_total_deg : 0;
+    K(GIMBAL_IMU_AGE_MS) = Age(now, d->gimbal_imu_tick_ms, gimbal_imu_known);
 }
 #undef K
 #endif
@@ -333,7 +353,7 @@ static void Kalman(float *f, const USBTelemetrySample_s *sample,
 static void FinishFrame(void)
 {
     float *f = frame.channels;
-    for (unsigned i = 0; i < 96; ++i) if (!isfinite(f[i])) f[i] = 0;
+    for (unsigned i = 0; i < OBSERVATION_CHANNELS; ++i) if (!isfinite(f[i])) f[i] = 0;
     uint8_t *bytes = (uint8_t *)&frame;
     for (size_t i = 0; i + 4 <= sizeof frame.channels; ++i) {
         if (memcmp(bytes + i, frame.tail, 4) == 0) {
@@ -370,15 +390,18 @@ void VofaKalmanCapture(const ChassisFusedVelocitySnapshot_s *velocity,
 {
     static bool observed, have_attempt;
     static uint32_t last_attempt, last_capture_ms;
+    static uint8_t last_chassis_mode;
     static ChassisFusedVelocityStatus_e last_status;
     if (!velocity || !remote || !target) return;
     const ChassisRemoteFusionAttempt_s *attempt = &velocity->remote.attempt;
     const bool new_attempt = attempt->available && (!have_attempt || attempt->sequence != last_attempt);
     if (observed && !new_attempt && velocity->status == last_status &&
+        velocity->diagnostics.chassis_mode == last_chassis_mode &&
         (uint32_t)(now_ms - last_capture_ms) < 100U) return;
     observed = true;
     last_capture_ms = now_ms;
     last_status = velocity->status;
+    last_chassis_mode = velocity->diagnostics.chassis_mode;
     if (attempt->available) { have_attempt = true; last_attempt = attempt->sequence; }
     const uint32_t sequence = capture_sequence++;
 
@@ -420,13 +443,13 @@ void VofaKalmanCaptureDrain(void)
     const KalmanCaptureRecord_s *record = &capture_queue[read % VOFA_KALMAN_CAPTURE_CAPACITY];
     float *f = frame.channels;
     memset(f, 0, sizeof frame.channels);
-    U32(f, VOFA_KALMAN_TICK_MS_HI, record->tick_ms);
-    U32(f, VOFA_KALMAN_TX_SEQUENCE_HI, record->sequence);
+    U32(f, VOFA_KALMAN_GIMBAL_TICK_MS_HI, record->tick_ms);
+    U32(f, VOFA_KALMAN_GIMBAL_TX_SEQUENCE_HI, record->sequence);
     Kalman(f, NULL, &record->velocity, record->tick_ms,
         &record->remote, record->remote_usable, &record->target);
     /* Transport diagnostics: FIFO format and overflow since MCU startup.
      * Overflow is sticky even on older queued records, so trailing loss is visible. */
-    f[VOFA_KALMAN_VALID] = (float)((uint32_t)f[VOFA_KALMAN_VALID] | 64U | (overflow ? 128U : 0U));
+    f[VOFA_KALMAN_GIMBAL_VALID] = (float)((uint32_t)f[VOFA_KALMAN_GIMBAL_VALID] | 64U | (overflow ? 128U : 0U));
     FinishFrame();
     const HAL_StatusTypeDef status = HAL_UART_Transmit_IT(uart, (uint8_t *)&frame, sizeof frame);
     taskENTER_CRITICAL();
