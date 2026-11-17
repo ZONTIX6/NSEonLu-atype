@@ -19,11 +19,11 @@ int main(void)
         /* Ordinary follow rotation must not activate a new compensation. */
         NEAR(0,GimbalYawFeedforwardUpdate(&state,true,false,true,3,100,100));
         NEAR(0,GimbalYawFeedforwardUpdate(&state,true,true,true,0,100,100));
-        NEAR(2160,GimbalYawFeedforwardUpdate(&state,true,true,true,2,102,103));
-        NEAR(7311.6f,GimbalYawFeedforwardUpdate(&state,true,true,true,6.77f,104,105));
+        NEAR(1600,GimbalYawFeedforwardUpdate(&state,true,true,true,2,102,103));
+        NEAR(5416,GimbalYawFeedforwardUpdate(&state,true,true,true,6.77f,104,105));
         /* Exiting the mode retains only the measured remaining rotation. */
-        NEAR(3240,GimbalYawFeedforwardUpdate(&state,true,false,true,3,106,107));
-        NEAR(108,GimbalYawFeedforwardUpdate(&state,true,false,true,0.1f,108,109));
+        NEAR(2400,GimbalYawFeedforwardUpdate(&state,true,false,true,3,106,107));
+        NEAR(80,GimbalYawFeedforwardUpdate(&state,true,false,true,0.1f,108,109));
         NEAR(0,GimbalYawFeedforwardUpdate(&state,true,false,true,0.05f,110,110));
         CHECK(!state.active);
         NEAR(0,GimbalYawFeedforwardUpdate(&state,true,false,true,3,112,112));
@@ -32,26 +32,26 @@ int main(void)
         NEAR(0,GimbalYawFeedforwardUpdate(&state,true,false,true,-0.1f,118,118));
         CHECK(!state.active);
 
-        NEAR(1080,GimbalYawFeedforwardUpdate(&state,true,true,true,1,100,120));
+        NEAR(800,GimbalYawFeedforwardUpdate(&state,true,true,true,1,100,120));
         NEAR(0,GimbalYawFeedforwardUpdate(&state,true,true,true,1,100,121));
         CHECK(!state.active);
         NEAR(0,GimbalYawFeedforwardUpdate(&state,true,false,true,1,122,122));
-        NEAR(1080,GimbalYawFeedforwardUpdate(&state,true,true,true,1,123,123));
+        NEAR(800,GimbalYawFeedforwardUpdate(&state,true,true,true,1,123,123));
         NEAR(0,GimbalYawFeedforwardUpdate(&state,false,true,true,1,124,124));
         CHECK(!state.active);
         NEAR(0,GimbalYawFeedforwardUpdate(&state,true,false,true,1,125,125));
 
         const float bad[]={NAN,INFINITY,-INFINITY};
         for (unsigned i=0;i<3;++i) {
-            NEAR(1080,GimbalYawFeedforwardUpdate(&state,true,true,true,1,130,130));
+            NEAR(800,GimbalYawFeedforwardUpdate(&state,true,true,true,1,130,130));
             NEAR(0,GimbalYawFeedforwardUpdate(&state,true,true,true,bad[i],132,132));
             CHECK(!state.active);
         }
-        NEAR(1080,GimbalYawFeedforwardUpdate(&state,true,true,true,1,140,140));
+        NEAR(800,GimbalYawFeedforwardUpdate(&state,true,true,true,1,140,140));
         NEAR(0,GimbalYawFeedforwardUpdate(&state,true,true,false,1,142,142));
         CHECK(!state.active);
         /* Source-clock rollover is accepted; future timestamps are rejected. */
-        NEAR(1080,GimbalYawFeedforwardUpdate(&state,true,true,true,1,UINT32_MAX-9,10));
+        NEAR(800,GimbalYawFeedforwardUpdate(&state,true,true,true,1,UINT32_MAX-9,10));
         NEAR(0,GimbalYawFeedforwardUpdate(&state,true,true,true,1,UINT32_MAX-9,11));
         NEAR(0,GimbalYawFeedforwardUpdate(&state,true,true,true,1,201,200));
     }

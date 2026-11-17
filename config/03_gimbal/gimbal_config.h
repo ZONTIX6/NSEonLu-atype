@@ -46,14 +46,14 @@
 #define YAW_MAX_TRACK_ERROR 60.0f
 
 /* 小陀螺 yaw 输出前馈：仅接入单板速度后端，输入为实际轮速逆解的 rad/s。
- * 1080 来自同向 6.77 rad/s、稳态抗扰命令约 7330 的实测初值。
+ * 启动 4 复测中 1080 出现反向过补；按自旋与静止保持输出之差下调至 800 待复测。
  * 反向尚未标定，本版只补偿正转；设 ENABLE=0 可回退到纯 PID。
  */
 #ifndef YAW_SPIN_FEEDFORWARD_ENABLE
 #define YAW_SPIN_FEEDFORWARD_ENABLE 1
 #endif
 #ifndef YAW_SPIN_FEEDFORWARD_GAIN
-#define YAW_SPIN_FEEDFORWARD_GAIN 1080.0f /* DJI 命令刻度/(rad/s)，不是 A。 */
+#define YAW_SPIN_FEEDFORWARD_GAIN 800.0f /* DJI 命令刻度/(rad/s)，不是 A。 */
 #endif
 #ifndef YAW_SPIN_FEEDFORWARD_MAX_COMMAND
 #define YAW_SPIN_FEEDFORWARD_MAX_COMMAND 8000.0f

@@ -139,20 +139,20 @@ int main(int argc,char **argv) {
         remote_input.control.rc.switch_right=RC_SW_DOWN;
         RobotCMDTask(); GimbalTask();
         assert(gimbal_cmd_recv.yaw_spin_feedforward_requested);
-        assert(fabsf(yaw_motor->output_feedforward-7311.6f)<.01f);
+        assert(fabsf(yaw_motor->output_feedforward-5416)<.01f);
         assert(yaw_motor->output_feedforward_tick_ms==now-2);
         assert(pitch_motor->output_feedforward==0);
         float previous_ref=yaw_motor->motor_controller.pid_ref;
         remote_input.control.rc.rocker_l_=100;
         RobotCMDTask(); GimbalTask();
         assert(yaw_motor->motor_controller.pid_ref!=previous_ref); /* Manual yaw still works. */
-        assert(fabsf(yaw_motor->output_feedforward-7311.6f)<.01f);
+        assert(fabsf(yaw_motor->output_feedforward-5416)<.01f);
         remote_input.control.rc.rocker_l_=0;
         remote_input.control.rc.switch_right=RC_SW_UP;
         wheel_feedback.actual.wz_rpm=3/0.104719755f;
         RobotCMDTask(); GimbalTask();
         assert(!gimbal_cmd_recv.yaw_spin_feedforward_requested);
-        assert(fabsf(yaw_motor->output_feedforward-3240)<.01f);
+        assert(fabsf(yaw_motor->output_feedforward-2400)<.01f);
         wheel_feedback.actual.wz_rpm=0;
         RobotCMDTask(); GimbalTask(); assert(yaw_motor->output_feedforward==0);
         wheel_feedback.actual.wz_rpm=3/0.104719755f;
