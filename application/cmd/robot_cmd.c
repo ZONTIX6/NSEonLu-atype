@@ -562,5 +562,8 @@ void RobotCMDTask()
 #endif
 #endif // GIMBAL_BOARD
     PubPushMessage(shoot_cmd_pub, (void *)&shoot_cmd_send);
+    gimbal_cmd_send.yaw_spin_feedforward_requested =
+        chassis_cmd_send.chassis_mode == CHASSIS_ROTATE &&
+        gimbal_cmd_send.gimbal_mode != GIMBAL_ZERO_FORCE;
     PubPushMessage(gimbal_cmd_pub, (void *)&gimbal_cmd_send);
 }

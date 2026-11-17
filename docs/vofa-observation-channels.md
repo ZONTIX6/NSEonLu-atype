@@ -524,3 +524,5 @@
 - bit 4: `speed_output_at_limit`
 - bit 5: `angle_output_at_limit`
 - bit 6: `speed_pid_calculated`
+- bit 7: `output_feedforward_applied`
+- bit 8: `combined_output_at_limit`

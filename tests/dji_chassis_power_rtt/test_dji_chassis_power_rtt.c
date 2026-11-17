@@ -1070,6 +1070,81 @@ static void TestYawControlSnapshot(void)
     PreparePowerGroup();
 }
 
+static void TestYawOutputFeedforward(void)
+{
+    PreparePowerGroup();
+    AddVehicleMotors();
+    DJIMotorInstance *yaw=dji_motor_instance[4];
+    DJIMotorControlSnapshot_s snapshot;
+    yaw->motor_settings=(Motor_Control_Setting_s){.close_loop_type=SPEED_LOOP,.outer_loop_type=SPEED_LOOP};
+    yaw->motor_controller.speed_PID.MaxOut=20000;
+    DJIMotorSetRef(yaw,500);
+    DJIMotorEnable(yaw);
+    DJIMotorSetOutputFeedforward(yaw,7311.6f,test_tick);
+    DJIMotorControl();
+    ASSERT_TRUE(DJIMotorGetControlSnapshot(yaw,&snapshot));
+    ASSERT_TRUE(snapshot.command==7811 && snapshot.reference==500);
+    ASSERT_TRUE(fabsf(snapshot.output_feedforward-7311.6f)<.01f);
+    ASSERT_TRUE(snapshot.flags&DJI_CONTROL_OUTPUT_FEEDFORWARD);
+    ASSERT_TRUE(!(snapshot.flags&DJI_CONTROL_COMBINED_AT_LIMIT));
+    ASSERT_TRUE(submitted_bytes[3][0]==30 && submitted_bytes[3][1]==131);
+    DJIMotorSetOutputFeedforward(yaw,8000,test_tick);
+    ASSERT_TRUE(fabsf(snapshot.output_feedforward-7311.6f)<.01f); /* Frozen cycle. */
+    DJIMotorSetRef(yaw,15000);
+    DJIMotorControl();
+    ASSERT_TRUE(DJIMotorGetControlSnapshot(yaw,&snapshot));
+    ASSERT_TRUE(snapshot.command==20000 && snapshot.flags&DJI_CONTROL_COMBINED_AT_LIMIT);
+    yaw->motor_settings.feedback_reverse_flag=FEEDBACK_DIRECTION_REVERSE;
+    DJIMotorControl();
+    ASSERT_TRUE(DJIMotorGetControlSnapshot(yaw,&snapshot) && snapshot.command==-20000);
+    yaw->motor_settings.feedback_reverse_flag=FEEDBACK_DIRECTION_NORMAL;
+    DJIMotorSetRef(yaw,-15000);
+    DJIMotorSetOutputFeedforward(yaw,-8000,test_tick);
+    DJIMotorControl();
+    ASSERT_TRUE(DJIMotorGetControlSnapshot(yaw,&snapshot));
+    ASSERT_TRUE(snapshot.command==-20000 && snapshot.flags&DJI_CONTROL_COMBINED_AT_LIMIT);
+
+    DJIMotorSetRef(yaw,500);
+    DJIMotorSetOutputFeedforward(yaw,7311.6f,test_tick-20);
+    DJIMotorControl();
+    ASSERT_TRUE(DJIMotorGetControlSnapshot(yaw,&snapshot) && snapshot.command==7811);
+    DJIMotorSetOutputFeedforward(yaw,7311.6f,test_tick-21);
+    DJIMotorControl();
+    ASSERT_TRUE(DJIMotorGetControlSnapshot(yaw,&snapshot) && snapshot.command==500);
+    ASSERT_TRUE(snapshot.output_feedforward==0 && !(snapshot.flags&DJI_CONTROL_OUTPUT_FEEDFORWARD));
+    const float bad[]={NAN,INFINITY,-INFINITY};
+    for(unsigned i=0;i<3;++i) {
+        DJIMotorSetOutputFeedforward(yaw,bad[i],test_tick);
+        DJIMotorControl();
+        ASSERT_TRUE(DJIMotorGetControlSnapshot(yaw,&snapshot) && snapshot.command==500);
+        ASSERT_TRUE(snapshot.output_feedforward==0);
+    }
+    DJIMotorSetOutputFeedforward(yaw,7311.6f,test_tick);
+    DJIMotorStop(yaw);
+    DJIMotorControl();
+    ASSERT_TRUE(DJIMotorGetControlSnapshot(yaw,&snapshot) && snapshot.command==0);
+    ASSERT_TRUE(snapshot.output_feedforward==0 && !(snapshot.flags&DJI_CONTROL_OUTPUT_FEEDFORWARD));
+    DJIMotorEnable(yaw);
+    DJIMotorControl(); /* A stop also clears the saved addend before re-enable. */
+    ASSERT_TRUE(DJIMotorGetControlSnapshot(yaw,&snapshot) && snapshot.command==500);
+    DJIMotorSetOutputFeedforward(yaw,7311.6f,test_tick);
+    yaw->daemon->online=0;
+    DJIMotorControl();
+    ASSERT_TRUE(DJIMotorGetControlSnapshot(yaw,&snapshot) && snapshot.command==0);
+    ASSERT_TRUE(snapshot.output_feedforward==0);
+    yaw->daemon->online=1;
+    yaw->measure.rx_tick_ms=test_tick-21;
+    DJIMotorControl();
+    ASSERT_TRUE(DJIMotorGetControlSnapshot(yaw,&snapshot) && snapshot.command==0);
+    ASSERT_TRUE(snapshot.output_feedforward==0);
+    yaw->measure.rx_tick_ms=test_tick;
+    safety_drive=false;
+    DJIMotorControl();
+    ASSERT_TRUE(DJIMotorGetControlSnapshot(yaw,&snapshot) && snapshot.command==0);
+    ASSERT_TRUE(snapshot.output_feedforward==0 && !(snapshot.flags&DJI_CONTROL_OUTPUT_FEEDFORWARD));
+    PreparePowerGroup();
+}
+
 int main(int argc, char **argv)
 {
     TestBaselineScenarioStream(argc > 1 && strcmp(argv[1], "--record-baseline") == 0);
@@ -1153,6 +1228,7 @@ int main(int argc, char **argv)
     TestAutotuneIsolationAndExplicitZeroForceRearm();
     TestNineMotorPowerAndStopIsolation();
     TestYawControlSnapshot();
+    TestYawOutputFeedforward();
     TestDirectCurrentOwnership();
     TestSpeedStopDuringMailboxWait();
     TestSecondGroupStopPreservesFirstSubmission();

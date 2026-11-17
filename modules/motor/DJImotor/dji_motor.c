@@ -65,6 +65,8 @@ static DJI_Motor_Measure_s cycle_measure[DJI_MOTOR_CNT];
 static float cycle_reference[DJI_MOTOR_CNT];
 static Motor_Working_Type_e cycle_stop[DJI_MOTOR_CNT];
 static bool cycle_online[DJI_MOTOR_CNT];
+static float cycle_output_feedforward[DJI_MOTOR_CNT];
+static uint32_t cycle_output_feedforward_tick[DJI_MOTOR_CNT];
 static DJIMotorGroupControl_s cycle_control;
 static uint32_t tuning_stop_since, tuning_stop_tick;
 static bool tuning_stopped, tuning_stop_seen;
@@ -361,7 +363,10 @@ void DJIMotorChangeFeed(DJIMotorInstance *motor, Closeloop_Type_e loop, Feedback
 
 void DJIMotorStop(DJIMotorInstance *motor)
 {
+    taskENTER_CRITICAL();
     motor->stop_flag = MOTOR_STOP;
+    motor->output_feedforward = 0;
+    taskEXIT_CRITICAL();
 }
 
 void DJIMotorEnable(DJIMotorInstance *motor)
@@ -379,6 +384,15 @@ void DJIMotorOuterLoop(DJIMotorInstance *motor, Closeloop_Type_e outer_loop)
 void DJIMotorSetRef(DJIMotorInstance *motor, float ref)
 {
     motor->motor_controller.pid_ref = ref;
+}
+
+void DJIMotorSetOutputFeedforward(DJIMotorInstance *motor, float command, uint32_t source_tick_ms)
+{
+    if (!motor) return;
+    taskENTER_CRITICAL();
+    motor->output_feedforward=isfinite(command) ? command : 0;
+    motor->output_feedforward_tick_ms=source_tick_ms;
+    taskEXIT_CRITICAL();
 }
 
 bool DJIMotorFindIndex(const DJIMotorInstance *motor, uint8_t *motor_index)
@@ -432,6 +446,8 @@ static void ReadMotorCycle(void)
         cycle_reference[i] = dji_motor_instance[i]->motor_controller.pid_ref;
         cycle_stop[i] = dji_motor_instance[i]->stop_flag;
         cycle_online[i] = DaemonIsOnline(dji_motor_instance[i]->daemon) != 0;
+        cycle_output_feedforward[i] = dji_motor_instance[i]->output_feedforward;
+        cycle_output_feedforward_tick[i] = dji_motor_instance[i]->output_feedforward_tick_ms;
     }
     taskEXIT_CRITICAL();
 }
@@ -467,6 +483,8 @@ void DJIMotorControl()
     ReadMotorCycle();
     const uint32_t control_tick_ms = HAL_GetTick();
     bool speed_calculated[DJI_MOTOR_CNT] = {false};
+    float output_feedforward_used[DJI_MOTOR_CNT] = {0};
+    bool combined_at_limit[DJI_MOTOR_CNT] = {false};
     const DJIMotorCycle_s cycle={.count=idx,.motors=dji_motor_instance,.measure=cycle_measure,
         .current=motor_output,.actual_aps=speed_feedback_aps,.target_aps=speed_reference_aps,
         .stop=cycle_stop,.online=cycle_online,.submission=&cycle_submission};
@@ -525,6 +543,19 @@ void DJIMotorControl()
 
         if (motor_setting->feedforward_flag & CURRENT_FEEDFORWARD)
             pid_ref += *motor_controller->current_feedforward_ptr;
+        /* Opt-in timed output addend. Leave existing pointer feedforwards and
+         * current-loop motors on their original paths. Never enlarge MaxOut. */
+        const float limit=motor_controller->speed_PID.MaxOut;
+        if (speed_calculated[i] && !(motor_setting->close_loop_type & CURRENT_LOOP) &&
+            (uint32_t)(HAL_GetTick()-cycle_output_feedforward_tick[i])<=20U &&
+            isfinite(cycle_output_feedforward[i]) && cycle_output_feedforward[i]!=0 &&
+            isfinite(pid_ref) && isfinite(limit) && limit>0 && limit<=32767) {
+            const float ff=fmaxf(-limit,fminf(limit,cycle_output_feedforward[i]));
+            output_feedforward_used[i]=ff;
+            const float combined=pid_ref+ff;
+            combined_at_limit[i]=fabsf(combined)>=limit;
+            pid_ref=fmaxf(-limit,fminf(limit,combined));
+        }
         if (motor_setting->close_loop_type & CURRENT_LOOP)
             pid_ref = PIDCalculate(&motor_controller->current_PID, measure->real_current, pid_ref);
 
@@ -620,9 +651,12 @@ void DJIMotorControl()
         const unsigned group_bit = 1U << motor->sender_group;
         DJIMotorControlSnapshot_s snapshot = {.available = true, .tick_ms = control_tick_ms,
             .reference = cycle_reference[i], .command = final_commands[i],
+            .output_feedforward = final_enabled[i] ? output_feedforward_used[i] : 0,
             .flags = (final_enabled[i] ? DJI_CONTROL_ENABLED : 0U) |
                 (submitted_groups & group_bit ? DJI_CONTROL_CAN_ATTEMPTED : 0U) |
                 (successful_groups & group_bit ? DJI_CONTROL_CAN_ACCEPTED : 0U)};
+        if (snapshot.output_feedforward!=0) snapshot.flags |= DJI_CONTROL_OUTPUT_FEEDFORWARD;
+        if (final_enabled[i] && combined_at_limit[i]) snapshot.flags |= DJI_CONTROL_COMBINED_AT_LIMIT;
         if (speed_calculated[i]) {
             snapshot.speed_dps = speed_feedback_aps[i];
             snapshot.speed_iout = speed->Iout;

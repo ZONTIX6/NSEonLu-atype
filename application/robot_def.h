@@ -132,6 +132,7 @@ typedef struct
     float chassis_rotate_wz;
 
     gimbal_mode_e gimbal_mode;
+    uint8_t yaw_spin_feedforward_requested; /* Local CMD -> gimbal, after safety gating. */
 } Gimbal_Ctrl_Cmd_s;
 
 // cmd发布的发射控制数据,由shoot订阅

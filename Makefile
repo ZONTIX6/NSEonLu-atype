@@ -187,6 +187,7 @@ modules/message_center/message_center.c \
 modules/daemon/daemon.c \
 modules/alarm/buzzer.c \
 application/gimbal/gimbal.c \
+application/gimbal/gimbal_yaw_feedforward.c \
 application/chassis/chassis.c \
 application/chassis/chassis_init.c \
 application/chassis/chassis_velocity_observer.c \
@@ -441,6 +442,7 @@ OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
 NUMERIC_SOURCES := $(filter modules/chassis_force_calibration/% modules/chassis_force/% modules/chassis_power/% modules/algorithm/power_model.c modules/algorithm/chassis_power_% modules/algorithm/chassis_spin.c modules/motor/DJImotor/% modules/telemetry/chassis_force_telemetry.c modules/telemetry/force_calibration_protocol.c application/runtime/force_calibration_app.c application/chassis/% application/board/board_chassis_force.c application/board/board_force_calibration.c application/cmd/robot_cmd.c,$(C_SOURCES))
 NUMERIC_SOURCES += $(filter modules/predictive_power/%,$(C_SOURCES))
 NUMERIC_SOURCES += $(filter config/%,$(C_SOURCES))
+NUMERIC_SOURCES += $(filter application/gimbal/%,$(C_SOURCES))
 NUMERIC_SOURCES += modules/algorithm/chassis_velocity_fusion.c modules/algorithm/chassis_remote_fusion.c \
                    modules/algorithm/chassis_velocity_center.c modules/algorithm/chassis_gimbal_imu.c
 ifeq ($(CHASSIS_VELOCITY_FUSION_ENABLE),1)

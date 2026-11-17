@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../../application/chassis/chassis.h"
 #include "../../application/cmd/robot_cmd.c"
 #include "../../application/gimbal/gimbal.c"
 #include "../../application/shoot/shoot.c"
@@ -22,6 +23,10 @@ static unsigned pub_count;
 typedef struct { Subscriber_t sub; Publisher_t *pub; unsigned char data[256]; int pending; } TestSub;
 static TestSub subs[20];
 static unsigned sub_count;
+static ChassisVelocityFeedback_s wheel_feedback;
+bool ChassisGetVelocitySnapshot(ChassisVelocityFeedback_s *out) {
+    *out=wheel_feedback; return out->actual.valid;
+}
 uint32_t HAL_GetTick(void) { return now; }
 float DWT_GetDeltaT(uint32_t *count) { *count=now; return .005f; }
 bool RuntimeTuningTrialActive(void) { return false; }
@@ -53,7 +58,10 @@ DJIMotorInstance *DJIMotorInit(Motor_Init_Config_s *c) {
     return m;
 }
 void DJIMotorSetRef(DJIMotorInstance *m,float ref) { m->motor_controller.pid_ref=ref; }
-void DJIMotorStop(DJIMotorInstance *m) { m->stop_flag=MOTOR_STOP; }
+void DJIMotorStop(DJIMotorInstance *m) { m->stop_flag=MOTOR_STOP; m->output_feedforward=0; }
+void DJIMotorSetOutputFeedforward(DJIMotorInstance *m,float command,uint32_t source_tick) {
+    m->output_feedforward=command; m->output_feedforward_tick_ms=source_tick;
+}
 void DJIMotorEnable(DJIMotorInstance *m) { m->stop_flag=MOTOR_ENALBED; }
 void DJIMotorOuterLoop(DJIMotorInstance *m,Closeloop_Type_e loop) { m->motor_settings.outer_loop_type=loop; }
 void DJIMotorChangeFeed(DJIMotorInstance *m,Closeloop_Type_e loop,Feedback_Source_e type) { (void)m;(void)loop;(void)type; }
@@ -120,6 +128,50 @@ int main(int argc,char **argv) {
         RemoteControlSet();
         assert(fabsf(gimbal_cmd_send.yaw-11.845f)<.0001f);
         assert(fabsf(gimbal_cmd_send.pitch-7.969f)<.0001f);
+    } else if(!strcmp(argv[1],"yaw_feedforward")) {
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_SPEED
+        remote_input=(RemoteControlSnapshot_s){.online=1,.has_sample=1,.last_rx_tick_ms=now};
+        remote_input.control.rc.switch_left=RC_SW_DOWN; remote_input.control.rc.switch_right=RC_SW_UP;
+        GimbalTask(); RobotCMDTask(); assert(VehicleSafetyAllowsDrive(now));
+        wheel_feedback.actual=(ChassisVelocity_s){.valid=true,.tick_ms=now-2,.wz_rpm=6.77f/0.104719755f};
+        /* Deliberately different target: only actual wheel motion may drive FF. */
+        wheel_feedback.target=(ChassisVelocity_s){.valid=true,.tick_ms=now,.wz_rpm=1000};
+        remote_input.control.rc.switch_right=RC_SW_DOWN;
+        RobotCMDTask(); GimbalTask();
+        assert(gimbal_cmd_recv.yaw_spin_feedforward_requested);
+        assert(fabsf(yaw_motor->output_feedforward-7311.6f)<.01f);
+        assert(yaw_motor->output_feedforward_tick_ms==now-2);
+        assert(pitch_motor->output_feedforward==0);
+        float previous_ref=yaw_motor->motor_controller.pid_ref;
+        remote_input.control.rc.rocker_l_=100;
+        RobotCMDTask(); GimbalTask();
+        assert(yaw_motor->motor_controller.pid_ref!=previous_ref); /* Manual yaw still works. */
+        assert(fabsf(yaw_motor->output_feedforward-7311.6f)<.01f);
+        remote_input.control.rc.rocker_l_=0;
+        remote_input.control.rc.switch_right=RC_SW_UP;
+        wheel_feedback.actual.wz_rpm=3/0.104719755f;
+        RobotCMDTask(); GimbalTask();
+        assert(!gimbal_cmd_recv.yaw_spin_feedforward_requested);
+        assert(fabsf(yaw_motor->output_feedforward-3240)<.01f);
+        wheel_feedback.actual.wz_rpm=0;
+        RobotCMDTask(); GimbalTask(); assert(yaw_motor->output_feedforward==0);
+        wheel_feedback.actual.wz_rpm=3/0.104719755f;
+        RobotCMDTask(); GimbalTask(); assert(yaw_motor->output_feedforward==0);
+        remote_input.control.rc.switch_right=RC_SW_DOWN;
+        RobotCMDTask(); GimbalTask(); assert(yaw_motor->output_feedforward>0);
+        /* Keep safety/commands alive while only the wheel sample ages out. */
+        for(unsigned i=0;i<4;++i) {
+            now+=5; FreshMotors(); remote_input.last_rx_tick_ms=now;
+            RobotCMDTask(); GimbalTask();
+        }
+        assert(yaw_motor->output_feedforward==0);
+        wheel_feedback.actual.tick_ms=now;
+        RobotCMDTask(); GimbalTask(); assert(yaw_motor->output_feedforward>0);
+        remote_input.online=0;
+        RobotCMDTask(); GimbalTask();
+        assert(!gimbal_cmd_recv.yaw_spin_feedforward_requested);
+        assert(yaw_motor->output_feedforward==0 && yaw_motor->stop_flag==MOTOR_STOP);
+#endif
     } else if(!strcmp(argv[1],"yaw")) {
         remote_input=(RemoteControlSnapshot_s){.online=1,.has_sample=1,.last_rx_tick_ms=now};
         remote_input.control.rc.switch_left=RC_SW_DOWN; remote_input.control.rc.switch_right=RC_SW_UP;

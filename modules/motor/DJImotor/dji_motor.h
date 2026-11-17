@@ -79,6 +79,8 @@ typedef struct
     uint32_t feed_cnt;
     float dt;
     DJIMotorControlSnapshot_s control_snapshot;
+    float output_feedforward; /* Optional DJI command added after speed PID. */
+    uint32_t output_feedforward_tick_ms;
 } DJIMotorInstance;
 #if CHASSIS_FORCE_CALIBRATION_ENABLE
 bool DJIMotorRegisterFeedbackObserver(void (*observer)(const DJIMotorInstance *,int16_t,int16_t,uint32_t));
@@ -182,6 +184,11 @@ DJIMotorInstance *DJIMotorInit(Motor_Init_Config_s *config);
  * @param ref 设定参考值
  */
 void DJIMotorSetRef(DJIMotorInstance *motor, float ref);
+
+/* Timed output feedforward for a speed/angle-speed loop without a current PID.
+ * Expires 20 ms after the source sample; PID + feedforward is capped at the
+ * speed PID's MaxOut. Zero disables it. Existing pointer feedforwards are separate. */
+void DJIMotorSetOutputFeedforward(DJIMotorInstance *motor, float command, uint32_t source_tick_ms);
 
 /**
  * @brief 切换反馈的目标来源,如将角速度和角度的来源换为IMU(小陀螺模式常用)

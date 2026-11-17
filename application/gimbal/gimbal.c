@@ -8,6 +8,13 @@
 #include "jscope.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "chassis_control_config.h"
+#include "vehicle_safety.h"
+#if defined(ONE_BOARD) && CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_SPEED
+#include "chassis.h"
+#include "gimbal_yaw_feedforward.h"
+static GimbalYawFeedforward_s yaw_feedforward_state;
+#endif
 
 
 static attitude_t *gimbal_IMU_data; // 云台IMU数据
@@ -107,6 +114,21 @@ void GimbalTask()
     // 后续增加未收到数据的处理
     SubGetMessage(gimbal_sub, &gimbal_cmd_recv);
 
+#if defined(ONE_BOARD) && CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_SPEED
+    ChassisVelocityFeedback_s wheel={0};
+    const bool wheel_valid=ChassisGetVelocitySnapshot(&wheel);
+    const uint32_t now=HAL_GetTick();
+    const bool head_enabled=(gimbal_cmd_recv.gimbal_mode==GIMBAL_GYRO_MODE ||
+        gimbal_cmd_recv.gimbal_mode==GIMBAL_FREE_MODE) && VehicleSafetyAllowsDrive(now);
+    const float feedforward=GimbalYawFeedforwardUpdate(&yaw_feedforward_state,
+        head_enabled, gimbal_cmd_recv.yaw_spin_feedforward_requested!=0,
+        wheel_valid, wheel.actual.wz_rpm*0.10471975511965977f,
+        wheel.actual.tick_ms, now);
+    /* Keep the source epoch: repeated reads must not refresh stale wheel data.
+     * This is wheel kinematics, independent of remote IMU / Kalman estimates. */
+    DJIMotorSetOutputFeedforward(yaw_motor,feedforward,wheel.actual.tick_ms);
+#endif
+
     // @todo:现在已不再需要电机反馈,实际上可以始终使用IMU的姿态数据来作为云台的反馈,yaw电机的offset只是用来跟随底盘
     // 根据控制模式进行电机反馈切换和过渡,视觉模式在robot_cmd模块就已经设置好,gimbal只看yaw_ref和pitch_ref
     switch (gimbal_cmd_recv.gimbal_mode)
@@ -139,6 +161,8 @@ void GimbalTask()
         DJIMotorSetRef(pitch_motor, gimbal_cmd_recv.pitch);
         break;
     default:
+        DJIMotorStop(yaw_motor);
+        DJIMotorStop(pitch_motor);
         break;
     }
     //SEGGER_RTT_printf(0,"0:%d,1:%d,2:%d\n",(int16_t)gimbal_IMU_data->Gyro[0], (int16_t)gimbal_IMU_data->Gyro[1],(int16_t)gimbal_IMU_data->Gyro[2]);

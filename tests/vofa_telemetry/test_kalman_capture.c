@@ -56,6 +56,8 @@ static void sample(uint32_t now, uint32_t attempt)
         .tick_ms=now-1U,.reference=731.5f,.speed_dps=-12.5f,.speed_iout=3000,
         .command=7000,.flags=DJI_CONTROL_ENABLED | DJI_CONTROL_CAN_ATTEMPTED |
             DJI_CONTROL_CAN_ACCEPTED | DJI_CONTROL_SPEED_CALCULATED | DJI_CONTROL_INTEGRAL_AT_LIMIT};
+    if (attempt==1) velocity.diagnostics.yaw_control.flags |=
+        DJI_CONTROL_OUTPUT_FEEDFORWARD | DJI_CONTROL_COMBINED_AT_LIMIT;
     for (unsigned i = 0; i < 4; ++i) {
         velocity.diagnostics.raw_rpm[i] = 100.f + (float)i;
         velocity.diagnostics.wheel_tick_ms[i] = now - 2U;
@@ -192,12 +194,13 @@ static void startup_preserves_frozen_records(void)
     assert(field(active, VOFA_KALMAN_GIMBAL_CONTROL_YAW_SPEED_DPS) == -12.5f);
     assert(field(active, VOFA_KALMAN_GIMBAL_CONTROL_YAW_SPEED_IOUT) == 3000);
     assert(field(active, VOFA_KALMAN_GIMBAL_CONTROL_YAW_COMMAND) == 7000);
-    assert(field(active, VOFA_KALMAN_GIMBAL_CONTROL_YAW_CONTROL_FLAGS) == 79);
+    assert(field(active, VOFA_KALMAN_GIMBAL_CONTROL_YAW_CONTROL_FLAGS) == (79|128|256));
     assert(field(active, VOFA_KALMAN_GIMBAL_CONTROL_YAW_CONTROL_AGE_MS) == 1);
     finish_uart();
     VofaKalmanCaptureDrain();
     assert(sent == 2 && stats().pending == 0);
     assert(field(active, VOFA_KALMAN_GIMBAL_CONTROL_YAW_ECD) == 352);
+    assert(field(active, VOFA_KALMAN_GIMBAL_CONTROL_YAW_CONTROL_FLAGS) == 79);
     assert(word(active, VOFA_KALMAN_GIMBAL_CONTROL_TICK_MS_HI) == 1020);
     assert(word(active, VOFA_KALMAN_GIMBAL_CONTROL_TX_SEQUENCE_HI) == 1);
     assert(word(active, VOFA_KALMAN_GIMBAL_CONTROL_ATTEMPT_SEQUENCE_HI) == 2);

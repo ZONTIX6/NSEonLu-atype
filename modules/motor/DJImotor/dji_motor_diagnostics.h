@@ -11,7 +11,9 @@ enum {
     DJI_CONTROL_INTEGRAL_AT_LIMIT = 1U << 3,
     DJI_CONTROL_SPEED_AT_LIMIT = 1U << 4,
     DJI_CONTROL_ANGLE_AT_LIMIT = 1U << 5,
-    DJI_CONTROL_SPEED_CALCULATED = 1U << 6
+    DJI_CONTROL_SPEED_CALCULATED = 1U << 6,
+    DJI_CONTROL_OUTPUT_FEEDFORWARD = 1U << 7,
+    DJI_CONTROL_COMBINED_AT_LIMIT = 1U << 8
 };
 
 /* One completed motor cycle. CAN acceptance means mailbox submission, not
@@ -19,6 +21,7 @@ enum {
 typedef struct {
     uint32_t tick_ms;
     float reference, speed_dps, speed_iout;
+    float output_feedforward; /* Used addend before feedback sign / combined clamp. */
     int16_t command;
     uint16_t flags;
     bool available;
