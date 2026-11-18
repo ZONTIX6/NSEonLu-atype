@@ -50,6 +50,7 @@ test: test_vofa_telemetry.exe test_vofa_measurement.exe test_imu_capture.exe tes
 	./test_kalman_capture.exe heartbeat
 	./test_kalman_capture.exe wrap
 	./test_kalman_capture.exe mode
+	./test_kalman_capture.exe spin
 
 test_vofa_telemetry.exe: $(SOURCE) $(HEADERS)
 	$(CC) $(CFLAGS) $(INCLUDES) -DVOFA_TELEMETRY_ENABLE=1 -DVOFA_TELEMETRY_MODE=0 $(SOURCE) -o $@

@@ -18,7 +18,8 @@
 #endif
 #endif
 
-enum { OBSERVATION_CHANNELS = VOFA_OBSERVATION_PROFILE == 1 ? VOFA_POWER_CHANNELS : VOFA_KALMAN_GIMBAL_CONTROL_CHANNELS };
+enum { OBSERVATION_CHANNELS = VOFA_OBSERVATION_PROFILE == 1 ? VOFA_POWER_CHANNELS :
+    VOFA_KALMAN_CAPTURE_ENABLED ? VOFA_KALMAN_GIMBAL_CONTROL_TURN_COUNT_CHANNELS : VOFA_KALMAN_GIMBAL_CONTROL_CHANNELS };
 static struct {
     float channels[OBSERVATION_CHANNELS];
     uint8_t tail[4];
@@ -278,7 +279,11 @@ static void Kalman(float *f, const USBTelemetrySample_s *sample,
     const bool control_valid = control_known && (uint32_t)(now - d->tick_ms) <= 20U &&
         (uint32_t)(now - control->tick_ms) <= 20U && isfinite(control->reference) &&
         isfinite(control->speed_dps) && isfinite(control->speed_iout);
+#if VOFA_KALMAN_CAPTURE_ENABLED
+    K(SCHEMA) = VOFA_KALMAN_GIMBAL_CONTROL_TURN_COUNT_SCHEMA_ID;
+#else
     K(SCHEMA) = VOFA_KALMAN_GIMBAL_CONTROL_SCHEMA_ID;
+#endif
     K(VALID) = (wheel ? 1U : 0U) | (target ? 2U : 0U) | (estimate ? 4U : 0U) | (imu ? 8U : 0U) |
         (attempt ? 16U : 0U) | (CHASSIS_REMOTE_IMU_CONFIG_VERIFIED ? 32U : 0U) |
         (yaw ? 256U : 0U) | (gimbal_imu ? 512U : 0U) | (control_valid ? 1024U : 0U);
@@ -380,7 +385,9 @@ typedef struct {
     ChassisImuCanSnapshot_s remote;
     ChassisVelocity_s target;
     uint32_t tick_ms, sequence;
+    float spin_turn_count;
     bool remote_usable;
+    bool spin_turn_count_valid;
 } KalmanCaptureRecord_s;
 
 /* One chassis-task producer and one telemetry-task consumer. Only publish a
@@ -395,6 +402,96 @@ static void Increment(uint32_t *value)
     if (*value != UINT32_MAX) ++*value;
 }
 
+static bool SpinTurnSensorsValid(const ChassisVelocityDiagnostics_s *d, uint32_t now_ms)
+{
+    return d->available && d->yaw_encoder_valid && d->joint_ecd[0] < 8192U &&
+        (uint32_t)(now_ms - d->tick_ms) <= 20U &&
+        (uint32_t)(now_ms - d->joint_tick_ms[0]) <= 20U &&
+        d->gimbal_imu_known && d->gimbal_imu_valid &&
+        (uint32_t)(now_ms - d->gimbal_imu_tick_ms) <= 20U &&
+        isfinite(d->gimbal_yaw_total_deg);
+}
+
+enum { SPIN_CHASSIS_MODE = 1U }; /* CHASSIS_ROTATE in application/robot_def.h. */
+
+static void AccumulateSpinSegment(const ChassisVelocityDiagnostics_s *d, uint32_t now_ms,
+    bool sensors_valid, bool *have_baseline, uint32_t *previous_tick_ms,
+    uint16_t *previous_ecd, float *previous_gimbal_yaw_deg, float *turn_count,
+    bool *count_valid)
+{
+    if (!sensors_valid) {
+        *count_valid = false;
+        *have_baseline = false;
+        return;
+    }
+    if (!*have_baseline) {
+        *previous_tick_ms = now_ms;
+        *previous_ecd = d->joint_ecd[0];
+        *previous_gimbal_yaw_deg = d->gimbal_yaw_total_deg;
+        *have_baseline = true;
+        return;
+    }
+
+    const uint32_t interval_ms = now_ms - *previous_tick_ms;
+    int32_t delta_ecd = (int32_t)d->joint_ecd[0] - (int32_t)*previous_ecd;
+    if (delta_ecd > 4096) delta_ecd -= 8192;
+    else if (delta_ecd < -4096) delta_ecd += 8192;
+    const float delta_gimbal_deg = d->gimbal_yaw_total_deg - *previous_gimbal_yaw_deg;
+    if (interval_ms > 100U || delta_ecd == 4096 || delta_ecd == -4096 ||
+        !isfinite(delta_gimbal_deg) || fabsf(delta_gimbal_deg) > 180.0f) {
+        *count_valid = false;
+    } else if (interval_ms != 0U) {
+        const float delta_chassis_deg = delta_gimbal_deg - (float)delta_ecd * (360.0f / 8192.0f);
+        if (!isfinite(delta_chassis_deg) || fabsf(delta_chassis_deg) > 180.0f) {
+            *count_valid = false;
+        } else {
+            *turn_count += fabsf(delta_chassis_deg) / 360.0f;
+        }
+    }
+
+    *previous_tick_ms = now_ms;
+    *previous_ecd = d->joint_ecd[0];
+    *previous_gimbal_yaw_deg = d->gimbal_yaw_total_deg;
+}
+
+static void UpdateSpinTurnCount(const ChassisFusedVelocitySnapshot_s *velocity, uint32_t now_ms,
+    float *turn_count, bool *count_valid)
+{
+    static bool tracking, have_baseline, valid;
+    static uint32_t previous_tick_ms;
+    static uint16_t previous_ecd;
+    static float previous_gimbal_yaw_deg, turns;
+    const ChassisVelocityDiagnostics_s *d = &velocity->diagnostics;
+    const bool mode_known = d->available && (uint32_t)(now_ms - d->tick_ms) <= 20U;
+    const bool sensors_valid = SpinTurnSensorsValid(d, now_ms);
+
+    if (!mode_known) {
+        if (tracking) {
+            valid = false;
+            have_baseline = false;
+        }
+    } else if (d->chassis_mode == SPIN_CHASSIS_MODE) {
+        if (!tracking) {
+            turns = 0.0f;
+            valid = sensors_valid;
+            tracking = true;
+            have_baseline = false;
+        }
+        AccumulateSpinSegment(d, now_ms, sensors_valid, &have_baseline,
+            &previous_tick_ms, &previous_ecd, &previous_gimbal_yaw_deg, &turns, &valid);
+    } else {
+        if (tracking && have_baseline) {
+            AccumulateSpinSegment(d, now_ms, sensors_valid, &have_baseline,
+                &previous_tick_ms, &previous_ecd, &previous_gimbal_yaw_deg, &turns, &valid);
+        }
+        tracking = false;
+        have_baseline = false;
+    }
+
+    *turn_count = turns;
+    *count_valid = valid;
+}
+
 void VofaKalmanCapture(const ChassisFusedVelocitySnapshot_s *velocity,
     const ChassisImuCanSnapshot_s *remote, bool remote_usable,
     const ChassisVelocity_s *target, uint32_t now_ms)
@@ -404,6 +501,9 @@ void VofaKalmanCapture(const ChassisFusedVelocitySnapshot_s *velocity,
     static uint8_t last_chassis_mode;
     static ChassisFusedVelocityStatus_e last_status;
     if (!velocity || !remote || !target) return;
+    float spin_turn_count;
+    bool spin_turn_count_valid;
+    UpdateSpinTurnCount(velocity, now_ms, &spin_turn_count, &spin_turn_count_valid);
     const ChassisRemoteFusionAttempt_s *attempt = &velocity->remote.attempt;
     const bool new_attempt = attempt->available && (!have_attempt || attempt->sequence != last_attempt);
     if (observed && !new_attempt && velocity->status == last_status &&
@@ -430,7 +530,9 @@ void VofaKalmanCapture(const ChassisFusedVelocitySnapshot_s *velocity,
     record->target = *target;
     record->tick_ms = now_ms;
     record->sequence = sequence;
+    record->spin_turn_count = spin_turn_count;
     record->remote_usable = remote_usable;
+    record->spin_turn_count_valid = spin_turn_count_valid;
     taskENTER_CRITICAL();
     capture_write = write + 1U;
     Increment(&capture_stats.captured);
@@ -461,6 +563,10 @@ void VofaKalmanCaptureDrain(void)
     /* Transport diagnostics: FIFO format and overflow since MCU startup.
      * Overflow is sticky even on older queued records, so trailing loss is visible. */
     f[VOFA_KALMAN_GIMBAL_CONTROL_VALID] = (float)((uint32_t)f[VOFA_KALMAN_GIMBAL_CONTROL_VALID] | 64U | (overflow ? 128U : 0U));
+    f[VOFA_KALMAN_GIMBAL_CONTROL_TURN_COUNT_SPIN_TURN_COUNT] = record->spin_turn_count;
+    if (record->spin_turn_count_valid) {
+        f[VOFA_KALMAN_GIMBAL_CONTROL_VALID] = (float)((uint32_t)f[VOFA_KALMAN_GIMBAL_CONTROL_VALID] | 2048U);
+    }
     FinishFrame();
     const HAL_StatusTypeDef status = HAL_UART_Transmit_IT(uart, (uint8_t *)&frame, sizeof frame);
     taskENTER_CRITICAL();

@@ -26,7 +26,7 @@ def markdown_report(report):
             f"Rows: {q['total_rows']}; numeric-valid: {q['valid_rows']}; invalid: {q['invalid_rows']}.",
             f"Duplicate frames: {q['duplicate_frames']}; missing {sequence_label}: {q['missing_attempts']}; "
             f"restart/order boundaries: {q['restart_or_order_boundaries']}.", '']
-        if q['schema'] in (5, 6, 7):
+        if q['schema'] in (5, 6, 7, 8):
             lines += [f"Unique recorded filter calls: {q['unique_filter_calls']}; missing filter calls "
                       f"between comparable recorded endpoints: {q['missing_filter_calls']}.",
                       f"FIFO overflow observed: {q['capture_overflow_observed']}. "
@@ -75,7 +75,7 @@ def main(argv=None):
         if capture['schema'] == 4:
             from vofa_power import analyze_power, fit_power_trials
             if args.fusion_candidate:
-                raise ValueError('fusion candidate requires schema 5, 6 or 7')
+                raise ValueError('fusion candidate requires schema 5, 6, 7 or 8')
             configuration = json.loads(args.configuration.read_text(encoding='utf-8-sig')) if args.configuration else None
             report['analysis'] = analyze_power(capture, configuration)
             if args.power_trials:
@@ -89,7 +89,7 @@ def main(argv=None):
                     instrument_error_w=metadata['instrument_error_w'])
                 if not report['power_fit']['validation_passed']:
                     raise ValueError('independent-trial power model validation failed; inspect power_fit')
-        elif capture['schema'] in (5, 6, 7):
+        elif capture['schema'] in (5, 6, 7, 8):
             from vofa_fusion import FusionBridge, analyze_fusion
             if args.power_trials or args.configuration:
                 raise ValueError('power configuration/trials require schema 4')

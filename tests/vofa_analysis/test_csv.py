@@ -155,6 +155,22 @@ class CsvTests(unittest.TestCase):
         self.assertEqual(quality['capture_mode'], 'event_fifo')
         self.assertEqual(quality['unique_filter_calls'], 3)
 
+    def test_spin_turn_extension_decodes_count_and_validity(self):
+        rows = [attempt(i, schema=8, valid=31 | 64 | 256 | 512 | 1024 | 2048,
+                        spin_turn_count=turns, chassis_mode=1)
+                for i, turns in ((1, 0.0), (2, 2.5), (3, 103.4165))]
+        export(self.path, wire_rows(rows), time_at=0, renamed=True)
+        capture = read_capture(self.path)
+        self.assertEqual(capture['schema'], 8)
+        self.assertEqual(capture['channel_count'], 109)
+        decoded = capture['rows'][2]
+        self.assertEqual(decoded['spin_turn_count'], 103.4165)
+        self.assertEqual(decoded['chassis_mode'], 1)
+        self.assertTrue(decoded['valid'] & 2048)
+        quality = quality_report(capture)
+        self.assertEqual(quality['capture_mode'], 'event_fifo')
+        self.assertEqual(quality['unique_filter_calls'], 3)
+
     def test_renamed_numeric_extra_column_cannot_ambiguously_shift_layout(self):
         rows = legacy_rows(count=2)
         for r in rows:

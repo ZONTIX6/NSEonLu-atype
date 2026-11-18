@@ -213,7 +213,7 @@ def quality_report(capture):
         if first is None:
             first = row['line']
         previous = row
-        if capture['schema'] in (5, 6, 7):
+        if capture['schema'] in (5, 6, 7, 8):
             fifo = bool(row['valid'] & 64)
             counts['capture_fifo_rows'] += fifo
             counts['capture_overflow_rows'] += fifo and bool(row['valid'] & 128)
@@ -286,7 +286,7 @@ held. Only the reset count captured BEFORE that call describes its filter state.
 The acceleration variance is an effective per-attempt input and may vary while
 the static config fingerprint stays unchanged.
 """
-    if capture['schema'] not in (5, 6, 7):
+    if capture['schema'] not in (5, 6, 7, 8):
         return []
     segments, segment, previous, previous_frame = [], [], None, None
     for row in capture['rows']:

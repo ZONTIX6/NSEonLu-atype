@@ -2132,5 +2132,595 @@
       "output_feedforward_applied": 7,
       "combined_output_at_limit": 8
     }
+  },
+  "8": {
+    "name": "kalman_gimbal_control_turn_count",
+    "channels": [
+      {
+        "name": "schema",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "tick_ms_hi",
+        "type": "u16",
+        "unit": "ms"
+      },
+      {
+        "name": "tick_ms_lo",
+        "type": "u16",
+        "unit": "ms"
+      },
+      {
+        "name": "tx_sequence_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "tx_sequence_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "valid",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "observer_status",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "config_source",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "config_fingerprint_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "config_fingerprint_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "imu_source",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "wheel_online_mask",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "raw_rpm_lf",
+        "type": "f32",
+        "unit": "rotor rpm"
+      },
+      {
+        "name": "raw_rpm_rf",
+        "type": "f32",
+        "unit": "rotor rpm"
+      },
+      {
+        "name": "raw_rpm_lb",
+        "type": "f32",
+        "unit": "rotor rpm"
+      },
+      {
+        "name": "raw_rpm_rb",
+        "type": "f32",
+        "unit": "rotor rpm"
+      },
+      {
+        "name": "wheel_age_ms_lf",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "wheel_age_ms_rf",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "wheel_age_ms_lb",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "wheel_age_ms_rb",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "wheel_vx_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "wheel_vy_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "wheel_wz_radps",
+        "type": "f32",
+        "unit": "rad/s"
+      },
+      {
+        "name": "target_vx_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "target_vy_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "target_wz_radps",
+        "type": "f32",
+        "unit": "rad/s"
+      },
+      {
+        "name": "velocity_vx_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "velocity_vy_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "velocity_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "imu_qw",
+        "type": "f32",
+        "unit": "1"
+      },
+      {
+        "name": "imu_qx",
+        "type": "f32",
+        "unit": "1"
+      },
+      {
+        "name": "imu_qy",
+        "type": "f32",
+        "unit": "1"
+      },
+      {
+        "name": "imu_qz",
+        "type": "f32",
+        "unit": "1"
+      },
+      {
+        "name": "imu_ax_mps2",
+        "type": "f32",
+        "unit": "m/s^2"
+      },
+      {
+        "name": "imu_ay_mps2",
+        "type": "f32",
+        "unit": "m/s^2"
+      },
+      {
+        "name": "imu_az_mps2",
+        "type": "f32",
+        "unit": "m/s^2"
+      },
+      {
+        "name": "imu_gx_radps",
+        "type": "f32",
+        "unit": "rad/s"
+      },
+      {
+        "name": "imu_gy_radps",
+        "type": "f32",
+        "unit": "rad/s"
+      },
+      {
+        "name": "imu_gz_radps",
+        "type": "f32",
+        "unit": "rad/s"
+      },
+      {
+        "name": "imu_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "imu_receive_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "imu_source_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "imu_sequence_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "imu_sequence_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "imu_tick_ms_hi",
+        "type": "u16",
+        "unit": "ms"
+      },
+      {
+        "name": "imu_tick_ms_lo",
+        "type": "u16",
+        "unit": "ms"
+      },
+      {
+        "name": "attempt_sequence_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "attempt_sequence_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "attempt_flags",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "call_receiver_ms_hi",
+        "type": "u16",
+        "unit": "ms"
+      },
+      {
+        "name": "call_receiver_ms_lo",
+        "type": "u16",
+        "unit": "ms"
+      },
+      {
+        "name": "call_us_hi",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "call_us_lo",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "wheel_us_hi",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "wheel_us_lo",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "imu_us_hi",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "imu_us_lo",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "middle_receiver_ms_hi",
+        "type": "u16",
+        "unit": "ms"
+      },
+      {
+        "name": "middle_receiver_ms_lo",
+        "type": "u16",
+        "unit": "ms"
+      },
+      {
+        "name": "wheel_n_x_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "wheel_n_y_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "accel_n_x_mps2",
+        "type": "f32",
+        "unit": "m/s^2"
+      },
+      {
+        "name": "accel_n_y_mps2",
+        "type": "f32",
+        "unit": "m/s^2"
+      },
+      {
+        "name": "output_n_x_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "output_n_y_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "output_sample_us_hi",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "output_sample_us_lo",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "update_count_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "update_count_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "reset_count_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "reset_count_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "resets_before_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "resets_before_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "pair_span_ms",
+        "type": "f32",
+        "unit": "ms"
+      },
+      {
+        "name": "source_step_ms",
+        "type": "f32",
+        "unit": "ms"
+      },
+      {
+        "name": "receive_step_ms",
+        "type": "f32",
+        "unit": "ms"
+      },
+      {
+        "name": "fusion_wheel_variance",
+        "type": "f32",
+        "unit": "(m/s)^2"
+      },
+      {
+        "name": "fusion_accel_variance",
+        "type": "f32",
+        "unit": "(m/s^2)^2",
+        "description": "Effective per-attempt IMU acceleration variance; may increase with predicted rotational lever-arm acceleration."
+      },
+      {
+        "name": "fusion_jerk_density",
+        "type": "f32",
+        "unit": "m^2/s^5"
+      },
+      {
+        "name": "fusion_max_residual_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "fusion_max_age_us_hi",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "fusion_max_age_us_lo",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "fusion_max_skew_us_hi",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "fusion_max_skew_us_lo",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "fusion_max_gap_us_hi",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "fusion_max_gap_us_lo",
+        "type": "u16",
+        "unit": "us"
+      },
+      {
+        "name": "mount_qw",
+        "type": "f32",
+        "unit": "1"
+      },
+      {
+        "name": "mount_qx",
+        "type": "f32",
+        "unit": "1"
+      },
+      {
+        "name": "mount_qy",
+        "type": "f32",
+        "unit": "1"
+      },
+      {
+        "name": "mount_qz",
+        "type": "f32",
+        "unit": "1"
+      },
+      {
+        "name": "offset_x_m",
+        "type": "f32",
+        "unit": "m"
+      },
+      {
+        "name": "offset_y_m",
+        "type": "f32",
+        "unit": "m"
+      },
+      {
+        "name": "offset_z_m",
+        "type": "f32",
+        "unit": "m"
+      },
+      {
+        "name": "max_pair_span_ms",
+        "type": "f32",
+        "unit": "ms"
+      },
+      {
+        "name": "max_wheel_skew_ms",
+        "type": "f32",
+        "unit": "ms"
+      },
+      {
+        "name": "max_timing_jitter_ms",
+        "type": "f32",
+        "unit": "ms"
+      },
+      {
+        "name": "yaw_ecd",
+        "type": "u16",
+        "unit": "encoder count",
+        "description": "Raw yaw motor encoder count (0..8191)."
+      },
+      {
+        "name": "yaw_offset_deg",
+        "type": "f32",
+        "unit": "deg",
+        "description": "Circular yaw encoder offset from YAW_CHASSIS_ALIGN_ECD."
+      },
+      {
+        "name": "yaw_age_ms",
+        "type": "age",
+        "unit": "ms",
+        "description": "Age of the yaw encoder feedback."
+      },
+      {
+        "name": "chassis_mode",
+        "type": "enum",
+        "unit": "1",
+        "description": "0=zero force, 1=spin, 2=no follow, 3=follow; -1=unavailable."
+      },
+      {
+        "name": "gimbal_yaw_total_deg",
+        "type": "f32",
+        "unit": "deg",
+        "description": "Local head IMU continuous yaw; subtract pre-switch baseline to measure head heading change."
+      },
+      {
+        "name": "gimbal_imu_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "yaw_ref_deg",
+        "type": "f32",
+        "unit": "deg"
+      },
+      {
+        "name": "yaw_speed_dps",
+        "type": "f32",
+        "unit": "deg/s"
+      },
+      {
+        "name": "yaw_speed_iout",
+        "type": "f32",
+        "unit": "DJI command"
+      },
+      {
+        "name": "yaw_command",
+        "type": "i16",
+        "unit": "DJI command"
+      },
+      {
+        "name": "yaw_control_flags",
+        "type": "u16",
+        "unit": "bitmask"
+      },
+      {
+        "name": "yaw_control_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "spin_turn_count",
+        "type": "f32",
+        "unit": "turn",
+        "description": "Accumulated chassis revolutions during the current or most recent spin mode; valid only when I5 bit 11 is set."
+      }
+    ],
+    "valid_bits": {
+      "wheels": 0,
+      "target": 1,
+      "estimate": 2,
+      "imu": 3,
+      "attempt": 4,
+      "verified": 5,
+      "capture_fifo": 6,
+      "capture_overflow": 7,
+      "yaw_encoder": 8,
+      "gimbal_imu": 9,
+      "yaw_control": 10,
+      "spin_turn_count": 11
+    },
+    "attempt_flags": {
+      "available": 0,
+      "wheel_valid": 1,
+      "imu_valid": 2,
+      "initialized_before": 3,
+      "output_valid": 4,
+      "output_fused": 5
+    },
+    "yaw_control_flags": {
+      "enabled_at_submit": 0,
+      "can_attempted": 1,
+      "can_mailbox_accepted": 2,
+      "speed_integral_at_limit": 3,
+      "speed_output_at_limit": 4,
+      "angle_output_at_limit": 5,
+      "speed_pid_calculated": 6,
+      "output_feedforward_applied": 7,
+      "combined_output_at_limit": 8
+    }
   }
 }

@@ -8,7 +8,7 @@
 #include <string.h>
 
 /* Each scenario runs in a fresh process: production has no test-only reset. */
-enum { FRAME_BYTES = (VOFA_KALMAN_GIMBAL_CONTROL_CHANNELS + 1) * 4, LOG_CAPACITY = 512 };
+enum { FRAME_BYTES = (VOFA_KALMAN_GIMBAL_CONTROL_TURN_COUNT_CHANNELS + 1) * 4, LOG_CAPACITY = 512 };
 UART_HandleTypeDef huart7 = {.gState = HAL_UART_STATE_READY};
 static uint32_t tick, send_started;
 static unsigned critical, sent, read_imu_calls, clock_reads;
@@ -141,8 +141,8 @@ static uint32_t word(const uint8_t *frame, unsigned index)
 static void check_frame(const uint8_t *frame)
 {
     const uint8_t tail[] = {0, 0, 128, 127};
-    assert(field(frame, 0) == 7 && memcmp(frame + FRAME_BYTES - 4, tail, 4) == 0);
-    for (unsigned i = 0; i < VOFA_KALMAN_GIMBAL_CONTROL_CHANNELS; ++i) assert(isfinite(field(frame, i)));
+    assert(field(frame, 0) == 8 && memcmp(frame + FRAME_BYTES - 4, tail, 4) == 0);
+    for (unsigned i = 0; i < VOFA_KALMAN_GIMBAL_CONTROL_TURN_COUNT_CHANNELS; ++i) assert(isfinite(field(frame, i)));
     for (unsigned i = 0; i + 4 <= FRAME_BYTES - 4; ++i) assert(memcmp(frame + i, tail, 4) != 0);
     assert((unsigned)lroundf(field(frame, VOFA_KALMAN_GIMBAL_CONTROL_VALID)) & 64U);
 }
@@ -176,7 +176,8 @@ static void startup_preserves_frozen_records(void)
     assert(word(active, VOFA_KALMAN_GIMBAL_CONTROL_TICK_MS_HI) == 1000);
     assert(word(active, VOFA_KALMAN_GIMBAL_CONTROL_TX_SEQUENCE_HI) == 0);
     assert(word(active, VOFA_KALMAN_GIMBAL_CONTROL_ATTEMPT_SEQUENCE_HI) == 1);
-    assert((unsigned)field(active, VOFA_KALMAN_GIMBAL_CONTROL_VALID) == (95U | 256U | 512U | 1024U));
+    assert((unsigned)field(active, VOFA_KALMAN_GIMBAL_CONTROL_VALID) == (95U | 256U | 512U | 1024U | 2048U));
+    assert(field(active, VOFA_KALMAN_GIMBAL_CONTROL_TURN_COUNT_SPIN_TURN_COUNT) == 0.0f);
     assert(field(active, VOFA_KALMAN_GIMBAL_CONTROL_ATTEMPT_FLAGS) == 55U); /* Known initial state. */
     assert(field(active, VOFA_KALMAN_GIMBAL_CONTROL_IMU_AGE_MS) == 5);
     assert(field(active, VOFA_KALMAN_GIMBAL_CONTROL_IMU_RECEIVE_AGE_MS) == 2);
@@ -369,6 +370,76 @@ static void mode_switch_is_captured_without_a_new_filter_call(void)
     assert(word(active, VOFA_KALMAN_GIMBAL_CONTROL_ATTEMPT_SEQUENCE_HI) == 1);
 }
 
+static void spin_turn_count_tracks_encoder_wrap_and_gimbal_motion(void)
+{
+    sample(1000, 1);
+    velocity.diagnostics.chassis_mode = 3;
+    velocity.diagnostics.joint_ecd[0] = 8190;
+    velocity.diagnostics.gimbal_yaw_total_deg = 0.0f;
+    VofaKalmanCapture(&velocity, &imu, true, &target, 1000);
+
+    sample(1020, 2);
+    velocity.diagnostics.joint_ecd[0] = 8190;
+    velocity.diagnostics.gimbal_yaw_total_deg = 0.0f;
+    VofaKalmanCapture(&velocity, &imu, true, &target, 1020);
+    sample(1040, 3);
+    velocity.diagnostics.joint_ecd[0] = 2;
+    velocity.diagnostics.gimbal_yaw_total_deg = 1.17578125f;
+    VofaKalmanCapture(&velocity, &imu, true, &target, 1040);
+    sample(1060, 4);
+    velocity.diagnostics.joint_ecd[0] = 10;
+    velocity.diagnostics.gimbal_yaw_total_deg = 3.52734375f;
+    VofaKalmanCapture(&velocity, &imu, true, &target, 1060);
+    sample(1080, 5);
+    velocity.diagnostics.chassis_mode = 3;
+    velocity.diagnostics.joint_ecd[0] = 18;
+    velocity.diagnostics.gimbal_yaw_total_deg = 4.87890625f;
+    VofaKalmanCapture(&velocity, &imu, true, &target, 1080);
+
+    for (unsigned i = 0; i < 5; ++i) {
+        finish_uart();
+        VofaKalmanCaptureDrain();
+        assert(word(active, VOFA_KALMAN_GIMBAL_CONTROL_TX_SEQUENCE_HI) == i);
+    }
+    const unsigned count_index = VOFA_KALMAN_GIMBAL_CONTROL_TURN_COUNT_SPIN_TURN_COUNT;
+    const unsigned valid_index = VOFA_KALMAN_GIMBAL_CONTROL_VALID;
+    assert(field(frames[0], count_index) == 0.0f);
+    assert(((unsigned)field(frames[0], valid_index) & 2048U) == 0);
+    assert(field(frames[1], count_index) == 0.0f);
+    assert(((unsigned)field(frames[1], valid_index) & 2048U) != 0);
+    assert(fabsf(field(frames[2], count_index) - 1.0f / 360.0f) < 1e-6f);
+    assert(fabsf(field(frames[3], count_index) - 3.0f / 360.0f) < 1e-6f);
+    assert(fabsf(field(frames[4], count_index) - 4.0f / 360.0f) < 1e-6f);
+    assert(((unsigned)field(frames[4], valid_index) & 2048U) != 0);
+
+    sample(1100, 6);
+    VofaKalmanCapture(&velocity, &imu, true, &target, 1100);
+    finish_uart();
+    VofaKalmanCaptureDrain();
+    assert(field(active, count_index) == 0.0f);
+    assert(((unsigned)field(active, valid_index) & 2048U) != 0);
+
+    sample(1120, 7);
+    velocity.diagnostics.yaw_encoder_valid = false;
+    VofaKalmanCapture(&velocity, &imu, true, &target, 1120);
+    finish_uart();
+    VofaKalmanCaptureDrain();
+    assert(((unsigned)field(active, valid_index) & 2048U) == 0);
+
+    sample(1140, 8);
+    VofaKalmanCapture(&velocity, &imu, true, &target, 1140);
+    sample(1160, 9);
+    velocity.diagnostics.chassis_mode = 3;
+    VofaKalmanCapture(&velocity, &imu, true, &target, 1160);
+    sample(1180, 10);
+    VofaKalmanCapture(&velocity, &imu, true, &target, 1180);
+    sample(1301, 11);
+    VofaKalmanCapture(&velocity, &imu, true, &target, 1301);
+    finish_uart();
+    VofaKalmanCaptureDrain();
+    assert(((unsigned)field(active, valid_index) & 2048U) == 0);
+}
+
 int main(int argc, char **argv)
 {
     assert(argc == 2);
@@ -379,6 +450,7 @@ int main(int argc, char **argv)
     else if (!strcmp(argv[1], "heartbeat")) heartbeat_and_rejected_calls_remain_visible();
     else if (!strcmp(argv[1], "wrap")) clock_attempt_and_wire_sequence_rollovers();
     else if (!strcmp(argv[1], "mode")) mode_switch_is_captured_without_a_new_filter_call();
+    else if (!strcmp(argv[1], "spin")) spin_turn_count_tracks_encoder_wrap_and_gimbal_motion();
     else assert(!"unknown scenario");
     assert(critical == 0);
     printf("PASS: Kalman capture %s\n", argv[1]);
