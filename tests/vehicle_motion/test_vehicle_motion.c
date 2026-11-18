@@ -69,6 +69,13 @@ void DJIMotorChangeFeed(DJIMotorInstance *m,Closeloop_Type_e loop,Feedback_Sourc
 static void FreshMotors(void) {
     for(unsigned i=0;i<motor_count;i++) { motors[i].measure.rx_sequence++; motors[i].measure.rx_tick_ms=now; }
 }
+#if CHASSIS_CONTROL_MODE == CHASSIS_CONTROL_SPEED
+static void StepYawFeedforward(bool fresh_wheels) {
+    now+=5; FreshMotors(); remote_input.last_rx_tick_ms=now;
+    if(fresh_wheels) wheel_feedback.actual.tick_ms=now-2;
+    RobotCMDTask(); GimbalTask();
+}
+#endif
 static void Heat(unsigned heat,unsigned valid) {
     HeatControlData_s h={.current_heat=heat,.heat_limit=300,.cooling_rate=20,.valid=valid,
         .robot_state_tick_ms=now,.power_heat_tick_ms=now};
@@ -139,38 +146,49 @@ int main(int argc,char **argv) {
         remote_input.control.rc.switch_right=RC_SW_DOWN;
         RobotCMDTask(); GimbalTask();
         assert(gimbal_cmd_recv.yaw_spin_feedforward_requested);
-        assert(fabsf(yaw_motor->output_feedforward-5416)<.01f);
+        assert(yaw_motor->output_feedforward==0); /* Entry starts smoothly. */
+        StepYawFeedforward(true);
+        assert(yaw_motor->output_feedforward>0 && yaw_motor->output_feedforward<5416);
         assert(yaw_motor->output_feedforward_tick_ms==now-2);
         assert(pitch_motor->output_feedforward==0);
+        for(unsigned i=0;i<200;++i) StepYawFeedforward(true);
+        assert(fabsf(yaw_motor->output_feedforward-5416)<.1f);
         float previous_ref=yaw_motor->motor_controller.pid_ref;
         remote_input.control.rc.rocker_l_=100;
         RobotCMDTask(); GimbalTask();
         assert(yaw_motor->motor_controller.pid_ref!=previous_ref); /* Manual yaw still works. */
-        assert(fabsf(yaw_motor->output_feedforward-5416)<.01f);
+        assert(fabsf(yaw_motor->output_feedforward-5416)<.1f);
         remote_input.control.rc.rocker_l_=0;
         remote_input.control.rc.switch_right=RC_SW_UP;
         wheel_feedback.actual.wz_rpm=3/0.104719755f;
-        RobotCMDTask(); GimbalTask();
+        StepYawFeedforward(true);
         assert(!gimbal_cmd_recv.yaw_spin_feedforward_requested);
-        assert(fabsf(yaw_motor->output_feedforward-2400)<.01f);
+        assert(yaw_motor->output_feedforward>2400 && yaw_motor->output_feedforward<5416);
+        for(unsigned i=0;i<200;++i) StepYawFeedforward(true);
+        assert(fabsf(yaw_motor->output_feedforward-2400)<.1f);
         wheel_feedback.actual.wz_rpm=0;
-        RobotCMDTask(); GimbalTask(); assert(yaw_motor->output_feedforward==0);
+        StepYawFeedforward(true);
+        assert(yaw_motor->output_feedforward>0 && yaw_motor->output_feedforward<2400);
         wheel_feedback.actual.wz_rpm=3/0.104719755f;
-        RobotCMDTask(); GimbalTask(); assert(yaw_motor->output_feedforward==0);
+        float tail=yaw_motor->output_feedforward;
+        StepYawFeedforward(true);
+        assert(yaw_motor->output_feedforward>0 && yaw_motor->output_feedforward<tail);
+        for(unsigned i=0;i<200;++i) StepYawFeedforward(true);
+        assert(yaw_motor->output_feedforward==0); /* Follow cannot re-arm FF. */
         remote_input.control.rc.switch_right=RC_SW_DOWN;
-        RobotCMDTask(); GimbalTask(); assert(yaw_motor->output_feedforward>0);
+        RobotCMDTask(); GimbalTask(); assert(yaw_motor->output_feedforward==0);
+        StepYawFeedforward(true); assert(yaw_motor->output_feedforward>0);
         /* Keep safety/commands alive while only the wheel sample ages out. */
-        for(unsigned i=0;i<4;++i) {
-            now+=5; FreshMotors(); remote_input.last_rx_tick_ms=now;
-            RobotCMDTask(); GimbalTask();
-        }
+        for(unsigned i=0;i<4;++i) StepYawFeedforward(false);
         assert(yaw_motor->output_feedforward==0);
         wheel_feedback.actual.tick_ms=now;
-        RobotCMDTask(); GimbalTask(); assert(yaw_motor->output_feedforward>0);
+        RobotCMDTask(); GimbalTask(); assert(yaw_motor->output_feedforward==0);
+        StepYawFeedforward(true); assert(yaw_motor->output_feedforward>0);
         remote_input.online=0;
         RobotCMDTask(); GimbalTask();
         assert(!gimbal_cmd_recv.yaw_spin_feedforward_requested);
         assert(yaw_motor->output_feedforward==0 && yaw_motor->stop_flag==MOTOR_STOP);
+        assert(!yaw_feedforward_state.active && yaw_feedforward_state.output==0);
 #endif
     } else if(!strcmp(argv[1],"yaw")) {
         remote_input=(RemoteControlSnapshot_s){.online=1,.has_sample=1,.last_rx_tick_ms=now};

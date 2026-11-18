@@ -46,7 +46,7 @@
 #define YAW_MAX_TRACK_ERROR 60.0f
 
 /* 小陀螺 yaw 输出前馈：仅接入单板速度后端，输入为实际轮速逆解的 rad/s。
- * 启动 4 复测中 1080 出现反向过补；按自旋与静止保持输出之差下调至 800 待复测。
+ * 启动 5/6 复测稳态较好；保留 800，增加 80 ms 一阶平滑以试验起停瞬态。
  * 反向尚未标定，本版只补偿正转；设 ENABLE=0 可回退到纯 PID。
  */
 #ifndef YAW_SPIN_FEEDFORWARD_ENABLE
@@ -57,6 +57,9 @@
 #endif
 #ifndef YAW_SPIN_FEEDFORWARD_MAX_COMMAND
 #define YAW_SPIN_FEEDFORWARD_MAX_COMMAND 8000.0f
+#endif
+#ifndef YAW_SPIN_FEEDFORWARD_TIME_CONSTANT_MS
+#define YAW_SPIN_FEEDFORWARD_TIME_CONSTANT_MS 80.0f /* 时间常数，非固定延时。 */
 #endif
 #define YAW_SPIN_FEEDFORWARD_STOP_RADPS 0.05f /* 退出后的静止释放阈值。 */
 #define YAW_SPIN_FEEDFORWARD_MAX_AGE_MS 20U
