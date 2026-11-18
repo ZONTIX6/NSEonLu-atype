@@ -70,8 +70,14 @@ static void Translation(void)
                 .vx=cases[i].vx, .vy=cases[i].vy};
             float vx, vy;
             ChassisResolveMotion(&cmd, 4000, &vx, &vy);
-            NEAR(cases[i].want_x, vx);
-            NEAR(cases[i].want_y, vy);
+            const float expected_gimbal_vx = cases[i].vx +
+                (modes[m] == CHASSIS_ROTATE ? CHASSIS_SPIN_DRIFT_COMPENSATION_VX : 0);
+            const float expected_gimbal_vy = cases[i].vy +
+                (modes[m] == CHASSIS_ROTATE ? CHASSIS_SPIN_DRIFT_COMPENSATION_VY : 0);
+            const float co = arm_cos_f32(cases[i].angle * DEGREE_2_RAD);
+            const float si = arm_sin_f32(cases[i].angle * DEGREE_2_RAD);
+            NEAR(expected_gimbal_vx * co - expected_gimbal_vy * si, vx);
+            NEAR(expected_gimbal_vx * si + expected_gimbal_vy * co, vy);
             NEAR(cases[i].vx, cmd.vx);
             NEAR(cases[i].vy, cmd.vy);
         }

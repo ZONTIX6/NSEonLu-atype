@@ -31,11 +31,21 @@ static inline void ChassisResolveMotion(Chassis_Ctrl_Cmd_s *cmd, float spin_wz,
         break;
     }
 
+    /* During spin, the measured drift is fixed in the gimbal/world frame.
+     * Add its opposite before the existing one-time frame transform. */
+    float command_vx = cmd->vx, command_vy = cmd->vy;
+#if CHASSIS_SPIN_DRIFT_COMPENSATION_ENABLE
+    if (cmd->chassis_mode == CHASSIS_ROTATE) {
+        command_vx += CHASSIS_SPIN_DRIFT_COMPENSATION_VX;
+        command_vy += CHASSIS_SPIN_DRIFT_COMPENSATION_VY;
+    }
+#endif
+
     // 实测云台相对角：将云台坐标平移命令只转换一次到底盘坐标。
     const float cos_theta = arm_cos_f32(cmd->offset_angle * DEGREE_2_RAD);
     const float sin_theta = arm_sin_f32(cmd->offset_angle * DEGREE_2_RAD);
-    *vx = cmd->vx * cos_theta - cmd->vy * sin_theta;
-    *vy = cmd->vx * sin_theta + cmd->vy * cos_theta;
+    *vx = command_vx * cos_theta - command_vy * sin_theta;
+    *vy = command_vx * sin_theta + command_vy * cos_theta;
 }
 
 #endif
