@@ -70,8 +70,8 @@
 #endif
 
 /* 小陀螺平移漂移补偿：速度后端的既有指令单位，不是 m/s。
- * 由 50/100/150 圈实测约 2.6 mm/圈左漂、0.39 mm/圈前漂，按约
- * 首版补偿在复测中出现右后过补偿，因此先收小为前进 -3、右移 +28。
+ * 由 50/100/150 圈实测约 2.6 mm/圈左漂、0.39 mm/圈前漂得到初值。
+ * 复测仍向后漂，前后补偿暂归零，保留右移 +28，待尺量位移后再调整。
  * 补偿在云台坐标中给出，
  * 再由 ChassisResolveMotion 按云台相对角转换到底盘坐标，因此在世界方向保持固定。
  * 仅 CHASSIS_ROTATE 生效；方向反转时由用户另行复测后调整符号。 */
@@ -79,7 +79,7 @@
 #define CHASSIS_SPIN_DRIFT_COMPENSATION_ENABLE 1
 #endif
 #ifndef CHASSIS_SPIN_DRIFT_COMPENSATION_VX
-#define CHASSIS_SPIN_DRIFT_COMPENSATION_VX (-3.0f) /* 抵消向前漂移；前进为正。 */
+#define CHASSIS_SPIN_DRIFT_COMPENSATION_VX (0.0f) /* 暂不叠加前后补偿；前进为正。 */
 #endif
 #ifndef CHASSIS_SPIN_DRIFT_COMPENSATION_VY
 #define CHASSIS_SPIN_DRIFT_COMPENSATION_VY (28.0f) /* 抵消向左漂移；速度后端右移为正。 */
