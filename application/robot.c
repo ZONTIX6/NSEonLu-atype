@@ -50,7 +50,7 @@ void RobotInit()
 #if defined(ONE_BOARD) || defined(GIMBAL_BOARD)
     RobotCMDInit();
     GimbalInit();
-    ShootInit();
+    // ShootInit(); // 暂时禁用发射机构
 #endif
 
 #if defined(ONE_BOARD) || defined(CHASSIS_BOARD)
@@ -70,7 +70,7 @@ void RobotTask()
 #if defined(ONE_BOARD) || defined(GIMBAL_BOARD)
     RobotCMDTask();
     GimbalTask();
-    ShootTask();
+    // ShootTask(); // 暂时禁用发射机构
 #endif
 
 #if defined(ONE_BOARD) || defined(CHASSIS_BOARD)
