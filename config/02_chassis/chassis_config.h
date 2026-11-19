@@ -89,14 +89,14 @@
 #endif
 
 /* 小陀螺平移相位预测：只提前操作者的平移向量，静态漂移补偿仍用实测角。
- * 240 cm 前进/约 65 cm 右偏，对应约 15.2°；在 1.08 圈/s 下取 39 ms 初值。
+ * 240 cm 前进/约 65 cm 右偏，对应约 15.2°；39 ms 试验后左偏 22 cm，收敛到 32 ms。
  * 预测角 = 云台相对角 + 其角速度 × 预测时间；正反转自动变号。
  * 这是待实车复测的初值，调整后重新编译；详见 docs/chassis-spin-phase-compensation.md。 */
 #ifndef CHASSIS_SPIN_PHASE_COMPENSATION_ENABLE
 #define CHASSIS_SPIN_PHASE_COMPENSATION_ENABLE 1 /* 0=关闭，1=仅小陀螺平移启用。 */
 #endif
 #ifndef CHASSIS_SPIN_PHASE_PREDICTION_MS
-#define CHASSIS_SPIN_PHASE_PREDICTION_MS 39.0f /* 等效预测时间，ms；减小可减轻补偿。 */
+#define CHASSIS_SPIN_PHASE_PREDICTION_MS 32.0f /* 等效预测时间，ms；减小可减轻补偿。 */
 #endif
 #ifndef CHASSIS_SPIN_PHASE_MAX_DEG
 #define CHASSIS_SPIN_PHASE_MAX_DEG 25.0f /* 预测角绝对值上限，°。 */
