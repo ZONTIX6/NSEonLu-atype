@@ -6,7 +6,8 @@ INCLUDES := -Istubs -I../../application/chassis -I../../application -I../../modu
 SOURCE := test_chassis_motion.c ../../modules/algorithm/user_lib.c
 HEADERS := $(wildcard stubs/*.h ../../application/chassis/chassis_motion.h) \
            ../../application/robot_def.h $(wildcard ../../config/*/*.h) ../../modules/algorithm/user_lib.h
-TARGETS := test_default.exe test_original.exe test_gimbal_forward.exe
+TARGETS := test_default.exe test_original.exe test_gimbal_forward.exe \
+           test_spin_phase.exe test_spin_phase_disabled.exe test_spin_phase_zero.exe
 
 .PHONY: all test invalid
 all: $(TARGETS)
@@ -18,6 +19,13 @@ test_original.exe: $(SOURCE) $(HEADERS)
 test_gimbal_forward.exe: $(SOURCE) $(HEADERS)
 	$(CC) $(CFLAGS) $(INCLUDES) -DCHASSIS_FOLLOW_MODE=1 -DEXPECT_GIMBAL_FORWARD=1 $(SOURCE) -lm -o $@
 
+test_spin_phase.exe: test_spin_phase.c $(HEADERS) ../../modules/algorithm/user_lib.c
+	$(CC) $(CFLAGS) $(INCLUDES) test_spin_phase.c ../../modules/algorithm/user_lib.c -lm -o $@
+test_spin_phase_disabled.exe: test_spin_phase.c $(HEADERS) ../../modules/algorithm/user_lib.c
+	$(CC) $(CFLAGS) $(INCLUDES) -DCHASSIS_SPIN_PHASE_COMPENSATION_ENABLE=0 test_spin_phase.c ../../modules/algorithm/user_lib.c -lm -o $@
+test_spin_phase_zero.exe: test_spin_phase.c $(HEADERS) ../../modules/algorithm/user_lib.c
+	$(CC) $(CFLAGS) $(INCLUDES) -DCHASSIS_SPIN_PHASE_PREDICTION_MS=0 test_spin_phase.c ../../modules/algorithm/user_lib.c -lm -o $@
+
 invalid:
 	powershell -NoProfile -File check_invalid.ps1 -Compiler "$(CC)" -Flags "$(CFLAGS) $(INCLUDES)"
 
@@ -25,3 +33,6 @@ test: all invalid
 	./test_default.exe
 	./test_original.exe
 	./test_gimbal_forward.exe
+	./test_spin_phase.exe
+	./test_spin_phase_disabled.exe
+	./test_spin_phase_zero.exe

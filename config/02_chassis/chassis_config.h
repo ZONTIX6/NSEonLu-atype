@@ -88,6 +88,26 @@
 #error CHASSIS_SPIN_DRIFT_COMPENSATION_ENABLE must be 0 or 1.
 #endif
 
+/* 小陀螺平移相位预测：只提前操作者的平移向量，静态漂移补偿仍用实测角。
+ * 240 cm 前进/约 65 cm 右偏，对应约 15.2°；在 1.08 圈/s 下取 39 ms 初值。
+ * 预测角 = 云台相对角 + 其角速度 × 预测时间；正反转自动变号。
+ * 这是待实车复测的初值，调整后重新编译；详见 docs/chassis-spin-phase-compensation.md。 */
+#ifndef CHASSIS_SPIN_PHASE_COMPENSATION_ENABLE
+#define CHASSIS_SPIN_PHASE_COMPENSATION_ENABLE 1 /* 0=关闭，1=仅小陀螺平移启用。 */
+#endif
+#ifndef CHASSIS_SPIN_PHASE_PREDICTION_MS
+#define CHASSIS_SPIN_PHASE_PREDICTION_MS 39.0f /* 等效预测时间，ms；减小可减轻补偿。 */
+#endif
+#ifndef CHASSIS_SPIN_PHASE_MAX_DEG
+#define CHASSIS_SPIN_PHASE_MAX_DEG 25.0f /* 预测角绝对值上限，°。 */
+#endif
+#ifndef CHASSIS_SPIN_PHASE_FILTER_MS
+#define CHASSIS_SPIN_PHASE_FILTER_MS 20.0f /* 相对角速度一阶滤波时间常数，ms；0=不滤波。 */
+#endif
+#if CHASSIS_SPIN_PHASE_COMPENSATION_ENABLE != 0 && CHASSIS_SPIN_PHASE_COMPENSATION_ENABLE != 1
+#error CHASSIS_SPIN_PHASE_COMPENSATION_ENABLE must be 0 or 1.
+#endif
+
 // 机器人底盘修改的参数,单位为mm(毫米)
 #ifndef WHEEL_BASE
 /* 前后轮轴距，单位 mm；默认 350，按实际底盘测量值修改。 */

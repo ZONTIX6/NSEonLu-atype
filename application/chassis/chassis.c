@@ -97,6 +97,7 @@ static uint32_t chassis_spin_dwt_count;
 
 /* 私有函数计算的中介变量,设为静态避免参数传递的开销 */
 static float chassis_vx, chassis_vy;                      // 将云台系的速度投影到底盘
+static ChassisSpinPhase_s chassis_spin_phase;
 static float vt_lf, vt_rf, vt_lb, vt_rb;                  // 底盘速度解算后的临时输出,待进行限幅
 
 #define LF_ROTATION_LEVER_SUM ((HALF_TRACK_WIDTH + CENTER_GIMBAL_OFFSET_X + HALF_WHEEL_BASE - CENTER_GIMBAL_OFFSET_Y) * DEGREE_2_RAD)
@@ -430,7 +431,9 @@ void ChassisTask()
 #endif // CHASSIS_BOARD
 
     // Resolve current translation before evaluating candidate wheel constraints.
-    ChassisResolveMotion(&chassis_cmd_recv, 0, &chassis_vx, &chassis_vy);
+    const float phase_lead_deg = ChassisSpinPhaseUpdate(&chassis_spin_phase,
+        &chassis_cmd_recv, HAL_GetTick());
+    ChassisResolveMotion(&chassis_cmd_recv, 0, phase_lead_deg, &chassis_vx, &chassis_vy);
     UpdateChassisPowerBudget();
 
 #if CHASSIS_POWER_CONTROL_ENABLE && CHASSIS_SPIN_DYNAMIC_ENABLED

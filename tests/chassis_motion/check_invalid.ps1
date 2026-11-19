@@ -11,3 +11,13 @@ foreach ($value in '-1','2','255') {
     }
 }
 Write-Output 'PASS: invalid follow modes rejected'
+foreach ($value in '-1','2','255') {
+    $output = & $Compiler @compilerFlags "-DCHASSIS_SPIN_PHASE_COMPENSATION_ENABLE=$value" `
+        -DEXPECT_GIMBAL_FORWARD=0 -fsyntax-only test_chassis_motion.c 2>&1
+    if ($LASTEXITCODE -eq 0 -or
+        ($output -join [Environment]::NewLine) -notmatch 'CHASSIS_SPIN_PHASE_COMPENSATION_ENABLE must be 0 or 1') {
+        $output | Write-Output
+        throw "Invalid phase enable accepted or wrong failure: $value"
+    }
+}
+Write-Output 'PASS: invalid phase enable values rejected'

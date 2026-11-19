@@ -28,7 +28,7 @@ static void FollowRotation(void)
         Chassis_Ctrl_Cmd_s cmd = {.chassis_mode=CHASSIS_FOLLOW_GIMBAL_YAW,
             .offset_angle=cases[i].angle, .wz=1234};
         float vx, vy;
-        ChassisResolveMotion(&cmd, 4000, &vx, &vy);
+        ChassisResolveMotion(&cmd, 4000, 0, &vx, &vy);
         NEAR(EXPECT_GIMBAL_FORWARD ? 0 : cases[i].original_wz, cmd.wz);
         NEAR(cases[i].angle, cmd.offset_angle);
         NEAR(0, vx);
@@ -39,7 +39,7 @@ static void FollowRotation(void)
         Chassis_Ctrl_Cmd_s cmd = {.chassis_mode=CHASSIS_FOLLOW_GIMBAL_YAW,
             .offset_angle=(float)angle, .wz=-4000};
         float vx, vy;
-        ChassisResolveMotion(&cmd, 4000, &vx, &vy);
+        ChassisResolveMotion(&cmd, 4000, 0, &vx, &vy);
         NEAR(0, cmd.wz);
     }
 #endif
@@ -69,7 +69,7 @@ static void Translation(void)
             Chassis_Ctrl_Cmd_s cmd = {.chassis_mode=modes[m], .offset_angle=cases[i].angle,
                 .vx=cases[i].vx, .vy=cases[i].vy};
             float vx, vy;
-            ChassisResolveMotion(&cmd, 4000, &vx, &vy);
+            ChassisResolveMotion(&cmd, 4000, 0, &vx, &vy);
             const float expected_gimbal_vx = cases[i].vx +
                 (modes[m] == CHASSIS_ROTATE ? CHASSIS_SPIN_DRIFT_COMPENSATION_VX : 0);
             const float expected_gimbal_vy = cases[i].vy +
@@ -93,7 +93,7 @@ static void ContinuousTranslation(void)
         Chassis_Ctrl_Cmd_s cmd = {.chassis_mode=CHASSIS_FOLLOW_GIMBAL_YAW,
             .offset_angle=angles[i], .vx=10, .vy=5};
         float vx, vy;
-        ChassisResolveMotion(&cmd, 4000, &vx, &vy);
+        ChassisResolveMotion(&cmd, 4000, 0, &vx, &vy);
         const float sign = i < 5 ? 1 : -1;
         Near(sign * 10, vx, 0.002f, __LINE__);
         Near(sign * 5, vy, 0.002f, __LINE__);
@@ -103,7 +103,7 @@ static void ContinuousTranslation(void)
     for (int step = 1; step <= 720; ++step) {
         cmd.offset_angle = step * 0.5f;
         float vx, vy;
-        ChassisResolveMotion(&cmd, 4000, &vx, &vy);
+        ChassisResolveMotion(&cmd, 4000, 0, &vx, &vy);
         Near(100, vx*vx + vy*vy, 0.001f, __LINE__);
         if (hypotf(vx-last_x, vy-last_y) > 0.09f) ++failures;
         last_x=vx; last_y=vy;
@@ -115,20 +115,20 @@ static void ModeTransitions(void)
 {
     Chassis_Ctrl_Cmd_s cmd = {.chassis_mode=CHASSIS_ROTATE, .offset_angle=30};
     float vx, vy;
-    ChassisResolveMotion(&cmd, -1234, &vx, &vy);
+    ChassisResolveMotion(&cmd, -1234, 0, &vx, &vy);
     NEAR(-1234, cmd.wz);
     cmd.chassis_mode=CHASSIS_FOLLOW_GIMBAL_YAW;
-    ChassisResolveMotion(&cmd, 4000, &vx, &vy);
+    ChassisResolveMotion(&cmd, 4000, 0, &vx, &vy);
     NEAR(EXPECT_GIMBAL_FORWARD ? 0 : -1500, cmd.wz);
     cmd.chassis_mode=CHASSIS_ROTATE;
-    ChassisResolveMotion(&cmd, 2345, &vx, &vy);
+    ChassisResolveMotion(&cmd, 2345, 0, &vx, &vy);
     NEAR(2345, cmd.wz);
     cmd.chassis_mode=CHASSIS_NO_FOLLOW;
-    ChassisResolveMotion(&cmd, 4000, &vx, &vy);
+    ChassisResolveMotion(&cmd, 4000, 0, &vx, &vy);
     NEAR(0, cmd.wz);
     cmd.chassis_mode=CHASSIS_ZERO_FORCE;
     cmd.wz=321;
-    ChassisResolveMotion(&cmd, 4000, &vx, &vy);
+    ChassisResolveMotion(&cmd, 4000, 0, &vx, &vy);
     NEAR(321, cmd.wz); /* Output disable remains downstream, as before. */
 }
 
