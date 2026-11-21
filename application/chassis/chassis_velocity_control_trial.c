@@ -90,6 +90,10 @@ bool ChassisVelocityControlTrialApply(const ChassisVelocityControlTrialConfig_s 
     }
 
     output->feedback_active = true;
+    output->reference_vx_mps = reference_x;
+    output->reference_vy_mps = reference_y;
+    output->feedback_vx_mps = feedback_x;
+    output->feedback_vy_mps = feedback_y;
     float error_x = reference_x - feedback_x;
     float error_y = reference_y - feedback_y;
     if (hypotf(error_x, error_y) <= config->deadband_mps) return true;
@@ -103,4 +107,56 @@ bool ChassisVelocityControlTrialApply(const ChassisVelocityControlTrialConfig_s 
     output->correction_vx_mps = output->vx_mps - demand_x;
     output->correction_vy_mps = output->vy_mps - demand_y;
     return true;
+}
+
+void ChassisVelocityControlTrialRecord(ChassisVelocityControlTrace_s *trace,
+    const ChassisVelocityControlTrialConfig_s *config,
+    const ChassisVelocityControlTrialInput_s *input,
+    const ChassisVelocityControlTrialOutput_s *output,
+    uint32_t now_ms, uint32_t control_version, const float target_rpm[4],
+    bool published, bool drive_enabled)
+{
+    if (!trace || !target_rpm) return;
+    const bool active = output && output->feedback_active;
+    const bool corrected = active && isfinite(output->correction_vx_mps) &&
+        isfinite(output->correction_vy_mps) &&
+        (output->correction_vx_mps != 0.0f || output->correction_vy_mps != 0.0f);
+    trace->available = true;
+    trace->tick_ms = now_ms;
+    trace->control_version = control_version;
+    ++trace->control_cycles;
+    trace->feedback_cycles += active;
+    trace->correction_cycles += corrected;
+    trace->flags &= CHASSIS_TRIAL_LAST_CORRECTION;
+    trace->flags |= (active ? CHASSIS_TRIAL_FEEDBACK_ACTIVE : 0U) |
+        (corrected ? CHASSIS_TRIAL_CORRECTION_NONZERO : 0U) |
+        (published ? CHASSIS_TRIAL_PUBLISHED : 0U) |
+        (drive_enabled ? CHASSIS_TRIAL_DRIVE_ENABLED : 0U);
+    trace->fused_age_ms = input ? input->now_ms - input->fused_tick_ms : 0U;
+    if (input) {
+        trace->flags |= (input->enabled ? CHASSIS_TRIAL_ENABLED : 0U) |
+            (input->feedback_allowed ? CHASSIS_TRIAL_MODE_ALLOWED : 0U) |
+            (input->fused_snapshot_valid ? CHASSIS_TRIAL_SNAPSHOT_VALID : 0U) |
+            (input->fused_status ? CHASSIS_TRIAL_FUSED : 0U) |
+            (input->wheel_valid ? CHASSIS_TRIAL_WHEEL_VALID : 0U) |
+            (config && input->fused_snapshot_valid && trace->fused_age_ms <= config->max_sample_age_ms ?
+                CHASSIS_TRIAL_FRESH : 0U);
+    }
+    trace->requested_vx_mps = input ? input->requested_vx_mps : 0.0f;
+    trace->requested_vy_mps = input ? input->requested_vy_mps : 0.0f;
+    trace->reference_vx_mps = active ? output->reference_vx_mps : 0.0f;
+    trace->reference_vy_mps = active ? output->reference_vy_mps : 0.0f;
+    trace->feedback_vx_mps = active ? output->feedback_vx_mps : 0.0f;
+    trace->feedback_vy_mps = active ? output->feedback_vy_mps : 0.0f;
+    trace->correction_vx_mps = corrected ? output->correction_vx_mps : 0.0f;
+    trace->correction_vy_mps = corrected ? output->correction_vy_mps : 0.0f;
+    for (unsigned i = 0; i < 4; ++i) trace->target_rpm[i] = target_rpm[i];
+    if (corrected && published) {
+        trace->flags |= CHASSIS_TRIAL_LAST_CORRECTION;
+        trace->last_correction_vx_mps = output->correction_vx_mps;
+        trace->last_correction_vy_mps = output->correction_vy_mps;
+        trace->last_correction_tick_ms = now_ms;
+        trace->last_correction_control_version = control_version;
+        for (unsigned i = 0; i < 4; ++i) trace->last_correction_target_rpm[i] = target_rpm[i];
+    }
 }

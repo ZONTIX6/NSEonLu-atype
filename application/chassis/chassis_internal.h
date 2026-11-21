@@ -12,6 +12,7 @@
 #include "message_center.h"
 
 #include "chassis_power_config.h"
+#include "chassis_velocity_control_trial.h"
 
 /* Device/message registrations owned by chassis_init.c. */
 extern DJIMotorInstance *motor_lf, *motor_rf, *motor_lb, *motor_rb;
@@ -41,7 +42,7 @@ extern ChassisPower_Init_Config_s power_module_config;
 void ChassisTuningRegister(void);
 #if CHASSIS_VELOCITY_FUSION_ENABLE
 void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config, uint8_t chassis_mode,
-    bool trial_speed_limited, bool trial_feedback_active);
+    bool trial_speed_limited, bool trial_feedback_active, const ChassisVelocityControlTrace_s *trace);
 #endif
 bool ChassisTuningApplyPower(const float *values);
 bool ChassisTuningApplySpin(const float *values);

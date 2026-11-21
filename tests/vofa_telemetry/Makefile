@@ -12,6 +12,7 @@ test: test_observation_power.exe test_observation_kalman.exe test_observation_re
 
 OBSERVATION_SOURCE := test_observation.c ../../application/runtime/vofa_observation.c
 OBSERVATION_HEADERS := stubs/FreeRTOS.h stubs/task.h ../../application/runtime/vofa_schema.h ../../application/runtime/vofa_observation.h ../../application/runtime/vofa_kalman_capture.h ../../modules/algorithm/chassis_remote_fusion.h ../../modules/chassis_power/chassis_power_types.h ../../modules/super_cap/super_cap_types.h ../../modules/referee/referee_power.h
+OBSERVATION_HEADERS += ../../application/chassis/chassis_velocity_control_trial.h
 test_observation_power.exe: $(OBSERVATION_SOURCE) $(OBSERVATION_HEADERS) $(HEADERS)
 	$(CC) $(CFLAGS) -fno-fast-math $(filter-out -DVOFA_OBSERVATION_PROFILE=0,$(INCLUDES)) $(MEASUREMENT_INCLUDES) -DVOFA_TELEMETRY_ENABLE=1 -DVOFA_TELEMETRY_MODE=2 -DVOFA_OBSERVATION_PROFILE=1 $(OBSERVATION_SOURCE) -o $@
 
@@ -23,9 +24,12 @@ test_observation_remote.exe: $(OBSERVATION_SOURCE) $(OBSERVATION_HEADERS) $(HEAD
 
 CAPTURE_SOURCE := test_kalman_capture.c ../../application/runtime/vofa_observation.c
 test_kalman_capture.exe: $(CAPTURE_SOURCE) $(OBSERVATION_HEADERS) $(HEADERS)
-	$(CC) $(CFLAGS) -fno-fast-math $(filter-out -DVOFA_OBSERVATION_PROFILE=0,$(INCLUDES)) $(MEASUREMENT_INCLUDES) -I../../modules/imu -DONE_BOARD -DCHASSIS_VELOCITY_FUSION_ENABLE=1 -DCHASSIS_VELOCITY_FUSION_CALIBRATED=0 -DCHASSIS_IMU_CAN_RX_ENABLE=1 -DCHASSIS_REMOTE_IMU_FUSION_ENABLE=1 -DVOFA_TELEMETRY_ENABLE=1 -DVOFA_TELEMETRY_MODE=2 -DVOFA_OBSERVATION_PROFILE=2 $(CAPTURE_SOURCE) -lm -o $@
+	$(CC) $(CFLAGS) -fno-fast-math $(filter-out -DVOFA_OBSERVATION_PROFILE=0,$(INCLUDES)) $(MEASUREMENT_INCLUDES) -I../../modules/imu -DONE_BOARD -DCHASSIS_VELOCITY_FUSION_ENABLE=1 -DCHASSIS_VELOCITY_FUSION_CALIBRATED=0 -DCHASSIS_IMU_CAN_RX_ENABLE=1 -DCHASSIS_REMOTE_IMU_FUSION_ENABLE=1 -DVOFA_TELEMETRY_ENABLE=1 -DVOFA_TELEMETRY_MODE=2 -DVOFA_OBSERVATION_PROFILE=2 -DVOFA_KALMAN_FULL_DETAIL=1 $(CAPTURE_SOURCE) -lm -o $@
 
-test: test_kalman_capture.exe
+test_kalman_compact.exe: test_kalman_compact.c $(CAPTURE_SOURCE) $(OBSERVATION_HEADERS) $(HEADERS) ../../application/chassis/chassis_velocity_control_trial.c
+	$(CC) $(CFLAGS) -fno-fast-math $(filter-out -DVOFA_OBSERVATION_PROFILE=0,$(INCLUDES)) $(MEASUREMENT_INCLUDES) -I../../modules/imu -DONE_BOARD -DCHASSIS_VELOCITY_FUSION_ENABLE=1 -DCHASSIS_VELOCITY_FUSION_CALIBRATED=0 -DCHASSIS_IMU_CAN_RX_ENABLE=1 -DCHASSIS_REMOTE_IMU_FUSION_ENABLE=1 -DVOFA_TELEMETRY_ENABLE=1 -DVOFA_TELEMETRY_MODE=2 -DVOFA_OBSERVATION_PROFILE=2 test_kalman_compact.c ../../application/runtime/vofa_observation.c ../../application/chassis/chassis_velocity_control_trial.c -lm -o $@
+
+test: test_kalman_capture.exe test_kalman_compact.exe
 
 test: test_vofa_telemetry.exe test_vofa_measurement.exe test_imu_capture.exe test_vofa_remote.exe test_vofa_remote_fusion.exe test_vofa_remote_verified.exe test_measurement_justfloat.exe test_imu_justfloat.exe test_remote_justfloat.exe test_remote_fusion_justfloat.exe test_remote_verified_justfloat.exe test_measurement_transport.exe
 	./test_vofa_telemetry.exe
@@ -51,6 +55,8 @@ test: test_vofa_telemetry.exe test_vofa_measurement.exe test_imu_capture.exe tes
 	./test_kalman_capture.exe wrap
 	./test_kalman_capture.exe mode
 	./test_kalman_capture.exe spin
+	./test_kalman_compact.exe evidence
+	./test_kalman_compact.exe jitter
 
 test_vofa_telemetry.exe: $(SOURCE) $(HEADERS)
 	$(CC) $(CFLAGS) $(INCLUDES) -DVOFA_TELEMETRY_ENABLE=1 -DVOFA_TELEMETRY_MODE=0 $(SOURCE) -o $@

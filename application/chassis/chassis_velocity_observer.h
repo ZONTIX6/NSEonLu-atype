@@ -3,6 +3,7 @@
 
 #include "chassis_velocity.h"
 #include "chassis_remote_fusion.h"
+#include "chassis_velocity_control_trial.h"
 #include "../../modules/motor/DJImotor/dji_motor_diagnostics.h"
 
 typedef enum {
@@ -42,6 +43,7 @@ typedef struct {
     uint32_t gimbal_imu_tick_ms;
     bool gimbal_imu_valid, gimbal_imu_known;
     bool trial_speed_limited, trial_feedback_active;
+    ChassisVelocityControlTrace_s control_trace;
     DJIMotorControlSnapshot_s yaw_control;
 } ChassisVelocityDiagnostics_s;
 

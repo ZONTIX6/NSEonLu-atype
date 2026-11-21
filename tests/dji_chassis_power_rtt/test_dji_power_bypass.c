@@ -118,11 +118,72 @@ static void TestBypassRejectsNonfiniteMotorInputs(void)
     }
 }
 
+static void TestVelocityFeedbackSubmissionEvidence(void)
+{
+    PrepareBypass();
+    velocity_feedback_evidence=(DJIVelocityFeedbackEvidence_s){0};
+    have_corrected_version=false;
+    DJIVelocityFeedbackEvidence_s evidence;
+    ASSERT_TRUE(!DJIPowerAdapterGetVelocityFeedbackEvidence(&evidence));
+    adapter_control.velocity_feedback_corrected=true;
+    adapter_control.target_rpm[1]=-1000;
+    DJIMotorControl();
+    ASSERT_TRUE(DJIPowerAdapterGetVelocityFeedbackEvidence(&evidence));
+    ASSERT_TRUE(evidence.control_version==0 && evidence.flags==255);
+    ASSERT_TRUE(evidence.submitted_correction_versions==1);
+    ASSERT_TRUE(evidence.final_current[0]==6000 && evidence.final_current[1]==-6000);
+    DJIMotorControl();
+    DJIPowerAdapterGetVelocityFeedbackEvidence(&evidence);
+    ASSERT_TRUE(evidence.submitted_correction_versions==1); /* Same version twice. */
+    adapter_control.version=1;
+    fail_can_transmit=true;
+    DJIMotorControl();
+    DJIPowerAdapterGetVelocityFeedbackEvidence(&evidence);
+    ASSERT_TRUE(!(evidence.flags & DJI_FEEDBACK_CAN_ACCEPTED));
+    ASSERT_TRUE(evidence.submitted_correction_versions==1);
+    fail_can_transmit=false;
+    DJIMotorControl();
+    DJIPowerAdapterGetVelocityFeedbackEvidence(&evidence);
+    ASSERT_TRUE(evidence.submitted_correction_versions==2);
+    adapter_control.version=2;
+    safety_drive=false;
+    DJIMotorControl();
+    DJIPowerAdapterGetVelocityFeedbackEvidence(&evidence);
+    ASSERT_TRUE((evidence.flags & 240)==0 && evidence.submitted_correction_versions==2);
+    safety_drive=true;
+    dji_motor_instance[1]->daemon->online=0;
+    DJIMotorControl();
+    DJIPowerAdapterGetVelocityFeedbackEvidence(&evidence);
+    ASSERT_TRUE((evidence.flags & 240)!=240 && evidence.submitted_correction_versions==2);
+    dji_motor_instance[1]->daemon->online=1;
+    DJIMotorControl();
+    DJIPowerAdapterGetVelocityFeedbackEvidence(&evidence);
+    ASSERT_TRUE(evidence.submitted_correction_versions==3);
+
+    /* A tuning override of even one target must not count as Kalman use. */
+    ++adapter_cycle_control.version;
+    speed_reference_aps[0]+=6;
+    const DJIMotorCycle_s cycle={.motors=dji_motor_instance,.target_aps=speed_reference_aps};
+    const int16_t commands[DJI_MOTOR_CNT]={6000};
+    const bool enabled[DJI_MOTOR_CNT]={true,true,true,true};
+    AdapterRecordFinal(NULL,&cycle,commands,enabled,2,2);
+    DJIPowerAdapterGetVelocityFeedbackEvidence(&evidence);
+    ASSERT_TRUE(!(evidence.flags & DJI_FEEDBACK_CORRECTED_TARGETS));
+    ASSERT_TRUE(evidence.submitted_correction_versions==3);
+    adapter_control.version=UINT32_MAX;
+    DJIMotorControl();
+    adapter_control.version=0;
+    DJIMotorControl();
+    DJIPowerAdapterGetVelocityFeedbackEvidence(&evidence);
+    ASSERT_TRUE(evidence.control_version==0 && evidence.submitted_correction_versions==5);
+}
+
 int main(void)
 {
     TestBypassKeepsPidDemandAndCurrentBounds();
     TestBypassRetainsDriveGates();
     TestBypassRejectsNonfiniteMotorInputs();
+    TestVelocityFeedbackSubmissionEvidence();
     if(failures) return 1;
     puts("PASS: power bypass preserves PID current, current bounds, and final drive gates");
     return 0;

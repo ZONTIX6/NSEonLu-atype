@@ -5,7 +5,7 @@ import sys
 import tempfile
 import unittest
 
-from fixtures import attempt, wire_rows
+from fixtures import attempt, row, wire_rows
 from test_csv import export, legacy_rows
 from test_power import power_rows
 
@@ -14,11 +14,13 @@ ROOT = Path(__file__).resolve().parents[2]
 
 class CliTests(unittest.TestCase):
     def test_original_exports_produce_quality_and_analysis_without_csv_conversion(self):
-        for schema in (2, 4, 5, 6, 7, 8):
+        for schema in (2, 4, 5, 6, 7, 8, 9):
             with self.subTest(schema=schema), tempfile.TemporaryDirectory() as directory:
                 d = Path(directory)
                 capture = d / 'raw.csv'
                 rows = legacy_rows() if schema == 2 else wire_rows(power_rows() if schema == 4 else
+                    [row(9, sequence=i, tick=20*i, valid=64|16384|32768, control_cycles=4*i,
+                         correction_cycles=i, submitted_correction_versions=i) for i in range(1, 61)] if schema == 9 else
                     [attempt(i, initialized=i != 1, config_source=0, schema=schema) for i in range(1, 61)])
                 export(capture, rows, time_at=0, renamed=True)
                 command = [sys.executable, '-B', str(ROOT / 'scripts/analyze-vofa.py'), str(capture),
@@ -29,6 +31,9 @@ class CliTests(unittest.TestCase):
                 self.assertEqual(report['capture']['schema'], schema)
                 self.assertFalse(report['hardware_validated'])
                 self.assertIn('quality', report)
+                if schema == 9:
+                    self.assertEqual(report['analysis']['counter_increments']['correction_cycles'], 59)
+                    self.assertTrue(report['analysis']['corrected_targets_submitted'])
                 self.assertTrue((d / 'report/report.md').is_file())
                 self.assertFalse((d / 'report/parameters-applied.json').exists())
                 self.assertNotEqual(subprocess.run(command, text=True, capture_output=True).returncode, 0)
@@ -43,6 +48,20 @@ class CliTests(unittest.TestCase):
             self.assertEqual(result.returncode, 2)
             report = json.loads((d/'report/report.json').read_text())
             self.assertEqual(report['status'], 'rejected')
+
+    def test_compact_capture_explicitly_rejects_filter_fitting(self):
+        with tempfile.TemporaryDirectory() as directory:
+            d = Path(directory)
+            capture = d/'raw.csv'
+            export(capture, wire_rows([row(9, sequence=i, tick=20*i) for i in range(1, 4)]))
+            candidate = d/'candidate.json'
+            candidate.write_text('{}')
+            result = subprocess.run([sys.executable, '-B', str(ROOT/'scripts/analyze-vofa.py'), str(capture),
+                '--output-dir', str(d/'report'), '--fusion-candidate', str(candidate)], text=True, capture_output=True)
+            self.assertEqual(result.returncode, 2)
+            report = json.loads((d/'report/report.json').read_text())
+            self.assertIn('compact schema 9 omits fitting/replay inputs', report['error'])
+            self.assertFalse((d/'report/model.json').exists())
 
 
 if __name__ == '__main__':

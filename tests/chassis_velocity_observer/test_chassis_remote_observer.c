@@ -75,12 +75,16 @@ static ChassisFusedVelocitySnapshot_s Step(bool new_remote)
         remote.last_rx_tick_ms=tick;
         remote_usable=true;
     }
-    ChassisObserveFusedVelocity(&config, 1, true, true);
+    const ChassisVelocityControlTrace_s trace={.available=true,.tick_ms=tick,
+        .correction_cycles=tick,.last_correction_vx_mps=.03f};
+    ChassisObserveFusedVelocity(&config, 1, true, true, &trace);
     assert(captured == before_capture + 1);
     ChassisFusedVelocitySnapshot_s out;
     (void)ChassisGetFusedVelocitySnapshot(&out);
     assert(captured_snapshot.remote.attempt.sequence == out.remote.attempt.sequence);
     assert(captured_snapshot.status == out.status);
+    assert(out.diagnostics.control_trace.correction_cycles==tick);
+    assert(captured_snapshot.diagnostics.control_trace.last_correction_vx_mps==.03f);
     return out;
 }
 

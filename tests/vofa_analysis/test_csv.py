@@ -8,7 +8,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from vofa_csv import read_capture, quality_report
+from vofa_csv import read_capture, quality_report, control_feedback_summary
 from fixtures import row, attempt, wire_rows
 
 
@@ -44,6 +44,40 @@ class CsvTests(unittest.TestCase):
 
     def tearDown(self):
         self.tmp.cleanup()
+
+    def test_compact_control_evidence_and_fifo_quality(self):
+        rows = [row(9, sequence=i, tick=1000+20*i, valid=64|16384|32768,
+                    control_cycles=65535+4*i, feedback_cycles=100+i,
+                    correction_cycles=10+i, submitted_correction_versions=0x12345678+i,
+                    final_current_lf=-32768, final_current_rf=32767)
+                for i in range(3)]
+        rows[-1]['valid'] |= 128
+        export(self.path, wire_rows(rows), time_at=0, renamed=True)
+        capture = read_capture(self.path)
+        self.assertEqual(capture['schema'], 9)
+        self.assertEqual(capture['channel_count'], 64)
+        self.assertEqual(capture['rows'][0]['submitted_correction_versions'], 0x12345678)
+        self.assertEqual(capture['rows'][0]['final_current_lf'], -32768)
+        quality = quality_report(capture)
+        self.assertEqual(quality['capture_mode'], 'event_fifo')
+        self.assertTrue(quality['capture_overflow_observed'])
+        self.assertIsNone(quality['unique_filter_calls'])
+        self.assertIsNone(quality['missing_filter_calls'])
+        summary = control_feedback_summary(capture)
+        self.assertEqual(summary['counter_increments']['control_cycles'], 8)
+        self.assertEqual(summary['counter_increments']['correction_cycles'], 2)
+        self.assertTrue(summary['corrected_targets_submitted'])
+        self.assertEqual(capture['rows'][0]['trial_correction_vx_mps'], 0)
+
+    def test_compact_summary_ignores_boot_history_and_counter_resets(self):
+        rows = [row(9, sequence=0, tick=100, valid=64|16384|32768,
+                    control_cycles=1000, correction_cycles=100, submitted_correction_versions=50),
+                row(9, sequence=0, tick=10, valid=64|16384|32768),
+                row(9, sequence=1, tick=30, valid=64)]
+        export(self.path, wire_rows(rows))
+        result = control_feedback_summary(read_capture(self.path))
+        self.assertEqual(result['counter_increments']['correction_cycles'], 0)
+        self.assertFalse(result['corrected_targets_submitted'])
 
     def test_legacy_default_and_renamed_headers_with_time_column(self):
         for schema in (2, 3):

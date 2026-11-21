@@ -34,7 +34,7 @@ def render_markdown():
         for name in ('state_encoding', 'provenance_encoding', 'wheel_masks_encoding'):
             if name in schema:
                 lines += [f"`{name}`: {schema[name]}", ""]
-        for flag_field in ('attempt_flags', 'yaw_control_flags'):
+        for flag_field in ('attempt_flags', 'yaw_control_flags', 'trial_flags', 'applied_flags'):
             if flag_field in schema:
                 lines += [f"`{flag_field}`：", ""]
                 lines += [f"- bit {bit}: `{name}`" for name, bit in schema[flag_field].items()]

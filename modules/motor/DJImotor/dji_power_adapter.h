@@ -14,6 +14,7 @@ typedef struct
 
 bool DJIPowerAdapterInit(const DJIPowerAdapterConfig_s *config);
 bool DJIPowerAdapterPublish(const ChassisPowerControlSnapshot_s *control);
+bool DJIPowerAdapterGetVelocityFeedbackEvidence(DJIVelocityFeedbackEvidence_s *out);
 
 bool DJIPowerAdapterSetSpeedCapture(CSCCapture *);
 bool DJIPowerAdapterTakeSpeedCycle(CSCCycleRecord *);

@@ -99,7 +99,7 @@ static ChassisFusedVelocitySnapshot_s Observe(bool expected_valid,
                                               ChassisFusedVelocityStatus_e status)
 {
     ChassisFusedVelocitySnapshot_s out;
-    ChassisObserveFusedVelocity(&wheel_config, 3, false, false);
+    ChassisObserveFusedVelocity(&wheel_config, 3, false, false, NULL);
     assert(ChassisGetFusedVelocitySnapshot(&out) == expected_valid);
     assert(out.valid == expected_valid);
     assert(out.status == status);

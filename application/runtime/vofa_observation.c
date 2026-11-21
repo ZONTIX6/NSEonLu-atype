@@ -19,7 +19,9 @@
 #endif
 
 enum { OBSERVATION_CHANNELS = VOFA_OBSERVATION_PROFILE == 1 ? VOFA_POWER_CHANNELS :
-    VOFA_KALMAN_CAPTURE_ENABLED ? VOFA_KALMAN_GIMBAL_CONTROL_TURN_COUNT_CHANNELS : VOFA_KALMAN_GIMBAL_CONTROL_CHANNELS };
+    VOFA_KALMAN_CAPTURE_ENABLED ? (VOFA_KALMAN_FULL_DETAIL ?
+        VOFA_KALMAN_GIMBAL_CONTROL_TURN_COUNT_CHANNELS : VOFA_KALMAN_CONTROL_CHANNELS) :
+        VOFA_KALMAN_GIMBAL_CONTROL_CHANNELS };
 static struct {
     float channels[OBSERVATION_CHANNELS];
     uint8_t tail[4];
@@ -365,6 +367,69 @@ static void Kalman(float *f, const USBTelemetrySample_s *sample,
     K(YAW_CONTROL_AGE_MS) = Age(now, control->tick_ms, control_known);
 }
 #undef K
+
+#if VOFA_KALMAN_CAPTURE_ENABLED && !VOFA_KALMAN_FULL_DETAIL
+#define C(name) f[VOFA_KALMAN_CONTROL_##name]
+static void CompactKalman(float *f, const float *full,
+    const ChassisVelocityControlTrace_s *t, uint32_t now)
+{
+    /* Reuse existing validity/coordinate rules, then retain only daily signals.
+     * Encoding stays outside critical sections and uses a separate full buffer. */
+    static const unsigned common[] = {
+        VOFA_KALMAN_GIMBAL_CONTROL_SCHEMA, VOFA_KALMAN_GIMBAL_CONTROL_TICK_MS_HI,
+        VOFA_KALMAN_GIMBAL_CONTROL_TICK_MS_LO, VOFA_KALMAN_GIMBAL_CONTROL_TX_SEQUENCE_HI,
+        VOFA_KALMAN_GIMBAL_CONTROL_TX_SEQUENCE_LO, VOFA_KALMAN_GIMBAL_CONTROL_VALID,
+        VOFA_KALMAN_GIMBAL_CONTROL_OBSERVER_STATUS, VOFA_KALMAN_GIMBAL_CONTROL_CHASSIS_MODE,
+        VOFA_KALMAN_GIMBAL_CONTROL_WHEEL_ONLINE_MASK, VOFA_KALMAN_GIMBAL_CONTROL_VELOCITY_AGE_MS,
+        VOFA_KALMAN_GIMBAL_CONTROL_WHEEL_VX_MPS, VOFA_KALMAN_GIMBAL_CONTROL_WHEEL_VY_MPS,
+        VOFA_KALMAN_GIMBAL_CONTROL_WHEEL_WZ_RADPS, VOFA_KALMAN_GIMBAL_CONTROL_TARGET_VX_MPS,
+        VOFA_KALMAN_GIMBAL_CONTROL_TARGET_VY_MPS, VOFA_KALMAN_GIMBAL_CONTROL_TARGET_WZ_RADPS,
+        VOFA_KALMAN_GIMBAL_CONTROL_VELOCITY_VX_MPS, VOFA_KALMAN_GIMBAL_CONTROL_VELOCITY_VY_MPS,
+        VOFA_KALMAN_GIMBAL_CONTROL_IMU_AGE_MS, VOFA_KALMAN_GIMBAL_CONTROL_YAW_OFFSET_DEG,
+        VOFA_KALMAN_GIMBAL_CONTROL_GIMBAL_YAW_TOTAL_DEG,
+        VOFA_KALMAN_GIMBAL_CONTROL_TURN_COUNT_SPIN_TURN_COUNT
+    };
+    for (unsigned i = 0; i < sizeof common / sizeof common[0]; ++i) f[i] = full[common[i]];
+    C(SCHEMA) = VOFA_KALMAN_CONTROL_SCHEMA_ID;
+    uint32_t valid = (uint32_t)C(VALID) & ~(16U | 1024U);
+    if (t->available && (uint32_t)(now-t->tick_ms)<=20U) valid |= 16384U;
+    const DJIVelocityFeedbackEvidence_s *m=&t->motor;
+    const bool motor_known=(m->flags & DJI_FEEDBACK_AVAILABLE)!=0U;
+    if (motor_known && (uint32_t)(now-m->tick_ms)<=20U) valid |= 32768U;
+    C(VALID) = (float)valid;
+    C(TRIAL_FLAGS) = t->flags;
+    C(TRIAL_AGE_MS) = Age(now,t->tick_ms,t->available);
+    C(TRIAL_FUSED_AGE_MS) = t->available && (t->flags & CHASSIS_TRIAL_SNAPSHOT_VALID) &&
+        t->fused_age_ms<=INT32_MAX ? (float)t->fused_age_ms : -1.0f;
+    C(TRIAL_REQUESTED_VX_MPS) = t->requested_vx_mps;
+    C(TRIAL_REQUESTED_VY_MPS) = t->requested_vy_mps;
+    C(TRIAL_REFERENCE_VX_MPS) = t->reference_vx_mps;
+    C(TRIAL_REFERENCE_VY_MPS) = t->reference_vy_mps;
+    C(TRIAL_FEEDBACK_VX_MPS) = t->feedback_vx_mps;
+    C(TRIAL_FEEDBACK_VY_MPS) = t->feedback_vy_mps;
+    C(TRIAL_CORRECTION_VX_MPS) = t->correction_vx_mps;
+    C(TRIAL_CORRECTION_VY_MPS) = t->correction_vy_mps;
+    U32(f,VOFA_KALMAN_CONTROL_CONTROL_CYCLES_HI,t->control_cycles);
+    U32(f,VOFA_KALMAN_CONTROL_FEEDBACK_CYCLES_HI,t->feedback_cycles);
+    U32(f,VOFA_KALMAN_CONTROL_CORRECTION_CYCLES_HI,t->correction_cycles);
+    U32(f,VOFA_KALMAN_CONTROL_SUBMITTED_CORRECTION_VERSIONS_HI,m->submitted_correction_versions);
+    C(LAST_CORRECTION_VX_MPS) = t->last_correction_vx_mps;
+    C(LAST_CORRECTION_VY_MPS) = t->last_correction_vy_mps;
+    C(LAST_CORRECTION_AGE_MS) = Age(now,t->last_correction_tick_ms,
+        t->available && (t->flags & CHASSIS_TRIAL_LAST_CORRECTION));
+    U32(f,VOFA_KALMAN_CONTROL_LAST_CORRECTION_CONTROL_VERSION_HI,t->last_correction_control_version);
+    U32(f,VOFA_KALMAN_CONTROL_PUBLISHED_CONTROL_VERSION_HI,t->control_version);
+    U32(f,VOFA_KALMAN_CONTROL_APPLIED_CONTROL_VERSION_HI,m->control_version);
+    C(APPLIED_CONTROL_AGE_MS) = Age(now,m->tick_ms,motor_known);
+    C(APPLIED_FLAGS) = m->flags;
+    for (unsigned i=0;i<4;++i) {
+        f[VOFA_KALMAN_CONTROL_TARGET_RPM_LF+i] = t->target_rpm[i];
+        f[VOFA_KALMAN_CONTROL_LAST_CORRECTION_TARGET_RPM_LF+i] = t->last_correction_target_rpm[i];
+        f[VOFA_KALMAN_CONTROL_FINAL_CURRENT_LF+i] = m->final_current[i];
+    }
+}
+#undef C
+#endif
 #endif
 
 static void FinishFrame(void)
@@ -555,8 +620,13 @@ void VofaKalmanCaptureDrain(void)
 
     /* Producer cannot reuse this slot until HAL accepts the independent buffer. */
     const KalmanCaptureRecord_s *record = &capture_queue[read % VOFA_KALMAN_CAPTURE_CAPACITY];
+#if VOFA_KALMAN_FULL_DETAIL
     float *f = frame.channels;
-    memset(f, 0, sizeof frame.channels);
+#else
+    static float full[VOFA_KALMAN_GIMBAL_CONTROL_TURN_COUNT_CHANNELS];
+    float *f = full;
+#endif
+    memset(f, 0, VOFA_KALMAN_GIMBAL_CONTROL_TURN_COUNT_CHANNELS*sizeof(float));
     U32(f, VOFA_KALMAN_GIMBAL_CONTROL_TICK_MS_HI, record->tick_ms);
     U32(f, VOFA_KALMAN_GIMBAL_CONTROL_TX_SEQUENCE_HI, record->sequence);
     Kalman(f, NULL, &record->velocity, record->tick_ms,
@@ -568,6 +638,9 @@ void VofaKalmanCaptureDrain(void)
     if (record->spin_turn_count_valid) {
         f[VOFA_KALMAN_GIMBAL_CONTROL_VALID] = (float)((uint32_t)f[VOFA_KALMAN_GIMBAL_CONTROL_VALID] | 2048U);
     }
+#if !VOFA_KALMAN_FULL_DETAIL
+    CompactKalman(frame.channels,f,&record->velocity.diagnostics.control_trace,record->tick_ms);
+#endif
     FinishFrame();
     const HAL_StatusTypeDef status = HAL_UART_Transmit_IT(uart, (uint8_t *)&frame, sizeof frame);
     taskENTER_CRITICAL();

@@ -63,7 +63,7 @@ int main(void)
         motors[w].measure.rx_cycles = (998 - w) * 168000U;
     }
 
-    ChassisObserveFusedVelocity(&config, 1, false, false);
+    ChassisObserveFusedVelocity(&config, 1, false, false, NULL);
     assert(ChassisGetFusedVelocitySnapshot(&out));
 #if !CHASSIS_VELOCITY_FUSION_CALIBRATED
     assert(out.status == CHASSIS_VELOCITY_UNCALIBRATED);
@@ -104,7 +104,7 @@ int main(void)
     online[1] = false;
     motors[2].measure.rx_sequence = 0;
     motor_rb = NULL;
-    ChassisObserveFusedVelocity(&config, 1, false, false);
+    ChassisObserveFusedVelocity(&config, 1, false, false, NULL);
     assert(!ChassisGetFusedVelocitySnapshot(&out));
     assert(out.status == CHASSIS_VELOCITY_WHEEL_UNAVAILABLE);
     assert(d->available && d->tick_ms == 1021 && d->wheel_online_mask == 1);

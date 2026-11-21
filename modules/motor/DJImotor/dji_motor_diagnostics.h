@@ -27,4 +27,19 @@ typedef struct {
     bool available;
 } DJIMotorControlSnapshot_s;
 
+enum {
+    DJI_FEEDBACK_AVAILABLE = 1U << 0,
+    DJI_FEEDBACK_CORRECTED_TARGETS = 1U << 1,
+    DJI_FEEDBACK_CAN_ACCEPTED = 1U << 2,
+    DJI_FEEDBACK_DRIVE_ENABLED = 1U << 3
+    /* bits 4..7: enabled LF/RF/LB/RB at CAN submission. */
+};
+
+typedef struct {
+    uint32_t tick_ms, control_version;
+    uint32_t submitted_correction_versions; /* Count each accepted version once. */
+    int16_t final_current[4];
+    uint16_t flags;
+} DJIVelocityFeedbackEvidence_s;
+
 #endif

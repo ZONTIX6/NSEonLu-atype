@@ -17,6 +17,7 @@ HEADERS = $(ROOT)/config/30_velocity_observation/chassis_velocity_config.h $(ROO
     $(CHASSIS)/chassis_internal.h $(wildcard $(ALGORITHM)/chassis_velocity*.h) \
     $(ALGORITHM)/chassis_gimbal_imu.h $(ALGORITHM)/chassis_remote_fusion.h $(APPLICATION)/gimbal/gimbal.h \
     $(MODULES)/imu/ins_task.h $(TIME)/speed_observation_time.h $(MODULES)/motor/DJImotor/dji_motor_diagnostics.h
+HEADERS += $(CHASSIS)/chassis_velocity_control_trial.h
 
 test_chassis_velocity_observer.exe: $(SOURCES) $(HEADERS)
 	$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -include stubs/platform.h $(SOURCES) -lm -o $@

@@ -9,7 +9,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-from vofa_csv import read_capture, quality_report
+from vofa_csv import read_capture, quality_report, control_feedback_summary
 
 
 def markdown_report(report):
@@ -28,10 +28,18 @@ def markdown_report(report):
             f"restart/order boundaries: {q['restart_or_order_boundaries']}.", '']
         if q['schema'] in (5, 6, 7, 8):
             lines += [f"Unique recorded filter calls: {q['unique_filter_calls']}; missing filter calls "
-                      f"between comparable recorded endpoints: {q['missing_filter_calls']}.",
-                      f"FIFO overflow observed: {q['capture_overflow_observed']}. "
+                      f"between comparable recorded endpoints: {q['missing_filter_calls']}.", '']
+        if q['schema'] in (5, 6, 7, 8, 9):
+            lines += [f"FIFO overflow observed: {q['capture_overflow_observed']}. "
                       "The sticky flag does not encode the exact number of dropped records.", '']
     analysis = report.get('analysis', {})
+    if 'counter_increments' in analysis:
+        c = analysis['counter_increments']
+        lines += [f"Observed control cycles: {c['control_cycles']}; feedback-active cycles: {c['feedback_cycles']}; "
+                  f"nonzero-correction cycles: {c['correction_cycles']}.",
+                  f"Distinct corrected target versions accepted by all four enabled CAN paths: "
+                  f"{c['submitted_correction_versions']}.",
+                  'Counts describe changes between comparable captured endpoints, excluding earlier boot history.', '']
     if 'steady' in analysis:
         q = analysis['steady']
         lines += [f"Steady meter events: {q['accepted_rows']}; exclusions: {q['rejected']}.",
@@ -89,6 +97,10 @@ def main(argv=None):
                     instrument_error_w=metadata['instrument_error_w'])
                 if not report['power_fit']['validation_passed']:
                     raise ValueError('independent-trial power model validation failed; inspect power_fit')
+        elif capture['schema'] == 9:
+            if args.power_trials or args.configuration or args.fusion_candidate:
+                raise ValueError('compact schema 9 omits fitting/replay inputs; use full Kalman schema 8 for filter replay')
+            report['analysis'] = control_feedback_summary(capture)
         elif capture['schema'] in (5, 6, 7, 8):
             from vofa_fusion import FusionBridge, analyze_fusion
             if args.power_trials or args.configuration:

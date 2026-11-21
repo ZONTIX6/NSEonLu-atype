@@ -678,3 +678,114 @@
 - bit 6: `speed_pid_calculated`
 - bit 7: `output_feedforward_applied`
 - bit 8: `combined_output_at_limit`
+
+## Schema 9: kalman_control
+
+| 通道 | 字段 | 单位 |
+| --- | --- | --- |
+| I0 | `schema` | 1 |
+| I1 | `tick_ms_hi` | ms |
+| I2 | `tick_ms_lo` | ms |
+| I3 | `tx_sequence_hi` | 1 |
+| I4 | `tx_sequence_lo` | 1 |
+| I5 | `valid` | 1 |
+| I6 | `observer_status` | 1 |
+| I7 | `chassis_mode` | 1 |
+| I8 | `wheel_online_mask` | 1 |
+| I9 | `velocity_age_ms` | ms |
+| I10 | `wheel_vx_mps` | m/s |
+| I11 | `wheel_vy_mps` | m/s |
+| I12 | `wheel_wz_radps` | rad/s |
+| I13 | `target_vx_mps` | m/s |
+| I14 | `target_vy_mps` | m/s |
+| I15 | `target_wz_radps` | rad/s |
+| I16 | `velocity_vx_mps` | m/s |
+| I17 | `velocity_vy_mps` | m/s |
+| I18 | `imu_age_ms` | ms |
+| I19 | `yaw_offset_deg` | deg |
+| I20 | `gimbal_yaw_total_deg` | deg |
+| I21 | `spin_turn_count` | turn |
+| I22 | `trial_flags` | 1 |
+| I23 | `trial_age_ms` | ms |
+| I24 | `trial_fused_age_ms` | ms |
+| I25 | `trial_requested_vx_mps` | m/s |
+| I26 | `trial_requested_vy_mps` | m/s |
+| I27 | `trial_reference_vx_mps` | m/s |
+| I28 | `trial_reference_vy_mps` | m/s |
+| I29 | `trial_feedback_vx_mps` | m/s |
+| I30 | `trial_feedback_vy_mps` | m/s |
+| I31 | `trial_correction_vx_mps` | m/s |
+| I32 | `trial_correction_vy_mps` | m/s |
+| I33 | `target_rpm_lf` | rpm |
+| I34 | `target_rpm_rf` | rpm |
+| I35 | `target_rpm_lb` | rpm |
+| I36 | `target_rpm_rb` | rpm |
+| I37 | `control_cycles_hi` | 1 |
+| I38 | `control_cycles_lo` | 1 |
+| I39 | `feedback_cycles_hi` | 1 |
+| I40 | `feedback_cycles_lo` | 1 |
+| I41 | `correction_cycles_hi` | 1 |
+| I42 | `correction_cycles_lo` | 1 |
+| I43 | `submitted_correction_versions_hi` | 1 |
+| I44 | `submitted_correction_versions_lo` | 1 |
+| I45 | `last_correction_vx_mps` | m/s |
+| I46 | `last_correction_vy_mps` | m/s |
+| I47 | `last_correction_age_ms` | ms |
+| I48 | `last_correction_control_version_hi` | 1 |
+| I49 | `last_correction_control_version_lo` | 1 |
+| I50 | `last_correction_target_rpm_lf` | rpm |
+| I51 | `last_correction_target_rpm_rf` | rpm |
+| I52 | `last_correction_target_rpm_lb` | rpm |
+| I53 | `last_correction_target_rpm_rb` | rpm |
+| I54 | `published_control_version_hi` | 1 |
+| I55 | `published_control_version_lo` | 1 |
+| I56 | `applied_control_version_hi` | 1 |
+| I57 | `applied_control_version_lo` | 1 |
+| I58 | `applied_control_age_ms` | ms |
+| I59 | `applied_flags` | 1 |
+| I60 | `final_current_lf` | DJI count |
+| I61 | `final_current_rf` | DJI count |
+| I62 | `final_current_lb` | DJI count |
+| I63 | `final_current_rb` | DJI count |
+
+有效位（I5）：
+
+- bit 0: `wheel`
+- bit 1: `target`
+- bit 2: `estimate`
+- bit 3: `imu`
+- bit 5: `verified`
+- bit 6: `capture_fifo`
+- bit 7: `capture_overflow`
+- bit 8: `yaw_encoder`
+- bit 9: `gimbal_imu`
+- bit 11: `spin_turn_count`
+- bit 12: `trial_speed_limited`
+- bit 13: `trial_feedback_active`
+- bit 14: `control_trace`
+- bit 15: `motor_evidence`
+
+`trial_flags`：
+
+- bit 0: `enabled`
+- bit 1: `mode_allowed`
+- bit 2: `fused_snapshot_valid`
+- bit 3: `fused_status`
+- bit 4: `wheel_valid`
+- bit 5: `fresh_at_control`
+- bit 6: `feedback_active`
+- bit 7: `correction_nonzero`
+- bit 8: `target_published`
+- bit 9: `drive_enabled`
+- bit 10: `last_correction_available`
+
+`applied_flags`：
+
+- bit 0: `available`
+- bit 1: `corrected_targets_used`
+- bit 2: `can_mailbox_accepted`
+- bit 3: `drive_enabled`
+- bit 4: `enabled_lf`
+- bit 5: `enabled_rf`
+- bit 6: `enabled_lb`
+- bit 7: `enabled_rb`

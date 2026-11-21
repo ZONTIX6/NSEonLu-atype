@@ -2,6 +2,7 @@
 #define TEST_OBSERVER_PLATFORM_H
 
 #include "chassis_velocity.h"
+#include "../../../application/chassis/chassis_velocity_control_trial.h"
 
 /* Replace the hardware declarations that chassis_internal.h normally pulls in. */
 #define CHASSIS_INTERNAL_H
@@ -17,6 +18,6 @@ extern DJIMotorInstance *motor_lf, *motor_rf, *motor_lb, *motor_rb;
 bool DaemonIsOnline(const bool *daemon);
 uint32_t HAL_GetTick(void);
 void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config, uint8_t chassis_mode,
-    bool trial_speed_limited, bool trial_feedback_active);
+    bool trial_speed_limited, bool trial_feedback_active, const ChassisVelocityControlTrace_s *trace);
 
 #endif

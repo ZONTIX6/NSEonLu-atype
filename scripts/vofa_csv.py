@@ -213,11 +213,11 @@ def quality_report(capture):
         if first is None:
             first = row['line']
         previous = row
-        if capture['schema'] in (5, 6, 7, 8):
+        if capture['schema'] in (5, 6, 7, 8, 9):
             fifo = bool(row['valid'] & 64)
             counts['capture_fifo_rows'] += fifo
             counts['capture_overflow_rows'] += fifo and bool(row['valid'] & 128)
-            if row['valid'] & 16 and row['attempt_flags'] & 1:
+            if row['valid'] & 16 and row.get('attempt_flags', 0) & 1:
                 advance = ((row['attempt_sequence'] - previous_attempt) & UINT32
                            if previous_attempt is not None else None)
                 if advance == 0:
@@ -261,12 +261,47 @@ def quality_report(capture):
         limitations.append('capture_fifo_overflow_observed_exact_drop_count_not_recorded')
     if capture['schema'] < 4:
         limitations += ['legacy_inputs_not_replayable', 'legacy_actual_configuration_unavailable']
+    if capture['schema'] == 9:
+        limitations.append('compact_schema_omits_filter_call_inputs_and_configuration_for_replay')
+        for key in ('unique_filter_calls', 'duplicate_filter_calls', 'missing_filter_calls',
+                    'filter_restart_or_order_boundaries'):
+            counts[key] = None  # Not transmitted; zero would falsely mean no calls.
     return dict(counts, schema=capture['schema'], profile=capture['profile'], errors=errors,
                 capture_mode=capture_mode, sequence_kind=sequence_kind,
                 capture_overflow_observed=bool(counts['capture_overflow_rows']),
                 valid_bit_counts=dict(bit_counts), ages=ages, contiguous_frame_ranges=ranges,
                 interval_ms=dict(min=min(intervals), max=max(intervals)) if intervals else None,
                 limitations=limitations)
+
+
+def control_feedback_summary(capture):
+    """Count changes between comparable endpoints, excluding pre-capture history.
+
+Counters run on every control/motor cycle and survive sparse VOFA sampling.
+CAN mailbox acceptance is software-path evidence, not physical execution.
+"""
+    fields = ('control_cycles', 'feedback_cycles', 'correction_cycles',
+              'submitted_correction_versions')
+    increments, pairs = dict.fromkeys(fields, 0), dict.fromkeys(fields, 0)
+    previous = None
+    for row in capture['rows']:
+        if 'error' in row:
+            previous = None
+            continue
+        if previous is not None and ((row['tick_ms']-previous['tick_ms']) & UINT32) < HALF and \
+                0 < ((row['tx_sequence']-previous['tx_sequence']) & UINT32) < HALF:
+            for field in fields:
+                valid_bit = 32768 if field == 'submitted_correction_versions' else 16384
+                delta = (row[field]-previous[field]) & UINT32
+                if row['valid'] & previous['valid'] & valid_bit and delta < HALF:
+                    increments[field] += delta
+                    pairs[field] += 1
+        previous = row
+    return dict(counter_increments=increments, comparable_endpoint_pairs=pairs,
+                nonzero_correction_observed=increments['correction_cycles'] > 0,
+                corrected_targets_submitted=increments['submitted_correction_versions'] > 0,
+                limitations=['can_acceptance_is_not_motor_execution_or_trajectory_accuracy',
+                             'increments_exclude_history_before_first_comparable_endpoint'])
 
 
 FILTER_CONFIG_FIELDS = ('fusion_wheel_variance', 'fusion_accel_variance', 'fusion_jerk_density',

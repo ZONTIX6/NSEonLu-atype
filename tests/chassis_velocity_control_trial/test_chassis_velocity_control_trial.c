@@ -219,6 +219,54 @@ static void TestSpinFallbackAndBounds(void)
     Near(.225f,output.vx_mps);
 }
 
+static void TestTraceRetainsCorrectionsBetweenCaptures(void)
+{
+    ChassisVelocityControlTrace_s trace={0};
+    ChassisVelocityControlTrialInput_s input=Input();
+    ChassisVelocityControlTrialOutput_s output;
+    const float rpm[4]={100,-200,300,-400};
+    assert(ChassisVelocityControlTrialApply(&config,&input,&output));
+    Near(.2f,output.reference_vx_mps);
+    Near(.1f,output.feedback_vx_mps);
+    ChassisVelocityControlTrialRecord(&trace,&config,&input,&output,100,42,rpm,true,true);
+    assert(trace.control_cycles==1 && trace.feedback_cycles==1 && trace.correction_cycles==1);
+    assert(trace.flags & CHASSIS_TRIAL_CORRECTION_NONZERO);
+    assert(trace.flags & CHASSIS_TRIAL_LAST_CORRECTION);
+    Near(.025f,trace.last_correction_vx_mps);
+    assert(trace.last_correction_control_version==42 && trace.last_correction_tick_ms==100);
+    Near(-400,trace.last_correction_target_rpm[3]);
+
+    input.fused_vx_mps=.195f; /* Active within deadband must not count as correction. */
+    assert(ChassisVelocityControlTrialApply(&config,&input,&output));
+    ChassisVelocityControlTrialRecord(&trace,&config,&input,&output,105,43,rpm,true,true);
+    assert(trace.control_cycles==2 && trace.feedback_cycles==2 && trace.correction_cycles==1);
+    assert(!(trace.flags & CHASSIS_TRIAL_CORRECTION_NONZERO));
+    input.now_ms=141;
+    assert(ChassisVelocityControlTrialApply(&config,&input,&output));
+    ChassisVelocityControlTrialRecord(&trace,&config,&input,&output,141,44,rpm,true,true);
+    assert(trace.fused_age_ms==41 && !(trace.flags & CHASSIS_TRIAL_FRESH));
+    assert(!(trace.flags & CHASSIS_TRIAL_FEEDBACK_ACTIVE));
+    Near(0,trace.correction_vx_mps);
+    Near(.025f,trace.last_correction_vx_mps);
+    assert(trace.last_correction_control_version==42);
+
+    input=Input();
+    assert(ChassisVelocityControlTrialApply(&config,&input,&output));
+    ChassisVelocityControlTrialRecord(&trace,&config,&input,&output,150,45,rpm,false,true);
+    assert(trace.correction_cycles==2); /* Generated but not published. */
+    assert(trace.last_correction_control_version==42);
+    assert(!(trace.flags & CHASSIS_TRIAL_PUBLISHED));
+    trace.control_cycles=UINT32_MAX;
+    ChassisVelocityControlTrialRecord(&trace,NULL,NULL,NULL,155,46,rpm,true,false);
+    assert(trace.control_cycles==0 && trace.feedback_cycles==3 && trace.correction_cycles==2);
+    assert(!(trace.flags & (CHASSIS_TRIAL_ENABLED | CHASSIS_TRIAL_FEEDBACK_ACTIVE)));
+    assert(trace.flags & CHASSIS_TRIAL_LAST_CORRECTION);
+    input=Input(); input.now_ms=5; input.fused_tick_ms=UINT32_MAX-15;
+    assert(ChassisVelocityControlTrialApply(&config,&input,&output));
+    ChassisVelocityControlTrialRecord(&trace,&config,&input,&output,5,47,rpm,true,true);
+    assert(trace.fused_age_ms==21 && (trace.flags & CHASSIS_TRIAL_FRESH));
+}
+
 int main(void)
 {
     TestDisabledAndIneligible();
@@ -229,6 +277,7 @@ int main(void)
     TestInvalidConfigurationFailsClosed();
     TestSpinFrameAndPhaseLead();
     TestSpinFallbackAndBounds();
+    TestTraceRetainsCorrectionsBetweenCaptures();
     puts("PASS: bounded chassis velocity-control trial");
     return 0;
 }

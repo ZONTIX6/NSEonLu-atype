@@ -40,6 +40,7 @@ typedef struct
     float power_ceiling_w, power_deadband_w;
     float target_rpm[4];
     bool control_enabled, autotune_permitted, zero_force;
+    bool velocity_feedback_corrected; /* Diagnostic tag; never used as a drive gate. */
     ChassisPowerControlTelemetry_s telemetry;
 } ChassisPowerControlSnapshot_s;
 

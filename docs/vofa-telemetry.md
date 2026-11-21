@@ -2,12 +2,12 @@
 
 ## 编译固件
 
-日常在 [`config/_vofa/vofa_config.h`](../config/_vofa/vofa_config.h) 只修改 `VOFA_OBSERVATION_PROFILE`：`1` 为功率/超级电容，`2` 为卡尔曼（默认）。保持 `config/00_flash/board_flash_config.h` 中的 `BOARD_FLASH_1_VOFA_TELEMETRY_MODE=2`，重新构建并烧录后切换用途。固件和烧录脚本共用该默认档位，显式构建参数或旧自定义预设可覆盖它。两档均通过 UART7 输出 JustFloat，使用 **230400 / 8N1**；功率档 **96 通道**，卡尔曼 FIFO 档 **109 通道**，非 FIFO 快照档 **108 通道**。功率档保留 20 ms 最新快照；远端融合卡尔曼档逐次捕获滤波调用，正常约 50 Hz，串口就绪后按队列顺序发送。用 VOFA+ 自带功能导出原始 CSV，不需要配置字段、改列名、换算单位或转换文件。修复后的实车复采见[卡尔曼重新采集步骤](kalman-recapture.md)，云台右偏记录见[小陀螺切换偏差采集](#小陀螺切换偏差采集)。
+日常在 [`config/_vofa/vofa_config.h`](../config/_vofa/vofa_config.h) 修改 `VOFA_OBSERVATION_PROFILE`：`1` 为功率/超级电容，`2` 为卡尔曼（默认）。保持 `config/00_flash/board_flash_config.h` 中的 `BOARD_FLASH_1_VOFA_TELEMETRY_MODE=2`，重新构建并烧录后切换用途。两档通过 UART7 输出 JustFloat，使用 **230400 / 8N1**；功率档 **96 通道**，卡尔曼 FIFO 默认精简为 **64 通道、schema 9**，非 FIFO 快照档仍为 **108 通道、schema 7**。精简档保留速度、角度和闭环指令证据，去掉原始 IMU、滤波重放参数及 yaw PID 内部量；详见[精简卡尔曼闭环观测](vofa-kalman-control.md)。需要完整滤波重放时，将同一配置文件的 `VOFA_KALMAN_FULL_DETAIL` 改为 `1`，恢复 **109 通道、schema 8**。远端融合档正常约 50 Hz，串口就绪后按 FIFO 顺序发送。用 VOFA+ 自带功能导出原始 CSV，无需改列名或换算单位。
 
 | 用途选项 | schema | 内容 |
 | --- | --- | --- |
 | `VOFA_OBSERVATION_PROFILE=1` | `4` | 四轮请求/最终命令、功率计、控制周期预算/保护、最新策略、超电与裁判 |
-| `VOFA_OBSERVATION_PROFILE=2`（默认） | `8`（FIFO）/`7`（快照） | schema 7 的 108 路基础上，FIFO 追加小陀螺圈数 `I108` |
+| `VOFA_OBSERVATION_PROFILE=2`（默认） | `9`（FIFO）/`7`（快照） | FIFO 默认 64 路闭环诊断；`VOFA_KALMAN_FULL_DETAIL=1` 恢复 schema 8、109 路 |
 | `VOFA_OBSERVATION_PROFILE=0` | `2/3` | 保留旧 64/72 路完整观测布局，按下文旧表解读 |
 
 用途选项仅在传输模式 `2` 生效。`VOFA_TELEMETRY_ENABLE=0` 关闭输出；旧模式 `0/1` 忽略用途选项，继续使用原格式。
@@ -20,7 +20,7 @@
 | `2`，用途 `0`，主板开启 CAN IMU 接收 | 旧 schema 3，72 路，20 ms 目标周期 | JustFloat |
 | `2`，用途 `0`，未开启 CAN IMU 接收 | 旧 schema 2，64 路，20 ms 目标周期 | JustFloat |
 | `2`，用途 `1` | schema 4，96 路，20 ms 最新快照 | JustFloat |
-| `2`，用途 `2` | 远端融合为 schema 8、109 路调用事件 FIFO；其他配置为 schema 7、108 路最新快照 | JustFloat |
+| `2`，用途 `2` | 远端融合默认 schema 9、64 路事件 FIFO；完整档 schema 8、109 路；其他配置为 schema 7、108 路最新快照 | JustFloat |
 
 在 [config/90_board/board_config.h](../config/90_board/board_config.h) 中修改 `VOFA_TELEMETRY_MODE` 后，正常编译烧录即可切换协议。构建命令也可显式覆盖该宏。力控模式、裁判使用 UART7 或 UART7 接有辅助设备时，默认关闭 VOFA+ 输出。USB 遥测可同时开启，也可用 `USB_TELEMETRY_ENABLE=0` 单独运行无线遥测。[A 板串口接线](atype-integration.md#接线)
 
@@ -41,7 +41,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Act
 make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-main ONE_BOARD=1 CHASSIS_CONTROL_MODE=0 CHASSIS_IMU_CAN_RX_ENABLE=1 CHASSIS_VELOCITY_FUSION_ENABLE=1 CHASSIS_REMOTE_IMU_FUSION_ENABLE=1 CHASSIS_VELOCITY_FUSION_CALIBRATED=0 VOFA_TELEMETRY_ENABLE=1 VOFA_TELEMETRY_MODE=2 VOFA_OBSERVATION_PROFILE=2
 ```
 
-功率采集将最后一个参数改为 `VOFA_OBSERVATION_PROFILE=1`，输出目录改为 `build/power-main`。CMake 接受同名 `-DVOFA_OBSERVATION_PROFILE=1` 或 `2`；手动 Make/CMake 不读取 `BOARD_FLASH_1_` 前缀预设。当前输出 `I0=4/7/8`；分析工具继续支持旧卡尔曼 `I0=5/6`，旧 `I0=2/3` 不能套用新布局。
+功率采集将最后一个参数改为 `VOFA_OBSERVATION_PROFILE=1`，输出目录改为 `build/power-main`。CMake 接受同名 `-DVOFA_OBSERVATION_PROFILE=1` 或 `2`；手动 Make/CMake 不读取 `BOARD_FLASH_1_` 前缀预设。当前输出 `I0=4/7/8/9`；分析工具继续支持旧卡尔曼 `I0=5/6`，各 schema 须按各自通道表解读。
 
 固定安装、芯片偏移和滤波噪声见 [远端 IMU 配置](../config/30_velocity_observation/chassis_remote_imu_config.h)。远端融合采用以底盘中心为原点的 A 板原生轴，芯片偏移 `(0,+0.116,0) m`、安装四元数 `[1,0,0,0]`。轮速、目标速度、融合速度和配对轮速的 VOFA 公共接口继续为前/右；融合入口将公共 `(vx,vy)` 转为 A 板 `(-vx,+vy)`，出口反向换算。`CHASSIS_REMOTE_IMU_CONFIG_VERIFIED=0` 不会阻止算法运行，但不能用于证明精度。
 
@@ -55,7 +55,7 @@ make -j8 PROFILE=atype-vehicle BUILD_DIR=build/kalman-main ONE_BOARD=1 CHASSIS_C
 
 ## 新档通道与分析约定
 
-schema 4/5/6/7/8 的唯一通道定义在 [`config/32_capture/vofa_schema.json`](../config/32_capture/vofa_schema.json)，功率 schema 4 与旧卡尔曼 schema 5 为 `I0`–`I95`，旧卡尔曼 schema 6 为 `I0`–`I101`，schema 7 为 `I0`–`I107`，当前 FIFO schema 8 为 `I0`–`I108`；解析器使用同一文件。schema 6 保留 schema 5 前 96 路字段顺序与含义；schema 7 保留 schema 6 前 102 路字段顺序与含义；schema 8 保留 schema 7 前 108 路并追加自旋圈数。用户只需保存全部通道。四轮数组统一为 **LF/RF/LB/RB**，物理量直接采用 W、J、转子 rpm、m/s、m/s²、rad/s；云台角度为度（°）。DJI 命令与反馈为原始计数，不是安培。旧 schema 2/3 的缩放和有效位不适用于新档。
+schema 4–9 的唯一通道定义在 [`config/32_capture/vofa_schema.json`](../config/32_capture/vofa_schema.json)，解析器使用同一文件。默认 schema 9 为 **`I0`–`I63`**，字段重新排列；完整 schema 8 为 `I0`–`I108`，schema 7 为 `I0`–`I107`，schema 6 为 `I0`–`I101`，功率 schema 4 与旧卡尔曼 schema 5 为 `I0`–`I95`。schema 6/7/8 依次向后追加字段，schema 9 是独立精简布局。四轮数组统一为 **LF/RF/LB/RB**，物理量直接采用 W、J、转子 rpm、m/s、m/s²、rad/s；角度为度（°）。DJI 命令为原始计数，不是安培。
 
 可直接查阅自动生成的[两档通道表和有效位](vofa-observation-channels.md)。工程维护者修改 JSON 后运行 `python scripts/generate-vofa-schema.py`；`--check` 同时检查固件索引与文档是否同步。
 
@@ -63,7 +63,11 @@ schema 4/5/6/7/8 的唯一通道定义在 [`config/32_capture/vofa_schema.json`]
 
 功率档分别标识控制周期实际使用的预算/修正与发送时最新策略，保留周期、版本和年龄；最新策略不能假定与最后电机周期同时生效。最终整数 CAN 命令与提交状态分别记录，提交成功不代表电机已经执行。功率计的事件号、功率和年龄来自该控制周期采用的测量。超电目标与回显相等只说明数值一致，不能单独作为强命令确认；协议不提供电容内部电压、电流和温度。
 
-卡尔曼档 `imu_source=1` 表示第二块 A 板，`0` 为本地来源；旧 DM 来源 `2` 不再由当前双板固件输出。
+默认 schema 9 的闭环计数、有效位和判据见[精简卡尔曼闭环观测](vofa-kalman-control.md)。它支持数据质量和闭环计数分析，不提供滤波重放所需的实际输入及配置。
+
+### 完整卡尔曼诊断（schema 5–8）
+
+完整档 `imu_source=1` 表示第二块 A 板，`0` 为本地来源；旧 DM 来源 `2` 不再由当前双板固件输出。
 
 卡尔曼档的 `wheel_n_x_mps/y_mps` 与 `accel_n_x_mps2/y_mps2` 记录实际调用生产滤波器前的同一导航系输入。它们来自三点补偿的中间样本，和原始 IMU 快照分开。被滤波器拒绝的调用也保留输入与返回结果。重放依据该次尝试保存的 `resets_before` 与初始化状态；后验速度减轮速仅是后验差值，不是校正前 innovation。
 
@@ -75,7 +79,7 @@ schema 4/5/6/7/8 的唯一通道定义在 [`config/32_capture/vofa_schema.json`]
 
 状态改变、底盘模式切换和 100 ms 没有新调用时也保存诊断记录，所以启动/预热/故障期间仍可见数据，小陀螺切换沿也能保留。它们可能重复同一滤波调用序号；滤波分析器会去重，云台偏差观察应保留原始行。不会在遥测任务启动时清空先到的首个滤波调用。未开启远端融合的 schema 7 及旧版快照记录不能保证包含每次滤波调用，也不提供圈数通道。
 
-每帧带配置来源、版本和本档必要的实际参数。分析先核对参数身份；功率侧可能受 Flash/在线覆盖影响，不能只按源码默认值解释。参数无法追溯、输入缺口过多或连续段不足时，只报告限制并补采，不给出声称已验证的最优参数。
+功率档与完整卡尔曼档每帧带配置来源、版本和本档必要的实际参数。分析先核对参数身份；功率侧可能受 Flash/在线覆盖影响，不能只按源码默认值解释。参数无法追溯、输入缺口过多或连续段不足时，只报告限制并补采。
 
 ## 双 A 板 CAN 接线与传输
 
@@ -102,15 +106,15 @@ schema 4/5/6/7/8 的唯一通道定义在 [`config/32_capture/vofa_schema.json`]
 
 1. 连接方式选 **SerialPort**，选择主板调试器的虚拟 COM 号，模式 `2` 设为 **230400、8 数据位、无校验、1 停止位、无流控**；模式 `0/1` 保持 **115200**。双板数据统一使用主板这一个接收通道。
 2. 当前主板模式 `2` 选择 **JustFloat**，再打开串口。右侧数据栏以 `I0`、`I1` 等显示通道，点击通道名可重命名。字节接收区勾选 `Hex` 查看二进制数据；波形和通道值仍正常显示数字。模式 `0` 同样选 JustFloat；仅模式 `1` 选 **FireWater**，并关闭 `Hex` 查看逗号分隔文本。[JustFloat 协议](https://www.vofa.plus/docs/learning/dataengines/justfloat/)、[FireWater 协议](https://www.vofa.plus/docs/learning/dataengines/firewater/)
-3. 主板与 IMU 上电后先保持静止。功率档确认 `I0=4`、96 通道，当前卡尔曼 FIFO 档确认 `I0=8`、109 通道；非 FIFO 快照卡尔曼仍为 `I0=7`、108 通道。以各档有效位和年龄判断传感器可用性。卡尔曼记录可含预热、拒绝和轮速回退，不必删除这些行。
-4. 从控件栏拖入「波形图」，在 Y 轴菜单勾选要看的通道。功率档可先看计量功率、目标/有效上限及超电输入/输出；卡尔曼档可看轮速、融合速度及真实配对加速度。字段位置以 [schema 定义](../config/32_capture/vofa_schema.json) 为准，无需重命名后才能导出。实际周期和缺帧由板端时间与发送序号判断。[VOFA+ 波形图操作](https://www.vofa.plus/docs/learning/widgets/wave/)
-5. 采完后用 VOFA+ 的 **文件 → 保存数据** 将卡尔曼 FIFO 档完整 **`I0`–`I108`**（快照档 `I0`–`I107`）、功率档完整 **`I0`–`I95`** 保存为原始 `.csv`。保留默认或已重命名的表头以及 VOFA 时间列。切换用途或开始下一试次前，保存上一批并清空缓冲区；不同 schema 分别保存。旧模式仍按各自表格保存 19/64/72 通道。
+3. 主板与 IMU 上电后先保持静止。默认卡尔曼 FIFO 档确认 `I0=9`、64 通道；完整卡尔曼档为 `I0=8`、109 通道，非 FIFO 快照为 `I0=7`、108 通道；功率档为 `I0=4`、96 通道。以各档有效位和年龄判断可用性，保留预热、拒绝和回退行。
+4. 从控件栏拖入「波形图」，勾选要看的通道。精简卡尔曼档先看 `I13/I16` 目标与融合前向速度、`I31/I32` 当前修正和 `I42/I44` 两个累计计数低位；完整计数高低位还原见[闭环判据](vofa-kalman-control.md)。字段位置以 schema 定义为准。实际周期和缺帧由板端时间与发送序号判断。[VOFA+ 波形图操作](https://www.vofa.plus/docs/learning/widgets/wave/)
+5. 用 VOFA+ 的 **文件 → 保存数据** 保存原始 `.csv`：精简卡尔曼档 **`I0`–`I63`**，完整档 `I0`–`I108`，快照档 `I0`–`I107`，功率档 `I0`–`I95`。保留默认或已重命名表头以及时间列。切换用途或开始下一试次前保存上一批并清空缓冲区，不同 schema 分别保存。
 
 模式 `2` 的串口数据没有逗号或文本换行，VOFA+ 按二进制帧尾解析为完整的一组通道，再按组导出 CSV。模式 `1` 的文本接收区可能按窗口宽度折行，但每组在串口上仍只有一个行末换行。
 
 ### 小陀螺切换偏差采集
 
-保持默认 `VOFA_OBSERVATION_PROFILE=2`，确认远端融合 FIFO 输出 `I0=8`，在 VOFA+ 波形中加入以下通道：
+以下通道表适用于完整诊断：保持 `VOFA_OBSERVATION_PROFILE=2`，将 `VOFA_KALMAN_FULL_DETAIL=1` 后重新构建，确认输出 `I0=8`。默认精简档可用 `I7` 模式、`I19` 相对角、`I20` 云台航向和 `I21` 圈数观察同一过程；需要 yaw PID 内部量时使用完整档。
 
 | 通道 | 字段 | 含义 |
 | --- | --- | --- |
@@ -170,7 +174,7 @@ schema 4/5/6/7/8 的唯一通道定义在 [`config/32_capture/vofa_schema.json`]
 
 《塔克无线高速 DAP 调试下载器手册 V3.0.1》未明确给出串口支持波特率上限，也未保证电脑端设置自动同步到从机。`CONF.TXT` 的 `rate` 表示空中速率，不是 UART 波特率；手册的无线下载速度也不是串口透传吞吐保证。使用无线链路前确认设备支持并匹配 230400，以板端时间与发送序号验证持续接收；本次配置没有上板实测保证。
 
-功率档 96 路加帧尾共 `96×4+4=388` 字节，50 Hz 时约 **19.4 kB/s**、单帧线占用 **16.84 ms**；卡尔曼 FIFO schema 8 的 109 路加帧尾共 `109×4+4=440` 字节，约 **22.0 kB/s**、**19.10 ms**；schema 7 快照仍为 436 字节、18.92 ms，均小于 20 ms。固件静态检查通道与线速预算，采用异步发送；卡尔曼 FIFO 忙时保留队头，最新快照档忙时跳过整帧。逐字节 `HAL_UART_Transmit_IT` 在卡尔曼 50 Hz 时约需 22000 次发送空中断/秒，另有帧完成中断；实际 CPU 占用、任务延迟、无线吞吐与持续丢帧须上板测量，静态预算通过不等于完成这些验证。
+默认精简卡尔曼 schema 9 的 64 路加帧尾共 **260 字节**，50 Hz 时约 **13.0 kB/s、11.28 ms/帧**，占 230400/8N1 线速约 **56.4%**。完整 schema 8 为 440 字节、22.0 kB/s、19.10 ms/帧；schema 7 快照为 436 字节、18.92 ms/帧；功率档为 388 字节、19.4 kB/s、16.84 ms/帧。FIFO 忙时保留队头，快照档忙时跳过整帧。默认精简档逐字节 UART 发送空中断从约 22000 次/秒降至约 13000 次/秒，另有帧完成中断；持续无线吞吐、任务时序和实车丢帧仍需复采验证。
 
 采集前核对模式 `2`、230400 / 8N1，再连续记录并检查相邻板端时间是否以约 20 ms 为主、发送序号有无缺口，以及控制任务是否新增超时。发生丢帧时先核对两端波特率、无线链路和接线，不跨缺口插值后当成真实连续采样。
 

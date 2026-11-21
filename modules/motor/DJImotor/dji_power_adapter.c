@@ -17,6 +17,9 @@ static ChassisPowerControlSnapshot_s adapter_control, adapter_cycle_control;
 static uint32_t adapter_dwt_count;
 static ChassisPowerCycleInput_s adapter_input;
 static ChassisPowerCycleOutput_s adapter_output;
+static DJIVelocityFeedbackEvidence_s velocity_feedback_evidence;
+static uint32_t last_corrected_version;
+static bool have_corrected_version;
 #if CHASSIS_SPEED_CAPTURE_ENABLE || CHASSIS_SPEED_KF_SHADOW_ENABLE
 static PPObservationClock observation_clock;
 #endif
@@ -126,6 +129,28 @@ static void AdapterRecordFinal(void *context,const DJIMotorCycle_s *cycle,
         final.can_submitted &= (submitted_groups & successful_groups & group)!=0;
         if(enabled[index]) final.enabled_mask |= (uint8_t)(1U<<w);
     }
+    bool corrected=adapter_cycle_control.velocity_feedback_corrected;
+    for(unsigned w=0;w<4;++w) {
+        const float target=cycle->target_aps[adapter_group.motor_indices[w]];
+        corrected &= isfinite(target) &&
+            fabsf(target-adapter_cycle_control.target_rpm[w]*6.0f)<=.001f;
+    }
+    const bool drive=adapter_cycle_control.control_enabled && !adapter_cycle_control.zero_force;
+    taskENTER_CRITICAL();
+    velocity_feedback_evidence.tick_ms=final.now_ms;
+    velocity_feedback_evidence.control_version=final.control_version;
+    velocity_feedback_evidence.flags=DJI_FEEDBACK_AVAILABLE |
+        (corrected ? DJI_FEEDBACK_CORRECTED_TARGETS : 0U) |
+        (final.can_submitted ? DJI_FEEDBACK_CAN_ACCEPTED : 0U) |
+        (drive ? DJI_FEEDBACK_DRIVE_ENABLED : 0U) | ((uint16_t)final.enabled_mask<<4);
+    memcpy(velocity_feedback_evidence.final_current,final.current_command,sizeof final.current_command);
+    if(corrected && drive && final.enabled_mask==15U && final.can_submitted &&
+        (!have_corrected_version || last_corrected_version!=final.control_version)) {
+        ++velocity_feedback_evidence.submitted_correction_versions;
+        last_corrected_version=final.control_version;
+        have_corrected_version=true;
+    }
+    taskEXIT_CRITICAL();
     (void)ChassisPowerRecordFinal(&final);
 #if CHASSIS_SPEED_CAPTURE_ENABLE
     CaptureFinal(cycle,&final);
@@ -181,6 +206,15 @@ bool DJIPowerAdapterDriveStopped(uint32_t now_ms)
         for(unsigned w=0;w<4;++w) stopped &= adapter_motors[w]->stop_flag==MOTOR_STOP;
     }
     taskEXIT_CRITICAL();return stopped;
+}
+
+bool DJIPowerAdapterGetVelocityFeedbackEvidence(DJIVelocityFeedbackEvidence_s *out)
+{
+    if(!out) return false;
+    taskENTER_CRITICAL();
+    *out=velocity_feedback_evidence;
+    taskEXIT_CRITICAL();
+    return (out->flags & DJI_FEEDBACK_AVAILABLE)!=0U;
 }
 #if CHASSIS_SPEED_CAPTURE_ENABLE
 static void RawFeedback(void *context,unsigned index,const DJI_Motor_Measure_s *m)

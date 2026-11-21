@@ -158,7 +158,7 @@ static void CalculateWheelSpeed(void)
  * @brief 根据裁判系统和电容剩余容量对输出进行限制并设置电机参考值
  *
  */
-static void LimitChassisOutput()
+static bool LimitChassisOutput(void)
 {
     // 底盘解算输出沿用 rpm；统一 DJI 驱动的速度环使用度/秒。
     pending_power_control.target_rpm[0] = vt_lf / 6.0f;
@@ -166,7 +166,7 @@ static void LimitChassisOutput()
     pending_power_control.target_rpm[2] = vt_lb / 6.0f;
     pending_power_control.target_rpm[3] = vt_rb / 6.0f;
     pending_power_control.tick_ms = HAL_GetTick();
-    DJIPowerAdapterPublish(&pending_power_control);
+    return DJIPowerAdapterPublish(&pending_power_control);
 }
 
 /**
@@ -522,13 +522,29 @@ void ChassisTask()
     CalculateWheelSpeed();
 
     // 根据裁判系统的反馈数据和电容数据对输出限幅并设定闭环参考值
-    LimitChassisOutput();
+    pending_power_control.velocity_feedback_corrected=
+        velocity_trial_correction_vx_mps!=0.0f || velocity_trial_correction_vy_mps!=0.0f;
+    const bool velocity_targets_published=LimitChassisOutput();
+#if CHASSIS_VELOCITY_FUSION_ENABLE
+    static ChassisVelocityControlTrace_s velocity_control_trace;
+    ChassisVelocityControlTrialRecord(&velocity_control_trace,
+#if CHASSIS_VELOCITY_CONTROL_TRIAL_ENABLE
+        &velocity_trial_config, &trial_input, &trial_output,
+#else
+        NULL, NULL, NULL,
+#endif
+        pending_power_control.tick_ms, pending_power_control.version, pending_power_control.target_rpm,
+        velocity_targets_published, pending_power_control.control_enabled && !pending_power_control.zero_force);
+    (void)DJIPowerAdapterGetVelocityFeedbackEvidence(&velocity_control_trace.motor);
+#else
+    (void)velocity_targets_published;
+#endif
 
     // 从四轮 CAN 反馈估算底盘几何中心速度。
     EstimateSpeed();
 #if CHASSIS_VELOCITY_FUSION_ENABLE
     ChassisObserveFusedVelocity(&velocity_config, (uint8_t)chassis_cmd_recv.chassis_mode,
-        velocity_trial_limited, velocity_trial_feedback_active);
+        velocity_trial_limited, velocity_trial_feedback_active, &velocity_control_trace);
 #endif
 
     // // 获取裁判系统数据   建议将裁判系统与底盘分离，所以此处数据应使用消息中心发送

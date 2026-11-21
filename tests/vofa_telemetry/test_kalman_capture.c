@@ -8,7 +8,8 @@
 #include <string.h>
 
 /* Each scenario runs in a fresh process: production has no test-only reset. */
-enum { FRAME_BYTES = (VOFA_KALMAN_GIMBAL_CONTROL_TURN_COUNT_CHANNELS + 1) * 4, LOG_CAPACITY = 512 };
+enum { FRAME_CHANNELS = VOFA_KALMAN_FULL_DETAIL ? VOFA_KALMAN_GIMBAL_CONTROL_TURN_COUNT_CHANNELS : VOFA_KALMAN_CONTROL_CHANNELS,
+    FRAME_BYTES = (FRAME_CHANNELS + 1) * 4, LOG_CAPACITY = 512 };
 UART_HandleTypeDef huart7 = {.gState = HAL_UART_STATE_READY};
 static uint32_t tick, send_started;
 static unsigned critical, sent, read_imu_calls, clock_reads;
@@ -141,8 +142,8 @@ static uint32_t word(const uint8_t *frame, unsigned index)
 static void check_frame(const uint8_t *frame)
 {
     const uint8_t tail[] = {0, 0, 128, 127};
-    assert(field(frame, 0) == 8 && memcmp(frame + FRAME_BYTES - 4, tail, 4) == 0);
-    for (unsigned i = 0; i < VOFA_KALMAN_GIMBAL_CONTROL_TURN_COUNT_CHANNELS; ++i) assert(isfinite(field(frame, i)));
+    assert(field(frame, 0) == (VOFA_KALMAN_FULL_DETAIL ? 8 : 9) && memcmp(frame + FRAME_BYTES - 4, tail, 4) == 0);
+    for (unsigned i = 0; i < FRAME_CHANNELS; ++i) assert(isfinite(field(frame, i)));
     for (unsigned i = 0; i + 4 <= FRAME_BYTES - 4; ++i) assert(memcmp(frame + i, tail, 4) != 0);
     assert((unsigned)lroundf(field(frame, VOFA_KALMAN_GIMBAL_CONTROL_VALID)) & 64U);
 }

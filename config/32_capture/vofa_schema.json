@@ -2724,5 +2724,369 @@
       "output_feedforward_applied": 7,
       "combined_output_at_limit": 8
     }
+  },
+  "9": {
+    "name": "kalman_control",
+    "channels": [
+      {
+        "name": "schema",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "tick_ms_hi",
+        "type": "u16",
+        "unit": "ms"
+      },
+      {
+        "name": "tick_ms_lo",
+        "type": "u16",
+        "unit": "ms"
+      },
+      {
+        "name": "tx_sequence_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "tx_sequence_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "valid",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "observer_status",
+        "type": "enum",
+        "unit": "1"
+      },
+      {
+        "name": "chassis_mode",
+        "type": "enum",
+        "unit": "1"
+      },
+      {
+        "name": "wheel_online_mask",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "velocity_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "wheel_vx_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "wheel_vy_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "wheel_wz_radps",
+        "type": "f32",
+        "unit": "rad/s"
+      },
+      {
+        "name": "target_vx_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "target_vy_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "target_wz_radps",
+        "type": "f32",
+        "unit": "rad/s"
+      },
+      {
+        "name": "velocity_vx_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "velocity_vy_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "imu_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "yaw_offset_deg",
+        "type": "f32",
+        "unit": "deg"
+      },
+      {
+        "name": "gimbal_yaw_total_deg",
+        "type": "f32",
+        "unit": "deg"
+      },
+      {
+        "name": "spin_turn_count",
+        "type": "f32",
+        "unit": "turn"
+      },
+      {
+        "name": "trial_flags",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "trial_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "trial_fused_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "trial_requested_vx_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "trial_requested_vy_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "trial_reference_vx_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "trial_reference_vy_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "trial_feedback_vx_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "trial_feedback_vy_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "trial_correction_vx_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "trial_correction_vy_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "target_rpm_lf",
+        "type": "f32",
+        "unit": "rpm"
+      },
+      {
+        "name": "target_rpm_rf",
+        "type": "f32",
+        "unit": "rpm"
+      },
+      {
+        "name": "target_rpm_lb",
+        "type": "f32",
+        "unit": "rpm"
+      },
+      {
+        "name": "target_rpm_rb",
+        "type": "f32",
+        "unit": "rpm"
+      },
+      {
+        "name": "control_cycles_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "control_cycles_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "feedback_cycles_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "feedback_cycles_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "correction_cycles_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "correction_cycles_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "submitted_correction_versions_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "submitted_correction_versions_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "last_correction_vx_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "last_correction_vy_mps",
+        "type": "f32",
+        "unit": "m/s"
+      },
+      {
+        "name": "last_correction_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "last_correction_control_version_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "last_correction_control_version_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "last_correction_target_rpm_lf",
+        "type": "f32",
+        "unit": "rpm"
+      },
+      {
+        "name": "last_correction_target_rpm_rf",
+        "type": "f32",
+        "unit": "rpm"
+      },
+      {
+        "name": "last_correction_target_rpm_lb",
+        "type": "f32",
+        "unit": "rpm"
+      },
+      {
+        "name": "last_correction_target_rpm_rb",
+        "type": "f32",
+        "unit": "rpm"
+      },
+      {
+        "name": "published_control_version_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "published_control_version_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "applied_control_version_hi",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "applied_control_version_lo",
+        "type": "u16",
+        "unit": "1"
+      },
+      {
+        "name": "applied_control_age_ms",
+        "type": "age",
+        "unit": "ms"
+      },
+      {
+        "name": "applied_flags",
+        "type": "mask",
+        "unit": "1"
+      },
+      {
+        "name": "final_current_lf",
+        "type": "i16",
+        "unit": "DJI count"
+      },
+      {
+        "name": "final_current_rf",
+        "type": "i16",
+        "unit": "DJI count"
+      },
+      {
+        "name": "final_current_lb",
+        "type": "i16",
+        "unit": "DJI count"
+      },
+      {
+        "name": "final_current_rb",
+        "type": "i16",
+        "unit": "DJI count"
+      }
+    ],
+    "valid_bits": {
+      "wheel": 0,
+      "target": 1,
+      "estimate": 2,
+      "imu": 3,
+      "verified": 5,
+      "capture_fifo": 6,
+      "capture_overflow": 7,
+      "yaw_encoder": 8,
+      "gimbal_imu": 9,
+      "spin_turn_count": 11,
+      "trial_speed_limited": 12,
+      "trial_feedback_active": 13,
+      "control_trace": 14,
+      "motor_evidence": 15
+    },
+    "trial_flags": {
+      "enabled": 0,
+      "mode_allowed": 1,
+      "fused_snapshot_valid": 2,
+      "fused_status": 3,
+      "wheel_valid": 4,
+      "fresh_at_control": 5,
+      "feedback_active": 6,
+      "correction_nonzero": 7,
+      "target_published": 8,
+      "drive_enabled": 9,
+      "last_correction_available": 10
+    },
+    "applied_flags": {
+      "available": 0,
+      "corrected_targets_used": 1,
+      "can_mailbox_accepted": 2,
+      "drive_enabled": 3,
+      "enabled_lf": 4,
+      "enabled_rf": 5,
+      "enabled_lb": 6,
+      "enabled_rb": 7
+    }
   }
 }
