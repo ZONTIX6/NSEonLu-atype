@@ -72,9 +72,26 @@ bool ChassisVelocityControlTrialApply(const ChassisVelocityControlTrialConfig_s 
         return true;
     }
 
+    float reference_x = demand_x, reference_y = demand_y;
+    float feedback_x = input->fused_vx_mps, feedback_y = input->fused_vy_mps;
+    if (input->spin_mode) {
+        if (!isfinite(input->reference_vx_mps) || !isfinite(input->reference_vy_mps) ||
+            !isfinite(input->wheel_wz_radps)) return true;
+        reference_x = input->reference_vx_mps;
+        reference_y = input->reference_vy_mps;
+        LimitVector(&reference_x, &reference_y, config->max_speed_mps);
+        /* Rotate the historical sample into current body axes. This assumes
+         * constant angular speed; it does not predict linear acceleration. */
+        const float angle = input->wheel_wz_radps * ((float)sample_age_ms * .001f);
+        const float co = cosf(angle), si = sinf(angle);
+        feedback_x = co * input->fused_vx_mps - si * input->fused_vy_mps;
+        feedback_y = si * input->fused_vx_mps + co * input->fused_vy_mps;
+        if (!isfinite(feedback_x) || !isfinite(feedback_y)) return true;
+    }
+
     output->feedback_active = true;
-    float error_x = demand_x - input->fused_vx_mps;
-    float error_y = demand_y - input->fused_vy_mps;
+    float error_x = reference_x - feedback_x;
+    float error_y = reference_y - feedback_y;
     if (hypotf(error_x, error_y) <= config->deadband_mps) return true;
 
     float correction_x = config->proportional_gain * error_x;

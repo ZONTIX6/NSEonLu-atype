@@ -47,7 +47,7 @@ static void TestDisabledAndIneligible(void)
     assert(!output.command_limited && !output.feedback_active);
 
     input=Input();
-    input.feedback_allowed=false; /* Spin and other non-test modes do not use fusion feedback. */
+    input.feedback_allowed=false; /* Ineligible modes do not use fusion feedback. */
     input.requested_vx_mps=.40f;
     assert(ChassisVelocityControlTrialApply(&config,&input,&output));
     Near(.30f,output.vx_mps);
@@ -147,6 +147,78 @@ static void TestInvalidConfigurationFailsClosed(void)
     assert(output.command_limited && !output.feedback_active);
 }
 
+static void TestSpinFrameAndPhaseLead(void)
+{
+    for (int direction=-1;direction<=1;direction+=2) {
+        ChassisVelocityControlTrialInput_s input=Input();
+        ChassisVelocityControlTrialOutput_s output;
+        input.spin_mode=true;
+        input.now_ms=125U;
+        input.wheel_wz_radps=direction*6.4f;
+        const float angle=input.wheel_wz_radps*.025f;
+        input.fused_vx_mps=.20f;
+        input.reference_vx_mps=.20f*cosf(angle);
+        input.reference_vy_mps=.20f*sinf(angle);
+        /* Intentional phase lead must not create a false lateral correction. */
+        input.requested_vx_mps=.20f*cosf(angle+direction*.16f);
+        input.requested_vy_mps=.20f*sinf(angle+direction*.16f);
+        assert(ChassisVelocityControlTrialApply(&config,&input,&output));
+        assert(output.feedback_active);
+        Near(input.requested_vx_mps,output.vx_mps);
+        Near(input.requested_vy_mps,output.vy_mps);
+        Near(0.0f,output.correction_vx_mps);
+        Near(0.0f,output.correction_vy_mps);
+
+        /* Stopping must oppose velocity expressed in the current axes. */
+        input.requested_vx_mps=input.requested_vy_mps=0.0f;
+        input.reference_vx_mps=input.reference_vy_mps=0.0f;
+        input.fused_vx_mps=.12f;
+        assert(ChassisVelocityControlTrialApply(&config,&input,&output));
+        Near(-.03f*cosf(angle),output.correction_vx_mps);
+        Near(-.03f*sinf(angle),output.correction_vy_mps);
+    }
+}
+
+static void TestSpinFallbackAndBounds(void)
+{
+    ChassisVelocityControlTrialInput_s input=Input();
+    ChassisVelocityControlTrialOutput_s output;
+    input.spin_mode=true;
+    input.now_ms=5U;
+    input.fused_tick_ms=UINT32_MAX-19U; /* 25 ms across timestamp wrap. */
+    input.wheel_wz_radps=6.4f;
+    input.reference_vx_mps=.10f;
+    input.fused_vx_mps=-1.0f;
+    assert(ChassisVelocityControlTrialApply(&config,&input,&output));
+    assert(output.feedback_active);
+    Near(.05f,hypotf(output.correction_vx_mps,output.correction_vy_mps));
+    assert(hypotf(output.vx_mps,output.vy_mps)<=config.max_speed_mps+1e-6f);
+
+    input.wheel_wz_radps=NAN;
+    assert(ChassisVelocityControlTrialApply(&config,&input,&output));
+    assert(!output.feedback_active);
+    Near(input.requested_vx_mps,output.vx_mps);
+    Near(0.0f,output.correction_vx_mps); /* No retained correction. */
+    input.wheel_wz_radps=6.4f;
+    input.reference_vx_mps=NAN;
+    assert(ChassisVelocityControlTrialApply(&config,&input,&output));
+    assert(!output.feedback_active);
+    Near(0.0f,output.correction_vy_mps);
+
+    input.reference_vx_mps=.10f;
+    input.now_ms=141U;
+    input.fused_tick_ms=100U;
+    assert(ChassisVelocityControlTrialApply(&config,&input,&output));
+    assert(!output.feedback_active);
+    Near(0.0f,output.correction_vx_mps);
+
+    input=Input(); /* Non-spin behavior ignores spin-only fields. */
+    input.reference_vx_mps=input.wheel_wz_radps=NAN;
+    assert(ChassisVelocityControlTrialApply(&config,&input,&output));
+    assert(output.feedback_active);
+    Near(.225f,output.vx_mps);
+}
+
 int main(void)
 {
     TestDisabledAndIneligible();
@@ -155,6 +227,8 @@ int main(void)
     TestVectorAndCorrectionBounds();
     TestTimestampWrapAndCommandScale();
     TestInvalidConfigurationFailsClosed();
+    TestSpinFrameAndPhaseLead();
+    TestSpinFallbackAndBounds();
     puts("PASS: bounded chassis velocity-control trial");
     return 0;
 }

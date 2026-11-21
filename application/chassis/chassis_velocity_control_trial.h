@@ -16,6 +16,7 @@ typedef struct {
     bool enabled;
     bool speed_limit_allowed;
     bool feedback_allowed;
+    bool spin_mode;
     bool fused_snapshot_valid;
     bool fused_status;
     bool wheel_valid;
@@ -23,6 +24,10 @@ typedef struct {
     uint32_t fused_tick_ms;
     float requested_vx_mps, requested_vy_mps;
     float fused_vx_mps, fused_vy_mps;
+    /* Spin reference excludes feed-forward phase lead, in current chassis axes. */
+    float reference_vx_mps, reference_vy_mps;
+    /* Public wheel yaw sign: historical velocity maps to current axes by +wz*age. */
+    float wheel_wz_radps;
 } ChassisVelocityControlTrialInput_s;
 
 typedef struct {

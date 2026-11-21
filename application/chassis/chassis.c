@@ -461,11 +461,18 @@ void ChassisTask()
     const bool fused_valid=ChassisGetFusedVelocitySnapshot(&fused);
     const bool scale_valid=ChassisVelocityControlTrialCommandScale(
         RADIUS_WHEEL*.001f, REDUCTION_RATIO_WHEEL, &command_scale);
+    const bool spin_mode=chassis_cmd_recv.chassis_mode==CHASSIS_ROTATE;
+    float feedback_vx=chassis_vx, feedback_vy=chassis_vy;
+    if (spin_mode) {
+        /* Keep phase lead in feed-forward, not in the tracking error. */
+        ChassisResolveMotion(&chassis_cmd_recv, 0, 0, &feedback_vx, &feedback_vy);
+    }
     const ChassisVelocityControlTrialInput_s trial_input={
         .enabled=true,
         .speed_limit_allowed=chassis_cmd_recv.chassis_mode!=CHASSIS_ZERO_FORCE,
         .feedback_allowed=chassis_cmd_recv.chassis_mode==CHASSIS_NO_FOLLOW ||
-            chassis_cmd_recv.chassis_mode==CHASSIS_FOLLOW_GIMBAL_YAW,
+            chassis_cmd_recv.chassis_mode==CHASSIS_FOLLOW_GIMBAL_YAW || spin_mode,
+        .spin_mode=spin_mode,
         .fused_snapshot_valid=fused_valid && fused.valid,
         .fused_status=fused.status==CHASSIS_VELOCITY_FUSED,
         .wheel_valid=fused.wheel.valid,
@@ -475,6 +482,9 @@ void ChassisTask()
         .requested_vy_mps=chassis_vy*command_scale,
         .fused_vx_mps=fused.vx_mps,
         .fused_vy_mps=fused.vy_mps,
+        .reference_vx_mps=feedback_vx*command_scale,
+        .reference_vy_mps=feedback_vy*command_scale,
+        .wheel_wz_radps=fused.wheel.wz_rpm*(6.283185307179586f/60.0f),
     };
     if (!scale_valid || !ChassisVelocityControlTrialApply(&velocity_trial_config,
             &trial_input, &trial_output)) {
