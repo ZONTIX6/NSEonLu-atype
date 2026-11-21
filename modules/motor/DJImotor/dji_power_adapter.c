@@ -10,8 +10,53 @@
 #include "task.h"
 #include <math.h>
 #include <string.h>
-
+#include "../../../config/30_velocity_observation/chassis_traction_config.h"
 static DJIMotorOutputGroup_s adapter_group;
+#if CHASSIS_TRACTION_MODE > 0
+#include "../../../config/02_chassis/chassis_config.h"
+static ChassisTractionState_s traction_state;
+static ChassisTractionInput_s traction_input;
+static DJITractionSnapshot_s traction_working, traction_published;
+static void ApplyTraction(const DJIMotorCycle_s *cycle, ChassisPowerCycleInput_s *input)
+{
+    const ChassisVelocityConfig_s geometry={.omni_x=CHASSIS_DRIVE_TYPE==CHASSIS_DRIVE_OMNI_X,
+        .wheel_radius_m=RADIUS_WHEEL*.001f,.reduction_ratio=REDUCTION_RATIO_WHEEL,
+        .wheel_base_m=WHEEL_BASE*.001f,.track_width_m=TRACK_WIDTH*.001f,
+        .direction={OMNI_X_LF_DIRECTION,OMNI_X_RF_DIRECTION,OMNI_X_LB_DIRECTION,OMNI_X_RB_DIRECTION}};
+    const ChassisTractionConfig_s config=ChassisTractionDefaultConfig(&geometry);
+    ChassisTractionInput_s *i=&traction_input;
+    *i=(ChassisTractionInput_s){.reference=input->control.traction,
+        .now_ms=input->now_ms,.dt_s=input->dt_s,
+        .online_mask=input->online_mask,.enabled_mask=input->enabled_mask,
+        .drive_enabled=input->control.control_enabled && !input->control.zero_force &&
+            !input->control.autotune_permitted && VehicleSafetyAllowsDrive(input->now_ms) &&
+            (uint32_t)(input->now_ms-input->control.tick_ms)<=10U,
+        .targets_match=true};
+    for(unsigned w=0;w<4;++w) {
+        const unsigned n=adapter_group.motor_indices[w];
+        i->raw_current[w]=input->raw_current[w];
+        i->actual_rpm[w]=(float)cycle->measure[n].raw_rpm;
+        i->max_current[w]=fminf(adapter_group.max_current_command,cycle->motors[n]->motor_controller.speed_PID.MaxOut);
+        i->feedback_tick_ms[w]=input->feedback_tick_ms[w];
+        i->feedback_sequence[w]=input->feedback_sequence[w];
+        i->targets_match &= isfinite(input->target_rpm[w]) &&
+            fabsf(input->target_rpm[w]-input->control.target_rpm[w])<=.001f;
+        traction_working.raw_current[w]=input->raw_current[w];
+        traction_working.target_rpm[w]=input->target_rpm[w];
+        traction_working.feedback_current[w]=input->feedback_current[w];
+    }
+    (void)ChassisTractionUpdate(&config,i,&traction_state,&traction_working.traction);
+    traction_working.reference=i->reference;
+    for(unsigned w=0;w<4;++w) {
+        input->raw_current[w]=traction_working.traction.current[w];
+        if(traction_working.traction.intervened_mask & (1U<<w)) {
+            PIDInstance *pid=&cycle->motors[adapter_group.motor_indices[w]]->motor_controller.speed_PID;
+            pid->Iout=pid->ITerm=pid->Last_ITerm=0;
+        }
+    }
+}
+#endif
+
 static DJIMotorInstance *adapter_motors[4];
 static ChassisPowerControlSnapshot_s adapter_control, adapter_cycle_control;
 static uint32_t adapter_dwt_count;
@@ -74,6 +119,9 @@ static void AdapterLimit(void *context,const DJIMotorCycle_s *cycle)
         if(cycle->online[index]) input->online_mask |= (uint8_t)(1U<<w);
         if(cycle->stop[index]!=MOTOR_STOP) input->enabled_mask |= (uint8_t)(1U<<w);
     }
+#if CHASSIS_TRACTION_MODE > 0
+    ApplyTraction(cycle,input);
+#endif
     (void)ChassisPowerLimit(input,&adapter_output);
 #if CHASSIS_POWER_CONTROL_ENABLE
     for(unsigned w=0;w<4;++w) cycle->current[adapter_group.motor_indices[w]]=adapter_output.current[w];
@@ -151,6 +199,21 @@ static void AdapterRecordFinal(void *context,const DJIMotorCycle_s *cycle,
         have_corrected_version=true;
     }
     taskEXIT_CRITICAL();
+#if CHASSIS_TRACTION_MODE > 0
+    traction_working.available=true;
+    traction_working.tick_ms=final.now_ms;
+    traction_working.control_version=final.control_version;
+    traction_working.enabled_mask=final.enabled_mask;
+    traction_working.can_submitted=final.can_submitted;
+    ++traction_working.cycles;
+    const bool intervention=traction_working.traction.intervened_mask!=0;
+    traction_working.intervention_cycles+=intervention;
+    traction_working.spin_cycles+=traction_working.traction.spin_mask!=0;
+    traction_working.lock_cycles+=traction_working.traction.lock_mask!=0;
+    traction_working.submitted_intervention_cycles+=intervention && final.enabled_mask==15U && final.can_submitted;
+    memcpy(traction_working.final_current,final.current_command,sizeof final.current_command);
+    taskENTER_CRITICAL();traction_published=traction_working;taskEXIT_CRITICAL();
+#endif
     (void)ChassisPowerRecordFinal(&final);
 #if CHASSIS_SPEED_CAPTURE_ENABLE
     CaptureFinal(cycle,&final);
@@ -215,6 +278,31 @@ bool DJIPowerAdapterGetVelocityFeedbackEvidence(DJIVelocityFeedbackEvidence_s *o
     *out=velocity_feedback_evidence;
     taskEXIT_CRITICAL();
     return (out->flags & DJI_FEEDBACK_AVAILABLE)!=0U;
+}
+
+bool DJIPowerAdapterGetTractionSnapshot(DJITractionSnapshot_s *out)
+{
+    if(!out) return false;
+#if CHASSIS_TRACTION_MODE > 0
+    taskENTER_CRITICAL();*out=traction_published;taskEXIT_CRITICAL();
+    return out->available;
+#else
+    *out=(DJITractionSnapshot_s){0};return false;
+#endif
+}
+
+bool DJIPowerAdapterTractionLimited(uint32_t now_ms)
+{
+#if CHASSIS_TRACTION_MODE >= 2
+    taskENTER_CRITICAL();
+    const bool limited=traction_published.available && traction_published.enabled_mask==15U &&
+        traction_published.traction.intervened_mask!=0 &&
+        (uint32_t)(now_ms-traction_published.tick_ms)<=20U;
+    taskEXIT_CRITICAL();
+    return limited;
+#else
+    (void)now_ms;return false;
+#endif
 }
 #if CHASSIS_SPEED_CAPTURE_ENABLE
 static void RawFeedback(void *context,unsigned index,const DJI_Motor_Measure_s *m)

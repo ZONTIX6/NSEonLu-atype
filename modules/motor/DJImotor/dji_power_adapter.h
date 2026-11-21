@@ -4,6 +4,7 @@
 #include "dji_motor.h"
 #include "chassis_power.h"
 #include "../../telemetry/chassis_speed_capture.h"
+#include "dji_traction.h"
 
 typedef struct
 {

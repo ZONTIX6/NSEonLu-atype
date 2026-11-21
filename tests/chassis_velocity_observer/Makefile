@@ -41,3 +41,14 @@ test_chassis_remote_observer.exe: test_chassis_remote_observer.c $(PRODUCTION_SO
 	    -DVOFA_TELEMETRY_ENABLE=1 -DVOFA_TELEMETRY_MODE=2 -DVOFA_OBSERVATION_PROFILE=2 \
 	    -DCHASSIS_IMU_CAN_RX_ENABLE=1 -DCHASSIS_REMOTE_IMU_FUSION_ENABLE=1 $(INCLUDES) \
 	    -I$(ROOT)/Inc -I$(APPLICATION)/runtime -include stubs/platform.h $< $(PRODUCTION_SOURCES) $(ALGORITHM)/chassis_remote_fusion.c -lm -o $@
+
+TRACTION_REFERENCE_DEFINES := -DONE_BOARD -DCHASSIS_VELOCITY_FUSION_ENABLE=1 -DCHASSIS_VELOCITY_FUSION_CALIBRATED=0 -DCHASSIS_IMU_CAN_RX_ENABLE=1 -DCHASSIS_REMOTE_IMU_FUSION_ENABLE=1 -DVOFA_TELEMETRY_ENABLE=1 -DVOFA_TELEMETRY_MODE=2 -DVOFA_OBSERVATION_PROFILE=2 -DCHASSIS_TRACTION_MODE=1
+test_traction_reference.exe: test_traction_reference.c $(PRODUCTION_SOURCES) $(ALGORITHM)/chassis_remote_fusion.c $(HEADERS)
+	$(CC) $(CFLAGS) $(TRACTION_REFERENCE_DEFINES) $(INCLUDES) -I$(ROOT)/Inc -I$(APPLICATION)/runtime -include stubs/platform.h $< $(PRODUCTION_SOURCES) $(ALGORITHM)/chassis_remote_fusion.c -lm -o $@
+test_traction_reference_reversed.exe: test_traction_reference.c $(PRODUCTION_SOURCES) $(ALGORITHM)/chassis_remote_fusion.c $(HEADERS)
+	$(CC) $(CFLAGS) $(TRACTION_REFERENCE_DEFINES) -DCHASSIS_TRACTION_GYRO_Z_SIGN=-1.0f $(INCLUDES) -I$(ROOT)/Inc -I$(APPLICATION)/runtime -include stubs/platform.h $< $(PRODUCTION_SOURCES) $(ALGORITHM)/chassis_remote_fusion.c -lm -o $@
+.PHONY: test_traction
+test: test_traction
+test_traction: test_traction_reference.exe test_traction_reference_reversed.exe
+	./test_traction_reference.exe
+	./test_traction_reference_reversed.exe

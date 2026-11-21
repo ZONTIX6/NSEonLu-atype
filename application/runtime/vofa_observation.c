@@ -3,7 +3,7 @@
 #include "imu_capture_config.h"
 #include "vofa_kalman_capture.h"
 
-#if VOFA_TELEMETRY_ENABLE && VOFA_TELEMETRY_MODE == 2 && VOFA_OBSERVATION_PROFILE != 0
+#if VOFA_TELEMETRY_ENABLE && VOFA_TELEMETRY_MODE == 2 && VOFA_OBSERVATION_PROFILE != 0 && VOFA_OBSERVATION_PROFILE != 3
 #include "usart.h"
 #include <limits.h>
 #include <math.h>

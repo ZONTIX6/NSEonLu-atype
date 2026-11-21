@@ -161,6 +161,7 @@ modules/telemetry/chassis_power_capture.c \
 modules/algorithm/power_model.c \
 modules/algorithm/chassis_kinematics.c \
 modules/algorithm/chassis_velocity.c \
+modules/algorithm/chassis_traction.c \
 modules/algorithm/chassis_velocity_fusion.c \
 modules/algorithm/chassis_remote_fusion.c \
 modules/algorithm/chassis_velocity_center.c \
@@ -201,7 +202,7 @@ application/runtime/robot_task.c
 C_SOURCES += $(wildcard modules/chassis_power/*.c) modules/motor/DJImotor/dji_power_adapter.c
 C_SOURCES += $(wildcard modules/predictive_power/*.c)
 C_SOURCES += $(wildcard config/*/*.c)
-C_SOURCES += modules/telemetry/chassis_speed_capture.c application/runtime/chassis_speed_observation.c
+C_SOURCES += modules/telemetry/chassis_speed_capture.c application/runtime/chassis_speed_observation.c application/runtime/vofa_traction.c
 C_SOURCES += modules/imu/ins_math.c modules/vehicle_safety/vehicle_safety.c application/board/board_optional.c application/board/board_devices.c application/board/board_analog_key.c Src/syscalls.c Src/sysmem.c modules/oled/oled_spi.c
 C_SOURCES += $(wildcard modules/TFminiPlus/*.c modules/key/*.c modules/jam_detector/*.c)
 
@@ -267,7 +268,21 @@ CHASSIS_VELOCITY_FUSION_ENABLE ?= 0
 CHASSIS_VELOCITY_FUSION_CALIBRATED ?= 0
 CHASSIS_REMOTE_IMU_FUSION_ENABLE ?= 0
 CHASSIS_VELOCITY_CONTROL_TRIAL_ENABLE ?= 0
+CHASSIS_TRACTION_MODE ?= 0
+ifeq ($(filter $(CHASSIS_TRACTION_MODE),0 1 2 3),)
+$(error CHASSIS_TRACTION_MODE must be 0, 1, 2 or 3)
+endif
+ifneq ($(CHASSIS_TRACTION_MODE),0)
+ifneq ($(ONE_BOARD):$(CHASSIS_CONTROL_MODE):$(CHASSIS_VELOCITY_FUSION_ENABLE):$(CHASSIS_REMOTE_IMU_FUSION_ENABLE):$(CHASSIS_IMU_CAN_RX_ENABLE),1:0:1:1:1)
+$(error Traction requires ONE_BOARD=1, speed control and the remote chassis IMU observer)
+endif
+endif
 IMU_CAPTURE_ONLY ?= 0
+ifneq ($(CHASSIS_TRACTION_MODE),0)
+ifneq ($(IMU_CAPTURE_ONLY):$(CHASSIS_VELOCITY_FUSION_CALIBRATED),0:0)
+$(error Traction requires IMU_CAPTURE_ONLY=0 and CHASSIS_VELOCITY_FUSION_CALIBRATED=0)
+endif
+endif
 IMU_CAPTURE_CAN_TX_ENABLE ?= 0
 CHASSIS_IMU_CAN_RX_ENABLE ?= 0
 ifeq ($(filter $(CHASSIS_REMOTE_IMU_FUSION_ENABLE),0 1),)
@@ -332,7 +347,9 @@ ifneq ($(origin VOFA_OBSERVATION_PROFILE),undefined)
 ifneq ($(VOFA_OBSERVATION_PROFILE),0)
 ifneq ($(VOFA_OBSERVATION_PROFILE),1)
 ifneq ($(VOFA_OBSERVATION_PROFILE),2)
-$(error VOFA_OBSERVATION_PROFILE must be 0, 1 or 2)
+ifneq ($(VOFA_OBSERVATION_PROFILE),3)
+$(error VOFA_OBSERVATION_PROFILE must be 0, 1, 2 or 3)
+endif
 endif
 endif
 endif
@@ -472,7 +489,7 @@ NUMERIC_SOURCES += $(filter modules/predictive_power/%,$(C_SOURCES))
 NUMERIC_SOURCES += $(filter config/%,$(C_SOURCES))
 NUMERIC_SOURCES += $(filter application/gimbal/%,$(C_SOURCES))
 NUMERIC_SOURCES += modules/algorithm/chassis_velocity_fusion.c modules/algorithm/chassis_remote_fusion.c \
-                   modules/algorithm/chassis_velocity_center.c modules/algorithm/chassis_gimbal_imu.c
+                   modules/algorithm/chassis_velocity_center.c modules/algorithm/chassis_gimbal_imu.c modules/algorithm/chassis_traction.c
 ifeq ($(CHASSIS_VELOCITY_FUSION_ENABLE),1)
 NUMERIC_SOURCES += modules/imu/ins_service.c modules/algorithm/chassis_velocity.c
 endif
@@ -481,7 +498,7 @@ NUMERIC_SOURCES += modules/imu/ins_service.c
 endif
 NUMERIC_SOURCES += modules/telemetry/chassis_speed_capture.c application/runtime/chassis_speed_observation.c
 NUMERIC_SOURCES += application/runtime/shadow_jscope.c
-NUMERIC_SOURCES += application/runtime/robot_telemetry.c application/runtime/vofa_telemetry.c \
+NUMERIC_SOURCES += application/runtime/robot_telemetry.c application/runtime/vofa_telemetry.c application/runtime/vofa_traction.c \
     application/runtime/vofa_observation.c \
     application/runtime/chassis_imu_can.c modules/imu/chassis_imu_can_protocol.c \
                    modules/telemetry/usb_telemetry_format.c modules/telemetry/usb_telemetry_imu.c \

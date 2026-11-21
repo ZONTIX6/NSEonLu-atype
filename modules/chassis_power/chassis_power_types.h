@@ -11,6 +11,7 @@
 #include "referee_power.h"
 #include "../predictive_power/wheel_speed_kf.h"
 #include "../predictive_power/speed_observation_config.h"
+#include "chassis_traction.h"
 
 typedef struct
 {
@@ -41,6 +42,7 @@ typedef struct
     float target_rpm[4];
     bool control_enabled, autotune_permitted, zero_force;
     bool velocity_feedback_corrected; /* Diagnostic tag; never used as a drive gate. */
+    ChassisTractionReference_s traction; /* Optional estimate; never substitutes a motor stop gate. */
     ChassisPowerControlTelemetry_s telemetry;
 } ChassisPowerControlSnapshot_s;
 

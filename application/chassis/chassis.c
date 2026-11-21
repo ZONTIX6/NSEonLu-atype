@@ -26,6 +26,7 @@
 #include "chassis_velocity_control_trial.h"
 #include "chassis_velocity_observer.h"
 #include "../../config/30_velocity_observation/chassis_velocity_control_trial_config.h"
+#include "../../config/30_velocity_observation/chassis_traction_config.h"
 #include "runtime_tuning.h"
 #include "remote_control.h"
 #include "robot_def.h"
@@ -166,6 +167,13 @@ static bool LimitChassisOutput(void)
     pending_power_control.target_rpm[2] = vt_lb / 6.0f;
     pending_power_control.target_rpm[3] = vt_rb / 6.0f;
     pending_power_control.tick_ms = HAL_GetTick();
+#if CHASSIS_TRACTION_MODE > 0
+    (void)ChassisGetTractionReference(&pending_power_control.traction);
+    pending_power_control.traction.valid &= !pending_power_control.autotune_permitted &&
+        (chassis_cmd_recv.chassis_mode==CHASSIS_NO_FOLLOW ||
+         chassis_cmd_recv.chassis_mode==CHASSIS_FOLLOW_GIMBAL_YAW ||
+         chassis_cmd_recv.chassis_mode==CHASSIS_ROTATE);
+#endif
     return DJIPowerAdapterPublish(&pending_power_control);
 }
 
@@ -296,6 +304,11 @@ static void UpdateChassisPowerBudget(void)
             fabsf(input.previous.raw_current[w])>=maximum;
     }
 #endif
+#if CHASSIS_TRACTION_MODE >= 2
+    const bool traction_limited=DJIPowerAdapterTractionLimited(input.now_ms);
+    /* Low measured power during lost traction is not spare tire grip. */
+    input.hold_positive_learning |= traction_limited;
+#endif
     (void)ChassisPowerUpdatePolicy(&input,&output);
 #if !CHASSIS_POWER_CONTROL_ENABLE
     /* Power calculations are observational; retain timing and referee stop permission.
@@ -378,6 +391,10 @@ static void UpdateChassisPowerBudget(void)
     chassis_spin_input.increase_allowed=ChassisSpinTransientAllowsIncrease(&power_state.transient);
     if(chassis_budget_output.spin_phase==CHASSIS_SPIN_POWER_DEGRADED)
         chassis_spin_input.increase_allowed=false;
+#endif
+#if CHASSIS_TRACTION_MODE >= 2
+    chassis_spin_input.power_limited |= traction_limited;
+    chassis_spin_input.increase_allowed &= !traction_limited;
 #endif
 #endif
 #endif

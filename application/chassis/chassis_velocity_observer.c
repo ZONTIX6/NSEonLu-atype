@@ -24,6 +24,9 @@
 #endif
 
 #include "../../config/30_velocity_observation/chassis_velocity_config.h"
+#include "../../config/30_velocity_observation/chassis_traction_config.h"
+#include "../../config/30_velocity_observation/chassis_remote_imu_config.h"
+#include <math.h>
 volatile ChassisFusedVelocitySnapshot_s chassis_fused_velocity;
 
 bool ChassisGetFusedVelocitySnapshot(ChassisFusedVelocitySnapshot_s *snapshot)
@@ -40,6 +43,42 @@ bool ChassisGetFusedVelocitySnapshot(ChassisFusedVelocitySnapshot_s *snapshot)
     if (!snapshot->wheel.valid || (uint32_t)(now_ms-snapshot->tick_ms)>limit)
         snapshot->valid=false;
     return snapshot->valid;
+}
+
+/* Keep the motor/control path's copy small; do not copy the observer's full
+ * diagnostics onto another real-time task's stack. Wheel-derived yaw would
+ * hide a wheel's rotational slip, so use the fixed chassis gyro instead. */
+bool ChassisGetTractionReference(ChassisTractionReference_s *reference)
+{
+    if(!reference) return false;
+    *reference=(ChassisTractionReference_s){0};
+#if CHASSIS_TRACTION_MODE > 0 && CHASSIS_REMOTE_IMU_FUSION_ENABLE
+    float gyro[3];
+    taskENTER_CRITICAL();
+    reference->vx_mps=chassis_fused_velocity.vx_mps;
+    reference->vy_mps=chassis_fused_velocity.vy_mps;
+    reference->tick_ms=chassis_fused_velocity.tick_ms;
+    reference->gyro_tick_ms=chassis_fused_velocity.diagnostics.imu_tick_ms;
+    reference->valid=chassis_fused_velocity.valid &&
+        chassis_fused_velocity.status==CHASSIS_VELOCITY_FUSED &&
+        chassis_fused_velocity.diagnostics.available && chassis_fused_velocity.diagnostics.imu_valid;
+    for(unsigned axis=0;axis<3;++axis) gyro[axis]=chassis_fused_velocity.diagnostics.imu_gyro_sensor_radps[axis];
+    taskEXIT_CRITICAL();
+    const float q[4]=CHASSIS_REMOTE_IMU_SENSOR_TO_BODY;
+    const float norm=q[0]*q[0]+q[1]*q[1]+q[2]*q[2]+q[3]*q[3];
+    if(!isfinite(norm) || norm<.98f || norm>1.02f ||
+       (CHASSIS_TRACTION_GYRO_Z_SIGN!=1.0f && CHASSIS_TRACTION_GYRO_Z_SIGN!=-1.0f))
+        reference->valid=false;
+    else reference->wz_radps=CHASSIS_TRACTION_GYRO_Z_SIGN*(
+        2*(q[1]*q[3]-q[0]*q[2])*gyro[0]+2*(q[2]*q[3]+q[0]*q[1])*gyro[1]+
+        (norm-2*(q[1]*q[1]+q[2]*q[2]))*gyro[2])/norm;
+#endif
+    const uint32_t now_ms=HAL_GetTick();
+    reference->valid &= isfinite(reference->vx_mps) && isfinite(reference->vy_mps) &&
+        isfinite(reference->wz_radps) &&
+        (uint32_t)(now_ms-reference->tick_ms)<=CHASSIS_TRACTION_MAX_REFERENCE_AGE_MS &&
+        (uint32_t)(now_ms-reference->gyro_tick_ms)<=CHASSIS_TRACTION_MAX_REFERENCE_AGE_MS;
+    return reference->valid;
 }
 
 #if CHASSIS_VELOCITY_FUSION_CALIBRATED

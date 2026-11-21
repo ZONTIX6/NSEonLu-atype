@@ -28,6 +28,7 @@ struct CANInstance
     CAN_TxHeaderTypeDef txconf;
     uint8_t tx_buff[8];
     uint8_t rx_buff[8];
+    uint8_t rx_len;
     void (*can_module_callback)(CANInstance *);
     void *id;
 };

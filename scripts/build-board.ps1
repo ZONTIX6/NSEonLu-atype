@@ -85,8 +85,8 @@ foreach($required in @('ONE_BOARD','CHASSIS_CONTROL_MODE','CHASSIS_FORCE_CALIBRA
     'VOFA_TELEMETRY_ENABLE','VOFA_TELEMETRY_MODE','VOFA_OBSERVATION_PROFILE','USB_TELEMETRY_ENABLE')) {
     if(-not $optionValues.ContainsKey($required)) { throw "Missing board option: $prefix$required" }
 }
-if($optionValues['VOFA_OBSERVATION_PROFILE'] -notin @('0','1','2')) {
-    throw 'VOFA_OBSERVATION_PROFILE must be 0, 1 or 2.'
+if($optionValues['VOFA_OBSERVATION_PROFILE'] -notin @('0','1','2','3')) {
+    throw 'VOFA_OBSERVATION_PROFILE must be 0, 1, 2 or 3.'
 }
 $options=@($optionValues.Keys | Sort-Object | ForEach-Object { "$_=$($optionValues[$_])" })
 $common=@("PROFILE=$profile","BUILD_DIR=$buildDirectory")+$options

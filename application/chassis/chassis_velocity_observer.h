@@ -4,6 +4,7 @@
 #include "chassis_velocity.h"
 #include "chassis_remote_fusion.h"
 #include "chassis_velocity_control_trial.h"
+#include "chassis_traction.h"
 #include "../../modules/motor/DJImotor/dji_motor_diagnostics.h"
 
 typedef enum {
@@ -63,6 +64,7 @@ typedef struct {
 /* Debugger can sample this symbol. Firmware readers should use the getter. */
 extern volatile ChassisFusedVelocitySnapshot_s chassis_fused_velocity;
 bool ChassisGetFusedVelocitySnapshot(ChassisFusedVelocitySnapshot_s *snapshot);
+bool ChassisGetTractionReference(ChassisTractionReference_s *reference);
 #endif
 
 #endif
