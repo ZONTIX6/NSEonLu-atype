@@ -41,6 +41,7 @@ typedef struct {
     float gimbal_yaw_total_deg; /* Local head INS, independent of the remote chassis IMU. */
     uint32_t gimbal_imu_tick_ms;
     bool gimbal_imu_valid, gimbal_imu_known;
+    bool trial_speed_limited, trial_feedback_active;
     DJIMotorControlSnapshot_s yaw_control;
 } ChassisVelocityDiagnostics_s;
 

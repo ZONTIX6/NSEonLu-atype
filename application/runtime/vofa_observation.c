@@ -286,7 +286,8 @@ static void Kalman(float *f, const USBTelemetrySample_s *sample,
 #endif
     K(VALID) = (wheel ? 1U : 0U) | (target ? 2U : 0U) | (estimate ? 4U : 0U) | (imu ? 8U : 0U) |
         (attempt ? 16U : 0U) | (CHASSIS_REMOTE_IMU_CONFIG_VERIFIED ? 32U : 0U) |
-        (yaw ? 256U : 0U) | (gimbal_imu ? 512U : 0U) | (control_valid ? 1024U : 0U);
+        (yaw ? 256U : 0U) | (gimbal_imu ? 512U : 0U) | (control_valid ? 1024U : 0U) |
+        (d->trial_speed_limited ? 4096U : 0U) | (d->trial_feedback_active ? 8192U : 0U);
     K(OBSERVER_STATUS) = v == &empty ? -1.0f : (float)v->status;
     K(CONFIG_SOURCE) = 0; /* Fixed A-board configuration; no runtime filter override. */
     if (a->available) U32(f, VOFA_KALMAN_GIMBAL_CONTROL_CONFIG_FINGERPRINT_HI, ConfigFingerprint(c));

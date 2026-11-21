@@ -244,7 +244,8 @@ static void UpdateRemote(ChassisFusedVelocitySnapshot_s *snapshot,
 }
 #endif
 
-void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config, uint8_t chassis_mode)
+void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config, uint8_t chassis_mode,
+    bool trial_speed_limited, bool trial_feedback_active)
 {
     DJIMotorInstance *const motors[4]={motor_lf,motor_rf,motor_lb,motor_rb};
     ChassisVelocityInput_s wheels={0};
@@ -315,6 +316,8 @@ void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config, uint8_t 
     diagnostics->joints_valid=joints_valid;
     diagnostics->yaw_encoder_valid=joints[0].valid;
     diagnostics->chassis_mode=chassis_mode;
+    diagnostics->trial_speed_limited=trial_speed_limited;
+    diagnostics->trial_feedback_active=trial_feedback_active;
     diagnostics->gimbal_yaw_total_deg=gimbal_imu.attitude.YawTotalAngle;
     diagnostics->gimbal_imu_tick_ms=gimbal_imu.tick_ms;
     diagnostics->gimbal_imu_valid=gimbal_imu.valid;

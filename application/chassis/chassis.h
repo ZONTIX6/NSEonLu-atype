@@ -9,6 +9,11 @@
  * Volatile pointer access keeps this debug anchor in the linked firmware.
  * Use the snapshot function for coherent cross-task reads and freshness checks. */
 extern const ChassisVelocityFeedback_s *const volatile chassis_velocity;
+/* Debug symbols for the opt-in bounded remote-fusion control trial. */
+extern volatile bool chassis_velocity_control_trial_limited;
+extern volatile bool chassis_velocity_control_trial_feedback_active;
+extern volatile float chassis_velocity_control_trial_correction_vx_mps;
+extern volatile float chassis_velocity_control_trial_correction_vy_mps;
 /* Returns actual.valid; target retains its own independent validity. */
 bool ChassisGetVelocitySnapshot(ChassisVelocityFeedback_s *snapshot);
 

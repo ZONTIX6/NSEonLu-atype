@@ -27,6 +27,7 @@
 #define BOARD_FLASH_1_CHASSIS_VELOCITY_FUSION_ENABLE 1 /* 1=启用速度观测接口；当前远端接收路径要求1。 */
 #define BOARD_FLASH_1_CHASSIS_VELOCITY_FUSION_CALIBRATED 0 /* 0=不启用本地云台标定；远端固定底盘IMU使用独立的安装与噪声配置。 */
 #define BOARD_FLASH_1_CHASSIS_REMOTE_IMU_FUSION_ENABLE 1 /* 1=用固定底盘IMU做只读卡尔曼观测；不表示安装与噪声参数已实测审核，也不接管控制。 */
+#define BOARD_FLASH_1_CHASSIS_VELOCITY_CONTROL_TRIAL_ENABLE 0 /* 0=保留只读观测；仅受控试验构建显式改为1。 */
 #define BOARD_FLASH_1_VOFA_TELEMETRY_ENABLE 1 /* 1=开启UART7统一遥测，需保持UART7未被裁判/辅助设备占用。 */
 #define BOARD_FLASH_1_VOFA_TELEMETRY_MODE 2 /* 2=JustFloat二进制观测；0/1保留旧格式，不使用用途选择。 */
 /* 功率/卡尔曼切换统一修改 ../_vofa/vofa_config.h 中的 VOFA_OBSERVATION_PROFILE。 */
@@ -46,6 +47,7 @@
 #define BOARD_FLASH_2_CHASSIS_VELOCITY_FUSION_ENABLE 0 /* 0=不运行整车速度融合。 */
 #define BOARD_FLASH_2_CHASSIS_VELOCITY_FUSION_CALIBRATED 0 /* 0=不加载整车融合标定。 */
 #define BOARD_FLASH_2_CHASSIS_REMOTE_IMU_FUSION_ENABLE 0 /* 0=采集板只发送IMU。 */
+#define BOARD_FLASH_2_CHASSIS_VELOCITY_CONTROL_TRIAL_ENABLE 0 /* 采集板不运行底盘闭环试验。 */
 #define BOARD_FLASH_2_VOFA_TELEMETRY_ENABLE 0 /* 0=关闭本板UART7遥测，由主板统一输出。 */
 #define BOARD_FLASH_2_VOFA_TELEMETRY_MODE 1 /* 预留格式；遥测关闭时不产生串口输出。 */
 #define BOARD_FLASH_2_USB_TELEMETRY_ENABLE 0 /* 0=关闭USB网页遥测，独立采集固件要求关闭。 */

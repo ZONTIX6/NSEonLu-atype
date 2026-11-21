@@ -16,6 +16,7 @@ typedef struct {
 extern DJIMotorInstance *motor_lf, *motor_rf, *motor_lb, *motor_rb;
 bool DaemonIsOnline(const bool *daemon);
 uint32_t HAL_GetTick(void);
-void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config, uint8_t chassis_mode);
+void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config, uint8_t chassis_mode,
+    bool trial_speed_limited, bool trial_feedback_active);
 
 #endif

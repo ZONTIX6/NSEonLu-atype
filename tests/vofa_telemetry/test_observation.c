@@ -98,6 +98,8 @@ int main(void)
     SuperCapSnapshot_s cap = {0};
     RefereePowerSnapshot_s referee = {0};
     ChassisFusedVelocitySnapshot_s velocity = {0};
+    velocity.diagnostics.trial_speed_limited = true;
+    velocity.diagnostics.trial_feedback_active = true;
     const uint32_t start = UINT32_MAX - 19U;
     sample.chassis_tick_ms = sample.velocity_target_tick_ms = start;
 #if CHASSIS_IMU_CAN_RX_ENABLE
@@ -146,6 +148,7 @@ int main(void)
     assert(field(VOFA_POWER_METER_SEQUENCE_HI) == 1);
 #else
     assert(field(0) == 7);
+    assert(((uint32_t)field(VOFA_KALMAN_GIMBAL_CONTROL_VALID) & (4096U | 8192U)) == (4096U | 8192U));
     assert(field(VOFA_KALMAN_GIMBAL_CONTROL_WHEEL_N_X_MPS) == 1.25f);
     assert(field(VOFA_KALMAN_GIMBAL_CONTROL_ACCEL_N_Y_MPS2) == -0.5f);
     assert(fabsf(field(VOFA_KALMAN_GIMBAL_CONTROL_TARGET_VX_MPS) - 1.234f) < 1e-6f);

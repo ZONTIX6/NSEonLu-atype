@@ -190,6 +190,7 @@ application/gimbal/gimbal.c \
 application/gimbal/gimbal_yaw_feedforward.c \
 application/chassis/chassis.c \
 application/chassis/chassis_init.c \
+application/chassis/chassis_velocity_control_trial.c \
 application/chassis/chassis_velocity_observer.c \
 application/chassis/chassis_tuning.c \
 application/shoot/shoot.c \
@@ -265,11 +266,38 @@ endif
 CHASSIS_VELOCITY_FUSION_ENABLE ?= 0
 CHASSIS_VELOCITY_FUSION_CALIBRATED ?= 0
 CHASSIS_REMOTE_IMU_FUSION_ENABLE ?= 0
+CHASSIS_VELOCITY_CONTROL_TRIAL_ENABLE ?= 0
 IMU_CAPTURE_ONLY ?= 0
 IMU_CAPTURE_CAN_TX_ENABLE ?= 0
 CHASSIS_IMU_CAN_RX_ENABLE ?= 0
 ifeq ($(filter $(CHASSIS_REMOTE_IMU_FUSION_ENABLE),0 1),)
 $(error CHASSIS_REMOTE_IMU_FUSION_ENABLE must be 0 or 1)
+endif
+ifeq ($(filter $(CHASSIS_VELOCITY_CONTROL_TRIAL_ENABLE),0 1),)
+$(error CHASSIS_VELOCITY_CONTROL_TRIAL_ENABLE must be 0 or 1)
+endif
+ifeq ($(CHASSIS_VELOCITY_CONTROL_TRIAL_ENABLE),1)
+ifneq ($(ONE_BOARD),1)
+$(error The velocity-control trial requires ONE_BOARD=1)
+endif
+ifneq ($(CHASSIS_CONTROL_MODE),0)
+$(error The velocity-control trial requires the speed-control backend)
+endif
+ifneq ($(CHASSIS_VELOCITY_FUSION_ENABLE),1)
+$(error The velocity-control trial requires CHASSIS_VELOCITY_FUSION_ENABLE=1)
+endif
+ifneq ($(CHASSIS_VELOCITY_FUSION_CALIBRATED),0)
+$(error The velocity-control trial requires CHASSIS_VELOCITY_FUSION_CALIBRATED=0)
+endif
+ifneq ($(CHASSIS_REMOTE_IMU_FUSION_ENABLE),1)
+$(error The velocity-control trial requires CHASSIS_REMOTE_IMU_FUSION_ENABLE=1)
+endif
+ifneq ($(CHASSIS_IMU_CAN_RX_ENABLE),1)
+$(error The velocity-control trial requires CHASSIS_IMU_CAN_RX_ENABLE=1)
+endif
+ifneq ($(IMU_CAPTURE_ONLY),0)
+$(error The velocity-control trial cannot run in IMU_CAPTURE_ONLY mode)
+endif
 endif
 ifeq ($(filter $(IMU_CAPTURE_ONLY),0 1),)
 $(error IMU_CAPTURE_ONLY must be 0 or 1)

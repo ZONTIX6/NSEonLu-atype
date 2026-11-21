@@ -75,7 +75,7 @@ static ChassisFusedVelocitySnapshot_s Step(bool new_remote)
         remote.last_rx_tick_ms=tick;
         remote_usable=true;
     }
-    ChassisObserveFusedVelocity(&config, 1);
+    ChassisObserveFusedVelocity(&config, 1, true, true);
     assert(captured == before_capture + 1);
     ChassisFusedVelocitySnapshot_s out;
     (void)ChassisGetFusedVelocitySnapshot(&out);
@@ -98,6 +98,7 @@ int main(void)
 {
     ChassisFusedVelocitySnapshot_s out=Run(40);
     assert(out.status==CHASSIS_VELOCITY_FUSED && out.valid);
+    assert(out.diagnostics.trial_speed_limited && out.diagnostics.trial_feedback_active);
     /* Zero wheel observations plus measured acceleration must actually enter
        the KF, rather than merely labelling a copied wheel value as fused. */
     assert(out.vx_mps>.0001f && out.vx_mps<.5f);

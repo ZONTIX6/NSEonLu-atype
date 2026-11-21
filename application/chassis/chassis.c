@@ -23,6 +23,9 @@
 #include "chassis_power_model_config.h"
 #include "chassis_spin_config.h"
 #include "chassis_spin.h"
+#include "chassis_velocity_control_trial.h"
+#include "chassis_velocity_observer.h"
+#include "../../config/30_velocity_observation/chassis_velocity_control_trial_config.h"
 #include "runtime_tuning.h"
 #include "remote_control.h"
 #include "robot_def.h"
@@ -62,6 +65,10 @@ static ChassisPowerControlSnapshot_s pending_power_control;
 static ChassisTelemetrySnapshot_s chassis_telemetry;
 static ChassisVelocityFeedback_s chassis_velocity_data;
 const ChassisVelocityFeedback_s *const volatile chassis_velocity = &chassis_velocity_data;
+volatile bool chassis_velocity_control_trial_limited;
+volatile bool chassis_velocity_control_trial_feedback_active;
+volatile float chassis_velocity_control_trial_correction_vx_mps;
+volatile float chassis_velocity_control_trial_correction_vy_mps;
 static uint32_t heat_publish_tick;
 
 bool ChassisGetVelocitySnapshot(ChassisVelocityFeedback_s *snapshot)
@@ -172,6 +179,16 @@ static const ChassisVelocityConfig_s velocity_config={
         .wheel_radius_m=RADIUS_WHEEL*.001f, .reduction_ratio=REDUCTION_RATIO_WHEEL,
         .wheel_base_m=WHEEL_BASE*.001f, .track_width_m=TRACK_WIDTH*.001f,
         .direction={OMNI_X_LF_DIRECTION,OMNI_X_RF_DIRECTION,OMNI_X_LB_DIRECTION,OMNI_X_RB_DIRECTION}};
+
+#if CHASSIS_VELOCITY_CONTROL_TRIAL_ENABLE
+static const ChassisVelocityControlTrialConfig_s velocity_trial_config={
+    .max_speed_mps=CHASSIS_VELOCITY_CONTROL_TRIAL_MAX_SPEED_MPS,
+    .proportional_gain=CHASSIS_VELOCITY_CONTROL_TRIAL_KP,
+    .max_correction_mps=CHASSIS_VELOCITY_CONTROL_TRIAL_MAX_CORRECTION_MPS,
+    .deadband_mps=CHASSIS_VELOCITY_CONTROL_TRIAL_DEADBAND_MPS,
+    .max_sample_age_ms=CHASSIS_VELOCITY_CONTROL_TRIAL_MAX_AGE_MS,
+};
+#endif
 
 #if CHASSIS_POWER_CONTROL_ENABLE && CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
 static void PrepareSpinLimits(void)
@@ -434,6 +451,50 @@ void ChassisTask()
     const float phase_lead_deg = ChassisSpinPhaseUpdate(&chassis_spin_phase,
         &chassis_cmd_recv, HAL_GetTick());
     ChassisResolveMotion(&chassis_cmd_recv, 0, phase_lead_deg, &chassis_vx, &chassis_vy);
+    bool velocity_trial_limited=false;
+    bool velocity_trial_feedback_active=false;
+    float velocity_trial_correction_vx_mps=0.0f, velocity_trial_correction_vy_mps=0.0f;
+#if CHASSIS_VELOCITY_CONTROL_TRIAL_ENABLE
+    float command_scale=0.0f;
+    ChassisVelocityControlTrialOutput_s trial_output={0};
+    ChassisFusedVelocitySnapshot_s fused={0};
+    const bool fused_valid=ChassisGetFusedVelocitySnapshot(&fused);
+    const bool scale_valid=ChassisVelocityControlTrialCommandScale(
+        RADIUS_WHEEL*.001f, REDUCTION_RATIO_WHEEL, &command_scale);
+    const ChassisVelocityControlTrialInput_s trial_input={
+        .enabled=true,
+        .speed_limit_allowed=chassis_cmd_recv.chassis_mode!=CHASSIS_ZERO_FORCE,
+        .feedback_allowed=chassis_cmd_recv.chassis_mode==CHASSIS_NO_FOLLOW ||
+            chassis_cmd_recv.chassis_mode==CHASSIS_FOLLOW_GIMBAL_YAW,
+        .fused_snapshot_valid=fused_valid && fused.valid,
+        .fused_status=fused.status==CHASSIS_VELOCITY_FUSED,
+        .wheel_valid=fused.wheel.valid,
+        .now_ms=HAL_GetTick(),
+        .fused_tick_ms=fused.tick_ms,
+        .requested_vx_mps=chassis_vx*command_scale,
+        .requested_vy_mps=chassis_vy*command_scale,
+        .fused_vx_mps=fused.vx_mps,
+        .fused_vy_mps=fused.vy_mps,
+    };
+    if (!scale_valid || !ChassisVelocityControlTrialApply(&velocity_trial_config,
+            &trial_input, &trial_output)) {
+        /* A broken trial configuration must not leave an unbounded translation command. */
+        chassis_vx=0.0f;
+        chassis_vy=0.0f;
+        velocity_trial_limited=true;
+    } else {
+        chassis_vx=trial_output.vx_mps/command_scale;
+        chassis_vy=trial_output.vy_mps/command_scale;
+        velocity_trial_limited=trial_output.command_limited;
+        velocity_trial_feedback_active=trial_output.feedback_active;
+        velocity_trial_correction_vx_mps=trial_output.correction_vx_mps;
+        velocity_trial_correction_vy_mps=trial_output.correction_vy_mps;
+    }
+#endif
+    chassis_velocity_control_trial_limited=velocity_trial_limited;
+    chassis_velocity_control_trial_feedback_active=velocity_trial_feedback_active;
+    chassis_velocity_control_trial_correction_vx_mps=velocity_trial_correction_vx_mps;
+    chassis_velocity_control_trial_correction_vy_mps=velocity_trial_correction_vy_mps;
     UpdateChassisPowerBudget();
 
 #if CHASSIS_POWER_CONTROL_ENABLE && CHASSIS_SPIN_DYNAMIC_ENABLED
@@ -456,7 +517,8 @@ void ChassisTask()
     // 从四轮 CAN 反馈估算底盘几何中心速度。
     EstimateSpeed();
 #if CHASSIS_VELOCITY_FUSION_ENABLE
-    ChassisObserveFusedVelocity(&velocity_config, (uint8_t)chassis_cmd_recv.chassis_mode);
+    ChassisObserveFusedVelocity(&velocity_config, (uint8_t)chassis_cmd_recv.chassis_mode,
+        velocity_trial_limited, velocity_trial_feedback_active);
 #endif
 
     // // 获取裁判系统数据   建议将裁判系统与底盘分离，所以此处数据应使用消息中心发送

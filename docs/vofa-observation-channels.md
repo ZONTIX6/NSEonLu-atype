@@ -655,6 +655,8 @@
 - bit 9: `gimbal_imu`
 - bit 10: `yaw_control`
 - bit 11: `spin_turn_count`
+- bit 12: `trial_speed_limited`
+- bit 13: `trial_feedback_active`
 
 `attempt_flags`：
 

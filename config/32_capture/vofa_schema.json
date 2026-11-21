@@ -2701,7 +2701,9 @@
       "yaw_encoder": 8,
       "gimbal_imu": 9,
       "yaw_control": 10,
-      "spin_turn_count": 11
+      "spin_turn_count": 11,
+      "trial_speed_limited": 12,
+      "trial_feedback_active": 13
     },
     "attempt_flags": {
       "available": 0,

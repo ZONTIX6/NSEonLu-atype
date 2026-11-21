@@ -40,7 +40,8 @@ extern ChassisPowerOuterLoopConfig_s chassis_outer_loop_config;
 extern ChassisPower_Init_Config_s power_module_config;
 void ChassisTuningRegister(void);
 #if CHASSIS_VELOCITY_FUSION_ENABLE
-void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config, uint8_t chassis_mode);
+void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config, uint8_t chassis_mode,
+    bool trial_speed_limited, bool trial_feedback_active);
 #endif
 bool ChassisTuningApplyPower(const float *values);
 bool ChassisTuningApplySpin(const float *values);
