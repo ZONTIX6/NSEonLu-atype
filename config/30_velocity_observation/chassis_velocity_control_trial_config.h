@@ -5,7 +5,7 @@
 #define CHASSIS_VELOCITY_CONTROL_TRIAL_ENABLE 0 /* 0=normal feed-forward, 1=bounded remote-fusion velocity trial. */
 #endif
 
-#define CHASSIS_VELOCITY_CONTROL_TRIAL_MAX_SPEED_MPS 0.30f
+#define CHASSIS_VELOCITY_CONTROL_TRIAL_MAX_SPEED_MPS 2.70f /* Keeps the full-scale two-axis RC command (~2.61 m/s) below the ceiling. */
 #define CHASSIS_VELOCITY_CONTROL_TRIAL_KP 0.25f
 #define CHASSIS_VELOCITY_CONTROL_TRIAL_MAX_CORRECTION_MPS 0.05f
 #define CHASSIS_VELOCITY_CONTROL_TRIAL_DEADBAND_MPS 0.02f
