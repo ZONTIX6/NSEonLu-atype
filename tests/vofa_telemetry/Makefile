@@ -29,7 +29,13 @@ test_kalman_capture.exe: $(CAPTURE_SOURCE) $(OBSERVATION_HEADERS) $(HEADERS)
 test_kalman_compact.exe: test_kalman_compact.c $(CAPTURE_SOURCE) $(OBSERVATION_HEADERS) $(HEADERS) ../../application/chassis/chassis_velocity_control_trial.c
 	$(CC) $(CFLAGS) -fno-fast-math $(filter-out -DVOFA_OBSERVATION_PROFILE=0,$(INCLUDES)) $(MEASUREMENT_INCLUDES) -I../../modules/imu -DONE_BOARD -DCHASSIS_VELOCITY_FUSION_ENABLE=1 -DCHASSIS_VELOCITY_FUSION_CALIBRATED=0 -DCHASSIS_IMU_CAN_RX_ENABLE=1 -DCHASSIS_REMOTE_IMU_FUSION_ENABLE=1 -DVOFA_TELEMETRY_ENABLE=1 -DVOFA_TELEMETRY_MODE=2 -DVOFA_OBSERVATION_PROFILE=2 test_kalman_compact.c ../../application/runtime/vofa_observation.c ../../application/chassis/chassis_velocity_control_trial.c -lm -o $@
 
-test: test_kalman_capture.exe test_kalman_compact.exe
+test_kalman_compact_redundancy.exe: test_kalman_compact.c $(CAPTURE_SOURCE) $(OBSERVATION_HEADERS) $(HEADERS) ../../application/chassis/chassis_velocity_control_trial.c ../../config/30_velocity_observation/chassis_wheel_redundancy_config.h
+	$(CC) $(CFLAGS) -fno-fast-math $(filter-out -DVOFA_OBSERVATION_PROFILE=0,$(INCLUDES)) $(MEASUREMENT_INCLUDES) -I../../modules/imu -DONE_BOARD -DCHASSIS_VELOCITY_FUSION_ENABLE=1 -DCHASSIS_VELOCITY_FUSION_CALIBRATED=0 -DCHASSIS_IMU_CAN_RX_ENABLE=1 -DCHASSIS_REMOTE_IMU_FUSION_ENABLE=1 -DCHASSIS_WHEEL_REDUNDANCY_MODE=1 -DVOFA_TELEMETRY_ENABLE=1 -DVOFA_TELEMETRY_MODE=2 -DVOFA_OBSERVATION_PROFILE=2 test_kalman_compact.c ../../application/runtime/vofa_observation.c ../../application/chassis/chassis_velocity_control_trial.c -lm -o $@
+
+test_kalman_compact_redundancy_active.exe: test_kalman_compact.c $(CAPTURE_SOURCE) $(OBSERVATION_HEADERS) $(HEADERS) ../../application/chassis/chassis_velocity_control_trial.c ../../config/30_velocity_observation/chassis_wheel_redundancy_config.h
+	$(CC) $(CFLAGS) -fno-fast-math $(filter-out -DVOFA_OBSERVATION_PROFILE=0,$(INCLUDES)) $(MEASUREMENT_INCLUDES) -I../../modules/imu -DONE_BOARD -DCHASSIS_VELOCITY_FUSION_ENABLE=1 -DCHASSIS_VELOCITY_FUSION_CALIBRATED=0 -DCHASSIS_IMU_CAN_RX_ENABLE=1 -DCHASSIS_REMOTE_IMU_FUSION_ENABLE=1 -DCHASSIS_WHEEL_REDUNDANCY_MODE=2 -DVOFA_TELEMETRY_ENABLE=1 -DVOFA_TELEMETRY_MODE=2 -DVOFA_OBSERVATION_PROFILE=2 test_kalman_compact.c ../../application/runtime/vofa_observation.c ../../application/chassis/chassis_velocity_control_trial.c -lm -o $@
+
+test: test_kalman_capture.exe test_kalman_compact.exe test_kalman_compact_redundancy.exe test_kalman_compact_redundancy_active.exe
 
 test: test_vofa_telemetry.exe test_vofa_measurement.exe test_imu_capture.exe test_vofa_remote.exe test_vofa_remote_fusion.exe test_vofa_remote_verified.exe test_measurement_justfloat.exe test_imu_justfloat.exe test_remote_justfloat.exe test_remote_fusion_justfloat.exe test_remote_verified_justfloat.exe test_measurement_transport.exe
 	./test_vofa_telemetry.exe
@@ -57,6 +63,10 @@ test: test_vofa_telemetry.exe test_vofa_measurement.exe test_imu_capture.exe tes
 	./test_kalman_capture.exe spin
 	./test_kalman_compact.exe evidence
 	./test_kalman_compact.exe jitter
+	./test_kalman_compact_redundancy.exe evidence
+	./test_kalman_compact_redundancy.exe jitter
+	./test_kalman_compact_redundancy_active.exe evidence
+	./test_kalman_compact_redundancy_active.exe jitter
 
 test_vofa_telemetry.exe: $(SOURCE) $(HEADERS)
 	$(CC) $(CFLAGS) $(INCLUDES) -DVOFA_TELEMETRY_ENABLE=1 -DVOFA_TELEMETRY_MODE=0 $(SOURCE) -o $@

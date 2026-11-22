@@ -2,12 +2,12 @@
 
 ## 编译固件
 
-日常在 [`config/_vofa/vofa_config.h`](../config/_vofa/vofa_config.h) 修改 `VOFA_OBSERVATION_PROFILE`：`1` 为功率/超级电容，`2` 为卡尔曼（默认）。保持 `config/00_flash/board_flash_config.h` 中的 `BOARD_FLASH_1_VOFA_TELEMETRY_MODE=2`，重新构建并烧录后切换用途。两档通过 UART7 输出 JustFloat，使用 **230400 / 8N1**；功率档 **96 通道**，卡尔曼 FIFO 默认精简为 **64 通道、schema 9**，非 FIFO 快照档仍为 **108 通道、schema 7**。精简档保留速度、角度和闭环指令证据，去掉原始 IMU、滤波重放参数及 yaw PID 内部量；详见[精简卡尔曼闭环观测](vofa-kalman-control.md)。需要完整滤波重放时，将同一配置文件的 `VOFA_KALMAN_FULL_DETAIL` 改为 `1`，恢复 **109 通道、schema 8**。远端融合档正常约 50 Hz，串口就绪后按 FIFO 顺序发送。用 VOFA+ 自带功能导出原始 CSV，无需改列名或换算单位。
+日常在 [`config/_vofa/vofa_config.h`](../config/_vofa/vofa_config.h) 修改 `VOFA_OBSERVATION_PROFILE`：`1` 为功率/超级电容，`2` 为卡尔曼（默认）。保持 `config/00_flash/board_flash_config.h` 中的 `BOARD_FLASH_1_VOFA_TELEMETRY_MODE=2`，重新构建并烧录后切换用途。两档通过 UART7 输出 JustFloat，使用 **230400 / 8N1**；功率档 **96 通道**，卡尔曼 FIFO 默认精简为 **64 通道、schema 9**。启用 `CHASSIS_WHEEL_REDUNDANCY_MODE=1` 或 `2` 时，精简 FIFO 自动切换到 **83 通道、schema 10**，追加候选轮、判定原因、连续确认数、四轮残差、三轮重算速度、实际采用标志和当前门限。默认关闭；该模式要求单板远端底盘 IMU 观测。可在 `board_flash_config.h` 的主板选项中加入 `#define BOARD_FLASH_1_CHASSIS_WHEEL_REDUNDANCY_MODE 1`，再执行 `scripts/build-board.ps1 -Action Build`。完整滤波档仍输出 **109 通道、schema 8**，但不包含这组冗余诊断列；查看候选轮和实际采用标志时使用精简 schema 10。非 FIFO 快照档仍为 **108 通道、schema 7**。精简档保留速度、角度和闭环指令证据，去掉原始 IMU、滤波重放参数及 yaw PID 内部量；详见[精简卡尔曼闭环观测](vofa-kalman-control.md)。远端融合档正常约 50 Hz，串口就绪后按 FIFO 顺序发送。用 VOFA+ 自带功能导出原始 CSV，无需改列名或换算单位。
 
 | 用途选项 | schema | 内容 |
 | --- | --- | --- |
 | `VOFA_OBSERVATION_PROFILE=1` | `4` | 四轮请求/最终命令、功率计、控制周期预算/保护、最新策略、超电与裁判 |
-| `VOFA_OBSERVATION_PROFILE=2`（默认） | `9`（FIFO）/`7`（快照） | FIFO 默认 64 路闭环诊断；`VOFA_KALMAN_FULL_DETAIL=1` 恢复 schema 8、109 路 |
+| `VOFA_OBSERVATION_PROFILE=2`（默认） | `9`（FIFO）/`7`（快照）；轮速冗余模式为 `10` | FIFO 默认 64 路闭环诊断；轮速冗余追加 19 路诊断；`VOFA_KALMAN_FULL_DETAIL=1` 恢复 schema 8、109 路 |
 | `VOFA_OBSERVATION_PROFILE=0` | `2/3` | 保留旧 64/72 路完整观测布局，按下文旧表解读 |
 
 用途选项仅在传输模式 `2` 生效。`VOFA_TELEMETRY_ENABLE=0` 关闭输出；旧模式 `0/1` 忽略用途选项，继续使用原格式。

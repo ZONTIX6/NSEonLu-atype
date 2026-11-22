@@ -20,7 +20,9 @@
 
 enum { OBSERVATION_CHANNELS = VOFA_OBSERVATION_PROFILE == 1 ? VOFA_POWER_CHANNELS :
     VOFA_KALMAN_CAPTURE_ENABLED ? (VOFA_KALMAN_FULL_DETAIL ?
-        VOFA_KALMAN_GIMBAL_CONTROL_TURN_COUNT_CHANNELS : VOFA_KALMAN_CONTROL_CHANNELS) :
+        VOFA_KALMAN_GIMBAL_CONTROL_TURN_COUNT_CHANNELS :
+        CHASSIS_WHEEL_REDUNDANCY_MODE ? VOFA_KALMAN_CONTROL_REDUNDANCY_CHANNELS :
+            VOFA_KALMAN_CONTROL_CHANNELS) :
         VOFA_KALMAN_GIMBAL_CONTROL_CHANNELS };
 static struct {
     float channels[OBSERVATION_CHANNELS];
@@ -371,7 +373,8 @@ static void Kalman(float *f, const USBTelemetrySample_s *sample,
 #if VOFA_KALMAN_CAPTURE_ENABLED && !VOFA_KALMAN_FULL_DETAIL
 #define C(name) f[VOFA_KALMAN_CONTROL_##name]
 static void CompactKalman(float *f, const float *full,
-    const ChassisVelocityControlTrace_s *t, uint32_t now)
+    const ChassisVelocityControlTrace_s *t, const ChassisRemoteFusionOutput_s *redundancy,
+    uint32_t now)
 {
     /* Reuse existing validity/coordinate rules, then retain only daily signals.
      * Encoding stays outside critical sections and uses a separate full buffer. */
@@ -390,7 +393,8 @@ static void CompactKalman(float *f, const float *full,
         VOFA_KALMAN_GIMBAL_CONTROL_TURN_COUNT_SPIN_TURN_COUNT
     };
     for (unsigned i = 0; i < sizeof common / sizeof common[0]; ++i) f[i] = full[common[i]];
-    C(SCHEMA) = VOFA_KALMAN_CONTROL_SCHEMA_ID;
+    C(SCHEMA) = CHASSIS_WHEEL_REDUNDANCY_MODE ?
+        VOFA_KALMAN_CONTROL_REDUNDANCY_SCHEMA_ID : VOFA_KALMAN_CONTROL_SCHEMA_ID;
     uint32_t valid = (uint32_t)C(VALID) & ~(16U | 1024U);
     if (t->available && (uint32_t)(now-t->tick_ms)<=20U) valid |= 16384U;
     const DJIVelocityFeedbackEvidence_s *m=&t->motor;
@@ -426,6 +430,32 @@ static void CompactKalman(float *f, const float *full,
         f[VOFA_KALMAN_CONTROL_TARGET_RPM_LF+i] = t->target_rpm[i];
         f[VOFA_KALMAN_CONTROL_LAST_CORRECTION_TARGET_RPM_LF+i] = t->last_correction_target_rpm[i];
         f[VOFA_KALMAN_CONTROL_FINAL_CURRENT_LF+i] = m->final_current[i];
+    }
+    if (CHASSIS_WHEEL_REDUNDANCY_MODE) {
+        const ChassisWheelRedundancyOutput_s *r=redundancy ? &redundancy->wheel_redundancy : NULL;
+        const bool known=r && r->valid;
+        if (known) C(VALID) = (float)((uint32_t)C(VALID) | 65536U);
+        C(REDUNDANCY_MODE) = CHASSIS_WHEEL_REDUNDANCY_MODE;
+        C(REDUNDANCY_REASON) = known ? (float)r->reason : -1.0f;
+        C(REDUNDANCY_EXCLUDED_WHEEL) = known && r->corrected ? (float)r->excluded_wheel : -1.0f;
+        C(REDUNDANCY_USED_WHEEL_MASK) = known ? (float)r->used_wheel_mask : 0.0f;
+        C(REDUNDANCY_CONFIRMATIONS) = redundancy ? (float)redundancy->wheel_redundancy_confirmations : 0.0f;
+        C(REDUNDANCY_CORRECTED) = known && r->corrected ? 1.0f : 0.0f;
+        C(REDUNDANCY_APPLIED) = redundancy && redundancy->wheel_redundancy_applied ? 1.0f : 0.0f;
+        C(REDUNDANCY_REFERENCE_ERROR_MPS) = known ? r->selected_reference_error_mps : 0.0f;
+        C(REDUNDANCY_RESIDUAL_LF_MPS) = known ? r->wheel_residual_mps[0] : 0.0f;
+        C(REDUNDANCY_RESIDUAL_RF_MPS) = known ? r->wheel_residual_mps[1] : 0.0f;
+        C(REDUNDANCY_RESIDUAL_LB_MPS) = known ? r->wheel_residual_mps[2] : 0.0f;
+        C(REDUNDANCY_RESIDUAL_RB_MPS) = known ? r->wheel_residual_mps[3] : 0.0f;
+        C(REDUNDANCY_SELECTED_VX_MPS) = known ? r->selected_vx_mps : 0.0f;
+        C(REDUNDANCY_SELECTED_VY_MPS) = known ? r->selected_vy_mps : 0.0f;
+        C(REDUNDANCY_SELECTED_WZ_RADPS) = known ? r->selected_wz_radps : 0.0f;
+        const ChassisRemoteFusionAttempt_s *attempt=redundancy ? &redundancy->attempt : NULL;
+        const bool config_known=attempt && attempt->available;
+        C(REDUNDANCY_THRESHOLD_MPS) = config_known ? attempt->config.wheel_redundancy.residual_threshold_mps : 0.0f;
+        C(REDUNDANCY_DOMINANCE_RATIO) = config_known ? attempt->config.wheel_redundancy.dominance_ratio : 0.0f;
+        C(REDUNDANCY_MAX_REFERENCE_ERROR_MPS) = config_known ? attempt->config.wheel_redundancy.max_reference_error_mps : 0.0f;
+        C(REDUNDANCY_CONFIRM_SAMPLES_REQUIRED) = config_known ? (float)attempt->config.wheel_redundancy_confirm_samples : 0.0f;
     }
 }
 #undef C
@@ -639,7 +669,8 @@ void VofaKalmanCaptureDrain(void)
         f[VOFA_KALMAN_GIMBAL_CONTROL_VALID] = (float)((uint32_t)f[VOFA_KALMAN_GIMBAL_CONTROL_VALID] | 2048U);
     }
 #if !VOFA_KALMAN_FULL_DETAIL
-    CompactKalman(frame.channels,f,&record->velocity.diagnostics.control_trace,record->tick_ms);
+    CompactKalman(frame.channels,f,&record->velocity.diagnostics.control_trace,
+        &record->velocity.remote,record->tick_ms);
 #endif
     FinishFrame();
     const HAL_StatusTypeDef status = HAL_UART_Transmit_IT(uart, (uint8_t *)&frame, sizeof frame);

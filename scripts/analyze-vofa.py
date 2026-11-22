@@ -29,7 +29,7 @@ def markdown_report(report):
         if q['schema'] in (5, 6, 7, 8):
             lines += [f"Unique recorded filter calls: {q['unique_filter_calls']}; missing filter calls "
                       f"between comparable recorded endpoints: {q['missing_filter_calls']}.", '']
-        if q['schema'] in (5, 6, 7, 8, 9):
+        if q['schema'] in (5, 6, 7, 8, 9, 10):
             lines += [f"FIFO overflow observed: {q['capture_overflow_observed']}. "
                       "The sticky flag does not encode the exact number of dropped records.", '']
     analysis = report.get('analysis', {})
@@ -40,6 +40,11 @@ def markdown_report(report):
                   f"Distinct corrected target versions accepted by all four enabled CAN paths: "
                   f"{c['submitted_correction_versions']}.",
                   'Counts describe changes between comparable captured endpoints, excluding earlier boot history.', '']
+    if 'wheel_redundancy' in analysis:
+        r = analysis['wheel_redundancy']
+        lines += [f"Wheel redundancy: {r['corrected_rows']} corrected candidates; {r['applied_rows']} applied samples; "
+                  f"candidate wheels {r['candidate_wheels']}; reasons {r['reasons']}.",
+                  f"Recorded thresholds: {r['thresholds']}.", '']
     if 'steady' in analysis:
         q = analysis['steady']
         lines += [f"Steady meter events: {q['accepted_rows']}; exclusions: {q['rejected']}.",
@@ -97,9 +102,9 @@ def main(argv=None):
                     instrument_error_w=metadata['instrument_error_w'])
                 if not report['power_fit']['validation_passed']:
                     raise ValueError('independent-trial power model validation failed; inspect power_fit')
-        elif capture['schema'] == 9:
+        elif capture['schema'] in (9, 10):
             if args.power_trials or args.configuration or args.fusion_candidate:
-                raise ValueError('compact schema 9 omits fitting/replay inputs; use full Kalman schema 8 for filter replay')
+                raise ValueError('compact schema 9/10 omits fitting/replay inputs; use full Kalman schema 8 for filter replay')
             report['analysis'] = control_feedback_summary(capture)
         elif capture['schema'] in (5, 6, 7, 8):
             from vofa_fusion import FusionBridge, analyze_fusion

@@ -34,6 +34,7 @@ bool ChassisEstimateVelocity(const ChassisVelocityConfig_s *config,
     const float lf=wheel[0], rf=wheel[1], lb=wheel[2], rb=wheel[3];
     const float lever=(config->wheel_base_m+config->track_width_m)*.5f;
     ChassisVelocity_s result={.tick_ms=input->now_ms-oldest_age};
+    for (unsigned i=0;i<4;++i) result.wheel_mps[i]=wheel[i];
     if (config->omni_x) {
         result.vx_mps=(-lf+rf-lb+rb)/(4.0f*PROJECTION_45);
         result.vy_mps=(lf+rf-lb-rb)/(4.0f*PROJECTION_45);

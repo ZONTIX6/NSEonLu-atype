@@ -164,6 +164,7 @@ modules/algorithm/chassis_velocity.c \
 modules/algorithm/chassis_traction.c \
 modules/algorithm/chassis_velocity_fusion.c \
 modules/algorithm/chassis_remote_fusion.c \
+modules/algorithm/chassis_wheel_redundancy.c \
 modules/algorithm/chassis_velocity_center.c \
 modules/algorithm/chassis_gimbal_imu.c \
 modules/algorithm/chassis_spin.c \
@@ -267,6 +268,7 @@ endif
 CHASSIS_VELOCITY_FUSION_ENABLE ?= 0
 CHASSIS_VELOCITY_FUSION_CALIBRATED ?= 0
 CHASSIS_REMOTE_IMU_FUSION_ENABLE ?= 0
+CHASSIS_WHEEL_REDUNDANCY_MODE ?= 0
 CHASSIS_VELOCITY_CONTROL_TRIAL_ENABLE ?= 0
 CHASSIS_TRACTION_MODE ?= 0
 ifeq ($(filter $(CHASSIS_TRACTION_MODE),0 1 2 3),)
@@ -288,6 +290,15 @@ CHASSIS_IMU_CAN_RX_ENABLE ?= 0
 ifeq ($(filter $(CHASSIS_REMOTE_IMU_FUSION_ENABLE),0 1),)
 $(error CHASSIS_REMOTE_IMU_FUSION_ENABLE must be 0 or 1)
 endif
+ifeq ($(filter $(CHASSIS_WHEEL_REDUNDANCY_MODE),0 1 2),)
+$(error CHASSIS_WHEEL_REDUNDANCY_MODE must be 0, 1 or 2)
+endif
+ifneq ($(CHASSIS_WHEEL_REDUNDANCY_MODE),0)
+ifneq ($(ONE_BOARD):$(CHASSIS_CONTROL_MODE):$(CHASSIS_VELOCITY_FUSION_ENABLE):$(CHASSIS_REMOTE_IMU_FUSION_ENABLE):$(CHASSIS_IMU_CAN_RX_ENABLE),1:0:1:1:1)
+$(error Wheel redundancy requires ONE_BOARD=1, speed control and the remote chassis IMU observer)
+endif
+endif
+C_DEFS += -DCHASSIS_WHEEL_REDUNDANCY_MODE=$(CHASSIS_WHEEL_REDUNDANCY_MODE)
 ifeq ($(filter $(CHASSIS_VELOCITY_CONTROL_TRIAL_ENABLE),0 1),)
 $(error CHASSIS_VELOCITY_CONTROL_TRIAL_ENABLE must be 0 or 1)
 endif
@@ -489,7 +500,8 @@ NUMERIC_SOURCES += $(filter modules/predictive_power/%,$(C_SOURCES))
 NUMERIC_SOURCES += $(filter config/%,$(C_SOURCES))
 NUMERIC_SOURCES += $(filter application/gimbal/%,$(C_SOURCES))
 NUMERIC_SOURCES += modules/algorithm/chassis_velocity_fusion.c modules/algorithm/chassis_remote_fusion.c \
-                   modules/algorithm/chassis_velocity_center.c modules/algorithm/chassis_gimbal_imu.c modules/algorithm/chassis_traction.c
+                   modules/algorithm/chassis_velocity_center.c modules/algorithm/chassis_gimbal_imu.c modules/algorithm/chassis_traction.c \
+                   modules/algorithm/chassis_wheel_redundancy.c
 ifeq ($(CHASSIS_VELOCITY_FUSION_ENABLE),1)
 NUMERIC_SOURCES += modules/imu/ins_service.c modules/algorithm/chassis_velocity.c
 endif

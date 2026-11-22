@@ -74,6 +74,9 @@ endif()
 if(NOT DEFINED CHASSIS_REMOTE_IMU_FUSION_ENABLE)
     set(CHASSIS_REMOTE_IMU_FUSION_ENABLE 0)
 endif()
+if(NOT DEFINED CHASSIS_WHEEL_REDUNDANCY_MODE)
+    set(CHASSIS_WHEEL_REDUNDANCY_MODE 0)
+endif()
 if(NOT DEFINED CHASSIS_VELOCITY_CONTROL_TRIAL_ENABLE)
     set(CHASSIS_VELOCITY_CONTROL_TRIAL_ENABLE 0)
 endif()
@@ -96,6 +99,16 @@ foreach(FUSION_OPTION IN ITEMS CHASSIS_VELOCITY_FUSION_ENABLE CHASSIS_VELOCITY_F
         message(FATAL_ERROR "${FUSION_OPTION} must be 0 or 1")
     endif()
 endforeach()
+if(NOT CHASSIS_WHEEL_REDUNDANCY_MODE MATCHES "^[012]$")
+    message(FATAL_ERROR "CHASSIS_WHEEL_REDUNDANCY_MODE must be 0, 1 or 2")
+endif()
+if(NOT CHASSIS_WHEEL_REDUNDANCY_MODE STREQUAL "0" AND
+   (NOT ONE_BOARD STREQUAL "1" OR NOT CHASSIS_CONTROL_MODE STREQUAL "0" OR
+    NOT CHASSIS_VELOCITY_FUSION_ENABLE STREQUAL "1" OR
+    NOT CHASSIS_REMOTE_IMU_FUSION_ENABLE STREQUAL "1" OR
+    NOT CHASSIS_IMU_CAN_RX_ENABLE STREQUAL "1"))
+    message(FATAL_ERROR "Wheel redundancy requires the single-board remote chassis IMU observer")
+endif()
 if(CHASSIS_VELOCITY_CONTROL_TRIAL_ENABLE STREQUAL "1" AND
    (NOT ONE_BOARD STREQUAL "1" OR NOT CHASSIS_CONTROL_MODE STREQUAL "0" OR
     NOT CHASSIS_VELOCITY_FUSION_ENABLE STREQUAL "1" OR
@@ -189,7 +202,7 @@ foreach(NUMERIC_SOURCE IN LISTS SOURCES)
     if(NUMERIC_SOURCE MATCHES "/config/")
         set_property(SOURCE "${NUMERIC_SOURCE}" APPEND PROPERTY COMPILE_OPTIONS -fno-fast-math)
     endif()
-    if(NUMERIC_SOURCE MATCHES "/modules/algorithm/(chassis_velocity_(fusion|center)|chassis_gimbal_imu|chassis_remote_fusion|chassis_traction)\\.c$"
+    if(NUMERIC_SOURCE MATCHES "/modules/algorithm/(chassis_velocity_(fusion|center)|chassis_gimbal_imu|chassis_remote_fusion|chassis_wheel_redundancy|chassis_traction)\\.c$"
         OR (IMU_CAPTURE_ONLY STREQUAL "1" AND NUMERIC_SOURCE MATCHES "/modules/imu/ins_service\\.c$")
         OR (CHASSIS_VELOCITY_FUSION_ENABLE STREQUAL "1" AND NUMERIC_SOURCE MATCHES "/modules/(imu/ins_service|algorithm/chassis_velocity)\\.c$"))
         set_property(SOURCE "${NUMERIC_SOURCE}" APPEND PROPERTY COMPILE_OPTIONS -fno-fast-math)

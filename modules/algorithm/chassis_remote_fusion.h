@@ -4,6 +4,7 @@
 #include "chassis_velocity.h"
 #include "chassis_velocity_center.h"
 #include "chassis_velocity_fusion.h"
+#include "chassis_wheel_redundancy.h"
 #include "../imu/chassis_imu_sample.h"
 
 #define CHASSIS_REMOTE_WHEEL_HISTORY_CAPACITY 32U
@@ -29,6 +30,10 @@ typedef struct {
     float spin_accel_uncertainty_fraction; /* Fraction of predicted centripetal acceleration treated as uncertainty. */
     float max_accel_variance; /* Per-axis IMU variance ceiling, (m/s^2)^2. */
     ChassisVelocityFusionConfig_s filter;
+    ChassisVelocityConfig_s wheel_kinematics;
+    ChassisWheelRedundancyConfig_s wheel_redundancy;
+    unsigned wheel_redundancy_confirm_samples;
+    float wheel_redundancy_gyro_z_sign;
     uint32_t max_pair_span_ms, max_wheel_skew_ms, max_timing_jitter_ms;
 } ChassisRemoteFusionConfig_s;
 
@@ -60,6 +65,9 @@ typedef struct {
     uint32_t source_sequence, source_tick_ms, estimated_sample_ms;
     uint32_t source_step_ms, receive_step_ms, pair_span_ms;
     uint32_t updates, resets; /* Saturating counters; updates counts accepted filter pairs. */
+    ChassisWheelRedundancyOutput_s wheel_redundancy;
+    uint8_t wheel_redundancy_confirmations;
+    bool wheel_redundancy_applied;
     ChassisRemoteFusionAttempt_s attempt;
 } ChassisRemoteFusionOutput_s;
 
@@ -73,6 +81,7 @@ typedef struct {
     ChassisRemoteFusionOutput_s held;
     uint32_t last_sequence, last_source_ms, last_receive_ms, last_estimated_ms;
     uint32_t source_step_ms, receive_step_ms, pair_span_ms;
+    uint8_t redundancy_candidate_wheel, redundancy_confirmations;
     uint32_t updates, resets, last_now_ms;
     bool have_source, have_now;
     ChassisRemoteFusionAttempt_s attempt;

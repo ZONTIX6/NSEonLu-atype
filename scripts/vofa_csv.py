@@ -72,6 +72,8 @@ def _decode(values, schema, definition):
             row[name] = integer(value, -1, 0x7fffffff)
         elif kind in ('enum', 'legacy') or name == 'observer_status':
             row[name] = integer(value, -0x80000000, 0x7fffffff)
+        elif kind == 'mask':
+            row[name] = integer(value, 0, 0x7fffffff)
         else:
             row[name] = integer(value)
     for name in list(row):
@@ -145,7 +147,8 @@ def read_capture(path):
                     if integer(raw_row[indexes[0]]) != schema:
                         continue
                     for i in range(1, 6):
-                        integer(raw_row[indexes[i]], maximum=0xfffff if schema < 4 and i == 5 else 65535)
+                        maximum = (0xfffff if schema < 4 else 0x7fffffff) if i == 5 else 65535
+                        integer(raw_row[indexes[i]], maximum=maximum)
                     _decode([raw_row[i] for i in indexes], schema, definition)
                     evidence += 1
                 except (ValueError, OverflowError):
@@ -213,7 +216,7 @@ def quality_report(capture):
         if first is None:
             first = row['line']
         previous = row
-        if capture['schema'] in (5, 6, 7, 8, 9):
+        if capture['schema'] in (5, 6, 7, 8, 9, 10):
             fifo = bool(row['valid'] & 64)
             counts['capture_fifo_rows'] += fifo
             counts['capture_overflow_rows'] += fifo and bool(row['valid'] & 128)
@@ -261,7 +264,7 @@ def quality_report(capture):
         limitations.append('capture_fifo_overflow_observed_exact_drop_count_not_recorded')
     if capture['schema'] < 4:
         limitations += ['legacy_inputs_not_replayable', 'legacy_actual_configuration_unavailable']
-    if capture['schema'] == 9:
+    if capture['schema'] in (9, 10):
         limitations.append('compact_schema_omits_filter_call_inputs_and_configuration_for_replay')
         for key in ('unique_filter_calls', 'duplicate_filter_calls', 'missing_filter_calls',
                     'filter_restart_or_order_boundaries'):
@@ -297,11 +300,28 @@ CAN mailbox acceptance is software-path evidence, not physical execution.
                     increments[field] += delta
                     pairs[field] += 1
         previous = row
-    return dict(counter_increments=increments, comparable_endpoint_pairs=pairs,
+    result = dict(counter_increments=increments, comparable_endpoint_pairs=pairs,
                 nonzero_correction_observed=increments['correction_cycles'] > 0,
                 corrected_targets_submitted=increments['submitted_correction_versions'] > 0,
                 limitations=['can_acceptance_is_not_motor_execution_or_trajectory_accuracy',
                              'increments_exclude_history_before_first_comparable_endpoint'])
+    if capture['schema'] == 10:
+        rows = [row for row in capture['rows'] if 'error' not in row and row.get('valid', 0) & (1 << 16)]
+        reason_counts, candidate_counts = Counter(), Counter()
+        for row in rows:
+            reason_counts[str(row['redundancy_reason'])] += 1
+            if row['redundancy_corrected']:
+                candidate_counts[str(row['redundancy_excluded_wheel'])] += 1
+        result['wheel_redundancy'] = dict(
+            diagnostic_rows=len(rows), corrected_rows=sum(row['redundancy_corrected'] for row in rows),
+            applied_rows=sum(row['redundancy_applied'] for row in rows),
+            reasons=dict(reason_counts), candidate_wheels=dict(candidate_counts),
+            mode=max((row['redundancy_mode'] for row in rows), default=0),
+            thresholds={key: (rows[0][key] if rows else None) for key in
+                ('redundancy_threshold_mps', 'redundancy_dominance_ratio',
+                 'redundancy_max_reference_error_mps', 'redundancy_confirm_samples_required')})
+        result['limitations'].append('wheel_slip_candidates_require_review_against_independent_physical_evidence')
+    return result
 
 
 FILTER_CONFIG_FIELDS = ('fusion_wheel_variance', 'fusion_accel_variance', 'fusion_jerk_density',

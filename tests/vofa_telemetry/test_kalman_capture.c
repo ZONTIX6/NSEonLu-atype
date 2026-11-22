@@ -1,6 +1,7 @@
 #include "vofa_kalman_capture.h"
 #include "vofa_observation.h"
 #include "vofa_schema.h"
+#include "../../config/30_velocity_observation/chassis_wheel_redundancy_config.h"
 #include "usart.h"
 #include <assert.h>
 #include <math.h>
@@ -8,7 +9,11 @@
 #include <string.h>
 
 /* Each scenario runs in a fresh process: production has no test-only reset. */
+#if CHASSIS_WHEEL_REDUNDANCY_MODE > 0 && !VOFA_KALMAN_FULL_DETAIL
+enum { FRAME_CHANNELS = VOFA_KALMAN_CONTROL_REDUNDANCY_CHANNELS,
+#else
 enum { FRAME_CHANNELS = VOFA_KALMAN_FULL_DETAIL ? VOFA_KALMAN_GIMBAL_CONTROL_TURN_COUNT_CHANNELS : VOFA_KALMAN_CONTROL_CHANNELS,
+#endif
     FRAME_BYTES = (FRAME_CHANNELS + 1) * 4, LOG_CAPACITY = 512 };
 UART_HandleTypeDef huart7 = {.gState = HAL_UART_STATE_READY};
 static uint32_t tick, send_started;
@@ -43,6 +48,16 @@ static void sample(uint32_t now, uint32_t attempt)
         .vx_mps = .5f, .vy_mps = -.25f, .wz_rpm = 15.f};
     velocity.vx_mps = .45f;
     velocity.vy_mps = -.2f;
+#if CHASSIS_WHEEL_REDUNDANCY_MODE > 0
+    velocity.remote.wheel_redundancy=(ChassisWheelRedundancyOutput_s){
+        .valid=true,.corrected=true,.excluded_wheel=2,.used_wheel_mask=11,
+        .reason=CHASSIS_WHEEL_REDUNDANCY_CORRECTED,
+        .selected_vx_mps=.45f,.selected_vy_mps=-.2f,.selected_wz_radps=.3f,
+        .wheel_residual_mps={.01f,.02f,.45f,.03f},
+        .selected_reference_error_mps=.07f};
+    velocity.remote.wheel_redundancy_confirmations=2;
+    velocity.remote.wheel_redundancy_applied=CHASSIS_WHEEL_REDUNDANCY_MODE>=2;
+#endif
     velocity.diagnostics.available = true;
     velocity.diagnostics.tick_ms = now;
     velocity.diagnostics.wheel_online_mask = 15;
@@ -85,6 +100,12 @@ static void sample(uint32_t now, uint32_t attempt)
     a->config.max_pair_span_ms = 15;
     a->config.max_wheel_skew_ms = 3;
     a->config.max_timing_jitter_ms = 10;
+#if CHASSIS_WHEEL_REDUNDANCY_MODE > 0
+    a->config.wheel_redundancy=(ChassisWheelRedundancyConfig_s){
+        .enabled=true,.residual_threshold_mps=.25f,.dominance_ratio=1.75f,
+        .max_reference_error_mps=.30f};
+    a->config.wheel_redundancy_confirm_samples=2;
+#endif
     a->pair_span_ms = 4;
     a->source_step_ms = a->receive_step_ms = 20;
     imu.available = imu.sample.valid = true;
@@ -142,7 +163,12 @@ static uint32_t word(const uint8_t *frame, unsigned index)
 static void check_frame(const uint8_t *frame)
 {
     const uint8_t tail[] = {0, 0, 128, 127};
-    assert(field(frame, 0) == (VOFA_KALMAN_FULL_DETAIL ? 8 : 9) && memcmp(frame + FRAME_BYTES - 4, tail, 4) == 0);
+#if CHASSIS_WHEEL_REDUNDANCY_MODE > 0 && !VOFA_KALMAN_FULL_DETAIL
+    const unsigned expected_schema=VOFA_KALMAN_CONTROL_REDUNDANCY_SCHEMA_ID;
+#else
+    const unsigned expected_schema=VOFA_KALMAN_FULL_DETAIL ? 8U : 9U;
+#endif
+    assert(field(frame, 0) == expected_schema && memcmp(frame + FRAME_BYTES - 4, tail, 4) == 0);
     for (unsigned i = 0; i < FRAME_CHANNELS; ++i) assert(isfinite(field(frame, i)));
     for (unsigned i = 0; i + 4 <= FRAME_BYTES - 4; ++i) assert(memcmp(frame + i, tail, 4) != 0);
     assert((unsigned)lroundf(field(frame, VOFA_KALMAN_GIMBAL_CONTROL_VALID)) & 64U);

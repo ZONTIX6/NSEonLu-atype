@@ -251,6 +251,7 @@ static const ChassisRemoteFusionConfig_s remote_config = CHASSIS_REMOTE_IMU_CONF
 
 static void UpdateRemote(ChassisFusedVelocitySnapshot_s *snapshot,
                          const ChassisVelocityInput_s *wheels,
+                         const ChassisVelocityConfig_s *kinematics,
                          const ChassisImuCanSnapshot_s *remote, bool usable)
 {
     uint32_t oldest=0, youngest=UINT32_MAX;
@@ -259,7 +260,9 @@ static void UpdateRemote(ChassisFusedVelocitySnapshot_s *snapshot,
         if(age>oldest) oldest=age;
         if(age<youngest) youngest=age;
     }
-    ChassisRemoteFusionUpdate(&remote_state,&remote_config,&snapshot->wheel,
+    ChassisRemoteFusionConfig_s configured=remote_config;
+    if(kinematics) configured.wheel_kinematics=*kinematics;
+    ChassisRemoteFusionUpdate(&remote_state,&configured,&snapshot->wheel,
         oldest-youngest,remote,usable,wheels->now_ms,&snapshot->remote);
     const ChassisRemoteFusionOutput_s *out=&snapshot->remote;
     switch(out->status) {
@@ -382,7 +385,7 @@ void ChassisObserveFusedVelocity(const ChassisVelocityConfig_s *config, uint8_t 
         ResetHistory();
 #endif
 #if CHASSIS_REMOTE_IMU_FUSION_ENABLE
-    UpdateRemote(&snapshot,&wheels,&remote,remote_usable);
+    UpdateRemote(&snapshot,&wheels,config,&remote,remote_usable);
 #if VOFA_KALMAN_CAPTURE_ENABLED
     VofaKalmanCapture(&snapshot,&remote,remote_usable,&chassis_velocity->target,wheels.now_ms);
 #endif

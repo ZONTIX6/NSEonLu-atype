@@ -41,6 +41,9 @@
 #define CHASSIS_REMOTE_IMU_MAX_WHEEL_SKEW_MS 3U
 #define CHASSIS_REMOTE_IMU_MAX_TIMING_JITTER_MS 10U
 
+#include "chassis_wheel_redundancy_config.h"
+#include "chassis_traction_config.h"
+
 /* 展开到 ChassisRemoteFusionConfig_s；不在头文件内产生重复静态实例。 */
 #define CHASSIS_REMOTE_IMU_CONFIG_INITIALIZER { \
     .sensor_to_body_quaternion = CHASSIS_REMOTE_IMU_SENSOR_TO_BODY, \
@@ -52,6 +55,12 @@
         .jerk_density = CHASSIS_REMOTE_IMU_JERK_DENSITY, \
         .max_velocity_residual_mps = CHASSIS_REMOTE_IMU_MAX_RESIDUAL_MPS, \
         .max_age_us = 60000U, .max_skew_us = 0U, .max_gap_us = 60000U }, \
+    .wheel_redundancy = { .enabled = (CHASSIS_WHEEL_REDUNDANCY_MODE != 0), \
+        .residual_threshold_mps = CHASSIS_WHEEL_REDUNDANCY_RESIDUAL_THRESHOLD_MPS, \
+        .dominance_ratio = CHASSIS_WHEEL_REDUNDANCY_DOMINANCE_RATIO, \
+        .max_reference_error_mps = CHASSIS_WHEEL_REDUNDANCY_MAX_REFERENCE_ERROR_MPS }, \
+    .wheel_redundancy_confirm_samples = CHASSIS_WHEEL_REDUNDANCY_CONFIRM_SAMPLES, \
+    .wheel_redundancy_gyro_z_sign = CHASSIS_TRACTION_GYRO_Z_SIGN, \
     .max_pair_span_ms = CHASSIS_REMOTE_IMU_MAX_PAIR_SPAN_MS, \
     .max_wheel_skew_ms = CHASSIS_REMOTE_IMU_MAX_WHEEL_SKEW_MS, \
     .max_timing_jitter_ms = CHASSIS_REMOTE_IMU_MAX_TIMING_JITTER_MS }

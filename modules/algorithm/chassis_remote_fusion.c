@@ -1,5 +1,6 @@
 #include "chassis_remote_fusion.h"
 #include "chassis_gimbal_imu.h"
+#include "../../config/30_velocity_observation/chassis_wheel_redundancy_config.h"
 #include <math.h>
 
 #define HALF_RANGE UINT32_C(0x80000000)
@@ -16,6 +17,8 @@ static void ResetPipeline(ChassisRemoteFusion_s *s)
     if(s->center.count || s->filter.initialized || s->held.valid) Increment(&s->resets);
     s->center=(ChassisVelocityCenter_s){0};
     ChassisVelocityFusionReset(&s->filter);
+    s->redundancy_candidate_wheel=UINT8_MAX;
+    s->redundancy_confirmations=0;
     s->held=(ChassisRemoteFusionOutput_s){0};
 }
 
@@ -93,7 +96,8 @@ static bool PushWheel(ChassisRemoteFusion_s *s,const ChassisVelocity_s *wheel)
 typedef enum {PAIR_UNAVAILABLE,PAIR_WAIT,PAIR_READY} WheelPairResult_e;
 
 static WheelPairResult_e PairWheel(const ChassisRemoteFusion_s *s,uint32_t tick,
-                      uint32_t now_ms,uint32_t max_span,float velocity[2],uint32_t *span)
+                      uint32_t now_ms,uint32_t max_span,float velocity[2],
+                      float wheel_mps[CHASSIS_WHEEL_COUNT],uint32_t *span)
 {
     const ChassisVelocity_s *before=NULL,*after=NULL;
     uint32_t before_distance=UINT32_MAX,after_distance=UINT32_MAX;
@@ -117,7 +121,12 @@ static WheelPairResult_e PairWheel(const ChassisRemoteFusion_s *s,uint32_t tick,
     const float fraction=*span ? (float)before_distance/(float)*span : 0;
     velocity[0]=before->vx_mps+fraction*(after->vx_mps-before->vx_mps);
     velocity[1]=before->vy_mps+fraction*(after->vy_mps-before->vy_mps);
-    return isfinite(velocity[0]) && isfinite(velocity[1]) ? PAIR_READY : PAIR_UNAVAILABLE;
+    for(unsigned i=0;i<CHASSIS_WHEEL_COUNT;++i)
+        wheel_mps[i]=before->wheel_mps[i]+fraction*(after->wheel_mps[i]-before->wheel_mps[i]);
+    if(!isfinite(velocity[0]) || !isfinite(velocity[1])) return PAIR_UNAVAILABLE;
+    for(unsigned i=0;i<CHASSIS_WHEEL_COUNT;++i)
+        if(!isfinite(wheel_mps[i])) return PAIR_UNAVAILABLE;
+    return PAIR_READY;
 }
 
 static void RememberSource(ChassisRemoteFusion_s *s,const ChassisImuCanSnapshot_s *r,
@@ -143,6 +152,32 @@ static void PublishHeld(const ChassisRemoteFusion_s *s,ChassisRemoteFusionOutput
         out->paired_wheel_mps[i]=s->held.paired_wheel_mps[i];
         out->center_accel_n_mps2[i]=s->held.center_accel_n_mps2[i];
     }
+    out->wheel_redundancy=s->held.wheel_redundancy;
+    out->wheel_redundancy_confirmations=s->held.wheel_redundancy_confirmations;
+    out->wheel_redundancy_applied=s->held.wheel_redundancy_applied;
+}
+
+static bool PredictReference(const ChassisRemoteFusion_s *state,
+    const ChassisRemoteFusionConfig_s *config,
+    const ChassisVelocityCenterSample_s *center, float reference[3])
+{
+    if(!state->filter.initialized) return false;
+    const uint32_t elapsed_us=center->imu_us-state->filter.state_us;
+    if(elapsed_us>=HALF_RANGE ||
+       elapsed_us>CHASSIS_WHEEL_REDUNDANCY_REFERENCE_MAX_AGE_MS*1000U) return false;
+    const float dt=(float)elapsed_us*1e-6f;
+    const float nav_x=state->filter.axis[0].velocity+dt*state->filter.axis[0].accel;
+    const float nav_y=state->filter.axis[1].velocity+dt*state->filter.axis[1].accel;
+    const float a=center->body_to_nav_xy[0][0],b=center->body_to_nav_xy[0][1];
+    const float c=center->body_to_nav_xy[1][0],d=center->body_to_nav_xy[1][1];
+    const float det=a*d-b*c;
+    if(!(det>.5f) || !isfinite(nav_x) || !isfinite(nav_y)) return false;
+    const float body_x=(d*nav_x-b*nav_y)/det;
+    const float body_y=(a*nav_y-c*nav_x)/det;
+    reference[0]=body_x;
+    reference[1]=body_y; /* Public chassis convention and wheel kinematics are forward/right. */
+    reference[2]=config->wheel_redundancy_gyro_z_sign*center->angular_velocity_body_radps[2];
+    return isfinite(reference[0]) && isfinite(reference[1]) && isfinite(reference[2]);
 }
 
 void ChassisRemoteFusionReset(ChassisRemoteFusion_s *state)
@@ -233,9 +268,10 @@ void ChassisRemoteFusionUpdate(ChassisRemoteFusion_s *state,
         RememberSource(s,remote,estimated,out->source_step_ms,out->receive_step_ms);
         ResetPipeline(s);out->status=CHASSIS_REMOTE_REJECTED;goto done;
     }
-    float paired[2];
+    float paired[2],paired_wheels[CHASSIS_WHEEL_COUNT];
     uint32_t span=0;
-    const WheelPairResult_e pairing=PairWheel(s,estimated,now_ms,config->max_pair_span_ms,paired,&span);
+    const WheelPairResult_e pairing=PairWheel(s,estimated,now_ms,config->max_pair_span_ms,
+        paired,paired_wheels,&span);
     if(pairing!=PAIR_READY) {
         /* This identity has not entered the filter. A later wheel sample may
          * complete its bracket, so do not consume it yet. */
@@ -251,6 +287,7 @@ void ChassisRemoteFusionUpdate(ChassisRemoteFusion_s *state,
      * native board +X. Keep Y and raw IMU/nav data unchanged. */
     ChassisVelocityCenterSample_s sample={.imu_us=remote->sample.tick_ms*1000U,
         .wheel_us=remote->sample.tick_ms*1000U,.wheel_b_mps={paired[0],paired[1]}};
+    for(unsigned i=0;i<CHASSIS_WHEEL_COUNT;++i) sample.wheel_mps[i]=paired_wheels[i];
     RotateSensorVectorToBody(config->sensor_to_body_quaternion,
         remote->sample.gyro_sensor_radps,sample.angular_velocity_body_radps);
     for(unsigned i=0;i<3;++i) {
@@ -275,6 +312,41 @@ void ChassisRemoteFusionUpdate(ChassisRemoteFusion_s *state,
     }
     s->center_local_ms[0]=s->center_local_ms[1];s->center_local_ms[1]=estimated;
     s->center_pair_span_ms[0]=s->center_pair_span_ms[1];s->center_pair_span_ms[1]=span;
+    ChassisWheelRedundancyOutput_s redundancy={.excluded_wheel=UINT8_MAX,
+        .reason=config->wheel_redundancy.enabled ? CHASSIS_WHEEL_REDUNDANCY_NO_REFERENCE :
+                                                   CHASSIS_WHEEL_REDUNDANCY_OFF};
+    bool redundancy_applied=false;
+    uint8_t redundancy_confirmations=0;
+    if(config->wheel_redundancy.enabled) {
+        float reference[3]={0};
+        ChassisWheelRedundancyInput_s redundancy_input={.valid=true,.online_mask=15,
+            .reference_valid=PredictReference(s,config,&center,reference),
+            .reference_vx_mps=reference[0],.reference_vy_mps=reference[1],
+            .reference_wz_radps=reference[2]};
+        if(ChassisEstimateVelocityWithWheelRedundancy(&config->wheel_kinematics,
+               &config->wheel_redundancy,&redundancy_input,center.wheel_mps,&redundancy) &&
+           redundancy.corrected) {
+            if(s->redundancy_candidate_wheel==redundancy.excluded_wheel) {
+                if(s->redundancy_confirmations<UINT8_MAX) ++s->redundancy_confirmations;
+            } else {
+                s->redundancy_candidate_wheel=redundancy.excluded_wheel;
+                s->redundancy_confirmations=1;
+            }
+            redundancy_confirmations=s->redundancy_confirmations;
+            if(CHASSIS_WHEEL_REDUNDANCY_MODE>=2 && config->wheel_redundancy_confirm_samples &&
+               s->redundancy_confirmations>=config->wheel_redundancy_confirm_samples) {
+                center.wheel_b_mps[0]=redundancy.selected_vx_mps;
+                center.wheel_b_mps[1]=redundancy.selected_vy_mps;
+                redundancy_applied=true;
+            }
+        } else {
+            s->redundancy_candidate_wheel=UINT8_MAX;
+            s->redundancy_confirmations=0;
+        }
+    }
+    out->wheel_redundancy=redundancy;
+    out->wheel_redundancy_confirmations=redundancy_confirmations;
+    out->wheel_redundancy_applied=redundancy_applied;
     const uint32_t known_age=now_ms-remote->first_rx_tick_ms+remote->sample.source_age_ms;
     ChassisVelocityFusionInput_s input={
         .now_us=(remote->sample.tick_ms+known_age)*1000U,
@@ -311,7 +383,9 @@ void ChassisRemoteFusionUpdate(ChassisRemoteFusion_s *state,
     }
     s->held=(ChassisRemoteFusionOutput_s){.valid=true,.tick_ms=middle_local_ms,
         .vx_mps=vx,.vy_mps=vy,.paired_wheel_mps={center.wheel_b_mps[0],center.wheel_b_mps[1]},
-        .center_accel_n_mps2={center.accel_n_mps2[0],center.accel_n_mps2[1]},.pair_span_ms=middle_span};
+        .center_accel_n_mps2={center.accel_n_mps2[0],center.accel_n_mps2[1]},.pair_span_ms=middle_span,
+        .wheel_redundancy=redundancy,.wheel_redundancy_confirmations=redundancy_confirmations,
+        .wheel_redundancy_applied=redundancy_applied};
     Increment(&s->updates);
     PublishHeld(s,out);
 done:

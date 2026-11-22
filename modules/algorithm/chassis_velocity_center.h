@@ -9,6 +9,7 @@ typedef struct {
     float accel_n_mps2[3];
     float angular_velocity_body_radps[3];
     float wheel_b_mps[2]; /* Fixed body X/Y: gimbal forward/left, remote native A-board axes. */
+    float wheel_mps[4]; /* Per-wheel rolling speeds paired to this IMU epoch, public wheel signs. */
     float body_to_nav_xy[2][2];
 } ChassisVelocityCenterSample_s;
 

@@ -32,7 +32,25 @@ static void frozen_trace_keeps_unsampled_corrections(void)
     tick=5000;
     VofaKalmanCaptureDrain();
     check_frame(active);
+#if CHASSIS_WHEEL_REDUNDANCY_MODE > 0
+    assert(FRAME_BYTES==336);
+    assert(field(active,VOFA_KALMAN_CONTROL_REDUNDANCY_MODE)==CHASSIS_WHEEL_REDUNDANCY_MODE);
+    assert(field(active,VOFA_KALMAN_CONTROL_REDUNDANCY_REASON)==CHASSIS_WHEEL_REDUNDANCY_CORRECTED);
+    assert(field(active,VOFA_KALMAN_CONTROL_REDUNDANCY_EXCLUDED_WHEEL)==2);
+    assert(field(active,VOFA_KALMAN_CONTROL_REDUNDANCY_USED_WHEEL_MASK)==11);
+    assert(field(active,VOFA_KALMAN_CONTROL_REDUNDANCY_CONFIRMATIONS)==2);
+    assert(field(active,VOFA_KALMAN_CONTROL_REDUNDANCY_CORRECTED)==1);
+    assert(field(active,VOFA_KALMAN_CONTROL_REDUNDANCY_APPLIED)==(CHASSIS_WHEEL_REDUNDANCY_MODE>=2));
+    assert(field(active,VOFA_KALMAN_CONTROL_REDUNDANCY_RESIDUAL_LB_MPS)==.45f);
+    assert(field(active,VOFA_KALMAN_CONTROL_REDUNDANCY_SELECTED_VX_MPS)==.45f);
+    assert(fabsf(field(active,VOFA_KALMAN_CONTROL_REDUNDANCY_REFERENCE_ERROR_MPS)-.07f)<1e-6f);
+    assert(field(active,VOFA_KALMAN_CONTROL_REDUNDANCY_THRESHOLD_MPS)==.25f);
+    assert(field(active,VOFA_KALMAN_CONTROL_REDUNDANCY_DOMINANCE_RATIO)==1.75f);
+    assert(field(active,VOFA_KALMAN_CONTROL_REDUNDANCY_MAX_REFERENCE_ERROR_MPS)==.30f);
+    assert(field(active,VOFA_KALMAN_CONTROL_REDUNDANCY_CONFIRM_SAMPLES_REQUIRED)==2);
+#else
     assert(FRAME_BYTES==260);
+#endif
     assert(field(active,VOFA_KALMAN_CONTROL_WHEEL_VX_MPS)==.5f);
     assert(field(active,VOFA_KALMAN_CONTROL_TARGET_VX_MPS)==1.2345f);
     assert(field(active,VOFA_KALMAN_CONTROL_TRIAL_FUSED_AGE_MS)==50);
@@ -72,7 +90,11 @@ static void compact_transport_handles_jitter_and_stall(void)
     unsigned next=0;
     uint32_t next_tick=1000;
     const uint32_t wire_ms=(FRAME_BYTES*10U*1000U+BOARD_UART7_BAUDRATE-1U)/BOARD_UART7_BAUDRATE;
+#if CHASSIS_WHEEL_REDUNDANCY_MODE > 0
+    assert(wire_ms==15);
+#else
     assert(wire_ms==12); /* Full frame formerly needed 20 ms rounded up. */
+#endif
     for(tick=1000;tick<9300;++tick) {
         if(huart7.gState==HAL_UART_STATE_BUSY_TX && tick-send_started>=wire_ms) finish_uart();
         if(next<EVENTS && tick==next_tick) {

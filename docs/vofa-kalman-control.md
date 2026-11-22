@@ -1,6 +1,6 @@
 # 精简卡尔曼闭环观测（schema 9）
 
-双 A 板远端融合默认输出 **64 路 `I0`–`I63`**，`I0=9`。VOFA+ 选择 **JustFloat、230400 / 8N1**，清空旧数据后重新连接；旧通道名称与曲线绑定需按新表更新，保存全部 64 路原始 CSV 即可。完整逐路表及有效位见 [VOFA 通道定义](vofa-observation-channels.md#schema-9-kalman_control)。
+双 A 板远端融合默认输出 **64 路 `I0`–`I63`**，`I0=9`。启用轮速冗余影子/主动模式后，精简档输出 **83 路 `I0`–`I82`**，`I0=10`；新增字段用于判断候选轮、各轮残差、三轮重算结果和是否实际采用，I79–I82 记录判定门限。完整滤波档 schema 8 保持 109 路，但不包含这些冗余诊断列。VOFA+ 选择 **JustFloat、230400 / 8N1**，清空旧数据后重新连接；旧通道名称与曲线绑定需按新表更新，保存全部原始 CSV 即可。完整逐路表及有效位见 [VOFA 通道定义](vofa-observation-channels.md#schema-9-kalman_control) 和 [schema 10](vofa-observation-channels.md#schema-10-kalman_control_redundancy)。
 
 默认去掉原始 IMU 四元数/加速度/陀螺、滤波重放输入与噪声/安装参数、重复源时钟、yaw PID 内部量。需要这些专项诊断时，在 `config/_vofa/vofa_config.h` 中设置 `VOFA_KALMAN_FULL_DETAIL=1`，重新构建得到兼容旧布局的 109 路 schema 8；设回 0 恢复精简档。非远端融合的快照模式仍使用 schema 7。
 
@@ -45,6 +45,6 @@ I59（applied_flags）：bit 0 电机记录存在，1 实际四轮目标与修�
 
 ## CSV 分析和传输
 
-`scripts/analyze-vofa.py` 自动识别 schema 9，报告传输缺口、FIFO 溢出和可比较端点之间的控制/反馈/修正/提交次数增量。未发送的滤波调用计数标记为未知，不冒充零；精简 CSV 不支持完整滤波重放或参数拟合。旧 schema 4–8 的解析与重放保持兼容。
+`scripts/analyze-vofa.py` 自动识别 schema 9/10，报告传输缺口、FIFO 溢出和可比较端点之间的控制/反馈/修正/提交次数增量；schema 10 还统计疑似轮、判定原因、实际采用次数和记录门限。未发送的滤波调用计数标记为未知，不冒充零；精简 CSV 不支持完整滤波重放或参数拟合。旧 schema 4–8 的解析与重放保持兼容。
 
 64 路加帧尾是 **260 字节**，50 Hz 约 **13.0 kB/s、11.28 ms/帧**，230400/8N1 占用约 **56.4%**。比旧 440 字节减少约 **40.9%**，16 槽 FIFO 的事件捕获频率保持原样。无线链路实际丢帧率需新固件复采验证。

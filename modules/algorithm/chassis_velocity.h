@@ -11,6 +11,7 @@ typedef struct {
     uint32_t tick_ms; /* Oldest of the four CAN feedback timestamps. */
     float vx_mps, vy_mps; /* Geometric center: forward/right positive, m/s. */
     float wz_rpm; /* Signed body revolutions/minute; same positive spin convention as commands. */
+    float wheel_mps[4]; /* LF/RF/LB/RB rolling speeds after configured wheel signs. */
 } ChassisVelocity_s;
 
 typedef struct {

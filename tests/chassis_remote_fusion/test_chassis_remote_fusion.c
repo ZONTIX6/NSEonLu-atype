@@ -4,6 +4,14 @@
 #include <math.h>
 #include <stdio.h>
 
+#if CHASSIS_WHEEL_REDUNDANCY_MODE > 0
+static const ChassisVelocityConfig_s redundancy_kinematics = {
+    .omni_x=true, .wheel_radius_m=.076f, .reduction_ratio=19.0f,
+    .wheel_base_m=.35f, .track_width_m=.30f,
+    .direction={1.0f,1.0f,1.0f,1.0f},
+};
+#endif
+
 static ChassisRemoteFusionConfig_s Config(void)
 {
     return (ChassisRemoteFusionConfig_s){
@@ -187,7 +195,10 @@ static void NativeABoardUsesProductionOffset(void)
     };
     for(unsigned k=0;k<sizeof cases/sizeof cases[0];++k) {
         ChassisRemoteFusion_s state={0};
-        const ChassisRemoteFusionConfig_s config=CHASSIS_REMOTE_IMU_CONFIG_INITIALIZER;
+        ChassisRemoteFusionConfig_s config=CHASSIS_REMOTE_IMU_CONFIG_INITIALIZER;
+#if CHASSIS_WHEEL_REDUNDANCY_MODE > 0
+        config.wheel_kinematics=redundancy_kinematics;
+#endif
         Near(config.sensor_to_body_quaternion[0],1,.00001f);
         Near(config.sensor_to_body_quaternion[3],0,.00001f);
         Near(config.imu_offset_body_m[1],.116f,.00001f);
@@ -234,7 +245,10 @@ static void NativeABoardTranslationPreservesPublicVelocity(void)
     for(unsigned h=0;h<sizeof headings/sizeof headings[0];++h)
         for(unsigned k=0;k<sizeof acceleration/sizeof acceleration[0];++k) {
             ChassisRemoteFusion_s state={0};
-            const ChassisRemoteFusionConfig_s config=CHASSIS_REMOTE_IMU_CONFIG_INITIALIZER;
+            ChassisRemoteFusionConfig_s config=CHASSIS_REMOTE_IMU_CONFIG_INITIALIZER;
+#if CHASSIS_WHEEL_REDUNDANCY_MODE > 0
+            config.wheel_kinematics=redundancy_kinematics;
+#endif
             ChassisImuCanSnapshot_s packet={0};
             ChassisRemoteFusionOutput_s out={0};
             const float angle=headings[h], c=cosf(angle), s=sinf(angle);
@@ -573,6 +587,93 @@ static void AttemptSequenceWrapIsNotUnavailable(void)
     assert(out.attempt.initialized_before && out.status==CHASSIS_REMOTE_FUSED);
 }
 
+#if CHASSIS_WHEEL_REDUNDANCY_MODE > 0
+static void RedundancyWheels(float vx,float vy,float wz,float wheel[4])
+{
+    const float k=.7071067811865475244f;
+    const float lever=(redundancy_kinematics.wheel_base_m+
+        redundancy_kinematics.track_width_m)*.5f;
+    wheel[0]=(-vx+vy+wz*lever)*k;
+    wheel[1]=(vx+vy+wz*lever)*k;
+    wheel[2]=(-vx-vy+wz*lever)*k;
+    wheel[3]=(vx-vy+wz*lever)*k;
+}
+
+static ChassisRemoteFusionConfig_s RedundancyConfig(void)
+{
+    ChassisRemoteFusionConfig_s config=Config();
+    config.wheel_kinematics=redundancy_kinematics;
+    config.wheel_redundancy=(ChassisWheelRedundancyConfig_s){
+        .enabled=true,.residual_threshold_mps=.25f,.dominance_ratio=1.75f,
+        .max_reference_error_mps=.30f};
+    config.wheel_redundancy_confirm_samples=2;
+    config.wheel_redundancy_gyro_z_sign=1.0f;
+    return config;
+}
+
+static ChassisRemoteFusionOutput_s RunRedundancyTrajectory(bool inject_slip,bool invalid_kinematics)
+{
+    ChassisRemoteFusion_s state={0};
+    ChassisRemoteFusionConfig_s config=RedundancyConfig();
+    if(invalid_kinematics) config.wheel_kinematics.omni_x=false;
+    ChassisImuCanSnapshot_s packet={0};
+    ChassisRemoteFusionOutput_s out={0};
+    for(uint32_t t=100;t<=225;t+=5) {
+        if(t>=125 && (t-125)%20==0) {
+            packet=Packet(900000+t-3,t-1,t);
+            packet.sample.accel_n_mps2[0]=0;
+            packet.sample.accel_n_mps2[1]=0;
+            packet.sample.gyro_sensor_radps[2]=0;
+        }
+        float wheel_speeds[4];
+        RedundancyWheels(.6f,-.2f,0,wheel_speeds);
+        if(inject_slip && t>=170) wheel_speeds[2]+=.45f;
+        const float k=.7071067811865475244f;
+        const float vx=(-wheel_speeds[0]+wheel_speeds[1]-wheel_speeds[2]+wheel_speeds[3])/(4*k);
+        const float vy=(wheel_speeds[0]+wheel_speeds[1]-wheel_speeds[2]-wheel_speeds[3])/(4*k);
+        ChassisVelocity_s wheel={.valid=true,.tick_ms=t,.vx_mps=vx,.vy_mps=vy};
+        for(unsigned i=0;i<4;++i) wheel.wheel_mps[i]=wheel_speeds[i];
+        ChassisRemoteFusionUpdate(&state,&config,&wheel,0,packet.available?&packet:NULL,
+            packet.available,t,&out);
+    }
+    assert(out.status==CHASSIS_REMOTE_FUSED && out.attempt.available);
+    return out;
+}
+
+static void RedundancyReferenceKeepsRightwardConventionAndGatesSlip(void)
+{
+    const ChassisRemoteFusionOutput_s clean=RunRedundancyTrajectory(false,false);
+    assert(clean.wheel_redundancy.valid && !clean.wheel_redundancy.corrected);
+    assert(clean.wheel_redundancy.reason==CHASSIS_WHEEL_REDUNDANCY_NO_OUTLIER);
+    assert(!clean.wheel_redundancy_applied && clean.wheel_redundancy_confirmations==0);
+
+    const ChassisRemoteFusionOutput_s slipped=RunRedundancyTrajectory(true,false);
+    assert(slipped.wheel_redundancy.valid && slipped.wheel_redundancy.corrected);
+    assert(slipped.wheel_redundancy.excluded_wheel==2);
+    assert(slipped.wheel_redundancy_confirmations>=2);
+#if CHASSIS_WHEEL_REDUNDANCY_MODE == 1
+    /* Shadow mode reports the outlier while keeping the original four-wheel
+     * velocity measurement in the production filter. */
+    assert(!slipped.wheel_redundancy_applied);
+    assert(fabsf(slipped.attempt.input.wheel_n_mps[0]-.6f)>.03f);
+#elif CHASSIS_WHEEL_REDUNDANCY_MODE >= 2
+    /* Active mode uses the three-wheel body velocity in the same filter call. */
+    assert(slipped.wheel_redundancy_applied);
+    Near(slipped.attempt.input.wheel_n_mps[0],.6f,.0001f);
+    Near(slipped.attempt.input.wheel_n_mps[1],-.2f,.0001f);
+#endif
+}
+
+static void InvalidRedundancyKinematicsDoNotDisableFusion(void)
+{
+    const ChassisRemoteFusionOutput_s out=RunRedundancyTrajectory(false,true);
+    assert(out.status==CHASSIS_REMOTE_FUSED);
+    assert(!out.wheel_redundancy.valid);
+    assert(out.wheel_redundancy.reason==CHASSIS_WHEEL_REDUNDANCY_INVALID);
+    assert(!out.wheel_redundancy_applied);
+}
+#endif
+
 int main(void)
 {
     RemoteClockOffsetAndRepeatedPackets();
@@ -593,6 +694,10 @@ int main(void)
     SpinNoiseUsesTheMountedBodyAxes();
     RejectedAttemptSurvivesResetAndReacquiresWithNewIdentity();
     AttemptSequenceWrapIsNotUnavailable();
+#if CHASSIS_WHEEL_REDUNDANCY_MODE > 0
+    RedundancyReferenceKeepsRightwardConventionAndGatesSlip();
+    InvalidRedundancyKinematicsDoNotDisableFusion();
+#endif
     puts("PASS: remote chassis velocity fusion");
     return 0;
 }

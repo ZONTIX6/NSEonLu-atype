@@ -69,6 +69,26 @@ class CsvTests(unittest.TestCase):
         self.assertTrue(summary['corrected_targets_submitted'])
         self.assertEqual(capture['rows'][0]['trial_correction_vx_mps'], 0)
 
+    def test_wheel_redundancy_schema_is_decoded_and_counted(self):
+        rows = [row(10, sequence=i, tick=1000+20*i, valid=64|16384|32768|(1<<16),
+                    control_cycles=4*i, feedback_cycles=i, correction_cycles=0,
+                    submitted_correction_versions=0, redundancy_mode=1,
+                    redundancy_reason=4, redundancy_excluded_wheel=2,
+                    redundancy_used_wheel_mask=11, redundancy_confirmations=2,
+                    redundancy_corrected=1, redundancy_applied=0,
+                    redundancy_threshold_mps=.25, redundancy_dominance_ratio=1.75,
+                    redundancy_max_reference_error_mps=.3,
+                    redundancy_confirm_samples_required=2)
+                for i in range(1, 4)]
+        export(self.path, wire_rows(rows), time_at=0, renamed=True)
+        capture = read_capture(self.path)
+        self.assertEqual(capture['schema'], 10)
+        self.assertEqual(capture['channel_count'], 83)
+        self.assertEqual(capture['rows'][0]['redundancy_threshold_mps'], .25)
+        summary = control_feedback_summary(capture)
+        self.assertEqual(summary['wheel_redundancy']['corrected_rows'], 3)
+        self.assertEqual(summary['wheel_redundancy']['candidate_wheels'], {'2': 3})
+
     def test_compact_summary_ignores_boot_history_and_counter_resets(self):
         rows = [row(9, sequence=0, tick=100, valid=64|16384|32768,
                     control_cycles=1000, correction_cycles=100, submitted_correction_versions=50),
