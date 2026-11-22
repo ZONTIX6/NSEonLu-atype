@@ -6,8 +6,15 @@ try {
     New-Item -ItemType Directory -Force $logDir | Out-Null
     $results=[Collections.Generic.List[object]]::new()
     function Run([string]$Name,[string]$Program,[string[]]$Arguments) {
-        $output=& $Program @Arguments 2>&1
-        $ok=$LASTEXITCODE -eq 0
+        $previousPreference=$ErrorActionPreference
+        try {
+            $ErrorActionPreference='Continue'
+            $output=& $Program @Arguments 2>&1
+            $exitCode=$LASTEXITCODE
+        } finally {
+            $ErrorActionPreference=$previousPreference
+        }
+        $ok=$exitCode -eq 0
         $output | Set-Content -LiteralPath (Join-Path $logDir "$Name.log") -Encoding utf8
         $results.Add([pscustomobject]@{name=$Name;passed=$ok})
         if(-not $ok) { $output | Select-Object -Last 30 | Write-Output; throw "$Name failed" }
@@ -60,8 +67,9 @@ try {
         }
     }
     if($CMake) {
+        $cmakeRunId=Get-Date -Format 'yyyyMMdd-HHmmss-fff'
         foreach($profile in 'atype-vehicle','atype-bench','atype-direct') {
-            $dir="build/cmake-$profile"
+            $dir="build/validation/cmake-$profile-$cmakeRunId"
             Run "cmake-config-$profile" 'cmake' @('-S','.','-B',$dir,'-G','MinGW Makefiles',"-DATYPE_PROFILE=$profile")
             Run "cmake-build-$profile" 'cmake' @('--build',$dir,'-j8')
             Run "cmake-layout-$profile" $Python @('scripts/check-atype-artifacts.py',$dir)

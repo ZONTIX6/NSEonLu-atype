@@ -82,7 +82,7 @@ class BoardFlashTests(unittest.TestCase):
         return project
 
     def test_shared_profile_drives_build_and_flash_arguments(self):
-        for profile in (0, 1, 2):
+        for profile in (0, 1, 2, 3):
             with self.subTest(profile=profile):
                 project = self.shared_config_fixture(f"#define VOFA_OBSERVATION_PROFILE {profile}")
                 result = self.invoke("-Action", "Show", script=project / "scripts/build-board.ps1")
@@ -105,7 +105,7 @@ class BoardFlashTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_invalid_shared_profile_stops_before_tools(self):
-        for definition in ("", "#define VOFA_OBSERVATION_PROFILE 3",
+        for definition in ("", "#define VOFA_OBSERVATION_PROFILE 4",
                            "#define VOFA_OBSERVATION_PROFILE 1 + 1",
                            "#define VOFA_OBSERVATION_PROFILE 1\n#define VOFA_OBSERVATION_PROFILE 2"):
             with self.subTest(definition=definition):
@@ -154,7 +154,7 @@ class BoardFlashTests(unittest.TestCase):
                 self.assertTrue(set(selected["options"]) <= set(selected["buildArguments"]))
 
     def test_observation_profile_is_forwarded_without_changing_transport(self):
-        for profile in (0, 1, 2):
+        for profile in (0, 1, 2, 3):
             with self.subTest(profile=profile):
                 selected = self.show("-ConfigFile", self.config_with(
                     BOARD_FLASH_1_VOFA_OBSERVATION_PROFILE=profile))
@@ -165,7 +165,7 @@ class BoardFlashTests(unittest.TestCase):
         self.assertEqual(self.commands(), [])
 
     def test_invalid_explicit_observation_profile_stops_before_tools(self):
-        path = self.config_with(BOARD_FLASH_1_VOFA_OBSERVATION_PROFILE=3)
+        path = self.config_with(BOARD_FLASH_1_VOFA_OBSERVATION_PROFILE=4)
         result = self.invoke("-ConfigFile", path, "-Action", "Flash")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("VOFA_OBSERVATION_PROFILE", result.stderr)

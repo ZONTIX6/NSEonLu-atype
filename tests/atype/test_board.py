@@ -35,11 +35,11 @@ class BoardConfiguration(unittest.TestCase):
 
     def test_observation_profile_accepts_only_documented_values(self):
         for mode in (0, 1, 2):
-            for profile in (0, 1, 2):
+            for profile in (0, 1, 2, 3):
                 result = self.compile("", f"VOFA_TELEMETRY_MODE={mode}",
                                       f"VOFA_OBSERVATION_PROFILE={profile}")
                 self.assertEqual(result.returncode, 0, result.stderr)
-        for profile in (-1, 3):
+        for profile in (-1, 4):
             result = self.compile("", f"VOFA_OBSERVATION_PROFILE={profile}")
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("VOFA_OBSERVATION_PROFILE", result.stderr)
