@@ -1,6 +1,6 @@
 # 完整宏与初始化参数索引
 
-更新日期：2026-11-14。当前目标为 STM32F427 A 板。配套说明：[配置指南](configuration-guide.md)、[宏迁移表](atype-macro-migration.md)。
+更新日期：2026-11-15。当前目标为 STM32F427 A 板。配套说明：[配置指南](configuration-guide.md)、[宏迁移表](atype-macro-migration.md)。
 
 由 `scripts/generate-configuration-index.py` 扫描 397 个项目 C/H 文件，记录 4501 条预处理、配置初始化和 HAL/NVIC 项。预处理条目包含互斥分支与保护宏，不能将所有条目同时理解为有效配置。可从构建命令覆盖的选项见 `config/99_build/atype-options.txt`；普通源码 PID/功率模型初值也列在所属文件下。
 
@@ -1697,30 +1697,30 @@
 | [30](../config/21_chassis_spin/chassis_spin_config.h#L30) | 预处理 | `#endif` |
 | [31](../config/21_chassis_spin/chassis_spin_config.h#L31) | 预处理 | `#define CHASSIS_SPIN_DYNAMIC_ENABLED (CHASSIS_SPIN_MODE != CHASSIS_SPIN_MODE_FIXED) /* 派生开关：固定模式为 0，其余模式为 1；由模式自动计算，不单独修改。 */` |
 | [34](../config/21_chassis_spin/chassis_spin_config.h#L34) | 预处理 | `#ifndef CHASSIS_SPIN_FIXED_WZ` |
-| [35](../config/21_chassis_spin/chassis_spin_config.h#L35) | 预处理 | `#define CHASSIS_SPIN_FIXED_WZ 8000.0f /* 固定模式目标/自适应初始目标，单位为本工程 Wz 命令尺度。 */` |
+| [35](../config/21_chassis_spin/chassis_spin_config.h#L35) | 预处理 | `#define CHASSIS_SPIN_FIXED_WZ 4000.0f /* 固定模式目标/自适应初始目标，单位为本工程 Wz 命令尺度。 */` |
 | [36](../config/21_chassis_spin/chassis_spin_config.h#L36) | 预处理 | `#endif` |
 | [37](../config/21_chassis_spin/chassis_spin_config.h#L37) | 预处理 | `#ifndef CHASSIS_SPIN_MIN_WZ` |
-| [38](../config/21_chassis_spin/chassis_spin_config.h#L38) | 预处理 | `#define CHASSIS_SPIN_MIN_WZ 3000.0f /* 自适应模式的 Wz 目标下限，单位 Wz 命令尺度，须为正且不大于初始目标。 */` |
+| [38](../config/21_chassis_spin/chassis_spin_config.h#L38) | 预处理 | `#define CHASSIS_SPIN_MIN_WZ 1500.0f /* 自适应模式的 Wz 目标下限，单位 Wz 命令尺度，须为正且不大于初始目标。 */` |
 | [39](../config/21_chassis_spin/chassis_spin_config.h#L39) | 预处理 | `#endif` |
 | [40](../config/21_chassis_spin/chassis_spin_config.h#L40) | 预处理 | `#ifndef CHASSIS_SPIN_MAX_WZ` |
-| [41](../config/21_chassis_spin/chassis_spin_config.h#L41) | 预处理 | `#define CHASSIS_SPIN_MAX_WZ 9000.0f /* 动态自旋目标软上限，单位 Wz 命令尺度，须不小于初始或正弦峰值。 */` |
+| [41](../config/21_chassis_spin/chassis_spin_config.h#L41) | 预处理 | `#define CHASSIS_SPIN_MAX_WZ 4500.0f /* 动态自旋目标软上限，单位 Wz 命令尺度，须不小于初始或正弦峰值。 */` |
 | [42](../config/21_chassis_spin/chassis_spin_config.h#L42) | 预处理 | `#endif` |
 | [43](../config/21_chassis_spin/chassis_spin_config.h#L43) | 预处理 | `#ifndef CHASSIS_SPIN_POWER_GAIN` |
 | [44](../config/21_chassis_spin/chassis_spin_config.h#L44) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |
-| [45](../config/21_chassis_spin/chassis_spin_config.h#L45) | 预处理 | `#define CHASSIS_SPIN_POWER_GAIN 80.0f /* 功率误差到目标变化速率的增益，单位 Wz/(W*s)；自适应默认 80，其余默认 40。 */` |
+| [45](../config/21_chassis_spin/chassis_spin_config.h#L45) | 预处理 | `#define CHASSIS_SPIN_POWER_GAIN 40.0f /* 功率误差到目标变化速率的增益，单位 Wz/(W*s)。 */` |
 | [46](../config/21_chassis_spin/chassis_spin_config.h#L46) | 预处理 | `#else` |
-| [47](../config/21_chassis_spin/chassis_spin_config.h#L47) | 预处理 | `#define CHASSIS_SPIN_POWER_GAIN 40.0f /* 功率误差到目标变化速率的增益，单位 Wz/(W*s)；自适应默认 80，其余默认 40。 */` |
+| [47](../config/21_chassis_spin/chassis_spin_config.h#L47) | 预处理 | `#define CHASSIS_SPIN_POWER_GAIN 40.0f /* 功率误差到目标变化速率的增益，单位 Wz/(W*s)。 */` |
 | [48](../config/21_chassis_spin/chassis_spin_config.h#L48) | 预处理 | `#endif` |
 | [49](../config/21_chassis_spin/chassis_spin_config.h#L49) | 预处理 | `#endif` |
 | [50](../config/21_chassis_spin/chassis_spin_config.h#L50) | 预处理 | `#ifndef CHASSIS_SPIN_RISE_RATE` |
 | [51](../config/21_chassis_spin/chassis_spin_config.h#L51) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |
-| [52](../config/21_chassis_spin/chassis_spin_config.h#L52) | 预处理 | `#define CHASSIS_SPIN_RISE_RATE 3600.0f /* 自适应目标上升速率上限，单位 Wz/s；自适应默认 3600，其余默认 1200。 */` |
+| [52](../config/21_chassis_spin/chassis_spin_config.h#L52) | 预处理 | `#define CHASSIS_SPIN_RISE_RATE 1800.0f /* 自适应目标上升速率上限，单位 Wz/s。 */` |
 | [53](../config/21_chassis_spin/chassis_spin_config.h#L53) | 预处理 | `#else` |
-| [54](../config/21_chassis_spin/chassis_spin_config.h#L54) | 预处理 | `#define CHASSIS_SPIN_RISE_RATE 1200.0f /* 自适应目标上升速率上限，单位 Wz/s；自适应默认 3600，其余默认 1200。 */` |
+| [54](../config/21_chassis_spin/chassis_spin_config.h#L54) | 预处理 | `#define CHASSIS_SPIN_RISE_RATE 1200.0f /* 自适应目标上升速率上限，单位 Wz/s；其他模式默认 1200。 */` |
 | [55](../config/21_chassis_spin/chassis_spin_config.h#L55) | 预处理 | `#endif` |
 | [56](../config/21_chassis_spin/chassis_spin_config.h#L56) | 预处理 | `#endif` |
 | [57](../config/21_chassis_spin/chassis_spin_config.h#L57) | 预处理 | `#ifndef CHASSIS_SPIN_FALL_RATE` |
-| [58](../config/21_chassis_spin/chassis_spin_config.h#L58) | 预处理 | `#define CHASSIS_SPIN_FALL_RATE 2400.0f /* 非正弦目标下降速率上限，单位 Wz/s；正弦使用独立下降速率。 */` |
+| [58](../config/21_chassis_spin/chassis_spin_config.h#L58) | 预处理 | `#define CHASSIS_SPIN_FALL_RATE 1200.0f /* 非正弦目标下降速率上限，单位 Wz/s；正弦使用独立下降速率。 */` |
 | [59](../config/21_chassis_spin/chassis_spin_config.h#L59) | 预处理 | `#endif` |
 | [60](../config/21_chassis_spin/chassis_spin_config.h#L60) | 预处理 | `#ifndef CHASSIS_SPIN_POWER_LPF_TAU_S` |
 | [61](../config/21_chassis_spin/chassis_spin_config.h#L61) | 预处理 | `#if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE` |

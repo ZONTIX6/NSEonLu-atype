@@ -101,6 +101,74 @@ if($Action -eq 'Show') {
     exit 0
 }
 
+function Find-ArmGnuToolchainBin {
+    $compiler=Get-Command arm-none-eabi-gcc -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    if($compiler) { return Split-Path -Parent $compiler.Source }
+
+    $roots=@()
+    if($env:CUBE_BUNDLE_PATH) {
+        $roots+=Join-Path $env:CUBE_BUNDLE_PATH 'gnu-tools-for-stm32'
+    }
+    if($env:LOCALAPPDATA) {
+        $roots+=Join-Path $env:LOCALAPPDATA 'stm32cube/bundles/gnu-tools-for-stm32'
+    }
+    $candidates=@(foreach($root in ($roots | Select-Object -Unique)) {
+        foreach($versionDirectory in (Get-ChildItem -LiteralPath $root -Directory -ErrorAction SilentlyContinue)) {
+            $bin=Join-Path $versionDirectory.FullName 'bin'
+            if(Test-Path -LiteralPath (Join-Path $bin 'arm-none-eabi-gcc.exe') -PathType Leaf) {
+                $versionText='0.0.0'
+                if($versionDirectory.Name -match '^\d+(?:\.\d+)+') { $versionText=$Matches[0] }
+                [pscustomobject]@{ Version=[version]$versionText; Bin=$bin }
+            }
+        }
+    })
+    if($candidates.Count -eq 0) { return $null }
+    return ($candidates | Sort-Object Version -Descending | Select-Object -First 1).Bin
+}
+
+function Find-OpenOcdExecutable {
+    if($env:OPENOCD_PATH) {
+        $configuredPath=[Environment]::ExpandEnvironmentVariables($env:OPENOCD_PATH)
+        if(Test-Path -LiteralPath $configuredPath -PathType Container) {
+            $configuredPath=Join-Path $configuredPath 'openocd.exe'
+        }
+        if(Test-Path -LiteralPath $configuredPath -PathType Leaf) {
+            return [IO.Path]::GetFullPath($configuredPath)
+        }
+        throw "OPENOCD_PATH does not point to openocd.exe: $configuredPath"
+    }
+
+    $command=Get-Command openocd -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    if($command) { return $command.Source }
+
+    $settingsPath=Join-Path $boardProjectRoot '.vscode/settings.json'
+    if(Test-Path -LiteralPath $settingsPath -PathType Leaf) {
+        $settings=Get-Content -LiteralPath $settingsPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $configuredPath=[Environment]::ExpandEnvironmentVariables($settings.'cortex-debug.openocdPath')
+        if($configuredPath -and (Test-Path -LiteralPath $configuredPath -PathType Leaf)) {
+            return [IO.Path]::GetFullPath($configuredPath)
+        }
+    }
+    return $null
+}
+
+if($Action -ne 'Symbols') {
+    $gccBin=Find-ArmGnuToolchainBin
+    if(-not $gccBin) {
+        throw 'Arm GNU Toolchain not found on PATH or in the STM32Cube bundles directory. Add arm-none-eabi-gcc to PATH or install it under %LOCALAPPDATA%\stm32cube\bundles\gnu-tools-for-stm32.'
+    }
+    $env:PATH="$gccBin;$env:PATH"
+    Write-Host "Arm GNU Toolchain: $gccBin"
+}
+if($Action -eq 'Flash' -and $programmerId -eq '1') {
+    $openOcdExe=Find-OpenOcdExecutable
+    if(-not $openOcdExe) {
+        throw 'OpenOCD not found. Set OPENOCD_PATH to openocd.exe or configure cortex-debug.openocdPath in .vscode/settings.json.'
+    }
+    $env:PATH="$(Split-Path -Parent $openOcdExe);$env:PATH"
+    Write-Host "OpenOCD: $openOcdExe"
+}
+
 Write-Host "Board $selected : $name"
 Write-Host "Output: $buildDirectory"
 if($Action -eq 'Flash') { Write-Host "Flash programmer: $programmer" }

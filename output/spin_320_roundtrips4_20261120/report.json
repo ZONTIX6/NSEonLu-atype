@@ -1,0 +1,5315 @@
+{
+  "schema": "vofa-analysis/1",
+  "status": "analyzed",
+  "hardware_validated": false,
+  "capture": {
+    "path": "D:\\Downloads\\\u5c0f\u9640\u87ba\u524d\u8fdb\u540e\u9000320cm\uff084\u7ec4\uff09.csv",
+    "sha256": "a511d21d3fe2f1ce2f045459d70d28b6526765ca70d3720152aa4457c637256d",
+    "schema": 8,
+    "profile": "kalman_gimbal_control_turn_count",
+    "channel_count": 109,
+    "time_column": null
+  },
+  "quality": {
+    "total_rows": 7339,
+    "valid_rows": 7339,
+    "capture_fifo_rows": 7339,
+    "capture_overflow_rows": 6908,
+    "missing_attempts": 257,
+    "clock_wraps": 0,
+    "unique_filter_calls": 7261,
+    "missing_filter_calls": 256,
+    "invalid_rows": 0,
+    "duplicate_frames": 0,
+    "restart_or_order_boundaries": 0,
+    "duplicate_filter_calls": 0,
+    "filter_restart_or_order_boundaries": 0,
+    "schema": 8,
+    "profile": "kalman_gimbal_control_turn_count",
+    "errors": [],
+    "capture_mode": "event_fifo",
+    "sequence_kind": "capture_records",
+    "capture_overflow_observed": true,
+    "valid_bit_counts": {
+      "0": 7295,
+      "1": 7339,
+      "2": 7295,
+      "3": 7262,
+      "4": 7261,
+      "5": 0,
+      "6": 7339,
+      "7": 6908,
+      "8": 7305,
+      "9": 7339,
+      "10": 7339,
+      "11": 6515,
+      "12": 0,
+      "13": 0,
+      "14": 0,
+      "15": 0,
+      "16": 0,
+      "17": 0,
+      "18": 0,
+      "19": 0
+    },
+    "ages": {
+      "wheel_age_ms_lf": {
+        "known": 7295,
+        "unknown": 44,
+        "max_ms": 2
+      },
+      "wheel_age_ms_rf": {
+        "known": 7295,
+        "unknown": 44,
+        "max_ms": 3
+      },
+      "wheel_age_ms_lb": {
+        "known": 7295,
+        "unknown": 44,
+        "max_ms": 3
+      },
+      "wheel_age_ms_rb": {
+        "known": 7296,
+        "unknown": 43,
+        "max_ms": 3
+      },
+      "velocity_age_ms": {
+        "known": 7295,
+        "unknown": 44,
+        "max_ms": 29
+      },
+      "imu_age_ms": {
+        "known": 7262,
+        "unknown": 77,
+        "max_ms": 9
+      },
+      "imu_receive_age_ms": {
+        "known": 7262,
+        "unknown": 77,
+        "max_ms": 7
+      },
+      "imu_source_age_ms": {
+        "known": 7262,
+        "unknown": 77,
+        "max_ms": 1
+      },
+      "yaw_age_ms": {
+        "known": 7305,
+        "unknown": 34,
+        "max_ms": 2
+      },
+      "gimbal_imu_age_ms": {
+        "known": 7339,
+        "unknown": 0,
+        "max_ms": 1
+      },
+      "yaw_control_age_ms": {
+        "known": 7339,
+        "unknown": 0,
+        "max_ms": 4
+      }
+    },
+    "contiguous_frame_ranges": [
+      {
+        "first_line": 2,
+        "last_line": 448
+      },
+      {
+        "first_line": 449,
+        "last_line": 477
+      },
+      {
+        "first_line": 478,
+        "last_line": 503
+      },
+      {
+        "first_line": 504,
+        "last_line": 520
+      },
+      {
+        "first_line": 521,
+        "last_line": 538
+      },
+      {
+        "first_line": 539,
+        "last_line": 562
+      },
+      {
+        "first_line": 563,
+        "last_line": 590
+      },
+      {
+        "first_line": 591,
+        "last_line": 609
+      },
+      {
+        "first_line": 610,
+        "last_line": 626
+      },
+      {
+        "first_line": 627,
+        "last_line": 653
+      },
+      {
+        "first_line": 654,
+        "last_line": 673
+      },
+      {
+        "first_line": 674,
+        "last_line": 694
+      },
+      {
+        "first_line": 695,
+        "last_line": 721
+      },
+      {
+        "first_line": 722,
+        "last_line": 741
+      },
+      {
+        "first_line": 742,
+        "last_line": 760
+      },
+      {
+        "first_line": 761,
+        "last_line": 783
+      },
+      {
+        "first_line": 784,
+        "last_line": 803
+      },
+      {
+        "first_line": 804,
+        "last_line": 825
+      },
+      {
+        "first_line": 826,
+        "last_line": 832
+      },
+      {
+        "first_line": 833,
+        "last_line": 878
+      },
+      {
+        "first_line": 879,
+        "last_line": 915
+      },
+      {
+        "first_line": 916,
+        "last_line": 939
+      },
+      {
+        "first_line": 940,
+        "last_line": 967
+      },
+      {
+        "first_line": 968,
+        "last_line": 996
+      },
+      {
+        "first_line": 997,
+        "last_line": 1019
+      },
+      {
+        "first_line": 1020,
+        "last_line": 1049
+      },
+      {
+        "first_line": 1050,
+        "last_line": 1074
+      },
+      {
+        "first_line": 1075,
+        "last_line": 1096
+      },
+      {
+        "first_line": 1097,
+        "last_line": 1119
+      },
+      {
+        "first_line": 1120,
+        "last_line": 1136
+      },
+      {
+        "first_line": 1137,
+        "last_line": 1158
+      },
+      {
+        "first_line": 1159,
+        "last_line": 1198
+      },
+      {
+        "first_line": 1199,
+        "last_line": 1222
+      },
+      {
+        "first_line": 1223,
+        "last_line": 1248
+      },
+      {
+        "first_line": 1249,
+        "last_line": 1277
+      },
+      {
+        "first_line": 1278,
+        "last_line": 1315
+      },
+      {
+        "first_line": 1316,
+        "last_line": 1353
+      },
+      {
+        "first_line": 1354,
+        "last_line": 1393
+      },
+      {
+        "first_line": 1394,
+        "last_line": 1413
+      },
+      {
+        "first_line": 1414,
+        "last_line": 1441
+      },
+      {
+        "first_line": 1442,
+        "last_line": 1475
+      },
+      {
+        "first_line": 1476,
+        "last_line": 1500
+      },
+      {
+        "first_line": 1501,
+        "last_line": 1530
+      },
+      {
+        "first_line": 1531,
+        "last_line": 1562
+      },
+      {
+        "first_line": 1563,
+        "last_line": 1594
+      },
+      {
+        "first_line": 1595,
+        "last_line": 1625
+      },
+      {
+        "first_line": 1626,
+        "last_line": 1655
+      },
+      {
+        "first_line": 1656,
+        "last_line": 1694
+      },
+      {
+        "first_line": 1695,
+        "last_line": 1722
+      },
+      {
+        "first_line": 1723,
+        "last_line": 1750
+      },
+      {
+        "first_line": 1751,
+        "last_line": 1784
+      },
+      {
+        "first_line": 1785,
+        "last_line": 1816
+      },
+      {
+        "first_line": 1817,
+        "last_line": 1841
+      },
+      {
+        "first_line": 1842,
+        "last_line": 1866
+      },
+      {
+        "first_line": 1867,
+        "last_line": 1889
+      },
+      {
+        "first_line": 1890,
+        "last_line": 1915
+      },
+      {
+        "first_line": 1916,
+        "last_line": 1940
+      },
+      {
+        "first_line": 1941,
+        "last_line": 1964
+      },
+      {
+        "first_line": 1965,
+        "last_line": 1989
+      },
+      {
+        "first_line": 1990,
+        "last_line": 2014
+      },
+      {
+        "first_line": 2015,
+        "last_line": 2037
+      },
+      {
+        "first_line": 2038,
+        "last_line": 2073
+      },
+      {
+        "first_line": 2074,
+        "last_line": 2098
+      },
+      {
+        "first_line": 2099,
+        "last_line": 2135
+      },
+      {
+        "first_line": 2136,
+        "last_line": 2156
+      },
+      {
+        "first_line": 2157,
+        "last_line": 2177
+      },
+      {
+        "first_line": 2178,
+        "last_line": 2204
+      },
+      {
+        "first_line": 2205,
+        "last_line": 2242
+      },
+      {
+        "first_line": 2243,
+        "last_line": 2279
+      },
+      {
+        "first_line": 2280,
+        "last_line": 2299
+      },
+      {
+        "first_line": 2300,
+        "last_line": 2330
+      },
+      {
+        "first_line": 2331,
+        "last_line": 2358
+      },
+      {
+        "first_line": 2359,
+        "last_line": 2404
+      },
+      {
+        "first_line": 2405,
+        "last_line": 2437
+      },
+      {
+        "first_line": 2438,
+        "last_line": 2453
+      },
+      {
+        "first_line": 2454,
+        "last_line": 2486
+      },
+      {
+        "first_line": 2487,
+        "last_line": 2514
+      },
+      {
+        "first_line": 2515,
+        "last_line": 2539
+      },
+      {
+        "first_line": 2540,
+        "last_line": 2571
+      },
+      {
+        "first_line": 2572,
+        "last_line": 2599
+      },
+      {
+        "first_line": 2600,
+        "last_line": 2631
+      },
+      {
+        "first_line": 2632,
+        "last_line": 2654
+      },
+      {
+        "first_line": 2655,
+        "last_line": 2676
+      },
+      {
+        "first_line": 2677,
+        "last_line": 2704
+      },
+      {
+        "first_line": 2705,
+        "last_line": 2722
+      },
+      {
+        "first_line": 2723,
+        "last_line": 2750
+      },
+      {
+        "first_line": 2751,
+        "last_line": 2772
+      },
+      {
+        "first_line": 2773,
+        "last_line": 2794
+      },
+      {
+        "first_line": 2795,
+        "last_line": 2822
+      },
+      {
+        "first_line": 2823,
+        "last_line": 2848
+      },
+      {
+        "first_line": 2849,
+        "last_line": 2866
+      },
+      {
+        "first_line": 2867,
+        "last_line": 2901
+      },
+      {
+        "first_line": 2902,
+        "last_line": 2927
+      },
+      {
+        "first_line": 2928,
+        "last_line": 2942
+      },
+      {
+        "first_line": 2943,
+        "last_line": 2968
+      },
+      {
+        "first_line": 2969,
+        "last_line": 2989
+      },
+      {
+        "first_line": 2990,
+        "last_line": 3007
+      },
+      {
+        "first_line": 3008,
+        "last_line": 3029
+      },
+      {
+        "first_line": 3030,
+        "last_line": 3057
+      },
+      {
+        "first_line": 3058,
+        "last_line": 3079
+      },
+      {
+        "first_line": 3080,
+        "last_line": 3105
+      },
+      {
+        "first_line": 3106,
+        "last_line": 3128
+      },
+      {
+        "first_line": 3129,
+        "last_line": 3148
+      },
+      {
+        "first_line": 3149,
+        "last_line": 3179
+      },
+      {
+        "first_line": 3180,
+        "last_line": 3205
+      },
+      {
+        "first_line": 3206,
+        "last_line": 3221
+      },
+      {
+        "first_line": 3222,
+        "last_line": 3247
+      },
+      {
+        "first_line": 3248,
+        "last_line": 3263
+      },
+      {
+        "first_line": 3264,
+        "last_line": 3290
+      },
+      {
+        "first_line": 3291,
+        "last_line": 3318
+      },
+      {
+        "first_line": 3319,
+        "last_line": 3341
+      },
+      {
+        "first_line": 3342,
+        "last_line": 3376
+      },
+      {
+        "first_line": 3377,
+        "last_line": 3408
+      },
+      {
+        "first_line": 3409,
+        "last_line": 3423
+      },
+      {
+        "first_line": 3424,
+        "last_line": 3447
+      },
+      {
+        "first_line": 3448,
+        "last_line": 3467
+      },
+      {
+        "first_line": 3468,
+        "last_line": 3490
+      },
+      {
+        "first_line": 3491,
+        "last_line": 3509
+      },
+      {
+        "first_line": 3510,
+        "last_line": 3535
+      },
+      {
+        "first_line": 3536,
+        "last_line": 3561
+      },
+      {
+        "first_line": 3562,
+        "last_line": 3586
+      },
+      {
+        "first_line": 3587,
+        "last_line": 3610
+      },
+      {
+        "first_line": 3611,
+        "last_line": 3639
+      },
+      {
+        "first_line": 3640,
+        "last_line": 3660
+      },
+      {
+        "first_line": 3661,
+        "last_line": 3676
+      },
+      {
+        "first_line": 3677,
+        "last_line": 3710
+      },
+      {
+        "first_line": 3711,
+        "last_line": 3743
+      },
+      {
+        "first_line": 3744,
+        "last_line": 3768
+      },
+      {
+        "first_line": 3769,
+        "last_line": 3792
+      },
+      {
+        "first_line": 3793,
+        "last_line": 3818
+      },
+      {
+        "first_line": 3819,
+        "last_line": 3853
+      },
+      {
+        "first_line": 3854,
+        "last_line": 3878
+      },
+      {
+        "first_line": 3879,
+        "last_line": 3900
+      },
+      {
+        "first_line": 3901,
+        "last_line": 3920
+      },
+      {
+        "first_line": 3921,
+        "last_line": 3941
+      },
+      {
+        "first_line": 3942,
+        "last_line": 3969
+      },
+      {
+        "first_line": 3970,
+        "last_line": 3990
+      },
+      {
+        "first_line": 3991,
+        "last_line": 4019
+      },
+      {
+        "first_line": 4020,
+        "last_line": 4051
+      },
+      {
+        "first_line": 4052,
+        "last_line": 4077
+      },
+      {
+        "first_line": 4078,
+        "last_line": 4108
+      },
+      {
+        "first_line": 4109,
+        "last_line": 4133
+      },
+      {
+        "first_line": 4134,
+        "last_line": 4158
+      },
+      {
+        "first_line": 4159,
+        "last_line": 4185
+      },
+      {
+        "first_line": 4186,
+        "last_line": 4213
+      },
+      {
+        "first_line": 4214,
+        "last_line": 4237
+      },
+      {
+        "first_line": 4238,
+        "last_line": 4258
+      },
+      {
+        "first_line": 4259,
+        "last_line": 4274
+      },
+      {
+        "first_line": 4275,
+        "last_line": 4301
+      },
+      {
+        "first_line": 4302,
+        "last_line": 4320
+      },
+      {
+        "first_line": 4321,
+        "last_line": 4343
+      },
+      {
+        "first_line": 4344,
+        "last_line": 4368
+      },
+      {
+        "first_line": 4369,
+        "last_line": 4393
+      },
+      {
+        "first_line": 4394,
+        "last_line": 4417
+      },
+      {
+        "first_line": 4418,
+        "last_line": 4437
+      },
+      {
+        "first_line": 4438,
+        "last_line": 4460
+      },
+      {
+        "first_line": 4461,
+        "last_line": 4479
+      },
+      {
+        "first_line": 4480,
+        "last_line": 4507
+      },
+      {
+        "first_line": 4508,
+        "last_line": 4532
+      },
+      {
+        "first_line": 4533,
+        "last_line": 4563
+      },
+      {
+        "first_line": 4564,
+        "last_line": 4594
+      },
+      {
+        "first_line": 4595,
+        "last_line": 4630
+      },
+      {
+        "first_line": 4631,
+        "last_line": 4651
+      },
+      {
+        "first_line": 4652,
+        "last_line": 4679
+      },
+      {
+        "first_line": 4680,
+        "last_line": 4707
+      },
+      {
+        "first_line": 4708,
+        "last_line": 4729
+      },
+      {
+        "first_line": 4730,
+        "last_line": 4756
+      },
+      {
+        "first_line": 4757,
+        "last_line": 4779
+      },
+      {
+        "first_line": 4780,
+        "last_line": 4800
+      },
+      {
+        "first_line": 4801,
+        "last_line": 4819
+      },
+      {
+        "first_line": 4820,
+        "last_line": 4843
+      },
+      {
+        "first_line": 4844,
+        "last_line": 4864
+      },
+      {
+        "first_line": 4865,
+        "last_line": 4882
+      },
+      {
+        "first_line": 4883,
+        "last_line": 4920
+      },
+      {
+        "first_line": 4921,
+        "last_line": 4936
+      },
+      {
+        "first_line": 4937,
+        "last_line": 4961
+      },
+      {
+        "first_line": 4962,
+        "last_line": 4990
+      },
+      {
+        "first_line": 4991,
+        "last_line": 5018
+      },
+      {
+        "first_line": 5019,
+        "last_line": 5037
+      },
+      {
+        "first_line": 5038,
+        "last_line": 5065
+      },
+      {
+        "first_line": 5066,
+        "last_line": 5094
+      },
+      {
+        "first_line": 5095,
+        "last_line": 5127
+      },
+      {
+        "first_line": 5128,
+        "last_line": 5158
+      },
+      {
+        "first_line": 5159,
+        "last_line": 5197
+      },
+      {
+        "first_line": 5198,
+        "last_line": 5242
+      },
+      {
+        "first_line": 5243,
+        "last_line": 5264
+      },
+      {
+        "first_line": 5265,
+        "last_line": 5294
+      },
+      {
+        "first_line": 5295,
+        "last_line": 5319
+      },
+      {
+        "first_line": 5320,
+        "last_line": 5366
+      },
+      {
+        "first_line": 5367,
+        "last_line": 5399
+      },
+      {
+        "first_line": 5400,
+        "last_line": 5433
+      },
+      {
+        "first_line": 5434,
+        "last_line": 5465
+      },
+      {
+        "first_line": 5466,
+        "last_line": 5501
+      },
+      {
+        "first_line": 5502,
+        "last_line": 5533
+      },
+      {
+        "first_line": 5534,
+        "last_line": 5559
+      },
+      {
+        "first_line": 5560,
+        "last_line": 5582
+      },
+      {
+        "first_line": 5583,
+        "last_line": 5618
+      },
+      {
+        "first_line": 5619,
+        "last_line": 5657
+      },
+      {
+        "first_line": 5658,
+        "last_line": 5693
+      },
+      {
+        "first_line": 5694,
+        "last_line": 5728
+      },
+      {
+        "first_line": 5729,
+        "last_line": 5747
+      },
+      {
+        "first_line": 5748,
+        "last_line": 5776
+      },
+      {
+        "first_line": 5777,
+        "last_line": 5801
+      },
+      {
+        "first_line": 5802,
+        "last_line": 5829
+      },
+      {
+        "first_line": 5830,
+        "last_line": 5857
+      },
+      {
+        "first_line": 5858,
+        "last_line": 5882
+      },
+      {
+        "first_line": 5883,
+        "last_line": 5905
+      },
+      {
+        "first_line": 5906,
+        "last_line": 5924
+      },
+      {
+        "first_line": 5925,
+        "last_line": 5957
+      },
+      {
+        "first_line": 5958,
+        "last_line": 5980
+      },
+      {
+        "first_line": 5981,
+        "last_line": 6007
+      },
+      {
+        "first_line": 6008,
+        "last_line": 6033
+      },
+      {
+        "first_line": 6034,
+        "last_line": 6056
+      },
+      {
+        "first_line": 6057,
+        "last_line": 6098
+      },
+      {
+        "first_line": 6099,
+        "last_line": 6139
+      },
+      {
+        "first_line": 6140,
+        "last_line": 6171
+      },
+      {
+        "first_line": 6172,
+        "last_line": 6207
+      },
+      {
+        "first_line": 6208,
+        "last_line": 6234
+      },
+      {
+        "first_line": 6235,
+        "last_line": 6275
+      },
+      {
+        "first_line": 6276,
+        "last_line": 6299
+      },
+      {
+        "first_line": 6300,
+        "last_line": 6336
+      },
+      {
+        "first_line": 6337,
+        "last_line": 6370
+      },
+      {
+        "first_line": 6371,
+        "last_line": 6402
+      },
+      {
+        "first_line": 6403,
+        "last_line": 6420
+      },
+      {
+        "first_line": 6421,
+        "last_line": 6451
+      },
+      {
+        "first_line": 6452,
+        "last_line": 6484
+      },
+      {
+        "first_line": 6485,
+        "last_line": 6517
+      },
+      {
+        "first_line": 6518,
+        "last_line": 6554
+      },
+      {
+        "first_line": 6555,
+        "last_line": 6591
+      },
+      {
+        "first_line": 6592,
+        "last_line": 6619
+      },
+      {
+        "first_line": 6620,
+        "last_line": 6649
+      },
+      {
+        "first_line": 6650,
+        "last_line": 6689
+      },
+      {
+        "first_line": 6690,
+        "last_line": 6716
+      },
+      {
+        "first_line": 6717,
+        "last_line": 6755
+      },
+      {
+        "first_line": 6756,
+        "last_line": 6788
+      },
+      {
+        "first_line": 6789,
+        "last_line": 6809
+      },
+      {
+        "first_line": 6810,
+        "last_line": 6835
+      },
+      {
+        "first_line": 6836,
+        "last_line": 6866
+      },
+      {
+        "first_line": 6867,
+        "last_line": 6891
+      },
+      {
+        "first_line": 6892,
+        "last_line": 6916
+      },
+      {
+        "first_line": 6917,
+        "last_line": 6936
+      },
+      {
+        "first_line": 6937,
+        "last_line": 6961
+      },
+      {
+        "first_line": 6962,
+        "last_line": 6998
+      },
+      {
+        "first_line": 6999,
+        "last_line": 7024
+      },
+      {
+        "first_line": 7025,
+        "last_line": 7051
+      },
+      {
+        "first_line": 7052,
+        "last_line": 7085
+      },
+      {
+        "first_line": 7086,
+        "last_line": 7103
+      },
+      {
+        "first_line": 7104,
+        "last_line": 7123
+      },
+      {
+        "first_line": 7124,
+        "last_line": 7145
+      },
+      {
+        "first_line": 7146,
+        "last_line": 7159
+      },
+      {
+        "first_line": 7160,
+        "last_line": 7193
+      },
+      {
+        "first_line": 7194,
+        "last_line": 7213
+      },
+      {
+        "first_line": 7214,
+        "last_line": 7245
+      },
+      {
+        "first_line": 7246,
+        "last_line": 7268
+      },
+      {
+        "first_line": 7269,
+        "last_line": 7288
+      },
+      {
+        "first_line": 7289,
+        "last_line": 7307
+      },
+      {
+        "first_line": 7308,
+        "last_line": 7331
+      },
+      {
+        "first_line": 7332,
+        "last_line": 7340
+      }
+    ],
+    "interval_ms": {
+      "min": 10,
+      "max": 105
+    },
+    "limitations": [
+      "restart_and_out_of_order_cannot_always_be_distinguished",
+      "hardware_validation_not_performed",
+      "capture_fifo_overflow_observed_exact_drop_count_not_recorded"
+    ]
+  },
+  "analysis": {
+    "kind": "kalman",
+    "hardware_validated": false,
+    "parameter_change_validated": false,
+    "replay": {
+      "attempts": 7261,
+      "scored_attempts": 2225,
+      "exact_initial_state_segments": 1,
+      "output_mismatches": 0,
+      "rejected_or_fallback": 0,
+      "invalid_outputs": 0,
+      "warmup_attempts": 5036,
+      "maximum_output_difference_mps": 5.287234019488228e-07,
+      "filter_deinitializations": 0,
+      "filter_initializations": 257
+    },
+    "segments": [
+      {
+        "first_line": 80,
+        "last_line": 448,
+        "attempts": 369,
+        "exact_initial_state": true,
+        "warmup_attempts": 0,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 449,
+        "last_line": 477,
+        "attempts": 29,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 478,
+        "last_line": 503,
+        "attempts": 26,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 504,
+        "last_line": 520,
+        "attempts": 17,
+        "exact_initial_state": false,
+        "warmup_attempts": 17,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 521,
+        "last_line": 538,
+        "attempts": 18,
+        "exact_initial_state": false,
+        "warmup_attempts": 18,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 539,
+        "last_line": 562,
+        "attempts": 24,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 563,
+        "last_line": 590,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 591,
+        "last_line": 609,
+        "attempts": 19,
+        "exact_initial_state": false,
+        "warmup_attempts": 19,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 610,
+        "last_line": 626,
+        "attempts": 17,
+        "exact_initial_state": false,
+        "warmup_attempts": 17,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 627,
+        "last_line": 653,
+        "attempts": 27,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 654,
+        "last_line": 673,
+        "attempts": 20,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 674,
+        "last_line": 694,
+        "attempts": 21,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 695,
+        "last_line": 721,
+        "attempts": 27,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 722,
+        "last_line": 741,
+        "attempts": 20,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 742,
+        "last_line": 760,
+        "attempts": 19,
+        "exact_initial_state": false,
+        "warmup_attempts": 19,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 761,
+        "last_line": 783,
+        "attempts": 23,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 784,
+        "last_line": 803,
+        "attempts": 20,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 804,
+        "last_line": 832,
+        "attempts": 29,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 833,
+        "last_line": 878,
+        "attempts": 46,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.331704,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 879,
+        "last_line": 915,
+        "attempts": 37,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.938791,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 916,
+        "last_line": 939,
+        "attempts": 24,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.98287,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 940,
+        "last_line": 967,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.954872,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 968,
+        "last_line": 996,
+        "attempts": 29,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.933447,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 997,
+        "last_line": 1019,
+        "attempts": 23,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.886713,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1020,
+        "last_line": 1049,
+        "attempts": 30,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.863945,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1050,
+        "last_line": 1074,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.91538,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1075,
+        "last_line": 1096,
+        "attempts": 22,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.887654,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1097,
+        "last_line": 1119,
+        "attempts": 23,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.926056,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1120,
+        "last_line": 1136,
+        "attempts": 17,
+        "exact_initial_state": false,
+        "warmup_attempts": 17,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.899505,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1137,
+        "last_line": 1158,
+        "attempts": 22,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.890547,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1159,
+        "last_line": 1198,
+        "attempts": 40,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.908832,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1199,
+        "last_line": 1222,
+        "attempts": 24,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.941511,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1223,
+        "last_line": 1248,
+        "attempts": 26,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.948234,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1249,
+        "last_line": 1277,
+        "attempts": 29,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.903178,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1278,
+        "last_line": 1315,
+        "attempts": 38,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.940056,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1316,
+        "last_line": 1353,
+        "attempts": 38,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.972284,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1354,
+        "last_line": 1393,
+        "attempts": 40,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.919974,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1394,
+        "last_line": 1413,
+        "attempts": 20,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.962766,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1414,
+        "last_line": 1441,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.931315,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1442,
+        "last_line": 1475,
+        "attempts": 34,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.943043,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1476,
+        "last_line": 1500,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.929331,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1501,
+        "last_line": 1530,
+        "attempts": 30,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.945862,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1531,
+        "last_line": 1562,
+        "attempts": 32,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.978463,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1563,
+        "last_line": 1594,
+        "attempts": 32,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.92232,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1595,
+        "last_line": 1625,
+        "attempts": 31,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.932363,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1626,
+        "last_line": 1655,
+        "attempts": 30,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.937945,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1656,
+        "last_line": 1694,
+        "attempts": 39,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.972856,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1695,
+        "last_line": 1722,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.955637,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1723,
+        "last_line": 1750,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.961131,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1751,
+        "last_line": 1784,
+        "attempts": 34,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.978926,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1785,
+        "last_line": 1816,
+        "attempts": 32,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.931687,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1817,
+        "last_line": 1841,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.927289,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1842,
+        "last_line": 1866,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.980867,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1867,
+        "last_line": 1889,
+        "attempts": 23,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 2.003613,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1890,
+        "last_line": 1915,
+        "attempts": 26,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.911062,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1916,
+        "last_line": 1940,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.884166,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1941,
+        "last_line": 1964,
+        "attempts": 24,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.938473,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1965,
+        "last_line": 1989,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.852232,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 1990,
+        "last_line": 2014,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.923749,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2015,
+        "last_line": 2037,
+        "attempts": 23,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.863585,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2038,
+        "last_line": 2073,
+        "attempts": 36,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.903627,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2074,
+        "last_line": 2098,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.931939,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2099,
+        "last_line": 2135,
+        "attempts": 37,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.851153,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2136,
+        "last_line": 2156,
+        "attempts": 21,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.931549,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2157,
+        "last_line": 2177,
+        "attempts": 21,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.85448,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2178,
+        "last_line": 2204,
+        "attempts": 27,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.935346,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2205,
+        "last_line": 2242,
+        "attempts": 38,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.944546,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2243,
+        "last_line": 2279,
+        "attempts": 37,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.934777,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2280,
+        "last_line": 2299,
+        "attempts": 20,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.955709,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2300,
+        "last_line": 2330,
+        "attempts": 31,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.946132,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2331,
+        "last_line": 2358,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.954234,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2359,
+        "last_line": 2404,
+        "attempts": 46,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.996229,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2405,
+        "last_line": 2437,
+        "attempts": 33,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.972894,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2438,
+        "last_line": 2453,
+        "attempts": 16,
+        "exact_initial_state": false,
+        "warmup_attempts": 16,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.936779,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2454,
+        "last_line": 2486,
+        "attempts": 33,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.941218,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2487,
+        "last_line": 2514,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.924161,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2515,
+        "last_line": 2539,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.925239,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2540,
+        "last_line": 2571,
+        "attempts": 32,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.946952,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2572,
+        "last_line": 2599,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.953095,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2600,
+        "last_line": 2631,
+        "attempts": 32,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.968964,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2632,
+        "last_line": 2654,
+        "attempts": 23,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.89153,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2655,
+        "last_line": 2676,
+        "attempts": 22,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.931292,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2677,
+        "last_line": 2704,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.879485,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2705,
+        "last_line": 2722,
+        "attempts": 18,
+        "exact_initial_state": false,
+        "warmup_attempts": 18,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.938574,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2723,
+        "last_line": 2750,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.850478,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2751,
+        "last_line": 2772,
+        "attempts": 22,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.897676,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2773,
+        "last_line": 2794,
+        "attempts": 22,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.935253,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2795,
+        "last_line": 2822,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.892447,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2823,
+        "last_line": 2848,
+        "attempts": 26,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.903855,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2849,
+        "last_line": 2866,
+        "attempts": 18,
+        "exact_initial_state": false,
+        "warmup_attempts": 18,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.877317,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2867,
+        "last_line": 2901,
+        "attempts": 35,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.946844,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2902,
+        "last_line": 2927,
+        "attempts": 26,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.91738,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2928,
+        "last_line": 2942,
+        "attempts": 15,
+        "exact_initial_state": false,
+        "warmup_attempts": 15,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.944111,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2943,
+        "last_line": 2968,
+        "attempts": 26,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.973177,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2969,
+        "last_line": 2989,
+        "attempts": 21,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.996957,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 2990,
+        "last_line": 3007,
+        "attempts": 18,
+        "exact_initial_state": false,
+        "warmup_attempts": 18,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.928808,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3008,
+        "last_line": 3029,
+        "attempts": 22,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.987336,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3030,
+        "last_line": 3057,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.95191,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3058,
+        "last_line": 3079,
+        "attempts": 22,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.975977,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3080,
+        "last_line": 3105,
+        "attempts": 26,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.967558,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3106,
+        "last_line": 3128,
+        "attempts": 23,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.933451,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3129,
+        "last_line": 3148,
+        "attempts": 20,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.98569,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3149,
+        "last_line": 3179,
+        "attempts": 31,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.937704,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3180,
+        "last_line": 3205,
+        "attempts": 26,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.938152,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3206,
+        "last_line": 3221,
+        "attempts": 16,
+        "exact_initial_state": false,
+        "warmup_attempts": 16,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.966713,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3222,
+        "last_line": 3247,
+        "attempts": 26,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.950149,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3248,
+        "last_line": 3263,
+        "attempts": 16,
+        "exact_initial_state": false,
+        "warmup_attempts": 16,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.985541,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3264,
+        "last_line": 3290,
+        "attempts": 27,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.968039,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3291,
+        "last_line": 3318,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 2.01396,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3319,
+        "last_line": 3341,
+        "attempts": 23,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.891185,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3342,
+        "last_line": 3376,
+        "attempts": 35,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.966294,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3377,
+        "last_line": 3408,
+        "attempts": 32,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.940488,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3409,
+        "last_line": 3423,
+        "attempts": 15,
+        "exact_initial_state": false,
+        "warmup_attempts": 15,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.927256,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3424,
+        "last_line": 3447,
+        "attempts": 24,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.949725,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3448,
+        "last_line": 3467,
+        "attempts": 20,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.926609,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3468,
+        "last_line": 3490,
+        "attempts": 23,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.926867,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3491,
+        "last_line": 3509,
+        "attempts": 19,
+        "exact_initial_state": false,
+        "warmup_attempts": 19,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.928689,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3510,
+        "last_line": 3535,
+        "attempts": 26,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.917029,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3536,
+        "last_line": 3561,
+        "attempts": 26,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.929639,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3562,
+        "last_line": 3586,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.985477,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3587,
+        "last_line": 3610,
+        "attempts": 24,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.935825,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3611,
+        "last_line": 3639,
+        "attempts": 29,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.943857,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3640,
+        "last_line": 3660,
+        "attempts": 21,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.866898,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3661,
+        "last_line": 3676,
+        "attempts": 16,
+        "exact_initial_state": false,
+        "warmup_attempts": 16,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.923597,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3677,
+        "last_line": 3710,
+        "attempts": 34,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.939507,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3711,
+        "last_line": 3743,
+        "attempts": 33,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.903205,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3744,
+        "last_line": 3768,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.95375,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3769,
+        "last_line": 3792,
+        "attempts": 24,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.923477,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3793,
+        "last_line": 3818,
+        "attempts": 26,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.916238,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3819,
+        "last_line": 3853,
+        "attempts": 35,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.958762,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3854,
+        "last_line": 3878,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.965321,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3879,
+        "last_line": 3900,
+        "attempts": 22,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.982863,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3901,
+        "last_line": 3920,
+        "attempts": 20,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.962201,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3921,
+        "last_line": 3941,
+        "attempts": 21,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.972296,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3942,
+        "last_line": 3969,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.959993,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3970,
+        "last_line": 3990,
+        "attempts": 21,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.919285,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 3991,
+        "last_line": 4019,
+        "attempts": 29,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.958936,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4020,
+        "last_line": 4051,
+        "attempts": 32,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.944762,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4052,
+        "last_line": 4077,
+        "attempts": 26,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.955535,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4078,
+        "last_line": 4108,
+        "attempts": 31,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.974736,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4109,
+        "last_line": 4133,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.937309,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4134,
+        "last_line": 4158,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.928502,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4159,
+        "last_line": 4185,
+        "attempts": 27,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.9529,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4186,
+        "last_line": 4213,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.949774,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4214,
+        "last_line": 4237,
+        "attempts": 24,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.958062,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4238,
+        "last_line": 4258,
+        "attempts": 21,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.91981,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4259,
+        "last_line": 4274,
+        "attempts": 16,
+        "exact_initial_state": false,
+        "warmup_attempts": 16,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.899455,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4275,
+        "last_line": 4301,
+        "attempts": 27,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.917709,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4302,
+        "last_line": 4320,
+        "attempts": 19,
+        "exact_initial_state": false,
+        "warmup_attempts": 19,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.900908,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4321,
+        "last_line": 4343,
+        "attempts": 23,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.932893,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4344,
+        "last_line": 4368,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.8642,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4369,
+        "last_line": 4393,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.945645,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4394,
+        "last_line": 4417,
+        "attempts": 24,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.944719,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4418,
+        "last_line": 4437,
+        "attempts": 20,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.928192,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4438,
+        "last_line": 4460,
+        "attempts": 23,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.972489,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4461,
+        "last_line": 4479,
+        "attempts": 19,
+        "exact_initial_state": false,
+        "warmup_attempts": 19,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.899288,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4480,
+        "last_line": 4507,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.92895,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4508,
+        "last_line": 4532,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.967728,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4533,
+        "last_line": 4563,
+        "attempts": 31,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.974057,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4564,
+        "last_line": 4594,
+        "attempts": 31,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.928435,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4595,
+        "last_line": 4630,
+        "attempts": 36,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.944742,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4631,
+        "last_line": 4651,
+        "attempts": 21,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 2.000748,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4652,
+        "last_line": 4679,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.95968,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4680,
+        "last_line": 4707,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.975442,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4708,
+        "last_line": 4729,
+        "attempts": 22,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.980558,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4730,
+        "last_line": 4756,
+        "attempts": 27,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.951605,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4757,
+        "last_line": 4779,
+        "attempts": 23,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.937025,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4780,
+        "last_line": 4800,
+        "attempts": 21,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 2.005461,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4801,
+        "last_line": 4819,
+        "attempts": 19,
+        "exact_initial_state": false,
+        "warmup_attempts": 19,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.949695,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4820,
+        "last_line": 4843,
+        "attempts": 24,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.976392,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4844,
+        "last_line": 4864,
+        "attempts": 21,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.959574,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4865,
+        "last_line": 4882,
+        "attempts": 18,
+        "exact_initial_state": false,
+        "warmup_attempts": 18,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.991918,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4883,
+        "last_line": 4920,
+        "attempts": 38,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.965437,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4921,
+        "last_line": 4936,
+        "attempts": 16,
+        "exact_initial_state": false,
+        "warmup_attempts": 16,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.965024,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4937,
+        "last_line": 4961,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.936373,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4962,
+        "last_line": 4990,
+        "attempts": 29,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.950239,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 4991,
+        "last_line": 5018,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.900143,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5019,
+        "last_line": 5037,
+        "attempts": 19,
+        "exact_initial_state": false,
+        "warmup_attempts": 19,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.934102,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5038,
+        "last_line": 5065,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.89862,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5066,
+        "last_line": 5094,
+        "attempts": 29,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.967512,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5095,
+        "last_line": 5127,
+        "attempts": 33,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.955692,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5128,
+        "last_line": 5158,
+        "attempts": 31,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.838713,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5159,
+        "last_line": 5197,
+        "attempts": 39,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.940045,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5198,
+        "last_line": 5242,
+        "attempts": 45,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.96273,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5243,
+        "last_line": 5264,
+        "attempts": 22,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.962365,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5265,
+        "last_line": 5294,
+        "attempts": 30,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.921903,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5295,
+        "last_line": 5319,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.951057,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5320,
+        "last_line": 5366,
+        "attempts": 47,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.918266,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5367,
+        "last_line": 5399,
+        "attempts": 33,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.943913,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5400,
+        "last_line": 5433,
+        "attempts": 34,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.948657,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5434,
+        "last_line": 5465,
+        "attempts": 32,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.973744,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5466,
+        "last_line": 5501,
+        "attempts": 36,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.940543,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5502,
+        "last_line": 5533,
+        "attempts": 32,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.925106,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5534,
+        "last_line": 5559,
+        "attempts": 26,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.943503,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5560,
+        "last_line": 5582,
+        "attempts": 23,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.961725,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5583,
+        "last_line": 5618,
+        "attempts": 36,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.978912,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5619,
+        "last_line": 5657,
+        "attempts": 39,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.958823,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5658,
+        "last_line": 5693,
+        "attempts": 36,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.961429,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5694,
+        "last_line": 5728,
+        "attempts": 35,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.870555,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5729,
+        "last_line": 5747,
+        "attempts": 19,
+        "exact_initial_state": false,
+        "warmup_attempts": 19,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.947757,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5748,
+        "last_line": 5776,
+        "attempts": 29,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.909438,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5777,
+        "last_line": 5801,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.910259,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5802,
+        "last_line": 5829,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.925222,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5830,
+        "last_line": 5857,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.878872,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5858,
+        "last_line": 5882,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.937363,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5883,
+        "last_line": 5905,
+        "attempts": 23,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.884619,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5906,
+        "last_line": 5924,
+        "attempts": 19,
+        "exact_initial_state": false,
+        "warmup_attempts": 19,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.937934,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5925,
+        "last_line": 5957,
+        "attempts": 33,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.887694,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5958,
+        "last_line": 5980,
+        "attempts": 23,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.942973,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 5981,
+        "last_line": 6007,
+        "attempts": 27,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.923907,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6008,
+        "last_line": 6033,
+        "attempts": 26,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.955469,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6034,
+        "last_line": 6056,
+        "attempts": 23,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.960264,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6057,
+        "last_line": 6098,
+        "attempts": 42,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.983357,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6099,
+        "last_line": 6139,
+        "attempts": 41,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.942014,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6140,
+        "last_line": 6171,
+        "attempts": 32,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.947865,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6172,
+        "last_line": 6207,
+        "attempts": 36,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.920667,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6208,
+        "last_line": 6234,
+        "attempts": 27,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.992785,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6235,
+        "last_line": 6275,
+        "attempts": 41,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.923491,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6276,
+        "last_line": 6299,
+        "attempts": 24,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.949448,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6300,
+        "last_line": 6336,
+        "attempts": 37,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.977963,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6337,
+        "last_line": 6370,
+        "attempts": 34,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.902956,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6371,
+        "last_line": 6402,
+        "attempts": 32,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.940593,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6403,
+        "last_line": 6420,
+        "attempts": 18,
+        "exact_initial_state": false,
+        "warmup_attempts": 18,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.903558,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6421,
+        "last_line": 6451,
+        "attempts": 31,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.964771,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6452,
+        "last_line": 6484,
+        "attempts": 33,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.91009,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6485,
+        "last_line": 6517,
+        "attempts": 33,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.941286,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6518,
+        "last_line": 6554,
+        "attempts": 37,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.916993,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6555,
+        "last_line": 6591,
+        "attempts": 37,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.954165,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6592,
+        "last_line": 6619,
+        "attempts": 28,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.883468,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6620,
+        "last_line": 6649,
+        "attempts": 30,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.943016,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6650,
+        "last_line": 6689,
+        "attempts": 40,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.892087,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6690,
+        "last_line": 6716,
+        "attempts": 27,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.940243,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6717,
+        "last_line": 6755,
+        "attempts": 39,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.995159,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6756,
+        "last_line": 6788,
+        "attempts": 33,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.91607,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6789,
+        "last_line": 6809,
+        "attempts": 21,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.917125,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6810,
+        "last_line": 6835,
+        "attempts": 26,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.979682,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6836,
+        "last_line": 6866,
+        "attempts": 31,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 2.007184,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6867,
+        "last_line": 6891,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 2.021433,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6892,
+        "last_line": 6916,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.925131,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6917,
+        "last_line": 6936,
+        "attempts": 20,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.916678,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6937,
+        "last_line": 6961,
+        "attempts": 25,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.91436,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6962,
+        "last_line": 6998,
+        "attempts": 37,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.895218,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 6999,
+        "last_line": 7024,
+        "attempts": 26,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.963372,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 7025,
+        "last_line": 7051,
+        "attempts": 27,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.908647,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 7052,
+        "last_line": 7085,
+        "attempts": 34,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.909219,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 7086,
+        "last_line": 7103,
+        "attempts": 18,
+        "exact_initial_state": false,
+        "warmup_attempts": 18,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 1.929535,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 7104,
+        "last_line": 7123,
+        "attempts": 20,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 7124,
+        "last_line": 7145,
+        "attempts": 22,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 7146,
+        "last_line": 7159,
+        "attempts": 14,
+        "exact_initial_state": false,
+        "warmup_attempts": 14,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 7160,
+        "last_line": 7193,
+        "attempts": 34,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 7194,
+        "last_line": 7213,
+        "attempts": 20,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 7214,
+        "last_line": 7245,
+        "attempts": 32,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 7246,
+        "last_line": 7268,
+        "attempts": 23,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 7269,
+        "last_line": 7288,
+        "attempts": 20,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 7289,
+        "last_line": 7307,
+        "attempts": 19,
+        "exact_initial_state": false,
+        "warmup_attempts": 19,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 7308,
+        "last_line": 7331,
+        "attempts": 24,
+        "exact_initial_state": false,
+        "warmup_attempts": 20,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      },
+      {
+        "first_line": 7332,
+        "last_line": 7340,
+        "attempts": 9,
+        "exact_initial_state": false,
+        "warmup_attempts": 9,
+        "config": {
+          "fusion_wheel_variance": 0.01,
+          "fusion_accel_variance": 0.25,
+          "fusion_jerk_density": 1.0,
+          "fusion_max_residual_mps": 1.5,
+          "fusion_max_age_us": 60000,
+          "fusion_max_skew_us": 0,
+          "fusion_max_gap_us": 60000
+        }
+      }
+    ],
+    "candidate_comparison": null,
+    "response": {
+      "baseline": {
+        "samples": 2225,
+        "peak_speed_mps": 0.8667042069295643,
+        "max_output_rate_mps2": 2.981012320792802,
+        "posterior_discrepancy_rms_mps": 0.0332150975718368
+      },
+      "note": "Response diagnostics from the same recorded input times; not independent speed accuracy."
+    },
+    "stationary_noise": {
+      "available": false,
+      "stationary_annotation": false,
+      "samples": 2225
+    },
+    "candidate": null,
+    "limitations": [
+      "hardware_validation_not_performed",
+      "no_parameter_optimization_claim",
+      "unknown_initial_state_replay_is_warmed_up_not_exact",
+      "unknown_sensor_latency_not_identifiable",
+      "wheel_odometry_is_not_independent_velocity_truth"
+    ],
+    "source_sha256": {
+      "tests\\vofa_analysis\\fusion_bridge.c": "a3fb7e690565355d171d8fac4f6c2c51da39e32165b1d9323323c8bdb6e9054a",
+      "modules\\algorithm\\chassis_velocity_fusion.c": "dfecc8dc7c6485fa71acdecb27b01aa2edc460e12606d349dcdc98d410947dbb",
+      "modules\\algorithm\\chassis_velocity_fusion.h": "ff6e520ab5b9b75a14e5b869c41e739640c82d4aeefd64f3501a71cc69450867"
+    }
+  }
+}

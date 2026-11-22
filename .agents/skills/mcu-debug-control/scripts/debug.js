@@ -4,6 +4,7 @@ const { call, writeDiagnostic } = require("../../_emberprobe/agent-client");
 
 const SIMPLE_ACTIONS = new Map([
     ["--status", ["debug.status", null]],
+    ["--select", ["debug.select", null]],
     ["--start", ["debug.start", null]],
     ["--pause", ["debug.control", "pause"]],
     ["--continue", ["debug.control", "continue"]],
@@ -23,20 +24,28 @@ const BREAKPOINT_ACTIONS = new Map([
 const VALUE_OPTIONS = new Set([
     "--workspace",
     "--thread",
+    "--session",
+    "--group",
+    "--core",
     "--source",
     "--line",
     "--column",
     "--function",
     "--condition",
     "--hit-condition",
-    "--log-message"
+    "--log-message",
+    "--data",
+    "--access",
+    "--id"
 ]);
+const DATA_ACCESS = new Set(["write", "read", "readWrite"]);
 
 function args(argv) {
     const out = { actions: [] };
     for (let index = 0; index < argv.length; index += 1) {
         const key = argv[index];
-        if (SIMPLE_ACTIONS.has(key)) out.actions.push({ kind: "simple", key });
+        if (key === "--attach") out.attach = true;
+        else if (SIMPLE_ACTIONS.has(key)) out.actions.push({ kind: "simple", key });
         else if (BREAKPOINT_ACTIONS.has(key)) out.actions.push({ kind: "breakpoint", key });
         else if (VALUE_OPTIONS.has(key)) {
             if (!argv[index + 1]) throw new Error(`Missing value for ${key}`);
@@ -44,7 +53,9 @@ function args(argv) {
         } else throw new Error(`Unknown argument: ${key}`);
     }
     if (out.actions.length !== 1) throw new Error("Choose exactly one debug or breakpoint action");
+    if (out.attach && out.actions[0].key !== "--start") throw new Error("--attach can only be used with --start");
     validateThreadOption(out, out.actions[0]);
+    validateSelection(out, out.actions[0]);
     return out;
 }
 
@@ -56,17 +67,41 @@ function validateThreadOption(opt, selected) {
         throw new Error("--thread must be a positive integer");
 }
 
+function validateSelection(opt, selected) {
+    const hasSelection = opt.session !== undefined || opt.group !== undefined || opt.core !== undefined;
+    if (selected.key !== "--select") {
+        if (hasSelection) throw new Error("--session, --group and --core require --select");
+        return;
+    }
+    if (!opt.session && !opt.group) throw new Error("--select requires --session or --group");
+    if (opt.core !== undefined && (!Number.isInteger(Number(opt.core)) || Number(opt.core) < 0))
+        throw new Error("--core must be a zero-based integer");
+}
+
 function request(opt) {
     const selected = opt.actions[0];
     validateThreadOption(opt, selected);
+    validateSelection(opt, selected);
     if (selected.kind === "simple") {
         const [method, action] = SIMPLE_ACTIONS.get(selected.key);
         return {
             method,
-            params: action ? { action, threadId: opt.thread === undefined ? undefined : Number(opt.thread) } : {}
+            params:
+                method === "debug.select"
+                    ? {
+                          sessionId: opt.session,
+                          serverGroup: opt.group,
+                          targetProcessor: opt.core === undefined ? undefined : Number(opt.core)
+                      }
+                    : action
+                      ? { action, threadId: opt.thread === undefined ? undefined : Number(opt.thread) }
+                      : opt.attach
+                        ? { attach: true }
+                        : {}
         };
     }
     const action = BREAKPOINT_ACTIONS.get(selected.key);
+    if (opt.data !== undefined || opt.id !== undefined || opt.access !== undefined) return dataRequest(opt, action);
     const hasSource = !!opt.source;
     const hasFunction = !!opt.function;
     if (hasSource === hasFunction) throw new Error("Choose either --source with --line, or --function");
@@ -83,6 +118,33 @@ function request(opt) {
             condition: opt.condition,
             hitCondition: opt.hitCondition,
             logMessage: opt.logMessage
+        }
+    };
+}
+
+// Hardware data breakpoints (built-in debugger): --data <variable> selects the variable, --id a listed entry.
+function dataRequest(opt, action) {
+    if (opt.source || opt.function || opt.line !== undefined || opt.column !== undefined)
+        throw new Error("--data/--id cannot be combined with --source, --line, --column or --function");
+    if (opt.hitCondition !== undefined || opt.logMessage !== undefined)
+        throw new Error("Data breakpoints do not accept --hit-condition or --log-message");
+    if (opt.access !== undefined && !DATA_ACCESS.has(opt.access))
+        throw new Error("--access must be write, read or readWrite");
+    if (action === "add" && (!opt.data || opt.id !== undefined))
+        throw new Error("--add-breakpoint for a data breakpoint needs --data <variable> and no --id");
+    if (action !== "add" && !opt.data && opt.id === undefined)
+        throw new Error("Select the data breakpoint by --id or --data");
+    if (action !== "add" && opt.condition !== undefined)
+        throw new Error("--condition is only accepted when adding a data breakpoint");
+    return {
+        method: "debug.breakpoints.update",
+        params: {
+            action,
+            type: "data",
+            ...(opt.data ? { variable: opt.data } : {}),
+            ...(opt.id !== undefined ? { id: opt.id } : {}),
+            ...(opt.access ? { access: opt.access } : {}),
+            ...(opt.condition !== undefined ? { condition: opt.condition } : {})
         }
     };
 }

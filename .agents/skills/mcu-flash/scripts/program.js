@@ -1,9 +1,16 @@
 "use strict";
-// 将工作区 ELF 固件烧录到 MCU（OpenOCD program ... verify reset exit）。
-// 先输出预检 JSON（含检测到的 ELF/目标/探针/OpenOCD），--execute 才真正执行烧录。
+// Programs the workspace ELF into the MCU (OpenOCD program ... verify reset exit). Prints the preflight JSON (detected
+// ELF/target/probe/OpenOCD) first; only --execute programs.
 const fs = require("fs");
 const { call } = require("../../_emberprobe/agent-client");
-const { parseArgs, preflight, emit, isSafeCfgPath, authorizeFlash } = require("../../_emberprobe/flash-common");
+const {
+    parseArgs,
+    preflight,
+    emit,
+    isSafeCfgPath,
+    authorizeFlash,
+    probeSerialOverride
+} = require("../../_emberprobe/flash-common");
 
 function fail(message) {
     process.stderr.write(message + "\n");
@@ -12,13 +19,31 @@ function fail(message) {
 
 async function main() {
     const options = parseArgs(process.argv.slice(2));
+    if (options.permission || options["reset-permission"]) {
+        if (options.execute || options.remember || options["confirmation-id"])
+            fail("--permission and --reset-permission cannot be combined with programming arguments.");
+        emit(
+            await call(options.workspace, "flash.permission", {
+                action: options["reset-permission"] ? "reset" : "status"
+            })
+        );
+        return;
+    }
+    if (options.remember && !(options.execute && options["confirmation-id"]))
+        fail("--remember requires --execute --confirmation-id <id> after the user chose the workspace option.");
     const result = await preflight(options);
-    if (!result.ready) fail("Detection incomplete. Provide or select ELF, target, and probe.");
+    if (!result.ready) {
+        emit(result);
+        if (options.execute) fail("OpenOCD preflight failed: " + result.notes.join(" "));
+        return;
+    }
     if (!fs.existsSync(result.elf)) fail(`ELF not found: ${result.elf}`);
     if (!isSafeCfgPath(result.target) || !isSafeCfgPath(result.probe)) fail("Unsafe OpenOCD configuration path.");
     let authorization;
     try {
-        authorization = options.execute ? { authorized: !!options["confirmation-id"] } : await authorizeFlash(result);
+        // Without an ID, execution proceeds only under a remembered workspace permission for this plan.
+        authorization =
+            options.execute && options["confirmation-id"] ? { authorized: true } : await authorizeFlash(result);
     } catch (error) {
         if (!options.execute) {
             emit({
@@ -39,7 +64,7 @@ async function main() {
     if (!options.execute) return;
     if (!authorization || authorization.authorized !== true) {
         fail(
-            "Flash confirmation is required. Show the preflight details to the user, then rerun with --execute --confirmation-id <id> only after explicit approval."
+            "Flash confirmation is required. Show the preflight details to the user, then rerun with --execute --confirmation-id <id> (add --remember only if the user chose the workspace option) after explicit approval."
         );
     }
     if (!result.openocdCompatible) {
@@ -56,7 +81,11 @@ async function main() {
             target: result.target,
             probe: result.probe,
             openocd: result.openocd,
-            confirmationId: options["confirmation-id"]
+            transport: result.transport,
+            probeSerial: probeSerialOverride(result),
+            adapterSpeedKhz: result.adapterSpeedKhz,
+            confirmationId: options["confirmation-id"],
+            remember: !!options.remember
         },
         150000
     );

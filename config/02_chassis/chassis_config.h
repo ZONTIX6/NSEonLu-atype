@@ -97,7 +97,7 @@
 #define CHASSIS_SPIN_PHASE_COMPENSATION_ENABLE 1 /* 0=关闭，1=仅小陀螺平移启用。 */
 #endif
 #ifndef CHASSIS_SPIN_PHASE_PREDICTION_MS
-#define CHASSIS_SPIN_PHASE_PREDICTION_MS 25.0f /* 等效预测时间，ms；减小可减轻补偿。 */
+#define CHASSIS_SPIN_PHASE_PREDICTION_MS 30.5f /* 等效预测时间，ms；减小可减轻补偿。 */
 #endif
 #ifndef CHASSIS_SPIN_PHASE_MAX_DEG
 #define CHASSIS_SPIN_PHASE_MAX_DEG 25.0f /* 预测角绝对值上限，°。 */

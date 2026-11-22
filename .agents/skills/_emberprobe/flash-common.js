@@ -1,51 +1,47 @@
 "use strict";
-// mcu-flash 编程/校验入口的共享逻辑：EmberProbe 配置复用、ELF/目标/探针自动
-// 检测与 OpenOCD 进程调用。仅依赖 Node 内置模块，随 skills/_emberprobe 一起分发，
-// 不依赖扩展本体；bridge 不可用时各项检测自动降级为工作区推断。
+const { inspectElf } = require("./elf-file");
+// Shared logic for the mcu-flash program/verify entry points: reuse of EmberProbe configuration, ELF/target/probe
+// detection and OpenOCD process calls. It uses only Node built-ins and ships with skills/_emberprobe, independent of
+// the extension; without the Bridge every detection degrades to workspace inference.
 
 const fs = require("fs");
+const { canonicalFileSync } = require("./file-identity");
+const { createLineDecoder } = require("./tool-output");
+const { detectProbe, probeFromText } = require("./probe-detection");
+const {
+    isSafeCfgPath,
+    matchesOpenOcdExecutable,
+    resolveExecutablePath,
+    resolveOpenOcdLaunch,
+    normalizeTransport
+} = require("./openocd-launch");
 const path = require("path");
 const crypto = require("crypto");
-const { execFile, spawn } = require("child_process");
+const { spawn } = require("child_process");
 const { call, diagnosticForError } = require("./agent-client");
 const { MIN_OPENOCD_VERSION, parseVersion: parseOpenOcdVersion, checkCompatibility } = require("./openocd-policy");
-
-const TARGET_RULES = [
-    ["apm32f0", "geehy/apm32f0x.cfg"],
-    ["apm32f1", "geehy/apm32f1x.cfg"],
-    ["apm32f4", "geehy/apm32f4x.cfg"],
-    ["stm32f0", "stm32f0x.cfg"],
-    ["stm32f1", "stm32f1x.cfg"],
-    ["stm32f2", "stm32f2x.cfg"],
-    ["stm32f3", "stm32f3x.cfg"],
-    ["stm32f4", "stm32f4x.cfg"],
-    ["stm32f7", "stm32f7x.cfg"],
-    ["stm32g0", "stm32g0x.cfg"],
-    ["stm32g4", "stm32g4x.cfg"],
-    ["stm32h7", "stm32h7x.cfg"],
-    ["stm32l0", "stm32l0.cfg"],
-    ["stm32l1", "stm32l1.cfg"],
-    ["stm32l4", "stm32l4x.cfg"],
-    ["stm32l5", "stm32l5x.cfg"],
-    ["stm32u5", "stm32u5x.cfg"],
-    ["stm32wb", "stm32wbx.cfg"],
-    ["stm32wl", "stm32wlx.cfg"],
-    ["gd32vf103", "gd32vf103.cfg"],
-    ["gd32e23", "gd32e23x.cfg"],
-    ["nrf51", "nordic/nrf51.cfg"],
-    ["nrf52", "nordic/nrf52.cfg"],
-    ["rp2040", "rp2040.cfg"],
-    ["esp32s3", "esp32s3.cfg"],
-    ["esp32s2", "esp32s2.cfg"],
-    ["esp32", "esp32.cfg"]
-];
+const { normalizeProbeSerial, normalizeAdapterSpeed } = require("./probe-connection");
+const { prepareProbeConnection } = require("./probe-preflight");
+const { listProbes } = require("./probe-inventory");
+const targets = require("./target-detection");
 
 function parseArgs(argv) {
     const out = { execute: false };
-    const valued = ["--workspace", "--elf", "--target", "--probe", "--openocd", "--confirmation-id"];
+    const valued = [
+        "--workspace",
+        "--elf",
+        "--target",
+        "--probe",
+        "--openocd",
+        "--transport",
+        "--probe-serial",
+        "--adapter-speed-khz",
+        "--confirmation-id"
+    ];
     for (let i = 0; i < argv.length; i++) {
         const key = argv[i];
         if (key === "--execute") out.execute = true;
+        else if (["--remember", "--permission", "--reset-permission"].includes(key)) out[key.slice(2)] = true;
         else if (valued.includes(key)) {
             if (!argv[i + 1]) throw new Error(`Missing value for ${key}`);
             out[key.slice(2)] = argv[++i];
@@ -55,30 +51,40 @@ function parseArgs(argv) {
     return out;
 }
 
-// 读取 EmberProbe 配置。config.get 失败时不再吞掉异常：返回结构化 diagnostic，
-// 供预检记录降级原因并保留原始错误码与详情；调用方仍可继续用显式参数/自动检测降级。
-async function getEmberProbeConfig(workspace) {
+// Reads the EmberProbe configuration. A failed config.get is not swallowed: it returns a structured diagnostic so the
+// preflight records why it degraded, with the original error code and details; callers can still fall back to explicit
+// arguments or detection.
+async function getEmberProbeConfig(workspace, bridgeCall = call) {
     try {
-        return { config: await call(workspace, "config.get", {}), diagnostic: null };
+        return { config: await bridgeCall(workspace, "config.get", { resolveOpenOcd: true }), diagnostic: null };
     } catch (error) {
         return { config: null, diagnostic: diagnosticForError(error, { operation: "config.get" }) };
     }
 }
 
-async function authorizeFlash(result, confirmationId) {
+// The Bridge resolves automatic selections against the current workspace binding.
+function probeSerialOverride(result) {
+    return ["explicit", "config"].includes(result.sources?.probeSerial) ? result.probeSerial : undefined;
+}
+
+async function authorizeFlash(result, confirmationId, operation = "flash.execute") {
     return call(result.workspace, "flash.authorize", {
         elf: result.elf,
         elfSha256: result.elfSha256,
         target: result.target,
         probe: result.probe,
         openocd: result.openocd,
-        confirmationId
+        transport: result.transport,
+        probeSerial: probeSerialOverride(result),
+        adapterSpeedKhz: result.adapterSpeedKhz,
+        confirmationId,
+        operation
     });
 }
 
-// 深度优先遍历工作区文件；跳过 node_modules/.git，忽略不可读目录。
-// 扩展名比较统一小写，避免 Linux 等大小写敏感文件系统上漏掉 FIRMWARE.ELF。
-function walkFiles(root, accept) {
+// Depth-first walk of workspace files, skipping ignored and unreadable directories. Extensions are compared in lower
+// case so FIRMWARE.ELF is found on case-sensitive file systems.
+function walkFiles(root, accept, ignored = targets.ELF_IGNORED_DIRS) {
     const files = [];
     const visit = (dir) => {
         let entries;
@@ -90,7 +96,7 @@ function walkFiles(root, accept) {
         for (const entry of entries) {
             const full = path.join(dir, entry.name);
             if (entry.isDirectory()) {
-                if (entry.name !== "node_modules" && entry.name !== ".git") visit(full);
+                if (!ignored.includes(entry.name) && !entry.name.startsWith(".emberprobe-cubemx-")) visit(full);
             } else if (entry.isFile() && accept(entry.name)) files.push(full);
         }
     };
@@ -98,85 +104,46 @@ function walkFiles(root, accept) {
     return files;
 }
 
-function findNewestElf(root) {
-    let best = null;
-    for (const file of walkFiles(root, (name) => name.toLowerCase().endsWith(".elf"))) {
+function readElfHeader(file) {
+    const handle = fs.openSync(file, "r");
+    try {
+        const header = Buffer.alloc(20);
+        return header.subarray(0, fs.readSync(handle, header, 0, header.length, 0));
+    } finally {
+        fs.closeSync(handle);
+    }
+}
+
+// Uses the extension's auto-detection rules: only ELF images (including Keil .axf / IAR .out), rejecting images whose
+// architecture contradicts the target, preferring images inside the project directory, then by modification time.
+function findNewestElf(root, options = {}) {
+    const images = [];
+    for (const file of walkFiles(root, targets.isElfCandidateName)) {
         try {
             const stats = fs.statSync(file);
-            if (!best || stats.mtimeMs > best.mtimeMs) best = { file, mtimeMs: stats.mtimeMs };
+            const info = stats.isFile() && targets.elfHeaderInfo(readElfHeader(file));
+            if (info) images.push({ file, mtimeMs: stats.mtimeMs, arch: info.arch });
         } catch {}
     }
-    return best ? best.file : "";
+    return targets.chooseElf(images, options).elf;
+}
+
+function inferTargetDetails(root) {
+    const files = targets.orderProjectFiles(
+        walkFiles(root, (name) => targets.sourcePriority(name) >= 0, targets.PROJECT_IGNORED_DIRS)
+    );
+    const entries = [];
+    for (const file of files) {
+        try {
+            if (fs.statSync(file).size > targets.MAX_PROJECT_FILE_BYTES) continue;
+            entries.push({ file, text: fs.readFileSync(file, "utf8") });
+        } catch {}
+    }
+    return targets.resolveTarget(entries);
 }
 
 function inferTarget(root) {
-    const files = walkFiles(root, (name) => {
-        const ext = path.extname(name).toLowerCase();
-        return ext === ".ioc" || ext === ".cmake" || ext === ".ld" || name === "CMakeLists.txt";
-    }).slice(0, 80);
-    let text = "";
-    for (const file of files) {
-        text += path.basename(file) + "\n";
-        try {
-            text += fs.readFileSync(file, "utf8") + "\n";
-        } catch {}
-    }
-    const joined = text.toLowerCase();
-    for (const [keyword, cfg] of TARGET_RULES) {
-        if (joined.includes(keyword)) return cfg;
-    }
-    return "";
-}
-
-function execText(command, args) {
-    return new Promise((resolve) => {
-        execFile(command, args, { timeout: 6000, windowsHide: true, maxBuffer: 4 * 1024 * 1024 }, (error, stdout) => {
-            resolve({ ok: !error, text: error ? "" : String(stdout || "") });
-        });
-    });
-}
-
-// 兼容常见固件与设备描述里的拼写：CMSIS-DAP / CMSIS DAP / CMSISDAP / DAPLink / MCU-Link 等。
-function probeFromText(text) {
-    const devices = String(text || "").toLowerCase();
-    if (/st[- ]?link|stm32\s+stlink/.test(devices)) return "stlink.cfg";
-    if (/j[- ]?link|segger/.test(devices)) return "jlink.cfg";
-    if (/cmsis(?:[- _]?dap)|daplink|pico\s?probe|mcu[- ]?link/.test(devices)) return "cmsis-dap.cfg";
-    if (/xds[- ]?110/.test(devices)) return "xds110.cfg";
-    if (/nu[- ]?link/.test(devices)) return "nulink.cfg";
-    return "";
-}
-
-async function detectProbe() {
-    const notes = [];
-    let text = "";
-    if (process.platform === "win32") {
-        text = (
-            await execText("powershell.exe", [
-                "-NoProfile",
-                "-NonInteractive",
-                "-Command",
-                "Get-PnpDevice -PresentOnly | Select-Object -ExpandProperty FriendlyName"
-            ])
-        ).text;
-        if (!text.trim()) text = (await execText("pnputil.exe", ["/enum-devices", "/connected"])).text;
-        if (!text.trim())
-            notes.push(
-                "USB enumeration unavailable (Get-PnpDevice and pnputil failed). If a probe is attached, pass --probe explicitly."
-            );
-    } else {
-        const darwin = process.platform === "darwin";
-        const tool = darwin ? "system_profiler" : "lsusb";
-        const result = await execText(tool, darwin ? ["SPUSBDataType"] : []);
-        text = result.text;
-        if (!result.ok)
-            notes.push(
-                darwin
-                    ? `${tool} is unavailable. If a probe is attached, pass --probe explicitly.`
-                    : `${tool} is not installed. Install usbutils (e.g. sudo apt install usbutils) or pass --probe explicitly.`
-            );
-    }
-    return { probe: probeFromText(text), notes };
+    return inferTargetDetails(root).target;
 }
 
 function sha256(file) {
@@ -189,59 +156,26 @@ function sha256(file) {
     });
 }
 
-// OpenOCD 的 -f 参数只接受相对 scripts/ 的 cfg 名，拒绝绝对路径、盘符与目录穿越，
-// 防止把任意本地文件当作 OpenOCD 配置执行。
-function isSafeCfgPath(value) {
-    if (!value || !value.endsWith(".cfg") || value.includes("\\") || value.startsWith("/")) return false;
-    if (/[\0\n\r]|:/.test(value)) return false;
-    return value.split("/").every((part) => part && part !== "." && part !== "..");
-}
-
-function resolveExecutablePath(executable) {
-    const configured = String(executable || "").trim();
-    if (!configured) return "";
-    if (configured.includes("/") || configured.includes("\\")) {
-        const absolute = path.resolve(configured);
-        try {
-            return fs.realpathSync(absolute);
-        } catch {
-            return absolute;
-        }
-    }
-    const extensions =
-        process.platform === "win32"
-            ? String(process.env.PATHEXT || ".EXE;.CMD;.BAT;.COM")
-                  .split(";")
-                  .filter(Boolean)
-            : [""];
-    for (const entry of String(process.env.PATH || "")
-        .split(path.delimiter)
-        .filter(Boolean)) {
-        for (const extension of extensions) {
-            const candidate = path.join(
-                entry,
-                process.platform === "win32" && !path.extname(configured)
-                    ? configured + extension.toLowerCase()
-                    : configured
-            );
-            try {
-                fs.accessSync(candidate, fs.constants.X_OK);
-                return fs.realpathSync(candidate);
-            } catch {
-                /* try next PATH entry */
-            }
-        }
-    }
-    return configured;
-}
-
 function checkOpenOcdVersion(version) {
     const { compatible, reason, minimumVersion } = checkCompatibility(version);
     return { compatible, reason, minimumVersion };
 }
 
 function probeOpenOcdCompatibility(executable, timeoutMs = 5000, spawnProcess = spawn) {
-    const binary = resolveExecutablePath(executable);
+    let binary;
+    try {
+        binary = resolveExecutablePath(executable);
+    } catch (error) {
+        return Promise.resolve({
+            found: false,
+            path: executable,
+            version: "",
+            compatible: false,
+            minimumVersion: MIN_OPENOCD_VERSION,
+            error: error.message,
+            code: error.code
+        });
+    }
     return new Promise((resolve) => {
         let child;
         try {
@@ -310,61 +244,6 @@ function probeOpenOcdCompatibility(executable, timeoutMs = 5000, spawnProcess = 
     });
 }
 
-function resolveOpenOcdLaunch(executable, probe, target) {
-    if (!isSafeCfgPath(probe) || !isSafeCfgPath(target)) throw new Error("Unsafe OpenOCD configuration path.");
-    const binary = resolveExecutablePath(executable);
-    if (!binary || (!binary.includes("/") && !binary.includes("\\"))) {
-        throw Object.assign(new Error(`Unable to resolve OpenOCD executable: ${executable}`), {
-            code: "OPENOCD_NOT_FOUND"
-        });
-    }
-    const prefix = path.dirname(path.dirname(binary));
-    const roots = [
-        process.env.OPENOCD_SCRIPTS,
-        path.join(prefix, "scripts"),
-        path.join(prefix, "openocd", "scripts"),
-        path.join(prefix, "share", "openocd", "scripts")
-    ].filter(Boolean);
-    let scriptsRoot = "";
-    for (const root of roots) {
-        try {
-            const resolved = fs.realpathSync(root);
-            if (fs.statSync(path.join(resolved, "target")).isDirectory()) {
-                scriptsRoot = resolved;
-                break;
-            }
-        } catch {
-            /* try next layout */
-        }
-    }
-    if (!scriptsRoot)
-        throw Object.assign(new Error(`Unable to locate OpenOCD scripts for ${binary}`), {
-            code: "OPENOCD_SCRIPTS_NOT_FOUND"
-        });
-    const resolveConfig = (kind, name) => {
-        const base = fs.realpathSync(path.join(scriptsRoot, kind));
-        let resolved;
-        try {
-            resolved = fs.realpathSync(path.join(base, ...name.split("/")));
-        } catch {
-            throw Object.assign(new Error(`OpenOCD config not found: ${kind}/${name}`), {
-                code: "OPENOCD_CONFIG_NOT_FOUND"
-            });
-        }
-        const relative = path.relative(base, resolved);
-        if (!relative || relative.startsWith("..") || path.isAbsolute(relative))
-            throw new Error(`Unsafe OpenOCD config: ${kind}/${name}`);
-        return resolved;
-    };
-    return {
-        executable: binary,
-        scriptsRoot,
-        cwd: scriptsRoot,
-        probePath: resolveConfig("interface", probe),
-        targetPath: resolveConfig("target", target)
-    };
-}
-
 function tclQuote(value) {
     const escaped = String(value)
         .replace(/\\/g, "\\\\")
@@ -377,13 +256,13 @@ function tclQuote(value) {
     return `"${escaped}"`;
 }
 
-// OpenOCD Tcl 内的文件名使用正斜杠，Windows 路径也能被解析。
+// File names inside OpenOCD Tcl use forward slashes so Windows paths parse too.
 function toPosix(value) {
     return path.sep === "/" ? value : value.split(path.sep).join("/");
 }
 
-// 运行 OpenOCD 并把 stdout/stderr 逐行转发到本进程 stdout（OpenOCD 诊断走 stderr，
-// 与 PowerShell 版的 2>&1 行为保持一致），同时收集行供 EP_VERIFY 标记解析。
+// Runs OpenOCD and forwards stdout/stderr line by line to this process's stdout (OpenOCD diagnostics go to stderr),
+// collecting the lines for EP_VERIFY marker parsing.
 function runOpenOcd(executable, args, options = {}) {
     return new Promise((resolve, reject) => {
         let child;
@@ -417,29 +296,22 @@ function runOpenOcd(executable, args, options = {}) {
         }, timeoutMs);
         let outputBytes = 0;
         const collect = (stream) => {
-            let buffer = "";
+            // Whole lines, decoded from the system code page where OpenOCD quotes Windows messages.
+            const decoder = createLineDecoder((line) => {
+                lines.push(line);
+                process.stdout.write(line + "\n");
+            });
             stream.on("data", (chunk) => {
                 if (settled) return;
                 outputBytes += chunk.length;
-                if (outputBytes > 4 * 1024 * 1024 || buffer.length + chunk.length > 65536) {
+                if (outputBytes > 4 * 1024 * 1024 || decoder.length + chunk.length > 65536) {
                     child.kill("SIGKILL");
                     finish(Object.assign(new Error("OpenOCD output limit exceeded"), { code: "OPENOCD_OUTPUT_LIMIT" }));
                     return;
                 }
-                buffer += chunk.toString();
-                const parts = buffer.split(/\r?\n/);
-                buffer = parts.pop();
-                for (const line of parts) {
-                    lines.push(line);
-                    process.stdout.write(line + "\n");
-                }
+                decoder.write(chunk);
             });
-            stream.on("end", () => {
-                if (buffer) {
-                    lines.push(buffer);
-                    process.stdout.write(buffer + "\n");
-                }
-            });
+            stream.on("end", () => decoder.end());
         };
         collect(child.stdout);
         collect(child.stderr);
@@ -452,16 +324,32 @@ function runOpenOcd(executable, args, options = {}) {
     });
 }
 
-// 统一预检：显式参数 > EmberProbe 配置（Agent Bridge）> 工作区/USB 自动检测。
-// notes 携带检测工具缺失等提示，随 JSON 一并输出。
-async function preflight(options) {
+// Unified preflight: explicit arguments > EmberProbe configuration (Agent Bridge) > workspace/USB detection. notes
+// carry hints such as missing detection tools and are printed with the JSON. deps.call lets the MCP server call the
+// Bridge with its own channel; skill scripts use the default agent-client.
+async function preflight(options, deps = {}) {
+    const bridgeCall = deps.call || call;
     const root = fs.realpathSync(path.resolve(options.workspace));
-    const { config, diagnostic } = await getEmberProbeConfig(root);
-    // diagnostics 保留 config.get 失败的原始诊断（错误码/详情），不因降级而丢弃；
-    // sources 记录每个字段的最终来源，供 agent 区分显式参数、EmberProbe 配置与自动检测。
+    const { config, diagnostic } = await getEmberProbeConfig(root, bridgeCall);
+    // diagnostics keeps the original config.get failure (code and details) even when degrading; sources records where
+    // each field came from, so agents can tell explicit arguments, EmberProbe configuration and detection apart.
     const diagnostics = diagnostic ? [diagnostic] : [];
     const sources = { elf: "none", target: "none", probe: "none", openocd: "none" };
     const notes = [];
+    let transport = normalizeTransport(options.transport ?? config?.transport ?? "auto");
+    let probeSerial = normalizeProbeSerial(options["probe-serial"] ?? config?.probeSerial ?? "");
+    const adapterSpeedKhz = normalizeAdapterSpeed(options["adapter-speed-khz"] ?? config?.adapterSpeedKhz ?? 0);
+    sources.probeSerial =
+        options["probe-serial"] !== undefined ? "explicit" : config?.probeSerial !== undefined ? "config" : "default";
+    sources.adapterSpeedKhz =
+        options["adapter-speed-khz"] !== undefined
+            ? "explicit"
+            : config?.adapterSpeedKhz !== undefined
+              ? "config"
+              : "default";
+    sources.transport =
+        options.transport !== undefined ? "explicit" : config?.transport !== undefined ? "config" : "default";
+    let candidates = [];
     let elf = "";
     if (options.elf) {
         elf = String(options.elf);
@@ -487,36 +375,59 @@ async function preflight(options) {
         sources.probe = "config";
     }
     let openocd;
-    if (options.openocd) {
+    if (Object.hasOwn(config || {}, "resolvedOpenOcdPath")) {
+        openocd = resolveExecutablePath(config.resolvedOpenOcdPath);
+        sources.openocd = "config";
+        let error;
+        if (!openocd) {
+            error = Object.assign(new Error("The configured OpenOCD could not be prepared"), {
+                code: "OPENOCD_NOT_FOUND"
+            });
+        } else if (options.openocd && !matchesOpenOcdExecutable(options.openocd, config.openocdPath, openocd)) {
+            error = Object.assign(new Error("Agent OpenOCD must match the configured executable"), {
+                code: "OPENOCD_EXECUTABLE_MISMATCH"
+            });
+            openocd = "";
+        }
+        if (error) {
+            diagnostics.push(diagnosticForError(error, { operation: "openocd.launch" }));
+            notes.push(error.message);
+        }
+    } else if (options.openocd) {
         openocd = String(options.openocd);
         sources.openocd = "explicit";
     } else if (config && config.openocdPath) {
         openocd = String(config.openocdPath);
         sources.openocd = "config";
-    } else {
+    } else if (!diagnostic) {
         openocd = "openocd";
         sources.openocd = "default";
     }
+    if (!openocd && diagnostic) notes.push(diagnostic.error.message);
     // Configuration values are workspace-relative by convention; canonicalize the
     // selected ELF before hashing/authorizing so the same bytes are flashed that the
     // user saw in preflight, regardless of the skill process' current directory.
     if (elf && !path.isAbsolute(elf)) elf = path.resolve(root, elf);
-    if (!elf) {
-        elf = findNewestElf(root);
-        sources.elf = elf ? "auto" : "none";
-    }
+    const inferred = !target || !elf ? inferTargetDetails(root) : null;
     if (!target) {
-        target = inferTarget(root);
+        target = inferred.target;
         sources.target = target ? "auto" : "none";
+        if (!target && inferred.candidates.length > 1)
+            notes.push(`Multiple MCU targets detected (${inferred.candidates.join(", ")}); pass --target.`);
+    }
+    if (!elf) {
+        elf = findNewestElf(root, { target, projectDir: inferred.projectDir });
+        sources.elf = elf ? "auto" : "none";
     }
     if (!probe) {
         const detected = await detectProbe();
         probe = detected.probe;
+        candidates = detected.candidates;
         sources.probe = probe ? "auto" : "none";
         notes.push(...detected.notes);
     }
-    const openocdCheck = await probeOpenOcdCompatibility(openocd);
-    if (!openocdCheck.compatible) {
+    const openocdCheck = openocd ? await probeOpenOcdCompatibility(openocd) : { compatible: false, version: "" };
+    if (openocd && !openocdCheck.compatible) {
         const detected = openocdCheck.version ? ` ${openocdCheck.version}` : " with an unknown version";
         const action =
             process.platform === "win32"
@@ -530,14 +441,61 @@ async function preflight(options) {
     let elfSha256 = "";
     if (elf) {
         try {
+            elf = canonicalFileSync(elf);
             const stats = fs.statSync(elf);
-            if (stats.isFile()) {
-                elfMtimeUtc = stats.mtime.toISOString();
-                elfSha256 = await sha256(elf);
-            }
-        } catch {}
+            if (!stats.isFile())
+                throw Object.assign(new Error("ELF path must be a file"), { code: "ELF_FILE_INVALID" });
+            elfMtimeUtc = stats.mtime.toISOString();
+            elfSha256 = (await inspectElf(elf)).sha256;
+        } catch (error) {
+            diagnostics.push(diagnosticForError(error, { operation: "elf.read" }));
+            notes.push(`Cannot read ELF: ${error.message}`);
+        }
+    }
+    let scriptsReady = false;
+    if (openocd && target && probe) {
+        try {
+            resolveOpenOcdLaunch(openocd, probe, target, transport);
+            const connection = await prepareProbeConnection(
+                {
+                    openocd,
+                    probe,
+                    target,
+                    transport,
+                    probeSerial,
+                    adapterSpeedKhz,
+                    // Bridge snapshots carry the v3 workspace selection; older ones only the v1/v2 record.
+                    successfulConnection: config?.selectedProbe || config?.successfulConnection
+                },
+                {
+                    listProbes: async (inventoryOptions) => {
+                        if (config) {
+                            try {
+                                return await bridgeCall(root, "probe.list", inventoryOptions);
+                            } catch {
+                                /* Use OS metadata without Bridge. */
+                            }
+                        }
+                        return listProbes(inventoryOptions);
+                    }
+                }
+            );
+            if (!probeSerial && connection.probeSerial) sources.probeSerial = "inventory";
+            probeSerial = connection.probeSerial;
+            transport = connection.transport;
+            if (connection.selection) sources.transport = connection.selection.transport;
+            notes.push(...connection.inventory.notes);
+            scriptsReady = true;
+        } catch (error) {
+            diagnostics.push(diagnosticForError(error, { operation: "openocd.launch" }));
+            notes.push(error.message);
+        }
     }
     return {
+        transport,
+        probeSerial,
+        adapterSpeedKhz,
+        probeCandidates: candidates,
         workspace: root,
         elf,
         elfSha256,
@@ -548,7 +506,7 @@ async function preflight(options) {
         openocdVersion: openocdCheck.version,
         openocdCompatible: openocdCheck.compatible,
         minimumOpenocdVersion: MIN_OPENOCD_VERSION,
-        ready: Boolean(elf && target && probe),
+        ready: Boolean(elfSha256 && target && probe && scriptsReady && openocdCheck.compatible),
         notes,
         sources,
         diagnostics
@@ -562,9 +520,11 @@ function emit(value) {
 module.exports = {
     parseArgs,
     getEmberProbeConfig,
+    probeSerialOverride,
     authorizeFlash,
     findNewestElf,
     inferTarget,
+    inferTargetDetails,
     detectProbe,
     probeFromText,
     sha256,

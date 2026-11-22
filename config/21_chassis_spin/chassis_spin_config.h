@@ -32,30 +32,30 @@
 
 /* 下列 Wz 参数使用工程既有命令尺度，不能直接填入电机 rpm。 */
 #ifndef CHASSIS_SPIN_FIXED_WZ
-#define CHASSIS_SPIN_FIXED_WZ 8000.0f /* 固定模式目标/自适应初始目标，单位为本工程 Wz 命令尺度。 */
+#define CHASSIS_SPIN_FIXED_WZ 4000.0f /* 固定模式目标/自适应初始目标，单位为本工程 Wz 命令尺度。 */
 #endif
 #ifndef CHASSIS_SPIN_MIN_WZ
-#define CHASSIS_SPIN_MIN_WZ 3000.0f /* 自适应模式的 Wz 目标下限，单位 Wz 命令尺度，须为正且不大于初始目标。 */
+#define CHASSIS_SPIN_MIN_WZ 1500.0f /* 自适应模式的 Wz 目标下限，单位 Wz 命令尺度，须为正且不大于初始目标。 */
 #endif
 #ifndef CHASSIS_SPIN_MAX_WZ
-#define CHASSIS_SPIN_MAX_WZ 9000.0f /* 动态自旋目标软上限，单位 Wz 命令尺度，须不小于初始或正弦峰值。 */
+#define CHASSIS_SPIN_MAX_WZ 4500.0f /* 动态自旋目标软上限，单位 Wz 命令尺度，须不小于初始或正弦峰值。 */
 #endif
 #ifndef CHASSIS_SPIN_POWER_GAIN
 #if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
-#define CHASSIS_SPIN_POWER_GAIN 80.0f /* 功率误差到目标变化速率的增益，单位 Wz/(W*s)；自适应默认 80，其余默认 40。 */
+#define CHASSIS_SPIN_POWER_GAIN 40.0f /* 功率误差到目标变化速率的增益，单位 Wz/(W*s)。 */
 #else
-#define CHASSIS_SPIN_POWER_GAIN 40.0f /* 功率误差到目标变化速率的增益，单位 Wz/(W*s)；自适应默认 80，其余默认 40。 */
+#define CHASSIS_SPIN_POWER_GAIN 40.0f /* 功率误差到目标变化速率的增益，单位 Wz/(W*s)。 */
 #endif
 #endif
 #ifndef CHASSIS_SPIN_RISE_RATE
 #if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE
-#define CHASSIS_SPIN_RISE_RATE 3600.0f /* 自适应目标上升速率上限，单位 Wz/s；自适应默认 3600，其余默认 1200。 */
+#define CHASSIS_SPIN_RISE_RATE 1800.0f /* 自适应目标上升速率上限，单位 Wz/s。 */
 #else
-#define CHASSIS_SPIN_RISE_RATE 1200.0f /* 自适应目标上升速率上限，单位 Wz/s；自适应默认 3600，其余默认 1200。 */
+#define CHASSIS_SPIN_RISE_RATE 1200.0f /* 自适应目标上升速率上限，单位 Wz/s；其他模式默认 1200。 */
 #endif
 #endif
 #ifndef CHASSIS_SPIN_FALL_RATE
-#define CHASSIS_SPIN_FALL_RATE 2400.0f /* 非正弦目标下降速率上限，单位 Wz/s；正弦使用独立下降速率。 */
+#define CHASSIS_SPIN_FALL_RATE 1200.0f /* 非正弦目标下降速率上限，单位 Wz/s；正弦使用独立下降速率。 */
 #endif
 #ifndef CHASSIS_SPIN_POWER_LPF_TAU_S
 #if CHASSIS_SPIN_MODE == CHASSIS_SPIN_MODE_ADAPTIVE

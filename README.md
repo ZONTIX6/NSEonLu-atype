@@ -6,7 +6,7 @@
 
 ## 构建
 
-将 Arm GNU Toolchain、MinGW Make 加入 PATH；CMake 构建另需 CMake 3.16 或更新版本。
+确保 MinGW Make 在 PATH 中。`scripts/build-board.ps1` 优先使用 PATH 中的 Arm GNU Toolchain；找不到时会从 `%LOCALAPPDATA%\stm32cube\bundles\gnu-tools-for-stm32\*\bin` 自动查找。直接运行 Make/CMake 时仍需将 Arm GNU Toolchain 加入 PATH；CMake 构建另需 CMake 3.16 或更新版本。
 
 双 A 板构建与烧录使用 [`config/00_flash/board_flash_config.h`](config/00_flash/board_flash_config.h)：目标 `1` 是整车主板，目标 `2` 是下方 IMU 采集板，各用独立输出目录。用 `-Board 1/2` 选择实际连接的板卡。
 
@@ -19,7 +19,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Act
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-board.ps1 -Action Flash
 ```
 
-VS Code 默认 `build task` 和 `build selected board` 按 `BOARD_FLASH_TARGET` 构建；`download dap` / `download jlink` 先构建所选板卡，再使用任务指定的下载器烧录。`show selected board` 显示配置，`flash selected board` 使用配置指定的板卡和下载器。F5 的 ST-Link / DAPlink / Jlink 也跟随 `BOARD_FLASH_TARGET`：`build selected board for debug` 构建所选板卡，成功后把该板 ELF 复制为 `build/selected-board.elf` 供调试器加载；这些 F5 入口无需随两板构建目录修改 ELF 路径。下载器由调试菜单选择，不由 `BOARD_FLASH_PROGRAMMER` 决定。`Jlink-attach` 准备所选板卡已有 ELF；`DAP-attach` 固定加载第一块主板的 `build/board-1-main/basic_framework.elf`，修改 `BOARD_FLASH_1_BUILD_DIR` 时需同步修改它在 `.vscode/launch.json` 中的路径。两种 attach 均不重编译或烧录，已有 ELF 须与板上固件一致。F5 与 `Jlink-attach` 共用副本，切换板卡前结束使用该副本的调试会话。[主板构建说明](config/README.md#主板怎样构建与烧录)列出下载器选择方法。下面的手动 Make/CMake 仍需显式传入双板参数。
+VS Code 默认 `build task` 和 `build selected board` 按 `BOARD_FLASH_TARGET` 构建；`download dap` / `download jlink` 先构建所选板卡，再使用任务指定的下载器烧录。DAP 烧录脚本依次从 PATH、`OPENOCD_PATH` 或 `.vscode/settings.json` 的 `cortex-debug.openocdPath` 查找 OpenOCD；Cortex-Debug 使用同一文件中的 `cortex-debug.armToolchainPath` 定位 GDB 和其他 Arm GNU 工具。`show selected board` 显示配置，`flash selected board` 使用配置指定的板卡和下载器。F5 的 ST-Link / DAPlink / Jlink 也跟随 `BOARD_FLASH_TARGET`：`build selected board for debug` 构建所选板卡，成功后把该板 ELF 复制为 `build/selected-board.elf` 供调试器加载；这些 F5 入口无需随两板构建目录修改 ELF 路径。下载器由调试菜单选择，不由 `BOARD_FLASH_PROGRAMMER` 决定。`Jlink-attach` 准备所选板卡已有 ELF；`DAP-attach` 固定加载第一块主板的 `build/board-1-main/basic_framework.elf`，修改 `BOARD_FLASH_1_BUILD_DIR` 时需同步修改它在 `.vscode/launch.json` 中的路径。两种 attach 均不重编译或烧录，已有 ELF 须与板上固件一致。F5 与 `Jlink-attach` 共用副本，切换板卡前结束使用该副本的调试会话。[主板构建说明](config/README.md#主板怎样构建与烧录)列出下载器选择方法。下面的手动 Make/CMake 仍需显式传入双板参数。
 
 ```powershell
 make -j8 PROFILE=atype-vehicle
@@ -34,7 +34,7 @@ cmake -S . -B build/cmake-vehicle -G "MinGW Makefiles" -DATYPE_PROFILE=atype-veh
 cmake --build build/cmake-vehicle -j8
 ```
 
-源码默认配置为单板完整整车、X 全向轮、自适应小陀螺（初始 Wz=8000，沿用工程命令尺度）、直供、阶段 3 功控、功率计和缓冲管理开启；实际参数还受构建覆盖和有效保存值影响。超级电容需显式设置 `CHASSIS_POWER_SOURCE_MODE=1`；atype-direct 为直供；atype-bench 默认直供且允许无裁判 50 W 回退，锁停云台与发射，仅在明确台架条件下整定选中底盘轮。
+源码默认配置为单板完整整车、X 全向轮、自适应小陀螺（Wz 初始 4000、范围 1500–4500，沿用工程命令尺度）、直供、阶段 3 功控、功率计和缓冲管理开启；实际参数还受构建覆盖和有效保存值影响。超级电容需显式设置 `CHASSIS_POWER_SOURCE_MODE=1`；atype-direct 为直供；atype-bench 默认直供且允许无裁判 50 W 回退，锁停云台与发射，仅在明确台架条件下整定选中底盘轮。
 
 USART1 固定 DBUS；视觉 USART3、图传 UART8、裁判默认 USART6（编号 16 最左侧、丝印 6）；日志默认 RTT，可选 USART2 非阻塞中断输出。裁判 USART6 使用 RX/TX DMA；`REFEREE_UART_PORT=7` 可切换到 UART7（RX DMA、TX 中断），UART7 裁判与辅助设备同时启用会编译报错。接口对应及本次故障见 [裁判通讯修复说明](docs/referee-uart7-fix.md)。旧 `UART1_USE` 构建参数会报错，替代选项见 [配置指南](docs/configuration-guide.md)。USB 默认用于网页遥测；改用 USB 视觉时同时设置 `VISION_USE_VCP=1 USB_TELEMETRY_ENABLE=0`。
 
