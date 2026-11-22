@@ -7,7 +7,9 @@
 
 工程的软件实现和自动化验证已达到可进入受控硬件测试的阶段。STM32F427IIH6 A 板固件、主机侧模块测试、USB 遥测工具、板卡构建脚本、配置矩阵和链接布局检查均已覆盖。最新一次完整软件验证执行了 **113 条检查命令，113 条通过**，记录在 `build/validation/results.json` 和 `build/validation/provenance.json`。
 
-这不等于整车验收通过。远端 IMU 安装/噪声审核标记仍为 `CHASSIS_REMOTE_IMU_CONFIG_VERIFIED=0`；底盘速度反馈试验和新增防滑主动控制没有当前固件的完整实车验收记录。转交后应先核对板间 CAN 口和主板速度闭环开关，再按观测、低速、主动干预的顺序测试。
+注意：上述 113 条完整验证早于轮速冗余提交 `0f15c27`，不含该功能。该提交另有定向主机测试及 Make/CMake 固件构建通过，范围和结果见第 9 节；新功能尚未烧录或实车验收。
+
+这不等于整车验收通过。远端 IMU 安装/噪声审核标记仍为 `CHASSIS_REMOTE_IMU_CONFIG_VERIFIED=0`；底盘速度反馈、轮速冗余补偿和现役防滑控制均没有当前固件的完整实车验收记录。转交后应先核对板间 CAN 口和主板速度闭环开关，再按观测、低速、主动干预的顺序测试。
 
 | 子系统 | 软件状态 | 接手测试时的判断 |
 | --- | --- | --- |
@@ -15,15 +17,16 @@
 | 云台、底盘、发射、遥控、裁判与图传 | 已集成到固件，相关主机测试通过 | 逐路检查实机接线、方向、单位和启停门控 |
 | 功率控制、功率计、超级电容、Flash 参数保存 | 模块与故障路径有主机回归 | 尚需实车功率、掉电、温升及参数恢复验收 |
 | 双 A 板 IMU 与速度融合 | 采集协议、接收、融合、遥测和离线重放已有覆盖 | 轴向、CAN、偏移和安装参数尚未完成最终实测审核 |
+| 轮速冗余诊断/三轮重算 | 提交 `0f15c27` 新增关闭、影子和主动三种模式；schema 10 与 CSV 分析已接入 | 默认关闭；影子判据与主动替换均未做实车验证，不能与现役 `CHASSIS_TRACTION_MODE` 混为一谈 |
 | 底盘平移速度反馈试验 | 有限幅闭环已实现，主机集成测试通过 | 当前工作树的板 1 预设已打开此试验，必须确认是否为本轮目标 |
 | 防滑模式 0–3 | 已接入轮速 PID、电流/功率/停车门控链路；算法和 CAN 集成测试通过 | 模式 1 只观察；模式 2/3 尚无实车收益验收，模式 3 应最后测试 |
 | USB 仪表盘、在线调参和自动整定 | 前端及协议测试通过 | 仍需在实际 USB CDC、浏览器、遥控和电机状态下操作验收 |
 
 ## 2. 代码与交接快照
 
-工程根目录为 `NSEonLu - atype/`。本次评估时功能基线是分支 `codex/github-main-06efa7d` 上的提交 `a98b29d`（`feat: add staged chassis traction and braking slip control`）。该分支当时比 `github/main` 超前 23 个提交。
+工程根目录为 `NSEonLu - atype/`。上一轮自动化评估的历史基线为提交 `a98b29d`；随后交接文档提交为 `73b6031`。本次轮速冗余功能已提交在分支 `codex/github-main-06efa7d` 的 `0f15c27`（`Add guarded wheel slip redundancy mode`），其父提交为 `73b6031`。
 
-评估开始前工作树已有未提交修改和未跟踪文件，包含主板配置、底盘自旋参数、构建脚本、说明文档、`.agents/` 工具文件及 `output/` 记录。测试与交接修订只涉及本次标明的测试夹具、验证脚本和本文档；它们不会把原有工作树改动自动变成可复现的正式版本。测试人员应接收**完整当前工程快照**，或先由项目负责人整理并记录全部本地修改。只检出 `a98b29d` 不会得到当前所有本地配置。
+工作树仍包含未提交修改和未跟踪文件，涉及主板配置、底盘自旋参数、构建脚本、说明文档、`.agents/` 工具文件及 `output/` 记录；本次功能提交没有包含这些修改。测试人员应接收**完整当前工程快照**，或先由项目负责人整理并记录全部本地修改。只检出 `0f15c27` 不会得到当前所有本地配置。
 
 `build/validation/`、`build/traction-mode*/` 和 `output/` 是本地生成/实验产物，不应假定已随 Git 提交。交接可复现证据时，应一并保存本轮 `results.json`、`provenance.json`、必要日志、最终构建选项和每块板实际烧录固件的 SHA-256。
 
@@ -119,6 +122,7 @@ node tools/usb-telemetry/serve.cjs
 - 测试日期、操作者、机器人/底盘编号、板卡型号、接线图或 CAN 口照片。
 - 来源提交号、是否含本地修改、实际构建参数、两块板的固件 SHA-256，以及板 1/2 的角色。
 - `CHASSIS_IMU_CAN_PORT`、IMU ID/频率、速度闭环开关、防滑模式/标定声明、VOFA profile 和对应 schema。
+- 新增轮速冗余模式（`CHASSIS_WHEEL_REDUNDANCY_MODE=0/1/2`）、对应 schema、候选轮、四轮残差、确认次数及 `redundancy_applied`；该功能与 `CHASSIS_TRACTION_MODE` 是两套独立机制。
 - 原始 VOFA CSV、USB 工具日志、关键通道截图、试验视频；保留原始文件，不只交分析后的图。
 - 地面材质、轮胎/载荷、电池与电容状态、命令档位、每次试验的方向、速度、距离、起停时间和异常现象。
 - 对照条件及重复次数、故障注入与恢复结果、停车和急停行为、任务周期/堆栈观察值。
@@ -131,6 +135,27 @@ node tools/usb-telemetry/serve.cjs
 - [卡尔曼底盘实车测试与验收手册](kalman-chassis-test-and-acceptance.md)
 - [速度闭环试验说明](chassis-velocity-control-trial.md)
 - [防滑控制与实车试验手册](chassis-traction-control.md)
+- [轮速冗余参数](../config/30_velocity_observation/chassis_wheel_redundancy_config.h)
 - [VOFA 卡尔曼闭环遥测通道](vofa-kalman-control.md)
 - [USB 仪表盘与在线调参说明](../tools/usb-telemetry/README.md)
 - [本轮自动化验证记录](../build/validation/provenance.json)（本地生成；打包交接时另附）
+
+## 9. 轮速冗余诊断与三轮重算
+
+该功能由 `0f15c27` 加入远端底盘 IMU 速度融合观察器，使用四个带轮序/方向符号的滚动速度，并按 IMU 源时间插值配对。检测器以融合状态短时外推速度、中心加速度及底盘陀螺 Z 角速度作为参考，计算四轮残差；只有单轮残差达到门限、显著大于其他轮，且排除该轮后的三轮解算仍接近参考时，才报出候选轮。当前轮序为 LF/RF/LB/RB。
+
+| 模式 | 行为 | 建议用途 |
+| --- | --- | --- |
+| `0` | 关闭；也是代码、Make、CMake 的默认值 | 当前默认构建 |
+| `1` | 影子检测与记录，不替换生产滤波器的轮速输入 | 首轮上车验证 |
+| `2` | 同一车轮连续确认后，将三轮重算速度用于远端融合的轮速观测 | 影子数据审查通过后再低速验证 |
+
+在 `config/00_flash/board_flash_config.h` 为主板增加或设置 `BOARD_FLASH_1_CHASSIS_WHEEL_REDUNDANCY_MODE`，然后用 `scripts/build-board.ps1 -Action Build -Board 1` 构建。例如先用值 `1`；构建脚本通过 `config/99_build/atype-options.txt` 将其传给 Make。未设置时保持关闭。启用要求单板速度控制和远端底盘 IMU 融合接收路径。
+
+初始判据为轮残差 `0.25 m/s`、最大/次大残差比 `1.75`、三轮结果对参考的误差 `0.30 m/s`、连续确认 `2` 个中心样本、参考状态最大年龄 `40 ms`。这些是软件试验初值，**不是实车标定值**。参考状态依赖先前融合状态，不是独立地速仪；调参前需用尺量/视频/其他外部测量核对候选和真实滑动。
+
+`VOFA_OBSERVATION_PROFILE=2` 且使用精简 FIFO 时，模式 1/2 输出 **83 路 schema 10**，`I5` bit 16 表示冗余诊断有效；新增列记录判定原因、候选轮、残差、三轮结果、实际采用标志及门限。默认关闭时仍是 schema 9。若 `VOFA_KALMAN_FULL_DETAIL=1`，完整日志仍为 schema 8（109 路），不含这组冗余诊断列；查看诊断时使用精简 schema 10。schema 编号须结合遥测 profile 和通道数解释；此处指 profile 2 的 83 列格式。通道明细见 [schema 10 通道表](vofa-observation-channels.md#schema-10-kalman_control_redundancy)，CSV 可由 `scripts/analyze-vofa.py` 汇总候选轮、判定原因和实际采用次数。
+
+提交后的定向软件验证已通过：`tests/chassis_wheel_redundancy`、`tests/chassis_remote_fusion` 的关闭/影子/主动三种构建、`tests/chassis_velocity_observer`、`tests/vofa_telemetry`、VOFA 分析 Python 测试 **49/49**、schema 生成检查，以及模式 1/2 的 Make ARM 构建和模式 2 CMake ARM 构建。该结果不包含在第 4 节历史的 113 项验证报告内；没有烧录、地面测试、候选误报率或主动补偿效果的实车证据。
+
+接手时先构建模式 1 并保持速度闭环、防滑模式及其他控制参数不变；记录静止、前后、左右、旋转、起停和低抓地过程的 schema 10 CSV，与独立的位移/视频观察对照。确认轮序、旋转项、正常行驶时误报和丢传感器降级后，再评估是否改成模式 2，并从低速短时开始。出现异常立即将模式恢复为 `0`。轮速冗余模式 2 不等同于 `CHASSIS_TRACTION_MODE` 的防滑电流/制动控制。
